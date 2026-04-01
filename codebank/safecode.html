@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; font-src * data: 'self'; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src * data: blob:; media-src *; frame-src *;">
+    <title>SafeCode Assets</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <style>
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg-dark: #0f172a;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --primary-color: #B043FF;
+            --secondary-color: #FF77E9;
+            --text-main: #f8fafc;
+            --text-muted: #8b949e;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* ✳️ Debug Overlay */
+        #safecode-debug {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #00ff00;
+            padding: 5px 10px;
+            font-family: monospace;
+            font-size: 10px;
+            border-radius: 4px;
+            z-index: 9999;
+            pointer-events: none;
+            border: 1px solid #00ff00;
+        }
+
+        body { 
+            background: var(--bg-dark); 
+            color: var(--text-main);
+            font-family: 'Poppins', 'Inter', system-ui, -apple-system, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #loading {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 1000;
+        }
+
+        #loading.hidden {
+            display: none;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #333;
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        #codebank-assets-tab {
+            flex: 1;
+            display: none; /* Shown after load */
+            flex-direction: column;
+            padding: 20px;
+            height: 100%;
+        }
+
+        .tabs-header {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tab-btn {
+            padding: 10px 24px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 4px 15px rgba(176, 67, 255, 0.3);
+        }
+
+        .asset-list-container {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 8px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary-color) transparent;
+        }
+
+        .asset-list-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .asset-list-container::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 10px;
+        }
+
+        .asset-item {
+            display: flex;
+            align-items: center;
+            padding: 16px 20px;
+            border-radius: 12px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            animation: fadeInUp 0.5s ease forwards;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .asset-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateX(4px);
+            border-color: var(--primary-color);
+        }
+
+        .asset-item.selected {
+            border-color: var(--primary-color);
+            background: rgba(176, 67, 255, 0.1);
+        }
+
+        .asset-thumbnail {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            background: #1a1a1a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .asset-details { flex: 1; }
+        .asset-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; color: #fff; font-family: 'JetBrains Mono', monospace; }
+        .asset-meta { font-size: 13px; color: var(--text-muted); }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .nav-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .page-info { font-weight: 600; color: var(--secondary-color); font-size: 14px; }
+
+        #guardian-dog-container {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 180px;
+            height: 180px;
+            z-index: 1000;
+            pointer-events: none;
+            filter: drop-shadow(0 0 15px rgba(176, 67, 255, 0.3));
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            opacity: 0.6;
+            text-align: center;
+            border: 2px dashed var(--border-color);
+            border-radius: 16px;
+            padding: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading"><div class="spinner"></div><p>Loading Safe Assets...</p></div>
+    <div id="codebank-assets-tab"> 
+        <div class="tabs-header">
+            <button class="tab-btn active" data-tab="codes">🔑 Codes</button>
+            <button class="tab-btn" data-tab="silver">🥈 Silver</button>
+            <button class="tab-btn" data-tab="gold">🥇 Gold</button>
+            <div id="asset-stats" style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
+                <span id="total-count" style="font-size: 13px; color: var(--text-muted); font-weight: 600; background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color);">0 Assets</span>
+                <button id="refresh-assets" class="nav-btn" style="width: 40px; height: 40px; border-radius: 10px;" title="Refresh Assets"><i class="fas fa-sync-alt"></i></button>
+            </div>
+        </div>
+        <div id="safe-assets-container" class="asset-list-container"></div>
+        <div class="pagination-controls" id="pagination">
+            <button id="prev-page" class="nav-btn"><i class="fas fa-chevron-left"></i></button>
+            <span class="page-info">Page <span id="current-page">1</span> / <span id="total-pages">1</span></span>
+            <button id="next-page" class="nav-btn"><i class="fas fa-chevron-right"></i></button>
+        </div>
+    </div>
+    <div id="guardian-dog-container"></div>
+    <div id="safecode-debug">SafeCode: Initializing...</div>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+      }
+    }
+    </script>
+
+    <script type="module" src="/codebank/bankode-assetbus-bridge.js"></script>
+    <script type="module" src="/codebank/js/safe-list-actions.js"></script>
+    <script type="module" src="/codebank/js/safe-asset-list.js"></script>
+
+    <script>
+        (function() {
+            const debugEl = document.getElementById('safecode-debug');
+            const updateDebug = (msg) => {
+                if (debugEl) debugEl.innerText = `SafeCode: ${msg}`;
+                console.log(`[SafeCode-Debug] ${msg}`);
+            };
+            updateDebug('DOM Loaded - Direct Access Mode');
+
+            // 🛡️ PREVENT UI BLOCK
+            window.addEventListener('error', (e) => {
+                console.warn('[SafeCode] Soft error caught:', e.message);
+                updateDebug(`Soft Error: ${e.message}`);
+            });
+
+            // دالة تفعيل كلب الحراسة
+            function activateWatchdog() {
+                const dog = document.getElementById('guardian-dog-container');
+                if (dog) {
+                    dog.style.display = 'block';
+                    if (typeof window.SafeActions?.initWatchDogGuardian === 'function') {
+                        window.SafeActions.initWatchDogGuardian();
+                    } else if (typeof initWatchDogGuardian === 'function') {
+                        initWatchDogGuardian();
+                    } else {
+                        console.warn('[SafeCode] WatchDog guardian function not found');
+                        updateDebug('WatchDog guardian not found');
+                    }
+                }
+            }
+
+            // Listen for the render event from safe-asset-list.js to activate watchdog
+            document.addEventListener('safe-assets-rendered', () => {
+                updateDebug('Assets rendered, activating watchdog');
+                // Show the assets tab
+                const tab = document.getElementById('codebank-assets-tab');
+                if (tab) tab.style.display = 'flex';
+                activateWatchdog();
+            });
+
+            // Also listen on window just in case
+            window.addEventListener('safe-assets-rendered', () => {
+                updateDebug('Window assets rendered, activating watchdog');
+                // Show the assets tab
+                const tab = document.getElementById('codebank-assets-tab');
+                if (tab) tab.style.display = 'flex';
+                activateWatchdog();
+            });
+
+            // Force watchdog activation after 3 seconds if not already done
+            setTimeout(() => {
+                if (!document.getElementById('guardian-dog-container').querySelector('canvas')) {
+                    updateDebug('Forcing watchdog activation after timeout');
+                    activateWatchdog();
+                }
+            }, 3000);
+
+        })();
+    </script>
+</body>
+</html>

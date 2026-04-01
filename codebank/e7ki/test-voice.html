@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Messages Test</title>
+    <link rel="stylesheet" href="frontend/styles.css">
+</head>
+<body>
+    <div style="padding: 20px; max-width: 800px; margin: 0 auto;">
+        <h1>Voice Messages Test</h1>
+
+        <div class="test-section">
+            <h2>Voice Recording Test</h2>
+            <p>Click the voice button to test recording functionality.</p>
+
+            <div class="message-input" style="margin: 20px 0;">
+                <input type="text" id="message-input" placeholder="Type a message..." maxlength="1000">
+                <button id="voice-btn" class="voice-btn">🎤</button>
+                <button id="send-btn" class="send-btn">Send</button>
+                <input type="file" id="voice-file-input" accept="audio/*" style="display: none;">
+            </div>
+
+            <!-- Voice Recording UI -->
+            <div id="voice-recording-ui" class="voice-recording-ui" style="display: none;">
+                <div class="voice-recording-content">
+                    <div class="voice-recording-header">
+                        <span id="recording-timer">00:00</span>
+                        <button id="cancel-voice-btn" class="cancel-voice-btn">Cancel</button>
+                    </div>
+                    <div class="voice-waveform">
+                        <canvas id="voice-waveform-canvas" width="300" height="60"></canvas>
+                    </div>
+                    <div class="voice-recording-controls">
+                        <button id="record-voice-btn" class="record-voice-btn recording">
+                            <span class="record-icon">⏺️</span>
+                            <span class="record-text">Recording...</span>
+                        </button>
+                        <button id="stop-voice-btn" class="stop-voice-btn" style="display: none;">
+                            <span class="stop-icon">⏹️</span>
+                            <span class="stop-text">Stop & Send</span>
+                        </button>
+                    </div>
+                    <div class="voice-preview-controls" style="display: none;">
+                        <button id="play-preview-btn" class="play-preview-btn">▶️ Play</button>
+                        <button id="re-record-btn" class="re-record-btn">🔄 Re-record</button>
+                        <button id="send-voice-btn" class="send-voice-btn">📤 Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Voice Message Playback Test</h2>
+            <p>Sample voice message player:</p>
+
+            <div class="message sent">
+                <div class="message-header">
+                    <div class="sender-avatar">U</div>
+                    <div class="sender-name">You</div>
+                </div>
+                <div class="voice-message-player" data-url="" data-duration="45">
+                    <button class="voice-play-btn" onclick="playVoiceMessage('test-1', 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav')">
+                        ▶️
+                    </button>
+                    <div class="voice-waveform-container">
+                        <div class="voice-waveform-bar" style="width: 0%"></div>
+                    </div>
+                    <div class="voice-duration">0:45</div>
+                    <audio preload="none">
+                        <source src="https://www.soundjay.com/misc/sounds/bell-ringing-05.wav" type="audio/wav">
+                    </audio>
+                </div>
+                <div class="message-time">12:34</div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Browser Support Check</h2>
+            <div id="support-info"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Test browser support
+        function checkBrowserSupport() {
+            const supportInfo = document.getElementById('support-info');
+
+            const checks = [
+                { name: 'MediaRecorder API', supported: typeof MediaRecorder !== 'undefined' },
+                { name: 'getUserMedia', supported: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) },
+                { name: 'AudioContext', supported: !!(window.AudioContext || window.webkitAudioContext) },
+                { name: 'Web Audio API', supported: !!(window.AudioContext || window.webkitAudioContext) }
+            ];
+
+            supportInfo.innerHTML = checks.map(check =>
+                `<div style="margin: 5px 0; color: ${check.supported ? 'green' : 'red'};">${check.name}: ${check.supported ? '✓ Supported' : '✗ Not Supported'}</div>`
+            ).join('');
+
+            if (!checks.every(check => check.supported)) {
+                supportInfo.innerHTML += '<div style="color: orange; margin-top: 10px;"><strong>Note:</strong> Some features may not work in this browser. Voice recording will fall back to file upload.</div>';
+            }
+        }
+
+        checkBrowserSupport();
+
+        // Import voice functions from chat.js
+        import { toggleVoiceRecording, startVoiceRecording, stopVoiceRecording, cancelVoiceRecording, playVoicePreview, reRecordVoice, sendVoiceMessage } from './frontend/chat.js';
+
+        // Make functions globally available for onclick handlers
+        window.playVoiceMessage = (messageId, audioUrl) => {
+            // Simple test implementation
+            const playerElement = document.querySelector(`[data-message-id="${messageId}"] .voice-message-player`);
+            if (!playerElement) return;
+
+            const playBtn = playerElement.querySelector('.voice-play-btn');
+            const waveformBar = playerElement.querySelector('.voice-waveform-bar');
+            const audio = playerElement.querySelector('audio');
+
+            if (audio.paused) {
+                audio.play();
+                playBtn.textContent = '⏸️';
+                playBtn.classList.add('playing');
+
+                const updateProgress = () => {
+                    const progress = (audio.currentTime / audio.duration) * 100;
+                    waveformBar.style.width = `${progress}%`;
+
+                    if (!audio.paused) {
+                        requestAnimationFrame(updateProgress);
+                    }
+                };
+                updateProgress();
+
+                audio.onended = () => {
+                    playBtn.textContent = '▶️';
+                    playBtn.classList.remove('playing');
+                    waveformBar.style.width = '0%';
+                };
+            } else {
+                audio.pause();
+                playBtn.textContent = '▶️';
+                playBtn.classList.remove('playing');
+            }
+        };
+
+        // Add event listeners
+        document.getElementById('voice-btn').addEventListener('click', toggleVoiceRecording);
+        document.getElementById('cancel-voice-btn').addEventListener('click', cancelVoiceRecording);
+        document.getElementById('record-voice-btn').addEventListener('click', startVoiceRecording);
+        document.getElementById('stop-voice-btn').addEventListener('click', stopVoiceRecording);
+        document.getElementById('play-preview-btn').addEventListener('click', playVoicePreview);
+        document.getElementById('re-record-btn').addEventListener('click', reRecordVoice);
+        document.getElementById('send-voice-btn').addEventListener('click', sendVoiceMessage);
+    </script>
+</body>
+</html>

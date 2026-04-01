@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeCode - Secure Assets</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0f172a;
+            color: #e2e8f0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #3b82f6;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(52, 211, 153, 0.2);
+            border: 1px solid rgba(52, 211, 153, 0.3);
+            border-radius: 20px;
+            font-size: 14px;
+            color: #34d399;
+        }
+
+        .status-indicator.offline {
+            background: rgba(248, 113, 113, 0.2);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            color: #f87171;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .asset-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+        }
+
+        .asset-tab {
+            padding: 10px 20px;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .asset-tab.active {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            color: white;
+        }
+
+        .asset-tab:hover {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .asset-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .asset-item {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 10px;
+            padding: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
+        }
+
+        .asset-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        .asset-item h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #f1f5f9;
+        }
+
+        .asset-item p {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 4px;
+        }
+
+        .asset-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #34d399;
+            margin-top: 10px;
+        }
+
+        .codes-value { color: #3b82f6; }
+        .silver-value { color: #94a3b8; }
+        .gold-value { color: #fbbf24; }
+
+        @media (max-width: 768px) {
+            .asset-list {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-shield-halved"></i> Safe Assets</h1>
+            <div class="status-indicator" id="status-indicator">
+                <i class="fas fa-circle"></i>
+                <span id="status-text">Connecting...</span>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="card">
+                <div class="asset-tabs">
+                    <div class="asset-tab active" data-tab="codes">
+                        <i class="fas fa-code"></i> Codes
+                    </div>
+                    <div class="asset-tab" data-tab="silver">
+                        <i class="fas fa-coins"></i> Silver
+                    </div>
+                    <div class="asset-tab" data-tab="gold">
+                        <i class="fas fa-gem"></i> Gold
+                    </div>
+                </div>
+
+                <div id="loading-container" class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading assets...</p>
+                </div>
+
+                <div id="empty-state" class="empty-state" style="display: none;">
+                    <i class="fas fa-inbox"></i>
+                    <p>No assets available. Generate codes or activate Extra Mode to get started.</p>
+                </div>
+
+                <div id="codebank-assets-tab">
+                    <div class="safe-container asset-list" id="asset-list-container" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Inherit from parent if in iframe - look up two levels if needed for loader structure
+        if (window !== window.parent) {
+            if (window.parent.AssetBus) {
+                window.AssetBus = window.parent.AssetBus;
+            } else if (window.parent.parent && window.parent.parent.AssetBus) {
+                window.AssetBus = window.parent.parent.AssetBus;
+            }
+        }
+
+        // Signal parent when ready
+        window.addEventListener('DOMContentLoaded', function() {
+            if (window.parent !== window) {
+                setTimeout(() => {
+                    console.log('[SafeCode] Signaling ready to parent');
+                    window.parent.postMessage({ type: 'safe-code-ready' }, '*');
+                }, 500);
+            }
+        });
+
+        // UI Elements
+        const statusIndicator = document.getElementById('status-indicator');
+        const statusText = document.getElementById('status-text');
+        const loadingContainer = document.getElementById('loading-container');
+        const emptyState = document.getElementById('empty-state');
+        const assetListContainer = document.getElementById('asset-list-container');
+        const assetTabs = document.querySelectorAll('.asset-tab');
+
+        // Current active tab
+        let activeTab = 'codes';
+
+        // Asset tab click handler
+        assetTabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Remove active class from all tabs
+                assetTabs.forEach(t => t.classList.remove('active'));
+                // Add active class to clicked tab
+                this.classList.add('active');
+                // Update active tab
+                activeTab = this.dataset.tab;
+                // Render assets for the active tab
+                renderAssets();
+            });
+        });
+
+        // Render assets
+        function renderAssets() {
+            if (!window.AssetBus) {
+                showLoading();
+                setTimeout(renderAssets, 300);
+                return;
+            }
+
+            try {
+                const snapshot = window.AssetBus.snapshot();
+                const assets = snapshot[activeTab] || [];
+
+                if (assets.length === 0) {
+                    showEmptyState();
+                } else {
+                    showAssetList(assets);
+                }
+
+                updateStatus('online', 'Connected');
+            } catch (error) {
+                console.error('[SafeCode] Error rendering assets:', error);
+                updateStatus('offline', 'Error');
+                showEmptyState();
+            }
+        }
+
+        // Show loading state
+        function showLoading() {
+            loadingContainer.style.display = 'flex';
+            emptyState.style.display = 'none';
+            assetListContainer.style.display = 'none';
+        }
+
+        // Show empty state
+        function showEmptyState() {
+            loadingContainer.style.display = 'none';
+            emptyState.style.display = 'block';
+            assetListContainer.style.display = 'none';
+        }
+
+        // Show asset list
+        function showAssetList(assets) {
+            console.log(`[SafeCode] Rendering ${assets.length} assets for tab: ${activeTab}`);
+            loadingContainer.style.display = 'none';
+            emptyState.style.display = 'none';
+            assetListContainer.style.display = 'grid';
+
+            // Clear previous content
+            assetListContainer.innerHTML = '';
+
+            // Render assets
+            assets.forEach(asset => {
+                const assetItem = document.createElement('div');
+                assetItem.className = 'asset-item';
+
+                const valueClass = activeTab === 'codes' ? 'codes-value' :
+                                    activeTab === 'silver' ? 'silver-value' : 'gold-value';
+
+                // Handle both object and string formats
+                const name = asset.name || (activeTab === 'codes' ? 'Code Asset' : 'Safe Asset');
+                const description = asset.description || (activeTab === 'codes' ? 'Encrypted safe code' : 'Precious metal asset');
+                const value = (asset && typeof asset === 'object') ? (asset.value || asset.code || '') : String(asset || '');
+
+                assetItem.innerHTML = `
+                    <h3><i class="fas fa-${getAssetIcon(activeTab)}"></i> ${name}</h3>
+                    <p>${description}</p>
+                    <div class="asset-value ${valueClass}">
+                        ${formatAssetValue(value, activeTab)}
+                    </div>
+                `;
+
+                assetListContainer.appendChild(assetItem);
+            });
+        }
+
+        // Get asset icon based on type
+        function getAssetIcon(type) {
+            switch (type) {
+                case 'codes':
+                    return 'code';
+                case 'silver':
+                    return 'coins';
+                case 'gold':
+                    return 'gem';
+                default:
+                    return 'code';
+            }
+        }
+
+        // Format asset value
+        function formatAssetValue(value, type) {
+            if (type === 'codes') {
+                return value;
+            }
+            // For silver/gold, try to format as currency if numeric
+            const num = Number(value);
+            return isNaN(num) ? value : `$${num.toLocaleString()}`;
+        }
+
+        // Update status indicator
+        function updateStatus(status, text) {
+            statusIndicator.className = `status-indicator ${status}`;
+            statusText.textContent = text;
+        }
+
+        // Subscribe to AssetBus updates
+        function subscribeToAssetBus() {
+            if (window.AssetBus) {
+                window.AssetBus.subscribe('safecode', () => {
+                    renderAssets();
+                });
+            }
+        }
+
+        // Initialize app
+        function initApp() {
+            showLoading();
+            updateStatus('connecting', 'Connecting...');
+
+            // Wait for AssetBus
+            const assetBusCheckInterval = setInterval(() => {
+                if (window.AssetBus) {
+                    clearInterval(assetBusCheckInterval);
+                    subscribeToAssetBus();
+                    renderAssets();
+                }
+            }, 300);
+
+            // Timeout after 10 seconds
+            setTimeout(() => {
+                clearInterval(assetBusCheckInterval);
+                if (!window.AssetBus) {
+                    updateStatus('offline', 'AssetBus not available');
+                    showEmptyState();
+                }
+            }, 10000);
+        }
+
+        // Start app
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+    </script>
+</body>
+</html>

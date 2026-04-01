@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Farragna Reels</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="farragna-root" class="reels-root">
+      <header class="reels-header">
+        <div class="left">
+          <h1>Farragna</h1>
+        </div>
+        <div class="right">
+          <button id="upload-btn" class="btn">+ Upload Video</button>
+          <input id="upload-input" type="file" accept="video/*" style="display:none" />
+        </div>
+      </header>
+      <main id="reels-container" class="reels-container"></main>
+      <div id="status-bar" class="status-bar"></div>
+    </div>
+
+    <script src="./app.js" type="module"></script>
+  </body>
+  </html>
+

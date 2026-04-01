@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>Bankode Admin Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; padding: 1rem 1.5rem; }
+  header { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+  button { padding: 0.5rem 0.8rem; cursor: pointer; }
+  #usersContainer { display: grid; gap: 0.5rem; margin-top: 1rem; }
+  .user-card { border: 1px solid #ddd; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.5rem; }
+  .muted { color: #666; font-size: 0.9rem; }
+  .mint-form { background: #f9f9f9; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid #eee; }
+  .form-group { margin-bottom: 1rem; }
+  .form-group label { display: block; margin-bottom: 0.25rem; font-weight: bold; }
+  .form-group input, .form-group select { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+  .btn-primary { background: #007bff; color: white; border: none; padding: 0.6rem 1rem; border-radius: 4px; font-weight: bold; }
+  .btn-primary:hover { background: #0056b3; }
+  .admin-banner { background: #d4edda; color: #155724; padding: 0.5rem 1rem; border-radius: 4px; margin-bottom: 1rem; border: 1px solid #c3e6cb; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+  .vault-status { background: #e7f3ff; color: #0056b3; padding: 0.5rem 1rem; border-radius: 4px; margin-bottom: 1rem; border: 1px solid #b8daff; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+  .ledger-report { margin-top: 2rem; border-top: 2px solid #eee; padding-top: 1rem; }
+  .tx-item { font-family: monospace; font-size: 0.8rem; background: #f0f0f0; padding: 0.5rem; border-radius: 4px; margin-bottom: 0.25rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1 style="margin:0;">لوحة تحكم المشرف (Hardened)</h1>
+  <button id="logoutBtn" aria-label="تسجيل الخروج">تسجيل الخروج</button>
+</header>
+
+<div id="adminBanner" class="admin-banner" style="display:none;">
+  <span><i class="fas fa-check-circle"></i> تم التحقق من صلاحيات المشرف</span>
+</div>
+
+<div id="vaultStatus" class="vault-status" style="display:none;">
+  <span>🏦 رصيد الخزنة (Vault Allowance): <span id="vaultAllowance">0</span></span>
+  <span style="font-size:0.8rem; font-weight:normal;">الحد الشهري: <span id="monthlyLimit">0</span></span>
+</div>
+
+<section class="mint-form">
+  <h2>سكّ من الخزنة (Mint from Vault)</h2>
+  <div class="form-group">
+    <label for="targetUserId">User ID or Email:</label>
+    <input type="text" id="targetUserId" placeholder="e.g. user_123 or user@example.com" required>
+  </div>
+  <div class="form-group">
+    <label for="assetType">Asset Type:</label>
+    <select id="assetType">
+      <option value="codes">Codes</option>
+      <option value="silver">Silver</option>
+      <option value="gold">Gold</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label for="mintAmount">Amount:</label>
+    <input type="number" id="mintAmount" min="1" placeholder="Enter amount manually" required>
+  </div>
+  <div class="form-group">
+    <label for="mintReason">Reason (Optional):</label>
+    <input type="text" id="mintReason" placeholder="e.g. Reward for competition">
+  </div>
+  <button id="mintBtn" class="btn-primary">تأكيد عملية السكّ (Confirm Mint)</button>
+</section>
+
+<section>
+  <button id="loadUsersBtn">تحميل قائمة المستخدمين</button>
+  <div id="status" class="muted" aria-live="polite"></div>
+  <div id="usersContainer"></div>
+</section>
+
+<section class="ledger-report">
+  <h2>سجل العمليات الأخير (Ledger Audit)</h2>
+  <div id="ledgerContainer"></div>
+</section>
+
+<script src="./config.js"></script>
+<script type="module">
+import { getAllUsers, getUserBalances, getAdminOverview } from './dashboard.js';
+import { logoutUser } from './jwt-auth.js';
+
+const statusEl = document.getElementById('status');
+const usersContainer = document.getElementById('usersContainer');
+const ledgerContainer = document.getElementById('ledgerContainer');
+
+// 1. Verify Admin Session
+async function checkAdmin() {
+  try {
+    // 🛡️ Get token from URL or Memory
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlToken = urlParams.get('at') ? atob(urlParams.get('at')) : null;
+    window.__ADMIN_JWT__ = urlToken || window.__ADMIN_JWT__;
+    
+    // Clean URL
+    if (urlToken) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    if (!window.__ADMIN_JWT__) {
+      throw new Error('Unauthorized');
+    }
+
+    // Fetch Vault Status
+    const vRes = await fetch('/api/admin/vault/status', {
+      headers: { 'Authorization': `Bearer ${window.__ADMIN_JWT__}` }
+    });
+    const vaultData = await vRes.json();
+    
+    if (vaultData.ok) {
+      document.getElementById('adminBanner').style.display = 'flex';
+      document.getElementById('vaultStatus').style.display = 'flex';
+      document.getElementById('vaultAllowance').textContent = vaultData.allowance.toLocaleString();
+      document.getElementById('monthlyLimit').textContent = vaultData.monthly_limit.toLocaleString();
+    }
+  } catch (e) {
+    window.location.href = 'admin-login.html';
+  }
+}
+checkAdmin();
+
+// 2. Load Users
+document.getElementById('loadUsersBtn').addEventListener('click', async () => {
+  try {
+    statusEl.textContent = 'جاري التحميل...';
+    usersContainer.innerHTML = '';
+    const overview = await getAdminOverview();
+    statusEl.textContent = `إجمالي المستخدمين: ${overview?.usersCount ?? '-'} | المعاملات: ${overview?.txCount ?? '-'} | سكّ: ${JSON.stringify(overview?.minted ?? {})}`;
+    const users = await getAllUsers();
+    for (const u of users) {
+      const balances = await getUserBalances(u.user_id);
+      const div = document.createElement('div');
+      div.className = 'user-card';
+      div.innerHTML = `<strong>${u.full_name || u.email || u.user_id}</strong><br>Codes: ${balances.codes} | Silver: ${balances.silver} | Gold: ${balances.gold}`;
+      usersContainer.appendChild(div);
+    }
+  } catch (err) {
+    statusEl.textContent = 'خطأ: ' + (err?.message || 'Unknown error');
+  }
+});
+
+// 3. Minting Execution
+document.getElementById('mintBtn').addEventListener('click', async () => {
+  const userId = document.getElementById('targetUserId').value;
+  const assetType = document.getElementById('assetType').value;
+  const amount = parseInt(document.getElementById('mintAmount').value, 10);
+  const reason = document.getElementById('mintReason').value;
+
+  if (!userId || isNaN(amount) || amount <= 0) {
+    alert('الرجاء إدخال بيانات صحيحة');
+    return;
+  }
+
+  if (!confirm(`هل أنت متأكد من سكّ ${amount} من ${assetType} للمستخدم ${userId}؟`)) {
+    return;
+  }
+
+  try {
+    statusEl.textContent = 'جاري تنفيذ العملية من الخزنة...';
+    
+    // 🛡️ VAULT MINT CALL: Deducts from allowance and updates ledger
+    const response = await fetch('/api/admin/mint-from-vault', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${window.__ADMIN_JWT__}`
+      },
+      body: JSON.stringify({
+        userId,
+        assetId: assetType,
+        amount,
+        reason
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.ok) {
+      alert(`نجاح: تم السك من الخزنة\nTX ID: ${result.txId}`);
+      
+      // Refresh Vault Balance
+      checkAdmin();
+      
+      // Add to local audit view
+      const txDiv = document.createElement('div');
+      txDiv.className = 'tx-item';
+      txDiv.innerHTML = `[${new Date().toLocaleTimeString()}] MINT: ${amount} ${assetType} to ${userId} | ID: ${result.txId.slice(0,8)} | Hash: ${result.txHash.slice(0,16)}...`;
+      ledgerContainer.prepend(txDiv);
+
+      // 🧠 Real-time Sync: AssetBus will reflect this on next sync/poll
+      if (window.AssetBus && typeof window.AssetBus.sync === 'function') {
+        window.AssetBus.sync();
+      }
+    } else {
+      throw new Error(result.message || result.error || 'فشلت العملية');
+    }
+  } catch (err) {
+    alert('خطأ في العملية: ' + err.message);
+    statusEl.textContent = 'خطأ: ' + err.message;
+  }
+});
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  logoutUser();
+  window.location.href = 'admin-login.html';
+});
+</script>
+</body>
+</html>

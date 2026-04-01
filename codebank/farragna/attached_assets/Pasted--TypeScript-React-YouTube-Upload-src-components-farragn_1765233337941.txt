@@ -1,0 +1,122 @@
+🔹 مثال TypeScript/React + YouTube Upload + موافقة المستخدم
+// src/components/farragna/VideoUploadWithConsent.tsx
+import React, { useState } from 'react';
+import axios from 'axios';
+
+type UploadProps = {};
+
+const YOUTUBE_API_KEY = 'AIzaSyBTz7CHWQI2dcAk9xmxvceFjEozKz_L1Mk';
+const PLAYLIST_ID = 'PLD60YBjiIjQNurNXEEWtQ2dt6iIUZFIpF';
+
+const VideoUploadWithConsent: React.FC<UploadProps> = () => {
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [consent1, setConsent1] = useState(false);
+  const [consent2, setConsent2] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      setVideoFile(e.target.files[0]);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!videoFile) return alert('اختر ملف فيديو أولاً');
+    if (!consent1 || !consent2) return alert('يجب الموافقة على الشروط قبل الرفع');
+
+    try {
+      setUploading(true);
+
+      // 1️⃣ رفع الفيديو على Farragna server
+      const formData = new FormData();
+      formData.append('video', videoFile);
+
+      const farragnaResponse = await axios.post('/api/farragna/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      const farragnaVideoUrl = farragnaResponse.data.url; // رابط الفيديو على Farragna
+
+      // 2️⃣ رفع الفيديو على YouTube
+      const ytResponse = await axios.post(
+        `https://www.googleapis.com/upload/youtube/v3/videos?part=snippet,status&key=${YOUTUBE_API_KEY}`,
+        {
+          snippet: {
+            title: videoFile.name,
+            description: 'Uploaded via Farragna platform',
+            playlistId: PLAYLIST_ID,
+          },
+          status: { privacyStatus: 'public' },
+          media: videoFile,
+        },
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        }
+      );
+
+      const ytVideoId = ytResponse.data.id;
+      alert(`تم رفع الفيديو على Farragna و YouTube بنجاح! رابط الفيديو على اليوتيوب: https://youtu.be/${ytVideoId}`);
+    } catch (err: any) {
+      console.error(err);
+      alert('حدث خطأ أثناء رفع الفيديو');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="p-4 border rounded-md">
+      <h2 className="text-lg font-bold mb-2">رفع فيديو مع الموافقة القانونية</h2>
+
+      <input type="file" accept="video/*" onChange={handleFileChange} className="mb-2" />
+
+      <div className="mb-2">
+        <label>
+          <input type="checkbox" checked={consent1} onChange={(e) => setConsent1(e.target.checked)} />
+          أوافق على أنني أتحمل كامل المسؤولية عن محتوى الفيديو
+        </label>
+      </div>
+
+      <div className="mb-2">
+        <label>
+          <input type="checkbox" checked={consent2} onChange={(e) => setConsent2(e.target.checked)} />
+          أوافق على منح Farragna جميع حقوق النشر لرفع الفيديو على قناتكم على يوتيوب
+        </label>
+      </div>
+
+      <button
+        onClick={handleUpload}
+        disabled={uploading}
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+      >
+        {uploading ? 'جاري الرفع...' : 'رفع الفيديو'}
+      </button>
+    </div>
+  );
+};
+
+export default VideoUploadWithConsent;
+
+🔹 النقاط المهمة في الكود
+
+Modal/Multi-Checkbox: لضمان موافقة المستخدم على المسؤولية وحقوق النشر قبل رفع الفيديو.
+
+رفع الفيديو على Farragna: POST /api/farragna/upload
+
+رفع الفيديو على YouTube تلقائيًا: باستخدام YouTube Data API v3 و API Key.
+
+عرض رابط الفيديو على YouTube بعد الرفع.
+
+حماية الأخطاء: أي خطأ أثناء الرفع يظهر للمستخدم ويُسجل في console.
+
+🔹 اقتراحات تحسين إضافية
+
+استخدام Resumable Upload للفيديوهات الكبيرة مع YouTube.
+
+حفظ سجل الموافقات لكل فيديو في قاعدة البيانات للرجوع إليه قانونيًا.
+
+التحقق من حالة الفيديو على YouTube بعد الرفع، retry في حال فشل الرفع.
+
+إضافة Loader/Skeleton أثناء عملية الرفع لتحسين UX.
+
+دمج lazy loading + suspense لمكونات الفيديو الثقيلة.

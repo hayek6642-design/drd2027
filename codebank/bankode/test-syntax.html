@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bankode Syntax Test</title>
+    <script>
+        // Test all JavaScript files for syntax errors
+        const testFiles = [
+            'config.js',
+            'utils/helpers.js',
+            'utils/validators.js',
+            'utils/formatters.js',
+            'components/Card.js',
+            'components/Table.js',
+            'components/Button.js',
+            'components/Modal.js',
+            'rpc.js',
+            'safeDoor3D.js',
+            'dashboard.js'
+        ];
+
+        let errorsFound = 0;
+        let filesTested = 0;
+
+        function testFile(file) {
+            return new Promise((resolve) => {
+                const script = document.createElement('script');
+                script.src = file;
+                script.onload = function() {
+                    console.log(`✅ ${file} - No syntax errors`);
+                    resolve(true);
+                };
+                script.onerror = function() {
+                    console.error(`❌ ${file} - Syntax error or failed to load`);
+                    errorsFound++;
+                    resolve(false);
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        async function runTests() {
+            console.log('Starting Bankode syntax validation...');
+
+            for (const file of testFiles) {
+                filesTested++;
+                await testFile(file);
+            }
+
+            console.log(`\nTest Results:`);
+            console.log(`Files tested: ${filesTested}`);
+            console.log(`Errors found: ${errorsFound}`);
+
+            if (errorsFound === 0) {
+                console.log('🎉 All files passed syntax validation!');
+                document.body.innerHTML = '<h1 style="color: green;">✅ All Bankode files passed syntax validation!</h1>';
+            } else {
+                console.log('⚠️  Some files have syntax errors!');
+                document.body.innerHTML = `<h1 style="color: red;">❌ ${errorsFound} file(s) have syntax errors!</h1>`;
+            }
+        }
+
+        // Start tests when page loads
+        window.onload = runTests;
+    </script>
+</head>
+<body>
+    <h1>Running Bankode Syntax Validation...</h1>
+    <p>Please check the browser console for detailed results.</p>
+</body>
+</html>

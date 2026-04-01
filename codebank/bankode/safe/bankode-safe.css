@@ -1,0 +1,702 @@
+/* Premium 3D Asset Safe - Complete Realistic Implementation */
+
+/* Container for the 3D safe */
+.asset-safe-container {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  height: 450px;
+  perspective: 1400px;
+  perspective-origin: center center;
+  margin: 20px auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(145deg, #0a0a0a, #1a1a1a);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 
+    inset 0 0 50px rgba(0,0,0,0.8),
+    0 20px 60px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(255,255,255,0.1);
+}
+
+/* 3D Safe Scene */
+.safe-3d-scene {
+  position: relative;
+  width: 400px;
+  height: 380px;
+  transform-style: preserve-3d;
+  transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Safe Frame - Premium Metallic */
+.safe-frame {
+  position: absolute;
+  width: 380px;
+  height: 360px;
+  background: 
+    linear-gradient(145deg, #2c3e50, #34495e),
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,0.15), transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(0,0,0,0.3), transparent 50%);
+  background-blend-mode: overlay, multiply, multiply;
+  border: 12px solid #1a252f;
+  border-radius: 24px;
+  box-shadow:
+    inset 0 0 60px rgba(0,0,0,0.9),
+    0 25px 50px rgba(0,0,0,0.7),
+    0 0 0 2px rgba(255,255,255,0.1),
+    inset 0 2px 4px rgba(255,255,255,0.1);
+  transform-style: preserve-3d;
+}
+
+/* Frame inner shadow and brushed texture */
+.safe-frame::before {
+  content: '';
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  right: 15px;
+  bottom: 15px;
+  background: 
+    linear-gradient(90deg, 
+      transparent 0%, 
+      rgba(255,255,255,0.05) 20%, 
+      rgba(255,255,255,0.1) 50%, 
+      rgba(255,255,255,0.05) 80%, 
+      transparent 100%),
+    linear-gradient(145deg, rgba(0,0,0,0.4), rgba(0,0,0,0.2));
+  border-radius: 18px;
+  pointer-events: none;
+}
+
+/* Premium Safe Door */
+.safe-door-3d {
+  position: absolute;
+  width: 350px;
+  height: 330px;
+  background:
+    linear-gradient(145deg, #4a5568, #2d3748),
+    linear-gradient(45deg, 
+      transparent 0%, 
+      rgba(255,255,255,0.1) 25%, 
+      transparent 50%, 
+      rgba(255,255,255,0.05) 75%, 
+      transparent 100%),
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2), transparent 70%),
+    radial-gradient(circle at 70% 70%, rgba(0,0,0,0.3), transparent 70%);
+  background-blend-mode: multiply, overlay, overlay, multiply;
+  border: 6px solid #1a202c;
+  border-radius: 18px;
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  transition: transform 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow:
+    inset 0 0 40px rgba(0,0,0,0.8),
+    0 20px 40px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(255,255,255,0.05);
+  cursor: pointer;
+}
+
+/* Door depth and edge lighting */
+.safe-door-3d::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg,
+    rgba(0,0,0,0.6) 0%,
+    transparent 15%,
+    transparent 85%,
+    rgba(0,0,0,0.6) 100%);
+  border-radius: 18px;
+  transform: translateZ(15px);
+  pointer-events: none;
+}
+
+/* Premium Handle */
+.safe-handle {
+  position: absolute;
+  top: 50%;
+  right: 40px;
+  width: 80px;
+  height: 80px;
+  background:
+    radial-gradient(circle at 40% 40%, #666, #999),
+    linear-gradient(145deg, #555, #777),
+    conic-gradient(from 0deg, #666 0deg, #888 90deg, #666 180deg, #444 270deg, #666 360deg);
+  background-blend-mode: overlay, multiply, overlay;
+  border: 4px solid #333;
+  border-radius: 50%;
+  transform: translateY(-50%) translateZ(25px);
+  box-shadow:
+    inset 0 4px 8px rgba(0,0,0,0.6),
+    0 3px 6px rgba(0,0,0,0.4),
+    0 0 0 2px rgba(255,255,255,0.1);
+  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  cursor: pointer;
+}
+
+.safe-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 30px;
+  height: 6px;
+  background: linear-gradient(90deg, #222, #444, #222);
+  border-radius: 3px;
+  transform: translate(-50%, -50%) translateZ(8px);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+/* Premium Central Dial */
+.safe-dial {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 140px;
+  height: 140px;
+  background:
+    radial-gradient(circle at 40% 40%, #555, #333),
+    conic-gradient(from 0deg, 
+      #666 0deg, #888 45deg, #666 90deg, 
+      #444 135deg, #666 180deg, #888 225deg, 
+      #666 270deg, #444 315deg, #666 360deg);
+  border: 6px solid #111;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) translateZ(30px);
+  box-shadow:
+    inset 0 0 30px rgba(0,0,0,0.9),
+    0 8px 20px rgba(0,0,0,0.6),
+    0 0 0 3px rgba(255,255,255,0.1);
+  cursor: grab;
+  transition: transform 0.1s ease;
+  transform-style: preserve-3d;
+}
+
+.safe-dial:active {
+  cursor: grabbing;
+  transform: translate(-50%, -50%) translateZ(30px) scale(0.98);
+}
+
+/* Dial center indicator */
+.safe-dial::before {
+  content: '';
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  width: 3px;
+  height: 20px;
+  background: linear-gradient(180deg, #fff, #ccc);
+  transform: translateX(-50%) translateZ(8px);
+  border-radius: 2px;
+  box-shadow: 0 0 4px rgba(255,255,255,0.8);
+}
+
+/* Dial ticks and numbers container */
+.safe-dial-ticks {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Individual tick marks */
+.safe-dial-tick {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  width: 2px;
+  height: 16px;
+  background: linear-gradient(180deg, #ccc, #888);
+  transform-origin: 0px 58px;
+  transform: translateX(-50%) rotate(var(--rotation));
+  border-radius: 1px;
+  box-shadow: 0 0 2px rgba(255,255,255,0.5);
+}
+
+.safe-dial-tick.major {
+  height: 22px;
+  width: 3px;
+  background: linear-gradient(180deg, #fff, #aaa);
+}
+
+/* Dial numbers */
+.safe-dial-number {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  font-size: 12px;
+  font-weight: bold;
+  color: #ddd;
+  font-family: 'Courier New', monospace;
+  transform-origin: 0px 46px;
+  transform: translateX(-50%) rotate(var(--rotation));
+  text-shadow: 0 0 4px rgba(0,0,0,0.8);
+  user-select: none;
+}
+
+/* Locking Bolts - Premium */
+.safe-bolts {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.safe-bolt {
+  position: absolute;
+  width: 12px;
+  height: 50px;
+  background:
+    linear-gradient(180deg, #777, #999, #666),
+    linear-gradient(90deg, #555, #777, #555);
+  background-blend-mode: multiply, overlay;
+  border: 2px solid #333;
+  border-radius: 6px;
+  transform: translateZ(35px);
+  box-shadow:
+    inset 0 2px 4px rgba(255,255,255,0.3),
+    0 3px 6px rgba(0,0,0,0.6);
+  transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Bolt positions */
+.safe-bolt.top-left { top: 30px; left: 30px; }
+.safe-bolt.top-right { top: 30px; right: 30px; }
+.safe-bolt.bottom-left { bottom: 30px; left: 30px; }
+.safe-bolt.bottom-right { bottom: 30px; right: 30px; }
+
+/* Retracted bolts */
+.safe-bolt.retracted {
+  transform: translateZ(10px) scaleY(0.2) translateX(15px);
+  opacity: 0.7;
+}
+
+/* Premium Status LED */
+.safe-led {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  background: radial-gradient(circle, #ff0000, #880000);
+  border: 3px solid #330000;
+  border-radius: 50%;
+  transform: translateX(-50%) translateZ(35px);
+  box-shadow:
+    0 0 15px rgba(255,0,0,0.8),
+    inset 0 0 8px rgba(255,255,255,0.3);
+  transition: all 0.4s ease;
+}
+
+.safe-led.success {
+  background: radial-gradient(circle, #00ff88, #00aa44);
+  border-color: #004422;
+  box-shadow:
+    0 0 15px rgba(0,255,136,0.8),
+    inset 0 0 8px rgba(255,255,255,0.3);
+}
+
+.safe-led.warning {
+  background: radial-gradient(circle, #ffaa00, #cc6600);
+  border-color: #663300;
+  box-shadow:
+    0 0 15px rgba(255,170,0,0.8),
+    inset 0 0 8px rgba(255,255,255,0.3);
+}
+
+/* Inner Chamber (revealed when open) */
+.safe-inner-chamber {
+  position: absolute;
+  top: 25px;
+  left: 25px;
+  right: 25px;
+  bottom: 25px;
+  background:
+    linear-gradient(145deg, #1a1a1a, #2a2a2a),
+    radial-gradient(circle at 50% 50%, rgba(255,255,255,0.08), transparent);
+  border-radius: 15px;
+  transform: translateZ(-20px);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  box-shadow: inset 0 0 40px rgba(0,0,0,0.9);
+}
+
+.safe-inner-chamber.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateZ(5px);
+}
+
+.safe-chamber-content {
+  text-align: center;
+  color: #ddd;
+}
+
+.safe-chamber-content h3 {
+  margin: 0 0 15px 0;
+  color: #fff;
+  font-size: 1.4em;
+  font-weight: 600;
+}
+
+.safe-chamber-content p {
+  margin: 0 0 25px 0;
+  font-size: 1em;
+  color: #aaa;
+}
+
+.safe-close-btn {
+  background: linear-gradient(135deg, #4a5568, #2d3748);
+  border: 2px solid #1a202c;
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+}
+
+.safe-close-btn:hover {
+  background: linear-gradient(135deg, #5a6578, #3d4758);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.5);
+}
+
+/* Password Panel */
+.password-panel {
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateZ(40px);
+  background: rgba(0,0,0,0.9);
+  border: 2px solid rgba(255,255,255,0.2);
+  border-radius: 12px;
+  padding: 20px;
+  width: 280px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.4s ease;
+  z-index: 10;
+}
+
+.password-panel.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.password-panel h4 {
+  margin: 0 0 15px 0;
+  color: #fff;
+  text-align: center;
+  font-size: 1.1em;
+}
+
+.password-input {
+  width: 100%;
+  padding: 12px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 16px;
+  margin-bottom: 15px;
+  box-sizing: border-box;
+}
+
+.password-input::placeholder {
+  color: rgba(255,255,255,0.6);
+}
+
+.password-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.password-btn {
+  flex: 1;
+  padding: 10px;
+  background: linear-gradient(135deg, #4a5568, #2d3748);
+  border: 1px solid #1a202c;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.password-btn:hover {
+  background: linear-gradient(135deg, #5a6578, #3d4758);
+}
+
+.password-btn.primary {
+  background: linear-gradient(135deg, #00aa44, #008833);
+  border-color: #006622;
+}
+
+.password-btn.primary:hover {
+  background: linear-gradient(135deg, #00bb55, #00aa44);
+}
+
+.reset-password {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.reset-password a {
+  color: #58a6ff;
+  text-decoration: none;
+  font-size: 0.9em;
+}
+
+.reset-password a:hover {
+  text-decoration: underline;
+}
+
+/* Instructions */
+.safe-instructions {
+  position: absolute;
+  bottom: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.9);
+  color: #ccc;
+  padding: 15px 20px;
+  border-radius: 10px;
+  font-size: 0.9em;
+  text-align: center;
+  max-width: 380px;
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255,255,255,0.2);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.6);
+  transition: all 0.3s ease;
+  opacity: 0.9;
+}
+
+.safe-instructions strong {
+  color: #fff;
+}
+
+/* Animations */
+
+/* Door opening animation */
+.safe-door-3d.opening {
+  transform: rotateY(-95deg);
+}
+
+/* Handle rotation on unlock */
+.safe-handle.unlocked {
+  transform: translateY(-50%) translateZ(25px) rotateZ(90deg);
+}
+
+/* Shake animation for wrong attempts */
+.safe-3d-scene.shake {
+  animation: safeShake 0.6s ease-in-out;
+}
+
+.safe-3d-scene.shake-hard {
+  animation: safeShakeHard 1s ease-in-out;
+}
+
+@keyframes safeShake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+  20%, 40%, 60%, 80% { transform: translateX(8px); }
+}
+
+@keyframes safeShakeHard {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-12px) rotate(-1deg); }
+  20%, 40%, 60%, 80% { transform: translateX(12px) rotate(1deg); }
+}
+
+/* Dial rotation inertia */
+.safe-dial.rotating {
+  transition: transform 0.1s ease-out;
+}
+
+/* LED pulse animation */
+.safe-led.success {
+  animation: ledPulse 1s ease-in-out;
+}
+
+.safe-led.glow {
+  background: radial-gradient(circle, #ffffff, #cccccc);
+  border-color: #ffffff;
+  box-shadow:
+    0 0 20px rgba(255,255,255,0.9),
+    inset 0 0 10px rgba(255,255,255,0.5);
+  animation: ledGlow 2s ease-in-out infinite;
+}
+
+@keyframes ledPulse {
+  0%, 100% { box-shadow: 0 0 15px rgba(0,255,136,0.8), inset 0 0 8px rgba(255,255,255,0.3); }
+  50% { box-shadow: 0 0 25px rgba(0,255,136,1), inset 0 0 12px rgba(255,255,255,0.5); }
+}
+
+@keyframes ledGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(255,255,255,0.9), inset 0 0 10px rgba(255,255,255,0.5); }
+  50% { box-shadow: 0 0 30px rgba(255,255,255,1), inset 0 0 15px rgba(255,255,255,0.8); }
+}
+
+/* Wrong password pulse text */
+@keyframes wrongPulse {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .asset-safe-container {
+    height: 380px;
+    perspective: 1000px;
+    margin: 15px auto;
+    padding: 15px;
+  }
+
+  .safe-3d-scene {
+    width: 320px;
+    height: 300px;
+  }
+
+  .safe-frame {
+    width: 300px;
+    height: 280px;
+  }
+
+  .safe-door-3d {
+    width: 270px;
+    height: 250px;
+  }
+
+  .safe-dial {
+    width: 110px;
+    height: 110px;
+  }
+
+  .safe-handle {
+    width: 60px;
+    height: 60px;
+    right: 25px;
+  }
+
+  .password-panel {
+    width: 240px;
+    top: 60px;
+    padding: 15px;
+  }
+
+  .safe-instructions {
+    font-size: 0.8em;
+    max-width: 280px;
+    bottom: -50px;
+  }
+}
+
+@media (max-width: 480px) {
+  .asset-safe-container {
+    height: 340px;
+  }
+  
+  .safe-3d-scene {
+    width: 280px;
+    height: 260px;
+  }
+  
+  .safe-frame {
+    width: 260px;
+    height: 240px;
+  }
+  
+  .safe-door-3d {
+    width: 230px;
+    height: 210px;
+  }
+  
+  .safe-dial {
+    width: 90px;
+    height: 90px;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .safe-door-3d,
+  .safe-bolt,
+  .safe-handle,
+  .safe-inner-chamber,
+  .safe-led {
+    transition: none;
+  }
+
+  .safe-3d-scene.shake {
+    animation: none;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .safe-frame {
+    border: 12px solid #fff;
+  }
+
+  .safe-door-3d {
+    border: 6px solid #fff;
+  }
+
+  .safe-dial {
+    border: 6px solid #fff;
+  }
+}
+
+/* Focus states for keyboard navigation */
+.safe-dial:focus,
+.safe-handle:focus,
+.safe-close-btn:focus,
+.password-btn:focus,
+.password-input:focus {
+  outline: 3px solid #58a6ff;
+  outline-offset: 4px;
+}
+
+/* Loading state */
+.safe-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #ccc;
+  font-size: 1.1em;
+}
+
+/* Premium glass effect for panel */
+.password-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+  border-radius: 12px;
+  pointer-events: none;
+  z-index: -1;
+}

@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YT-Clear - Hybrid Authentication</title>
+<style>
+  * { box-sizing: border-box; }
+  body { 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    margin: 0;
+    padding: 20px; 
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    min-height: 100vh;
+    color: #fff;
+  }
+  .container {
+    max-width: 500px;
+    margin: 0 auto;
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 30px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  h2 { 
+    text-align: center; 
+    margin-bottom: 30px;
+    color: #00d4ff;
+    font-size: 28px;
+  }
+  .form-group {
+    margin-bottom: 20px;
+  }
+  label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  input, select {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    background: rgba(0,0,0,0.3);
+    color: #fff;
+    font-size: 16px;
+    transition: all 0.3s ease;
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: #00d4ff;
+    background: rgba(0,0,0,0.5);
+  }
+  select option {
+    background: #1a1a2e;
+    color: #fff;
+  }
+  button {
+    width: 100%;
+    padding: 15px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0,212,255,0.3);
+  }
+  button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  button.secondary {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+  .phone-group {
+    display: flex;
+    gap: 10px;
+  }
+  .phone-group select {
+    width: 140px;
+    flex-shrink: 0;
+  }
+  .verification-section {
+    display: none;
+    margin-top: 20px;
+    padding: 20px;
+    background: rgba(0,212,255,0.1);
+    border-radius: 10px;
+    border: 1px solid rgba(0,212,255,0.3);
+  }
+  .verification-section.active {
+    display: block;
+    animation: slideDown 0.3s ease;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .channel-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    margin-bottom: 15px;
+  }
+  .channel-status.verified {
+    background: rgba(0,255,0,0.1);
+    border: 1px solid #00ff00;
+  }
+  .channel-status.pending {
+    background: rgba(255,165,0,0.1);
+    border: 1px solid #ffa500;
+  }
+  .status-icon {
+    font-size: 24px;
+  }
+  .otp-input-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .otp-input-group input {
+    text-align: center;
+    letter-spacing: 5px;
+    font-size: 20px;
+  }
+  .timer {
+    text-align: center;
+    color: #ff6b6b;
+    font-size: 14px;
+    margin-top: 10px;
+  }
+  .status-message {
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 15px;
+    text-align: center;
+    font-size: 14px;
+    display: none;
+  }
+  .status-message.success {
+    background: rgba(0,255,0,0.1);
+    border: 1px solid #00ff00;
+    color: #00ff00;
+    display: block;
+  }
+  .status-message.error {
+    background: rgba(255,0,0,0.1);
+    border: 1px solid #ff0000;
+    color: #ff0000;
+    display: block;
+  }
+  .tab-switcher {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 12px;
+    background: rgba(255,255,255,0.05);
+    border: 2px solid transparent;
+    color: #aaa;
+    font-size: 14px;
+  }
+  .tab-btn.active {
+    background: rgba(0,212,255,0.1);
+    border-color: #00d4ff;
+    color: #00d4ff;
+  }
+  pre { 
+    background: #0f0f1a; 
+    padding: 15px; 
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.1);
+    max-height: 300px; 
+    overflow-y: auto;
+    font-size: 12px;
+    color: #00ff00;
+    margin-top: 20px;
+  }
+  .loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255,255,255,.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  .select-loading {
+    color: #aaa;
+    font-size: 12px;
+    margin-left: 10px;
+  }
+  .info-box {
+    background: rgba(0,212,255,0.1);
+    border-left: 4px solid #00d4ff;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 0 8px 8px 0;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2>🔐 YT-Clear Hybrid Auth</h2>
+  
+  <div class="tab-switcher">
+    <button class="tab-btn active" onclick="switchTab('signup')">Sign Up</button>
+    <button class="tab-btn" onclick="switchTab('login')">Login</button>
+  </div>
+
+  <!-- SIGNUP FORM -->
+    <div id="signupForm">
+    <div class="info-box">
+      🔒 Secure signup is enabled. No OTP verification required for now.
+    </div>
+    
+    <div class="form-group">
+      <label>Email Address</label>
+      <input type="email" id="signupEmail" placeholder="your@email.com" required>
+    </div>
+    
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="signupUsername" placeholder="Choose a username" required>
+    </div>
+    
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="signupPassword" placeholder="Create a strong password" required>
+    </div>
+    
+    <div class="form-group">
+      <label>Religion <span id="religionLoading" class="select-loading"></span></label>
+      <select id="religion" required>
+        <option value="">-- Select Religion --</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label>Country <span id="countryLoading" class="select-loading"></span></label>
+      <select id="country" required onchange="updateCountryCode()">
+        <option value="">-- Select Country --</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label>Phone Number</label>
+      <div class="phone-group">
+        <select id="countryCode" required>
+          <option value="">Code</option>
+        </select>
+        <input type="tel" id="phoneNumber" placeholder="Phone number" required>
+      </div>
+    </div>
+    
+    <div id="statusMessage" class="status-message"></div>
+    
+    <button onclick="handleSignup()" id="signupBtn">Complete Sign Up</button>
+  </div>
+
+  <!-- LOGIN FORM -->
+  <div id="loginForm" style="display: none;">
+    <div class="form-group">
+      <label>Email Address</label>
+      <input type="email" id="loginEmail" placeholder="your@email.com" required>
+    </div>
+    
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="loginPassword" placeholder="Enter your password" required>
+    </div>
+    
+    <button onclick="handleLogin()">Login</button>
+  </div>
+
+  <pre id="output"></pre>
+</div>
+
+<script>
+const API_BASE = (window.location.origin.includes('localhost:3001') || window.location.origin.includes('127.0.0.1:3001')) 
+  ? '' 
+  : 'http://localhost:3001';
+
+console.log('🔥 API_BASE:', API_BASE);
+console.log('🔥 Window origin:', window.location.origin);
+
+  // 🧠 Auth Flow Control: Auto-redirect if session is active
+  if (localStorage.getItem("session_active") === "true") {
+    window.location.href = "/yt-new-clear.html";
+  }
+
+  let sessionId = null;
+let verificationStatus = { email: false, phone: false };
+let countriesData = [];
+let religionsData = [];
+
+// Load data on page load
+document.addEventListener('DOMContentLoaded', async () => {
+  await Promise.all([loadCountries(), loadReligions()]);
+});
+
+async function loadCountries() {
+  const loadingEl = document.getElementById('countryLoading');
+  if (loadingEl) loadingEl.textContent = '(loading...)';
+  try {
+    const response = await fetch(`${API_BASE}/api/countries`);
+    const data = await response.json();
+    if (data.success) {
+      countriesData = data.countries;
+      populateCountrySelects();
+    }
+  } catch (error) {
+    console.error('Failed to load countries:', error);
+  } finally {
+    if (loadingEl) loadingEl.textContent = '';
+  }
+}
+
+async function loadReligions() {
+  const loadingEl = document.getElementById('religionLoading');
+  if (loadingEl) loadingEl.textContent = '(loading...)';
+  try {
+    const response = await fetch(`${API_BASE}/api/religions`);
+    const data = await response.json();
+    if (data.success) {
+      religionsData = data.religions;
+      populateReligionSelect();
+    }
+  } catch (error) {
+    // Fallback
+    religionsData = [
+      { value: 'Islam', label: 'Islam', icon: '☪️' },
+      { value: 'Christianity', label: 'Christianity', icon: '✝️' },
+      { value: 'Judaism', label: 'Judaism', icon: '✡️' },
+      { value: 'Hinduism', label: 'Hinduism', icon: '🕉️' },
+      { value: 'Buddhism', label: 'Buddhism', icon: '☸️' },
+      { value: 'Sikhism', label: 'Sikhism', icon: '🪯' },
+      { value: 'Atheist', label: 'Atheist', icon: '⚛️' },
+      { value: 'Agnostic', label: 'Agnostic', icon: '❓' },
+      { value: 'Other', label: 'Other', icon: '🌐' },
+      { value: 'Prefer not to say', label: 'Prefer not to say', icon: '🤫' }
+    ];
+    populateReligionSelect();
+  } finally {
+    if (loadingEl) loadingEl.textContent = '';
+  }
+}
+
+function populateCountrySelects() {
+  const countrySelect = document.getElementById('country');
+  const countryCodeSelect = document.getElementById('countryCode');
+  
+  if (!countrySelect || !countryCodeSelect) return;
+
+  countrySelect.innerHTML = '<option value="">-- Select Country --</option>';
+  countryCodeSelect.innerHTML = '<option value="">Code</option>';
+  
+  countriesData.forEach(country => {
+    const option = document.createElement('option');
+    option.value = country.code;
+    option.textContent = `${country.flag} ${country.name}`;
+    option.setAttribute('data-phone-code', country.phoneCode);
+    countrySelect.appendChild(option);
+    
+    const codeOption = document.createElement('option');
+    codeOption.value = country.phoneCode;
+    codeOption.textContent = `${country.flag} ${country.phoneCode}`;
+    codeOption.setAttribute('data-country', country.code);
+    countryCodeSelect.appendChild(codeOption);
+  });
+}
+
+function populateReligionSelect() {
+  const religionSelect = document.getElementById('religion');
+  if (!religionSelect) return;
+
+  religionSelect.innerHTML = '<option value="">-- Select Religion --</option>';
+  religionsData.forEach(religion => {
+    const option = document.createElement('option');
+    option.value = religion.value;
+    option.textContent = `${religion.icon || ''} ${religion.label || religion.value}`;
+    religionSelect.appendChild(option);
+  });
+}
+
+function updateCountryCode() {
+  const countrySelect = document.getElementById('country');
+  const countryCodeSelect = document.getElementById('countryCode');
+  if (!countrySelect || !countryCodeSelect) return;
+
+  const selectedOption = countrySelect.options[countrySelect.selectedIndex];
+  const phoneCode = selectedOption.getAttribute('data-phone-code');
+  
+  if (phoneCode) {
+    for (let i = 0; i < countryCodeSelect.options.length; i++) {
+      if (countryCodeSelect.options[i].value === phoneCode) {
+        countryCodeSelect.selectedIndex = i;
+        break;
+      }
+    }
+  }
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+  
+  if (tab === 'signup') {
+    document.getElementById('signupForm').style.display = 'block';
+    document.getElementById('loginForm').style.display = 'none';
+  } else {
+    document.getElementById('signupForm').style.display = 'none';
+    document.getElementById('loginForm').style.display = 'block';
+  }
+}
+
+function showStatus(message, type) {
+  const statusEl = document.getElementById('statusMessage');
+  if (!statusEl) return;
+  statusEl.textContent = message;
+  statusEl.className = 'status-message ' + type;
+  setTimeout(() => {
+    statusEl.className = 'status-message';
+  }, 5000);
+}
+
+async function sendHybridOTP() {
+  const email = document.getElementById('signupEmail').value.trim();
+  const phone = document.getElementById('phoneNumber').value.trim();
+  const countryCode = document.getElementById('countryCode').value;
+  
+  console.log('🔥 Sending OTP with:', { email, phone, countryCode });
+  
+  if (!email || !phone || !countryCode) {
+    showStatus('Please fill in all fields', 'error');
+    return;
+  }
+  
+  const sendBtn = document.getElementById('sendOtpBtn');
+  sendBtn.disabled = true;
+  sendBtn.innerHTML = '<span class="loading"></span> Sending...';
+  
+  try {
+    // Debug: Log the exact URL being called
+    const url = `${API_BASE}/api/auth/send-hybrid-otp`;
+    console.log('🔥 Fetching URL:', url);
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      credentials: 'include', // 🛡️ CRITICAL for cookies
+      body: JSON.stringify({ email, phone, countryCode })
+    });
+    
+    console.log('🔥 Response status:', response.status);
+    
+    const data = await response.json();
+    console.log('🔥 Response data:', data);
+    
+    if (data.success) {
+      sessionId = data.sessionId;
+      document.getElementById('verificationSection').classList.add('active');
+      showStatus(data.message, 'success');
+      
+      // Show mock OTP in development
+      if (data.mockOtp) {
+        console.log('🔐 DEVELOPMENT OTP:', data.mockOtp);
+        const output = document.getElementById('output');
+        if (output) output.textContent = `[DEV MOCK OTP]: ${data.mockOtp}`;
+      }
+      
+      startTimer();
+    } else {
+      showStatus(data.error || 'Failed to send OTP', 'error');
+    }
+    
+  } catch (error) {
+    // 🛡️ CRITICAL: Log the actual error
+    console.error('🔥 Fetch error:', error);
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    
+    showStatus(`Network error: ${error.message}`, 'error');
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.textContent = 'Send Verification Codes';
+  }
+}
+
+async function verifyOTP(channel) {
+  const otpInput = channel === 'email' ? 'emailOtp' : 'phoneOtp';
+  const otp = document.getElementById(otpInput).value.trim();
+  
+  if (!otp || otp.length !== 6) {
+    showStatus(`Please enter the 6-digit OTP`, 'error');
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${API_BASE}/api/auth/verify-hybrid-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId, otp, channel })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      verificationStatus[channel] = true;
+      updateChannelStatus(channel, true);
+      
+      if (data.verified) {
+        showStatus('Phone number verified! You can now complete signup.', 'success');
+        document.getElementById('signupBtn').disabled = false;
+        if (document.getElementById('phoneOtpInput')) {
+          document.getElementById('phoneOtpInput').style.display = 'none';
+        }
+      }
+    } else {
+      showStatus(data.error || 'Invalid OTP', 'error');
+    }
+  } catch (error) {
+    showStatus('Verification failed. Please try again.', 'error');
+  }
+}
+
+async function resendOTP(channel) {
+  try {
+    const response = await fetch(`${API_BASE}/api/auth/resend-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId, channel })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      showStatus(`OTP resent via ${channel}`, 'success');
+    } else {
+      showStatus(data.error || 'Failed to resend', 'error');
+    }
+  } catch (error) {
+    showStatus('Failed to resend OTP', 'error');
+  }
+}
+
+function updateChannelStatus(channel, verified) {
+  const channelEl = document.getElementById(channel + 'Channel');
+  const statusEl = document.getElementById(channel + 'Status');
+  const inputEl = document.getElementById(channel + 'OtpInput');
+  
+  if (verified && channelEl && statusEl && inputEl) {
+    channelEl.classList.remove('pending');
+    channelEl.classList.add('verified');
+    statusEl.textContent = '✓ Verified';
+    inputEl.style.display = 'none';
+    
+    // Enable signup button when verification is successful
+    if (channel === 'phone') {
+      const signupBtn = document.getElementById('signupBtn');
+      if (signupBtn) signupBtn.disabled = false;
+    }
+  }
+}
+
+function startTimer() {
+  let seconds = 600; // 10 minutes
+  
+  const timerEl = document.getElementById('timer');
+  if (!timerEl) return;
+
+  const interval = setInterval(() => {
+    seconds--;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    timerEl.textContent = `Codes expire in ${mins}:${secs.toString().padStart(2, '0')}`;
+    
+    if (seconds <= 0) {
+      clearInterval(interval);
+      timerEl.textContent = 'Codes expired. Please request new codes.';
+    }
+  }, 1000);
+}
+
+async function handleSignup() {
+  const email = document.getElementById('signupEmail').value.trim();
+  const username = document.getElementById('signupUsername').value.trim();
+  const password = document.getElementById('signupPassword').value;
+  const religion = document.getElementById('religion').value;
+  const country = document.getElementById('country').value;
+  const countryCode = document.getElementById('countryCode').value;
+  const phone = document.getElementById('phoneNumber').value.trim();
+  
+  if (!email || !username || !password || !religion || !country || !phone) {
+    showStatus('Please fill in all fields', 'error');
+    return;
+  }
+  
+  const signupBtn = document.getElementById('signupBtn');
+  signupBtn.disabled = true;
+  signupBtn.innerHTML = '<span class="loading"></span> Creating account...';
+  
+  try {
+    const response = await fetch(`${API_BASE}/api/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        email,
+        username,
+        password,
+        religion,
+        country,
+        phone,
+        countryCode
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.status === 'success') {
+      showStatus('Account created successfully! Redirecting...', 'success');
+      
+      // 🛡️ CRITICAL: Store session and update auth state
+      const session = {
+        userId: data.userId,
+        sessionId: data.sessionId,
+        user: data.user
+      };
+      localStorage.setItem('session_token', data.sessionId);
+      localStorage.setItem('user_data', JSON.stringify(data.user));
+      
+      // 🧠 Auth Flow Control
+      localStorage.setItem('session_active', 'true');
+      
+      // FIXED: Update auth state to authenticated in AuthCore
+      if (window.AuthCore && typeof window.AuthCore._setState === 'function') {
+        window.AuthCore._setState({
+          authenticated: true,
+          status: 'active',
+          userId: data.userId,
+          sessionId: data.sessionId,
+          user: data.user
+        });
+      }
+      
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1500);
+    } else {
+      if (data.error === 'USER_EXISTS') {
+        showStatus('Account already exists. Please sign in.', 'error');
+        return;
+      }
+      showStatus(data.error || 'Signup failed', 'error');
+      signupBtn.disabled = false;
+      signupBtn.textContent = 'Complete Sign Up';
+    }
+  } catch (error) {
+    showStatus('Network error. Please try again.', 'error');
+    signupBtn.disabled = false;
+    signupBtn.textContent = 'Complete Sign Up';
+  }
+}
+
+async function handleLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+
+  if (!email || !password) {
+    showStatus('Email and password required', 'error');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await response.json();
+
+    if (data.status === 'success') {
+      showStatus('Login successful! Redirecting...', 'success');
+      
+      // 🛡️ CRITICAL: Store session and update auth state
+      localStorage.setItem('session_token', data.sessionId);
+      if (data.user) {
+        localStorage.setItem('user_data', JSON.stringify(data.user));
+      }
+      
+      // 🧠 Auth Flow Control
+      localStorage.setItem('session_active', 'true');
+      
+      // FIXED: Update auth state to authenticated in AuthCore
+      if (window.AuthCore && typeof window.AuthCore._setState === 'function') {
+        window.AuthCore._setState({
+          authenticated: true,
+          status: 'active',
+          userId: data.userId,
+          sessionId: data.sessionId,
+          user: data.user
+        });
+      }
+      
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1500);
+    } else {
+      showStatus(data.error || 'Login failed', 'error');
+    }
+  } catch (error) {
+    showStatus('Network error. Please try again.', 'error');
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Samma3ny Loader</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #0f172a; 
+            color: #e2e8f0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        #loader {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #0f172a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.3s;
+        }
+        #loader.hidden { opacity: 0; pointer-events: none; }
+        .spinner {
+            width: 50px; height: 50px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #error-display {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            max-width: 500px;
+        }
+        #error-display.visible { display: block; }
+        .error-icon { font-size: 48px; margin-bottom: 16px; }
+        .retry-btn {
+            margin-top: 20px;
+            padding: 12px 24px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .retry-btn:hover { background: #2563eb; }
+        
+        #service-frame {
+            flex: 1;
+            width: 100%;
+            border: none;
+            display: none;
+        }
+        #service-frame.loaded { display: block; }
+    </style>
+</head>
+<body>
+    <div id="loader">
+        <div class="spinner"></div>
+        <p>Loading Samma3ny...</p>
+        <div id="error-display">
+            <div class="error-icon">⚠️</div>
+            <h2>Failed to Load Samma3ny</h2>
+            <p id="error-message">Unknown error occurred</p>
+            <button class="retry-btn" onclick="location.reload()">Retry</button>
+            <button class="retry-btn" onclick="forceLoad()" style="margin-left: 10px; background: #10b981;">Force Load (No Bridge)</button>
+        </div>
+    </div>
+
+    <iframe id="service-frame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-top-navigation-by-user-activation"></iframe>
+
+    <script>
+        const BRIDGE_TIMEOUT = 8000;
+        let bridgeConnected = false;
+        // 1️⃣ Fix AssetBus origin detection
+        const ParentBridge = {
+            send: function(data) {
+                if (window.parent !== window) {
+                    window.parent.postMessage({
+                        type: 'samma3ny-loader',
+                        ...data,
+                        timestamp: Date.now()
+                    }, '*'); // Handshake uses '*'
+                }
+            },
+            receive: function(callback) {
+                window.addEventListener('message', (e) => {
+                    if (e.data?.type === 'auth:ready' || e.data?.type === 'codebank:init') {
+                        callback(e.data);
+                    }
+                });
+            }
+        };
+        async function init() {
+            ParentBridge.send({ status: 'loader-ready' });
+            ParentBridge.receive((data) => {
+                bridgeConnected = true;
+                loadService(data);
+            });
+            setTimeout(() => {
+                if (!bridgeConnected) {
+                    loadService(null);
+                }
+            }, 2000);
+        }
+        function loadService(authData) {
+            const frame = document.getElementById('service-frame');
+            const loader = document.getElementById('loader');
+            const baseUrl = './samma3ny/index.html';
+            const url = baseUrl + (baseUrl.includes('?') ? '&' : '?') + '_loader=' + Date.now();
+            frame.onload = () => {
+                setTimeout(() => {
+                    if (frame.contentWindow) {
+                        frame.contentWindow.postMessage({
+                            type: 'auth:ready',
+                            source: 'samma3ny-loader',
+                            payload: authData?.payload || authData || {}
+                        }, '*');
+                    }
+                }, 1000);
+                frame.classList.add('loaded');
+                loader.classList.add('hidden');
+                ParentBridge.send({ status: 'service-loaded' });
+            };
+            frame.src = url;
+        }
+        function forceLoad() {
+            const frame = document.getElementById('service-frame');
+            frame.removeAttribute('sandbox');
+            frame.src = './samma3ny/index.html?_force=' + Date.now();
+            document.getElementById('loader').classList.add('hidden');
+            frame.classList.add('loaded');
+        }
+        init();
+    </script>
+</body>
+</html>

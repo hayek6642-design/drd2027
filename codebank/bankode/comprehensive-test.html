@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comprehensive Supabase Fix Test</title>
+
+  <!-- Supabase (Module-based) - This is the FIX -->
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+    // Initialize Supabase globally
+    window.supabase = createClient(
+      'https://obmufgumrrxjvgjquqro.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ibXVmZ3VtcnJ4anZnanF1cXJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc2NzY0MTUsImV4cCI6MjA1MzI1MjQxNX0.wUKntErBvsfTgX5FJZ45TdC697Hg63rgkQcI5P-3SpQ'
+    );
+
+    // Authentication helper
+    window.checkAuth = async function() {
+      try {
+        const { data: { session }, error } = await window.supabase.auth.getSession();
+        if (error) { console.error('Auth error:', error); return null; }
+        return session?.user || null;
+      } catch (err) {
+        console.error('Check auth error:', err);
+        return null;
+      }
+    };
+
+    // Helper to wait for Supabase before running scripts
+    async function initApp() {
+      console.log('Starting Supabase initialization...');
+
+      // Wait until supabase is available
+      while (!window.supabase || typeof window.supabase.createClient !== 'function') {
+        await new Promise(r => setTimeout(r, 50));
+      }
+
+      console.log('✅ Supabase ready, now loading dependent scripts');
+
+      // Test 1: Basic Supabase functionality
+      console.log('🔍 Test 1: Supabase client exists:', !!window.supabase);
+      console.log('🔍 Test 1: Supabase has createClient method:', typeof window.supabase.createClient === 'function');
+
+      // Test 2: Authentication helper works
+      try {
+        const user = await window.checkAuth();
+        console.log('🔍 Test 2: Authentication check completed, user:', user ? 'authenticated' : 'null');
+      } catch (error) {
+        console.error('🔍 Test 2: Authentication check failed:', error);
+      }
+
+      // Test 3: Simulate unifiedStorage.js behavior
+      try {
+        console.log('🔍 Test 3: Starting unifiedStorage simulation...');
+
+        // This simulates what unifiedStorage.js does
+        async function waitForSupabase(timeout = 5000) {
+          const interval = 50;
+          let waited = 0;
+
+          return new Promise((resolve, reject) => {
+            const check = () => {
+              if (window.supabase && typeof window.supabase.createClient === 'function') {
+                resolve(window.supabase);
+              } else {
+                waited += interval;
+                if (waited >= timeout) {
+                  reject(new Error('Supabase client not initialized within timeout'));
+                } else {
+                  setTimeout(check, interval);
+                }
+              }
+            };
+            check();
+          });
+        }
+
+        const supabase = await waitForSupabase();
+        console.log('🔍 Test 3: ✅ unifiedStorage simulation passed - Supabase available');
+
+        // Test Supabase query (simulated)
+        console.log('🔍 Test 3: Supabase client ready for queries');
+
+      } catch (error) {
+        console.error('🔍 Test 3: unifiedStorage simulation failed:', error);
+      }
+
+      // Test 4: Simulate bankode-safe.js behavior
+      try {
+        console.log('🔍 Test 4: Starting bankode-safe simulation...');
+
+        // This simulates what bankode-safe.js does
+        const supabase = window.unifiedStorage && window.unifiedStorage.supabase;
+        const supabaseAvailable = !!supabase;
+
+        console.log('🔍 Test 4: Supabase available for bankode-safe:', supabaseAvailable);
+
+        // Test DOMContentLoaded handling
+        if (document.readyState !== 'loading') {
+          console.log('🔍 Test 4: DOM is ready, would initialize AssetSafe');
+        } else {
+          console.log('🔍 Test 4: Waiting for DOMContentLoaded...');
+        }
+
+      } catch (error) {
+        console.error('🔍 Test 4: bankode-safe simulation failed:', error);
+      }
+
+      // Load the actual scripts to test the real implementation
+      console.log('🔍 Loading actual scripts for full test...');
+
+      // Load unifiedStorage.js
+      const unifiedStorageScript = document.createElement('script');
+      unifiedStorageScript.src = './unifiedStorage.js';
+      unifiedStorageScript.onload = () => console.log('✅ unifiedStorage.js loaded successfully');
+      unifiedStorageScript.onerror = () => console.error('❌ Failed to load unifiedStorage.js');
+      document.head.appendChild(unifiedStorageScript);
+
+      // Load bankode-safe.js
+      const bankodeSafeScript = document.createElement('script');
+      bankodeSafeScript.src = './safe/bankode-safe.js';
+      bankodeSafeScript.onload = () => console.log('✅ bankode-safe.js loaded successfully');
+      bankodeSafeScript.onerror = () => console.error('❌ Failed to load bankode-safe.js');
+      document.head.appendChild(bankodeSafeScript);
+
+      console.log('🎉 All tests completed!');
+    }
+
+    initApp();
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h1>Comprehensive Supabase Fix Test</h1>
+    <p>This test verifies that the Supabase initialization fix works correctly.</p>
+
+    <div class="test-results">
+      <h2>Test Results:</h2>
+      <ul id="results">
+        <li>⏳ Waiting for tests to run...</li>
+      </ul>
+    </div>
+
+    <div class="asset-safe-container" style="display: none;">
+      <div class="safe-3d-scene">
+        <div class="safe-frame">
+          <div class="safe-door-3d"></div>
+          <div class="safe-handle"></div>
+          <div class="safe-dial"></div>
+          <div class="safe-bolts"></div>
+          <div class="safe-led"></div>
+          <div class="safe-inner-chamber"></div>
+          <div class="password-panel"></div>
+          <div class="safe-instructions"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Capture console logs and display them
+    (function() {
+      const originalConsoleLog = console.log;
+      const originalConsoleError = console.error;
+      const resultsList = document.getElementById('results');
+
+      console.log = function(...args) {
+        originalConsoleLog.apply(console, args);
+        const li = document.createElement('li');
+        li.textContent = args.join(' ');
+        li.style.color = args[0] && args[0].includes('✅') ? 'green' :
+                        args[0] && args[0].includes('❌') ? 'red' : 'inherit';
+        resultsList.appendChild(li);
+      };
+
+      console.error = function(...args) {
+        originalConsoleError.apply(console, args);
+        const li = document.createElement('li');
+        li.textContent = args.join(' ');
+        li.style.color = 'red';
+        resultsList.appendChild(li);
+      };
+    })();
+  </script>
+</body>
+</html>

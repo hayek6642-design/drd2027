@@ -1,0 +1,5 @@
+import { verify as verifyAccess } from '../jwt/verifyAccess.js'
+import { verify as verifyRefresh } from '../jwt/verifyRefresh.js'
+import { rotate } from '../jwt/rotateRefresh.js'
+import { setAuthCookies } from '../utils/cookie.js'
+export async function authGuard(req,res,next){ const at=req.cookies?.access_token; const rt=req.cookies?.refresh_token; const pub=req.app.locals.publicPem; const priv=req.app.locals.privatePem; const acc=at?verifyAccess(at,pub):null; if(acc){ req.user=acc; return next() } const ref=rt?verifyRefresh(rt,pub):null; if(ref){ const newAt={ sub:ref.sub, role:ref.role, exp: Math.floor(Date.now()/1000)+900 }; const access=await import('../jwt/signAccess.js').then(m=>m.sign(newAt,priv)); const refresh=rotate(rt,priv,pub); setAuthCookies(res, access, refresh); req.user=newAt; return next() } res.status(401).end() }

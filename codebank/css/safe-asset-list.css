@@ -1,0 +1,232 @@
+/* ===================================================
+   Unified Safe Asset List Styles
+   =================================================== */
+
+/* Layout container fit (align with Samma3ny playlist) */
+#codebank-assets-tab,
+#codebank-assets-tab .safe-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0; /* allow inner scroll areas to size correctly */
+}
+
+/* Scrollable list area */
+#safe-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+/* Header Styles */
+#safe-title {
+  font-size: 1.2em;
+  font-weight: 600;
+  color: #eaeaea;
+  margin-bottom: 8px;
+}
+
+#safe-count {
+  font-size: 0.9em;
+  color: #94a3b8;
+}
+
+#safe-last {
+  font-size: 0.85em;
+  color: #64748b;
+  font-family: 'Courier New', monospace;
+}
+
+/* Safe Item Styles */
+.safe-item {
+  padding: 12px 16px;
+  border-radius: 8px;
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.safe-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.safe-item.selected {
+  background: linear-gradient(180deg, rgba(59,130,246,0.12) 0%, rgba(37,99,235,0.10) 100%);
+  border-color: rgba(59,130,246,0.5);
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.35) inset, 0 6px 16px rgba(0,0,0,0.35);
+}
+
+.safe-item.selected.safe-gold {
+  background: linear-gradient(180deg, rgba(255,193,7,0.15) 0%, rgba(255,179,0,0.12) 100%);
+  border-color: rgba(255, 179, 0, 0.6);
+  box-shadow: 0 0 0 2px rgba(255, 179, 0, 0.35) inset, 0 6px 16px rgba(0,0,0,0.35);
+}
+
+.safe-item.selected.safe-silver {
+  background: linear-gradient(180deg, rgba(176,190,197,0.18) 0%, rgba(144,164,174,0.12) 100%);
+  border-color: rgba(176,190,197,0.6);
+  box-shadow: 0 0 0 2px rgba(176,190,197,0.35) inset, 0 6px 16px rgba(0,0,0,0.35);
+}
+
+/* Newly received highlight (gold shimmer) */
+.safe-item.newly-received {
+  position: relative;
+  background: linear-gradient(180deg, rgba(255,215,0,0.12) 0%, rgba(255,215,0,0.08) 100%);
+  border-color: rgba(255,215,0,0.6);
+  box-shadow: 0 0 12px rgba(255,215,0,0.25), inset 0 0 0 2px rgba(255,215,0,0.35);
+}
+.safe-item.newly-received::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 0%, rgba(255,215,0,0.18) 40%, transparent 80%);
+  animation: safe-shimmer 1.6s infinite;
+  pointer-events: none;
+}
+.safe-badge-new {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #0f172a;
+  background: #FFD700;
+  border-radius: 10px;
+}
+@keyframes safe-shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+/* Asset Type Specific Styles */
+.safe-codes {
+  color: #eaeaea;
+  border-left: 4px solid #64748b;
+}
+
+.safe-codes:hover {
+  background-color: #334155;
+  border-left-color: #94a3b8;
+}
+
+.safe-silver {
+  color: #cfd8dc;
+  border-left: 4px solid #b0bec5;
+  background: linear-gradient(135deg, #1e293b 0%, #263238 100%);
+}
+
+.safe-silver:hover {
+  background: linear-gradient(135deg, #334155 0%, #37474f 100%);
+  border-left-color: #eceff1;
+  box-shadow: 0 4px 12px rgba(192, 192, 192, 0.2);
+}
+
+.safe-gold {
+  color: #ffd700;
+  border-left: 4px solid #ffb300;
+  background: linear-gradient(135deg, #1e293b 0%, #2d2d00 100%);
+}
+
+.safe-gold:hover {
+  background: linear-gradient(135deg, #334155 0%, #3d3d00 100%);
+  border-left-color: #ffca28;
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);
+}
+
+/* Empty State */
+.safe-empty {
+  padding: 24px;
+  text-align: center;
+  color: #64748b;
+  font-style: italic;
+}
+
+/* Pagination - sticky bottom like Samma3ny panel footer */
+.safe-pagination {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 8px;
+  margin-top: 8px;
+  background: linear-gradient(180deg, rgba(15,23,42,0) 0%, rgba(15,23,42,0.85) 40%, rgba(15,23,42,1) 100%);
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Tab Button Styles */
+.safe-tab-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background-color: #334155;
+  color: #eaeaea;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-right: 8px;
+}
+
+.safe-tab-button:hover {
+  background-color: #475569;
+}
+
+.safe-tab-button.active {
+  background-color: #3b82f6;
+  color: white;
+  font-weight: 600;
+}
+
+/* Tab-specific active states */
+.safe-tab-button[data-tab="codes"].active {
+  background-color: #64748b;
+}
+
+.safe-tab-button[data-tab="silver"].active {
+  background-color: #b0bec5;
+  color: #1e293b;
+}
+
+.safe-tab-button[data-tab="gold"].active {
+  background-color: #ffb300;
+  color: #1e293b;
+}
+
+/* Scrollbar Styling */
+#safe-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+#safe-list::-webkit-scrollbar-track {
+  background: #1e293b;
+  border-radius: 4px;
+}
+
+#safe-list::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+
+#safe-list::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .safe-item {
+    padding: 10px 12px;
+    font-size: 0.85em;
+  }
+
+  .safe-tab-button {
+    padding: 6px 12px;
+    font-size: 0.85em;
+  }
+}

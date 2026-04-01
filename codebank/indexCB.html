@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="/codebank/">
+    <title>CodeBank Exchange - Professional Banking Services</title>
+    
+    <!-- 2️⃣ FIXED CSP Policy -->
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; font-src * data: 'self'; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src * data: blob:; media-src *; frame-src *;">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAABILAAASCwAAAAAAAAAAAAD///8A////AP///wA=">
+    
+    <!-- ⚡ EMERGENCY PERFORMANCE FIXES (Phase 1) -->
+    <script src="./js/performance-monitor.js"></script>
+    <script>
+        // 1. Reduce Watch-Dog polling frequency immediately
+        window.WATCH_DOG_INTERVAL = 30000; // 30s instead of 1s
+        
+        // 2. Performance-oriented CSS optimizations
+        const perfStyle = document.createElement('style');
+        perfStyle.textContent = `
+            /* Reduce CPU/GPU load from heavy effects */
+            * {
+                box-shadow: none !important;
+                text-shadow: none !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+            }
+            
+            /* Simplify animations */
+            .animate-spin {
+                animation: spin 2s linear infinite !important;
+            }
+            
+            /* Disable transitions globally for instant feel & zero CPU during idle */
+            * {
+                transition: none !important;
+            }
+            
+            /* Optimize will-change usage */
+            .app-card, .btn, .tab-btn {
+                will-change: auto !important;
+            }
+            
+            .app-card:hover {
+                will-change: transform !important;
+            }
+        `;
+        document.head.appendChild(perfStyle);
+
+        // 3. Pause non-critical tasks when tab is hidden
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                console.log('[PERF] Tab hidden, pausing non-critical tasks...');
+                window.__PAUSE_WATCHDOG__ = true;
+            } else {
+                console.log('[PERF] Tab visible, resuming tasks...');
+                window.__PAUSE_WATCHDOG__ = false;
+            }
+        });
+
+        // 4. Safe requestAnimationFrame throttling (Avoid breakage)
+        const originalRAF = window.requestAnimationFrame;
+        window.requestAnimationFrame = (fn) => {
+            return originalRAF(() => {
+                try {
+                    fn();
+                } catch (e) {
+                    console.error('RAF error:', e);
+                }
+            });
+        };
+    </script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles/styles.css">
+    <link rel="stylesheet" href="css/safe-asset-list.css">
+    
+    <!-- External Dependencies -->
+    <script src="/codebank/js/index.js"></script>
+    <script src="/codebank/js/utils.js"></script>
+    <script type="module">
+        import { AssetBus } from '/shared/local-asset-bus.js';
+        
+        // 🛡️ Phase 2: Expose Single Source of Truth
+        if (window.self === window.top) { 
+            window.AssetBus = AssetBus; 
+            console.log("✅ AssetBus exposed globally"); 
+        }
+        
+        // 🛡️ Phase 3: Secure Event Dispatch
+        try {
+            window.dispatchEvent(new CustomEvent('assetbus:ready', { detail: { snapshot: AssetBus.snapshot() } }));
+        } catch (e) {
+            console.error("⚠️ Failed to dispatch assetbus:ready event:", e);
+        }
+    </script>
+    <script src="/codebank/bankode-assetbus-bridge.js"></script>
+    
+    <!-- Modular App Core -->
+    <script type="module" src="/codebank/js/app-core.js"></script>
+    <script src="/codebank/js/service-manager.js"></script>
+    <script type="module" src="/codebank/js/sync-test.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #FF6B35;
+            --secondary-color: #8B5CF6;
+            --accent-color: #58a6ff;
+            --bg-gradient-start: #87CEEB;
+            --bg-gradient-end: #B0E0E6;
+            --text-color: #E0E0E0;
+            --text-muted: #8b949e;
+            --text-bright: #ffffff;
+            --card-bg: rgba(22, 27, 34, 0.8);
+            --border-color: #30363d;
+            --hover-bg: #21262d;
+            --success-color: #00ff88;
+            --error-color: #f85149;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.2);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --glow-primary: 0 0 20px rgba(255, 107, 53, 0.3);
+            --glow-secondary: 0 0 20px rgba(139, 92, 246, 0.3);
+            --transition-fast: 0.2s ease;
+            --transition-normal: 0.3s ease;
+            --transition-slow: 0.6s ease;
+            
+            /* App Launcher Variables */
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --accent: #f59e0b;
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --bg-glass: rgba(30, 41, 59, 0.7);
+            --bg-glass-light: rgba(255, 255, 255, 0.05);
+            --text-primary: #f8fafc;
+            --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+            --gradient-dark: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+            --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.4);
+            --shadow-glow-pink: 0 0 20px rgba(236, 72, 153, 0.4);
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* 🎯 Community Mission Styles */
+        .mission-container {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 600px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mission-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #f8fafc;
+            margin-bottom: 12px;
+        }
+
+        .mission-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 20px;
+        }
+
+        /* Endless Progress Bar Logic */
+        .progress-wrapper {
+            position: relative;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            padding: 2px;
+        }
+
+        .progress-bracket {
+            color: rgba(255, 255, 255, 0.4);
+            font-weight: bold;
+            padding: 0 5px;
+            user-select: none;
+        }
+
+        .progress-track {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(255, 255, 255, 0.05) 10px,
+                rgba(255, 255, 255, 0.05) 20px
+            );
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s ease;
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+
+        /* Tiers */
+        .tier-grey { background-color: #ffffff; box-shadow: 0 0 10px rgba(255, 255, 255, 0.3); }
+        .tier-green { background-color: #00ff88; box-shadow: 0 0 15px rgba(0, 255, 136, 0.4); }
+        .tier-silver { background-color: #c0c0c0; box-shadow: 0 0 20px rgba(192, 192, 192, 0.5); background-image: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); background-size: 200% 100%; animation: silver-shine 3s infinite; }
+
+        @keyframes silver-shine {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .mission-stats {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        .multiplier-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .copy-icon {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .copy-icon:hover { color: #ffffff; }
+
+        body {
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            background-attachment: fixed;
+            color: var(--text-color);
+            font-family: 'Poppins', 'Inter', -apple-system, sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* Essential UI Classes */
+        .card { background: var(--card-bg); backdrop-filter: blur(20px); border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); }
+        .btn { padding: 12px 24px; border-radius: 12px; cursor: pointer; transition: all 0.3s; font-weight: 600; }
+        .btn-primary { background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; }
+        
+        /* Service Modal Styles - ONLY container used */
+        #service-modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          display: none;
+          flex-direction: column;
+          z-index: 10000;
+          background: #0f172a;
+        }
+
+        #service-modal.active {
+          display: flex !important;
+        }
+
+        #service-modal .service-modal-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 10px 20px;
+          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+          color: white;
+          height: 60px;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+          z-index: 10001;
+          flex-shrink: 0;
+        }
+
+        .service-iframe-container {
+          flex: 1;
+          position: relative;
+          background: #0f172a;
+          overflow: hidden;
+        }
+
+        #service-modal iframe {
+          width: 100% !important;
+          height: 100% !important;
+          border: none !important;
+          display: block !important;
+          opacity: 1 !important;
+          visibility: visible !important;
+          background: #0f172a !important;
+        }
+
+        .service-loading {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          background: #0f172a;
+          z-index: 10000;
+          transition: opacity 0.3s ease;
+        }
+
+        .service-loading.hidden {
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        /* REMOVE LEGACY APP-RUNNER - Not used anymore */
+        #app-runner { display: none !important; }
+        
+        .dock-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 500; }
+        .dock { display: flex; align-items: flex-end; gap: 12px; padding: 12px 20px; background: var(--bg-glass); backdrop-filter: blur(20px); border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); }
+        
+        .launcher-section { margin-bottom: 32px; padding: 0 20px; }
+        .app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 24px; }
+        .app-card { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; transition: 0.3s; }
+        .app-icon-wrapper { width: 72px; height: 72px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 32px; background: var(--bg-glass-light); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 10000; }
+        .toast { background: rgba(22,27,34,0.95); border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; box-shadow: var(--shadow-lg); animation: toastSlideIn 0.3s ease-out; }
+        
+        @keyframes toastSlideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+        
+        /* SafeCode Content Visibility Fixes */
+        .safe-container,
+        .safe-asset-list,
+        #safeCodeFrame,
+        iframe[data-service="safecode"],
+        .service-iframe-container iframe {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            min-height: 400px !important;
+        }
+        
+        /* Ensure iframe content is visible */
+        iframe {
+            color-scheme: normal;
+        }
+    </style>
+</head>
+<body>
+    <div id="codebank-root">
+        <!-- Header -->
+        <header class="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 text-white shadow-2xl backdrop-blur-md border-b border-white/10 p-4">
+            <div class="container mx-auto flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <button id="back-btn" class="p-3 hover:bg-white/10 rounded-xl transition-all" onclick="window.location.href='yt-new.html'">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <div>
+                        <h1 class="text-2xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">CodeBank Exchange</h1>
+                        <p class="text-blue-300 text-sm">Professional Banking Services</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-6">
+                    <!-- Stats -->
+                    <div id="user-balance" class="text-right">
+                        <div class="font-semibold text-sm">Portfolio Value</div>
+                        <div class="text-blue-200 text-xs">≈ <span id="total-egp-value">0.00</span> EGP</div>
+                    </div>
+                    
+                    <div class="flex items-center bg-white/10 px-4 py-2 rounded-full border border-white/20">
+                        <i class="fas fa-coins text-yellow-400 mr-2"></i>
+                        <span id="header-codes-count" class="font-bold">0</span>
+                    </div>
+
+                    <button id="settings-btn" class="p-2 bg-blue-700 hover:bg-blue-800 rounded-lg transition-colors">
+                        <i class="fas fa-user-circle"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Launcher Grid -->
+        <main class="container mx-auto py-8">
+            <!-- 🎯 Community Mission (YouTube Subscriber Progress) -->
+            <div class="mission-container">
+                <div class="copy-icon"><i class="far fa-copy"></i></div>
+                <div class="mission-header">
+                    <span class="text-red-500">🎯</span>
+                    <span>Community Mission</span>
+                </div>
+                <div class="mission-title">Reach <span id="mission-target-label">1000</span> YouTube Subscribers</div>
+                
+                <div class="progress-wrapper">
+                    <span class="progress-bracket">[</span>
+                    <div class="progress-track">
+                        <div id="mission-progress-fill" class="progress-fill tier-grey"></div>
+                    </div>
+                    <span class="progress-bracket">]</span>
+                </div>
+                
+                <div class="mission-stats">
+                    <span id="mission-current-count">0</span> / <span id="mission-target-count">1000</span>
+                </div>
+                
+                <div class="multiplier-tag">
+                    <span>🔥</span>
+                    <span>Rewards multiplier: <span id="mission-multiplier">1.0x</span></span>
+                </div>
+            </div>
+
+            <!-- App Sections (Injected by app-launcher.js) -->
+            <div id="launcher-grid">
+                <section class="launcher-section">
+                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">Core Services</h2>
+                    <div class="app-grid" id="core-apps"></div>
+                </section>
+
+                <section class="launcher-section">
+                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">Media & Entertainment</h2>
+                    <div class="app-grid" id="media-apps"></div>
+                </section>
+
+                <section class="launcher-section">
+                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">Finance & Trading</h2>
+                    <div class="app-grid" id="finance-apps"></div>
+                </section>
+
+                <section class="launcher-section">
+                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">Games & Fun</h2>
+                    <div class="app-grid" id="games-apps"></div>
+                </section>
+
+                <section class="launcher-section">
+                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">Tools & AI</h2>
+                    <div class="app-grid" id="tools-apps"></div>
+                </section>
+            </div>
+        </main>
+
+        <!-- App Runner View -->
+        <div id="app-runner" class="app-runner">
+            <header class="runner-header">
+                <button id="runner-back" class="p-3 hover:bg-white/10 rounded-xl text-white mr-4">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <h2 id="runner-title" class="text-lg font-bold text-white flex-1">App Name</h2>
+                <div class="flex space-x-2">
+                    <button id="runner-reload" class="p-3 text-gray-400 hover:text-white"><i class="fas fa-redo"></i></button>
+                    <button id="runner-fullscreen" class="p-3 text-gray-400 hover:text-white"><i class="fas fa-expand"></i></button>
+                </div>
+            </header>
+            <div class="runner-content" style="flex: 1; position: relative; overflow: hidden; background: #0f172a; visibility: visible;">
+                <div id="runner-loading" class="absolute inset-0 flex items-center justify-center bg-slate-900 z-10">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                </div>
+                <iframe id="runner-iframe" src="about:blank" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-top-navigation-by-user-activation" style="width: 100%; height: 100%; border: none; background: #ffffff; display: block; visibility: visible;"></iframe>
+            </div>
+        </div>
+
+        <!-- Service Modal (actly.md implementation) -->
+        <div id="service-modal">
+            <header class="service-modal-header">
+                <div class="flex items-center">
+                    <button id="service-modal-back" class="p-2 mr-4 hover:bg-white/10 rounded-full transition-colors">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <h2 id="service-modal-title" class="text-lg font-bold">SafeCode</h2>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="service-modal-reload" class="p-2 hover:bg-white/10 rounded-full transition-colors">
+                        <i class="fas fa-redo-alt"></i>
+                    </button>
+                    <button id="service-modal-close" class="p-2 hover:bg-white/10 rounded-full transition-colors text-xl">
+                        &times;
+                    </button>
+                </div>
+            </header>
+            <div class="service-iframe-container">
+                <div id="service-modal-loading" class="service-loading">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+                    <span>Loading Service...</span>
+                </div>
+                <iframe id="service-modal-iframe" src="about:blank" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-top-navigation-by-user-activation"></iframe>
+            </div>
+        </div>
+
+        <!-- Dock -->
+        <div class="dock-container">
+            <nav class="dock" id="dock"></nav>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div id="toast-container" class="toast-container"></div>
+
+        <!-- Settings Slide Panel -->
+        <aside id="settings-panel" class="fixed top-0 right-0 h-full w-80 bg-slate-900 shadow-2xl transform translate-x-full transition-transform duration-300">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-8">
+                    <h2 class="text-xl font-bold">My Room</h2>
+                    <button id="settings-close" class="text-2xl">&times;</button>
+                </div>
+                <div class="space-y-6">
+                    <section>
+                        <h3 class="text-xs font-bold text-gray-500 uppercase mb-4">Appearance</h3>
+                        <div class="bg-white/5 rounded-xl p-4 flex items-center justify-between">
+                            <span>Dark Mode</span>
+                            <input type="checkbox" id="theme-toggle" checked>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h3 class="text-xs font-bold text-gray-500 uppercase mb-4">Account</h3>
+                        <button id="signOutBtn" class="w-full p-4 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl transition-colors flex items-center justify-between">
+                            <span>Sign Out</span>
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </section>
+                </div>
+            </div>
+        </aside>
+        <div id="settings-overlay" class="fixed inset-0 bg-black/50 opacity-0 pointer-events-none transition-opacity duration-300"></div>
+    </div>
+
+    <!-- SERVICE PATH FIX - Handles both folder and flat file structures -->
+    <script>
+        (function() {
+            // Override the openService function to try multiple path variants
+            const originalOpenService = window.openService;
+            
+            window.openService = function(serviceUrl, title) {
+                console.log('[CodeBank] Routing request for:', serviceUrl);
+                
+                // If it's a folder-based path that might 404, try flat path
+                if (serviceUrl.includes('/index.html')) {
+                    const flatUrl = serviceUrl.replace('/index.html', '.html');
+                    console.log('[CodeBank] Folder path detected, checking flat path:', flatUrl);
+                    
+                    // Try flat path first via HEAD request
+                    fetch(flatUrl, { method: 'HEAD' })
+                        .then(res => {
+                            if (res.ok) {
+                                console.log('[CodeBank] Flat path exists, using:', flatUrl);
+                                originalOpenService(flatUrl, title);
+                            } else {
+                                console.log('[CodeBank] Flat path not found, falling back to original folder path');
+                                originalOpenService(serviceUrl, title);
+                            }
+                        })
+                        .catch(() => {
+                            // Fallback to original on error
+                            originalOpenService(serviceUrl, title);
+                        });
+                } else {
+                    // Already flat or other structure
+                    originalOpenService(serviceUrl, title);
+                }
+            };
+        })();
+    </script>
+
+    <script>
+        // Consolidated Service Manager - Only uses service-modal, removes app-runner conflict
+        (function() {
+            const modal = document.getElementById('service-modal');
+            const modalIframe = document.getElementById('service-modal-iframe');
+            const modalLoading = document.getElementById('service-modal-loading');
+            const modalTitle = document.getElementById('service-modal-title');
+            const modalClose = document.getElementById('service-modal-close');
+            const modalBack = document.getElementById('service-modal-back');
+            const modalReload = document.getElementById('service-modal-reload');
+            
+            let currentServiceUrl = null;
+            
+            // SINGLE INSTANCE POLICY: Track open services
+            const openServices = new Map();
+
+            // Main entry point for opening services
+            window.openService = function(serviceUrl, title) {
+                console.log('[CodeBank] Opening service:', serviceUrl);
+
+                // If service is already open in the modal, just show the modal
+                if (currentServiceUrl === serviceUrl && modal.classList.contains('active')) {
+                    console.log('⚠️ Service already open and active:', serviceUrl);
+                    return;
+                }
+
+                currentServiceUrl = serviceUrl;
+                
+                // Set title
+                modalTitle.textContent = title || 'SafeCode';
+                
+                // Show modal
+                modal.classList.add('active');
+                modalLoading.style.display = 'flex';
+                modalLoading.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+                
+                // Check if we already have this URL loaded
+                if (modalIframe.src === serviceUrl || (serviceUrl.startsWith('/') && modalIframe.src.endsWith(serviceUrl))) {
+                    console.log('✅ Service already loaded in iframe, skipping reload');
+                    modalLoading.classList.add('hidden');
+                    return;
+                }
+
+                // Reset iframe - 🔧 FIX: Removed about:blank assignment
+                // modalIframe.src = 'about:blank';
+                
+                // Small delay then load
+                setTimeout(() => {
+                    modalIframe.src = serviceUrl;
+                    
+                    // Setup load handler
+                    modalIframe.onload = function() {
+                        console.log('[CodeBank] Service iframe loaded');
+                        modalLoading.classList.add('hidden');
+                        
+                        // Send init message to iframe
+                        setTimeout(() => {
+                            sendInitToIframe();
+                        }, 500);
+                    };
+                    
+                    // Fallback hide loading after 3 seconds
+                    setTimeout(() => {
+                        if (modalLoading.style.display !== 'none') {
+                            modalLoading.classList.add('hidden');
+                        }
+                    }, 3000);
+                }, 100);
+            };
+            
+            function sendInitToIframe() {
+                try {
+                    const user = JSON.parse(localStorage.getItem('user') || '{}');
+                    
+                    // 🛡️ ARCHITECTURE ALIGNMENT: Get codes from AssetBus (Authoritative Runtime)
+                    let codes = [];
+                    if (window.AssetBus && typeof window.AssetBus.snapshot === 'function') {
+                        const snap = window.AssetBus.snapshot();
+                        codes = snap.codes || [];
+                    }
+                    
+                    // Fallback to localStorage if AssetBus is empty
+                    if (!codes.length) {
+                        codes = JSON.parse(localStorage.getItem('safeCodes') || localStorage.getItem('bankode_codes') || '[]');
+                    }
+                    
+                    modalIframe.contentWindow.postMessage({
+                        type: 'auth:ready',
+                        source: 'codebank-parent',
+                        serviceId: currentServiceUrl,
+                        payload: {
+                            user: user,
+                            codes: codes,
+                            timestamp: Date.now()
+                        }
+                    }, '*');
+                    
+                    console.log('[CodeBank] Sent auth:ready to iframe with', codes.length, 'codes');
+                } catch (e) {
+                    console.error('[CodeBank] Failed to send init:', e);
+                }
+            }
+            
+            function closeServiceModal() {
+                modal.classList.remove('active');
+                // 🔧 FIX: Comment out about:blank to preserve state
+                // modalIframe.src = 'about:blank';
+                currentServiceUrl = null;
+                document.body.style.overflow = '';
+            }
+            
+            function reloadService() {
+                if (currentServiceUrl) {
+                    modalLoading.classList.remove('hidden');
+                    modalLoading.style.display = 'flex';
+                    // 🔧 FIX: Comment out about:blank
+                    // modalIframe.src = 'about:blank';
+                    setTimeout(() => {
+                        modalIframe.src = currentServiceUrl;
+                    }, 100);
+                }
+            }
+            
+            // Event listeners
+            if (modalClose) modalClose.onclick = closeServiceModal;
+            if (modalBack) modalBack.onclick = closeServiceModal;
+            if (modalReload) modalReload.onclick = reloadService;
+            
+            // Close on escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal.classList.contains('active')) {
+                    closeServiceModal();
+                }
+            });
+            
+            // Listen for messages from iframe
+            window.addEventListener('message', (e) => {
+                // Forward AUTH_SYNC to the service iframe
+                if (e.data?.type === 'AUTH_SYNC' || e.data?.type === 'AUTH_CONTEXT') {
+                    console.log('[CodeBank] Forwarding auth message to service iframe');
+                    if (modalIframe && modalIframe.contentWindow) {
+                        modalIframe.contentWindow.postMessage(e.data, '*');
+                    }
+                }
+
+                if (e.data?.type === 'service:ready' || e.data?.type === 'iframe-ready' || e.data?.type === 'safe-assets-rendered') {
+                    console.log('[CodeBank] Service reports ready or rendered:', e.data.type);
+                    modalLoading.classList.add('hidden');
+                }
+                
+                if (e.data?.type === 'safe-code-ready') {
+                    console.log('[CodeBank] SafeCode specifically reports ready');
+                    modalLoading.classList.add('hidden');
+                }
+            });
+            
+            // Legacy compatibility - redirect old calls to new modal
+            window.openServiceLegacy = window.openService;
+            
+            console.log('[CodeBank] Service Manager initialized');
+        })();
+
+        // 🎯 Community Mission Logic (YouTube API v3)
+        (function() {
+            const API_KEY = 'AIzaSyBTz7CHWQI2dcAk9xmxvceFjEozKz_L1Mk';
+            const CHANNEL_ID = 'UC-lHJZR3Gqxm24_Vd_AJ5Yw'; // @PewDiePie for testing, replace with user channel ID if known
+            const UPDATE_INTERVAL = 300000; // 5 minutes
+            
+            const progressFill = document.getElementById('mission-progress-fill');
+            const currentCountEl = document.getElementById('mission-current-count');
+            const targetCountEl = document.getElementById('mission-target-count');
+            const targetLabelEl = document.getElementById('mission-target-label');
+            const multiplierEl = document.getElementById('mission-multiplier');
+
+            async function fetchSubscribers() {
+                try {
+                    // Try to get channel ID from local storage if available, otherwise use default
+                    const storedChannelId = localStorage.getItem('yt_channel_id') || CHANNEL_ID;
+                    
+                    const response = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${storedChannelId}&key=${API_KEY}`);
+                    const data = await response.json();
+                    
+                    if (data.items && data.items.length > 0) {
+                        const subCount = parseInt(data.items[0].statistics.subscriberCount);
+                        updateProgressBar(subCount);
+                    } else {
+                        console.warn('[YouTube API] No channel found or invalid ID');
+                        // Fallback to a mock number for demo if API fails
+                        updateProgressBar(742); 
+                    }
+                } catch (error) {
+                    console.error('[YouTube API] Error fetching subscriber count:', error);
+                    updateProgressBar(742); // Fallback
+                }
+            }
+
+            function updateProgressBar(count) {
+                let target = 1000;
+                let tier = 'grey';
+                let multiplier = 1.0;
+                let displayPercentage = 0;
+
+                if (count < 1000) {
+                    // Tier 1: Grey (Goal 1000)
+                    target = 1000;
+                    tier = 'grey';
+                    displayPercentage = (count / target) * 100;
+                    multiplier = 1.0 + (count / 1000) * 0.3; // Progressing towards 1.3x
+                } else if (count < 5000) {
+                    // Tier 2: Green (Goal 5000)
+                    target = 5000;
+                    tier = 'green';
+                    displayPercentage = ((count - 1000) / (target - 1000)) * 100;
+                    multiplier = 1.3 + ((count - 1000) / 4000) * 0.7; // Progressing towards 2.0x
+                } else {
+                    // Tier 3: Silver (Endless)
+                    target = Math.ceil(count / 1000) * 1000 + 1000; // Dynamic next milestone
+                    tier = 'silver';
+                    displayPercentage = ((count - 5000) / (target - 5000)) * 100;
+                    multiplier = 2.0 + ((count - 5000) / 5000) * 1.0; // Scalable multiplier
+                }
+
+                // Apply UI updates
+                progressFill.style.width = `${displayPercentage}%`;
+                progressFill.className = `progress-fill tier-${tier}`;
+                
+                currentCountEl.textContent = count.toLocaleString();
+                targetCountEl.textContent = target.toLocaleString();
+                targetLabelEl.textContent = target.toLocaleString();
+                multiplierEl.textContent = `${multiplier.toFixed(1)}x`;
+
+                console.log(`[Mission] Count: ${count}, Tier: ${tier}, Target: ${target}`);
+            }
+
+            // Initial fetch and set interval
+            fetchSubscribers();
+            setInterval(fetchSubscribers, UPDATE_INTERVAL);
+        })();
+        
+        // Dark Mode Toggle
+        (function() {
+            const themeToggle = document.getElementById('theme-toggle');
+            const body = document.body;
+            
+            // Load saved preference
+            const savedTheme = localStorage.getItem('codebank-theme');
+            if (savedTheme === 'light') {
+                body.classList.remove('dark');
+                body.classList.add('light');
+                if (themeToggle) themeToggle.checked = false;
+            } else {
+                body.classList.add('dark');
+                body.classList.remove('light');
+                if (themeToggle) themeToggle.checked = true;
+            }
+            
+            // Toggle handler
+            if (themeToggle) {
+                themeToggle.addEventListener('change', function() {
+                    if (this.checked) {
+                        body.classList.add('dark');
+                        body.classList.remove('light');
+                        localStorage.setItem('codebank-theme', 'dark');
+                    } else {
+                        body.classList.remove('dark');
+                        body.classList.add('light');
+                        localStorage.setItem('codebank-theme', 'light');
+                    }
+                });
+            }
+        })();
+        
+        // Settings Panel
+        (function() {
+            const panel = document.getElementById('settings-panel');
+            const overlay = document.getElementById('settings-overlay');
+            const openBtn = document.getElementById('settings-btn');
+            const closeBtn = document.getElementById('settings-close');
+            
+            function openPanel() {
+                panel.classList.add('active');
+                panel.style.transform = 'translateX(0)';
+                if (overlay) {
+                    overlay.classList.add('active');
+                    overlay.style.opacity = '1';
+                    overlay.style.pointerEvents = 'auto';
+                }
+            }
+            
+            function closePanel() {
+                panel.classList.remove('active');
+                panel.style.transform = 'translateX(100%)';
+                if (overlay) {
+                    overlay.classList.remove('active');
+                    overlay.style.opacity = '0';
+                    overlay.style.pointerEvents = 'none';
+                }
+            }
+            
+            if (openBtn) openBtn.addEventListener('click', openPanel);
+            if (closeBtn) closeBtn.addEventListener('click', closePanel);
+            if (overlay) overlay.addEventListener('click', closePanel);
+        })();
+        
+        // REMOVE STATS WIDGETS - Per user request
+        (function() {
+            // Hide stats elements if they exist
+            const statsElements = [
+                document.getElementById('user-balance'),
+                document.getElementById('total-egp-value'),
+                document.querySelector('.header-balance'),
+                document.querySelector('.stats-widget'),
+                document.querySelector('.portfolio-value')
+            ];
+            
+            statsElements.forEach(el => {
+                if (el) el.style.display = 'none';
+            });
+            
+            // Also hide the codes count in header (optional - remove if you want to keep it)
+            const headerCodesCount = document.getElementById('header-codes-count');
+            if (headerCodesCount) {
+                // Keep it but style it minimally
+                headerCodesCount.parentElement.style.background = 'transparent';
+                headerCodesCount.parentElement.style.border = 'none';
+            }
+        })();
+
+        // 🔓 Sign Out Feature
+        (function() {
+            const signOutBtn = document.getElementById('signOutBtn');
+            if (signOutBtn) {
+                signOutBtn.addEventListener('click', async () => {
+                    console.log('🔓 Signing out...');
+                    
+                    // 1. Remove session active flag
+                    localStorage.removeItem('session_active');
+                    
+                    // 2. Optional: Notify backend
+                    try {
+                        await fetch('/api/auth/logout', { method: 'POST' });
+                    } catch (e) {
+                        console.warn('Logout notification failed:', e);
+                    }
+                    
+                    // 3. Redirect to login
+                    window.location.href = '/login.html';
+                });
+            }
+        })();
+    </script>
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</body>
+</html>

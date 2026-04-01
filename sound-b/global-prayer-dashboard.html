@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Azan Management Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #FFD700;
+            --secondary: #1E90FF;
+            --dark: #121212;
+            --darker: #0A0A0A;
+            --light: #FFFFFF;
+            --gray: #2D2D2D;
+            --success: #4CAF50;
+            --warning: #FF9800;
+            --danger: #F44336;
+            --prayer-bg: rgba(255, 255, 255, 0.05);
+            --azan-1: #8B4513;
+            --azan-2: #4682B4;
+            --azan-3: #32CD32;
+            --azan-4: #FF6347;
+            --azan-5: #9370DB;
+            --azan-6: #20B2AA;
+            --azan-7: #FFD700;
+            --azan-8: #FF69B4;
+            --azan-9: #87CEEB;
+            --azan-10: #DDA0DD;
+            --azan-11: #98FB98;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            color: var(--light);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(30, 30, 30, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .dashboard-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+        }
+
+        .dashboard-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+
+        .dashboard-subtitle {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.1rem;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .dashboard-section {
+            background: var(--prayer-bg);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .azan-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .azan-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .azan-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .azan-card.active {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+
+        .azan-card.azan-1 { border-left: 4px solid var(--azan-1); }
+        .azan-card.azan-2 { border-left: 4px solid var(--azan-2); }
+        .azan-card.azan-3 { border-left: 4px solid var(--azan-3); }
+        .azan-card.azan-4 { border-left: 4px solid var(--azan-4); }
+        .azan-card.azan-5 { border-left: 4px solid var(--azan-5); }
+        .azan-card.azan-6 { border-left: 4px solid var(--azan-6); }
+        .azan-card.azan-7 { border-left: 4px solid var(--azan-7); }
+        .azan-card.azan-8 { border-left: 4px solid var(--azan-8); }
+        .azan-card.azan-9 { border-left: 4px solid var(--azan-9); }
+        .azan-card.azan-10 { border-left: 4px solid var(--azan-10); }
+        .azan-card.azan-11 { border-left: 4px solid var(--azan-11); }
+
+        .azan-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .azan-number {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .azan-play-btn {
+            background: none;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .azan-play-btn:hover {
+            background: var(--primary);
+            color: var(--dark);
+            transform: scale(1.1);
+        }
+
+        .azan-info {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 8px;
+        }
+
+        .azan-assignment {
+            font-size: 0.8rem;
+            color: var(--secondary);
+            font-weight: 500;
+        }
+
+        .settings-panel {
+            background: var(--prayer-bg);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .setting-group {
+            margin-bottom: 20px;
+        }
+
+        .setting-label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--light);
+        }
+
+        .setting-control {
+            width: 100%;
+            padding: 10px 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--light);
+            font-size: 1rem;
+        }
+
+        .setting-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+        }
+
+        .language-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+        }
+
+        .language-btn {
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--light);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .language-btn:hover {
+            border-color: var(--primary);
+            background: rgba(255, 215, 0, 0.1);
+        }
+
+        .language-btn.active {
+            background: var(--primary);
+            color: var(--dark);
+            border-color: var(--primary);
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .volume-slider {
+            flex: 1;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            outline: none;
+            appearance: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .volume-display {
+            min-width: 50px;
+            text-align: right;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .regional-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .region-card {
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .region-card:hover {
+            border-color: var(--secondary);
+            background: rgba(30, 144, 255, 0.1);
+        }
+
+        .region-card.active {
+            border-color: var(--secondary);
+            background: var(--secondary);
+            color: var(--dark);
+        }
+
+        .region-emoji {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+
+        .region-name {
+            font-weight: 500;
+        }
+
+        .test-panel {
+            background: var(--prayer-bg);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+
+        .test-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .test-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+
+        .test-btn.primary {
+            background: var(--primary);
+            color: var(--dark);
+        }
+
+        .test-btn.secondary {
+            background: var(--secondary);
+            color: var(--light);
+        }
+
+        .test-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .status-indicator.online {
+            background: var(--success);
+            color: var(--light);
+        }
+
+        .status-indicator.offline {
+            background: var(--danger);
+            color: var(--light);
+        }
+
+        .prayer-status {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .prayer-status-item {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .prayer-status-item.current {
+            background: rgba(255, 215, 0, 0.2);
+            border: 2px solid var(--primary);
+        }
+
+        .prayer-status-item.next {
+            background: rgba(30, 144, 255, 0.2);
+            border: 2px solid var(--secondary);
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .azan-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .test-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .test-btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1>🕌 Global Azan Management Dashboard</h1>
+            <p class="dashboard-subtitle">Control and customize all 11 azan files across your platform</p>
+            <div class="status-indicator" id="system-status">
+                <span id="status-dot">●</span>
+                <span id="status-text">Initializing...</span>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Azan Files Management -->
+            <div class="dashboard-section">
+                <h2 class="section-title">
+                    🎵 Azan Files
+                    <small style="color: rgba(255,255,255,0.6); font-size: 0.8rem;">(11 Files)</small>
+                </h2>
+                <div class="azan-grid" id="azan-files-grid">
+                    <!-- Dynamic azan cards will be generated here -->
+                </div>
+            </div>
+
+            <!-- Prayer Times Status -->
+            <div class="dashboard-section">
+                <h2 class="section-title">⏰ Prayer Times Status</h2>
+                <div class="prayer-status" id="prayer-status-grid">
+                    <!-- Dynamic prayer status will be generated here -->
+                </div>
+            </div>
+
+            <!-- Settings Panel -->
+            <div class="settings-panel">
+                <h2 class="section-title">⚙️ Global Settings</h2>
+                
+                <div class="setting-group">
+                    <label class="setting-label">Language</label>
+                    <div class="language-selector" id="language-selector">
+                        <!-- Dynamic language buttons will be generated here -->
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <label class="setting-label">Region</label>
+                    <div class="regional-grid" id="region-selector">
+                        <!-- Dynamic region cards will be generated here -->
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <label class="setting-label">Volume</label>
+                    <div class="volume-control">
+                        <input type="range" class="volume-slider" id="volume-slider" min="0" max="100" value="80">
+                        <span class="volume-display" id="volume-display">80%</span>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <label class="setting-label">Azan Style</label>
+                    <select class="setting-control" id="azan-style-selector">
+                        <option value="primary">Primary</option>
+                        <option value="secondary">Secondary</option>
+                        <option value="special">Special</option>
+                    </select>
+                </div>
+
+                <div class="setting-group">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="auto-alert-toggle" checked>
+                        <span>Auto Prayer Alerts</span>
+                    </label>
+                </div>
+
+                <div class="setting-group">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="use-regional-toggle">
+                        <span>Use Regional Azan Variations</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Test Panel -->
+            <div class="test-panel">
+                <h2 class="section-title">🧪 Test & Validate</h2>
+                <p style="color: rgba(255,255,255,0.7); margin-bottom: 20px;">
+                    Test all azan files and system functionality
+                </p>
+                <div class="test-buttons">
+                    <button class="test-btn primary" onclick="testAllAzanFiles()">Test All Azan</button>
+                    <button class="test-btn secondary" onclick="testPrayerAlert()">Test Prayer Alert</button>
+                    <button class="test-btn secondary" onclick="testGlobalCommunication()">Test Communication</button>
+                    <button class="test-btn secondary" onclick="exportSettings()">Export Settings</button>
+                    <button class="test-btn secondary" onclick="importSettings()">Import Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden audio elements for testing -->
+    <div id="test-audio-container" style="display: none;">
+        <!-- Audio elements will be dynamically created here -->
+    </div>
+
+    <script>
+        // Global Azan Management Dashboard
+        class AzanDashboard {
+            constructor() {
+                this.azanFiles = this.generateAzanFiles();
+                this.languages = {
+                    en: { name: 'English', flag: '🇺🇸' },
+                    ar: { name: 'العربية', flag: '🇸🇦' },
+                    ur: { name: 'اردو', flag: '🇵🇰' },
+                    tr: { name: 'Türkçe', flag: '🇹🇷' },
+                    id: { name: 'Bahasa Indonesia', flag: '🇮🇩' },
+                    fa: { name: 'فارسی', flag: '🇮🇷' },
+                    hi: { name: 'हिन्दी', flag: '🇮🇳' }
+                };
+
+                this.regions = {
+                    mecca: { name: 'Mecca', emoji: '🕌' },
+                    madinah: { name: 'Medina', emoji: '🕌' },
+                    cairo: { name: 'Cairo', emoji: '🏺' },
+                    istanbul: { name: 'Istanbul', emoji: '🏰' },
+                    jakarta: { name: 'Jakarta', emoji: '🏝️' },
+                    karachi: { name: 'Karachi', emoji: '🌴' }
+                };
+
+                this.currentSettings = {
+                    language: 'en',
+                    region: 'mecca',
+                    volume: 80,
+                    azanStyle: 'primary',
+                    autoAlert: true,
+                    useRegional: false
+                };
+
+                this.initializeDashboard();
+            }
+
+            generateAzanFiles() {
+                return [
+                    { id: 1, name: 'Azan 1', file: 'azan1.mp3', description: 'Primary Fajr', assignment: 'Fajr Prayer', color: 'azan-1' },
+                    { id: 2, name: 'Azan 2', file: 'azan2.mp3', description: 'Primary Dhuhr', assignment: 'Dhuhr Prayer', color: 'azan-2' },
+                    { id: 3, name: 'Azan 3', file: 'azan3.mp3', description: 'Primary Asr', assignment: 'Asr Prayer', color: 'azan-3' },
+                    { id: 4, name: 'Azan 4', file: 'azan4.mp3', description: 'Primary Maghrib', assignment: 'Maghrib Prayer', color: 'azan-4' },
+                    { id: 5, name: 'Azan 5', file: 'azan5.mp3', description: 'Primary Isha', assignment: 'Isha Prayer', color: 'azan-5' },
+                    { id: 6, name: 'Azan 6', file: 'azan6.mp3', description: 'Secondary Fajr', assignment: 'Fajr (Regional)', color: 'azan-6' },
+                    { id: 7, name: 'Azan 7', file: 'azan7.mp3', description: 'Eid Special', assignment: 'Eid Prayer', color: 'azan-7' },
+                    { id: 8, name: 'Azan 8', file: 'azan8.mp3', description: 'Friday Special', assignment: 'Jumu\'ah', color: 'azan-8' },
+                    { id: 9, name: 'Azan 9', file: 'azan9.mp3', description: 'Tarawih', assignment: 'Ramadan Special', color: 'azan-9' },
+                    { id: 10, name: 'Azan 10', file: 'azan10.mp3', description: 'Qiyam Al-Layl', assignment: 'Night Prayer', color: 'azan-10' },
+                    { id: 11, name: 'Azan 11', file: 'azan11.mp3', description: 'Tahajjud', assignment: 'Pre-Dawn', color: 'azan-11' }
+                ];
+            }
+
+            initializeDashboard() {
+                this.loadSettings();
+                this.generateAzanGrid();
+                this.generateLanguageSelector();
+                this.generateRegionSelector();
+                this.setupEventListeners();
+                this.updateSystemStatus();
+                this.loadPrayerTimes();
+                this.checkGlobalSystem();
+            }
+
+            generateAzanGrid() {
+                const grid = document.getElementById('azan-files-grid');
+                grid.innerHTML = '';
+
+                this.azanFiles.forEach(azan => {
+                    const card = document.createElement('div');
+                    card.className = `azan-card ${azan.color}`;
+                    card.innerHTML = `
+                        <div class="azan-header">
+                            <span class="azan-number">${azan.name}</span>
+                            <button class="azan-play-btn" onclick="azanDashboard.playAzan('${azan.file}')">▶️</button>
+                        </div>
+                        <div class="azan-info">${azan.description}</div>
+                        <div class="azan-assignment">${azan.assignment}</div>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+
+            generateLanguageSelector() {
+                const selector = document.getElementById('language-selector');
+                selector.innerHTML = '';
+
+                Object.entries(this.languages).forEach(([code, lang]) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'language-btn';
+                    if (code === this.currentSettings.language) {
+                        btn.classList.add('active');
+                    }
+                    btn.innerHTML = `${lang.flag}<br>${lang.name}`;
+                    btn.onclick = () => this.setLanguage(code);
+                    selector.appendChild(btn);
+                });
+            }
+
+            generateRegionSelector() {
+                const selector = document.getElementById('region-selector');
+                selector.innerHTML = '';
+
+                Object.entries(this.regions).forEach(([code, region]) => {
+                    const card = document.createElement('div');
+                    card.className = 'region-card';
+                    if (code === this.currentSettings.region) {
+                        card.classList.add('active');
+                    }
+                    card.innerHTML = `
+                        <div class="region-emoji">${region.emoji}</div>
+                        <div class="region-name">${region.name}</div>
+                    `;
+                    card.onclick = () => this.setRegion(code);
+                    selector.appendChild(card);
+                });
+            }
+
+            setupEventListeners() {
+                // Volume control
+                const volumeSlider = document.getElementById('volume-slider');
+                const volumeDisplay = document.getElementById('volume-display');
+                
+                volumeSlider.addEventListener('input', (e) => {
+                    const volume = e.target.value;
+                    this.currentSettings.volume = volume;
+                    volumeDisplay.textContent = `${volume}%`;
+                    this.saveSettings();
+                    this.updateGlobalSystem();
+                });
+
+                // Azan style selector
+                document.getElementById('azan-style-selector').addEventListener('change', (e) => {
+                    this.currentSettings.azanStyle = e.target.value;
+                    this.saveSettings();
+                    this.updateGlobalSystem();
+                });
+
+                // Auto alert toggle
+                document.getElementById('auto-alert-toggle').addEventListener('change', (e) => {
+                    this.currentSettings.autoAlert = e.target.checked;
+                    this.saveSettings();
+                    this.updateGlobalSystem();
+                });
+
+                // Use regional toggle
+                document.getElementById('use-regional-toggle').addEventListener('change', (e) => {
+                    this.currentSettings.useRegional = e.target.checked;
+                    this.saveSettings();
+                    this.updateGlobalSystem();
+                });
+            }
+
+            setLanguage(language) {
+                this.currentSettings.language = language;
+                this.saveSettings();
+                this.generateLanguageSelector();
+                this.updateGlobalSystem();
+                console.log(`🌍 Language set to: ${this.languages[language].name}`);
+            }
+
+            setRegion(region) {
+                this.currentSettings.region = region;
+                this.saveSettings();
+                this.generateRegionSelector();
+                this.updateGlobalSystem();
+                console.log(`📍 Region set to: ${this.regions[region].name}`);
+            }
+
+            playAzan(azanFile) {
+                const audio = new Audio(azanFile);
+                audio.volume = this.currentSettings.volume / 100;
+                
+                audio.play().catch(error => {
+                    console.error('Error playing azan:', error);
+                    this.showNotification('Error playing azan file', 'error');
+                });
+
+                // Highlight playing card
+                document.querySelectorAll('.azan-card').forEach(card => {
+                    card.classList.remove('active');
+                });
+                
+                const playingCard = Array.from(document.querySelectorAll('.azan-card')).find(card => {
+                    return card.querySelector('.azan-header span').textContent.includes(azanFile.replace('.mp3', '').toUpperCase());
+                });
+                if (playingCard) {
+                    playingCard.classList.add('active');
+                    setTimeout(() => playingCard.classList.remove('active'), 3000);
+                }
+            }
+
+            updateSystemStatus() {
+                const statusIndicator = document.getElementById('system-status');
+                const statusText = document.getElementById('status-text');
+                const statusDot = document.getElementById('status-dot');
+
+                if (window.globalPrayerSystem) {
+                    statusIndicator.className = 'status-indicator online';
+                    statusText.textContent = 'Global Prayer System Online';
+                    statusDot.style.color = '#4CAF50';
+                } else {
+                    statusIndicator.className = 'status-indicator offline';
+                    statusText.textContent = 'Global Prayer System Offline';
+                    statusDot.style.color = '#F44336';
+                }
+            }
+
+            checkGlobalSystem() {
+                if (!window.globalPrayerSystem) {
+                    this.showNotification('Global Prayer System not found. Make sure global-prayer-system.js is loaded.', 'warning');
+                }
+            }
+
+            loadPrayerTimes() {
+                if (window.globalPrayerSystem) {
+                    const times = window.globalPrayerSystem.getCurrentPrayerTimes();
+                    this.updatePrayerStatus(times);
+                } else {
+                    // Mock data for testing
+                    const mockTimes = [
+                        { name: 'Fajr', time: '05:30', key: 'fajr' },
+                        { name: 'Dhuhr', time: '12:15', key: 'dhuhr' },
+                        { name: 'Asr', time: '15:45', key: 'asr' },
+                        { name: 'Maghrib', time: '18:20', key: 'maghrib' },
+                        { name: 'Isha', time: '19:50', key: 'isha' }
+                    ];
+                    this.updatePrayerStatus(mockTimes);
+                }
+            }
+
+            updatePrayerStatus(times) {
+                const statusGrid = document.getElementById('prayer-status-grid');
+                statusGrid.innerHTML = '';
+
+                const now = new Date();
+                const currentTime = now.getHours() * 60 + now.getMinutes();
+
+                times.forEach((prayer, index) => {
+                    const [hours, minutes] = prayer.time.split(':').map(Number);
+                    const prayerTime = hours * 60 + minutes;
+                    
+                    const statusItem = document.createElement('div');
+                    statusItem.className = 'prayer-status-item';
+                    
+                    if (prayerTime > currentTime && index === this.getNextPrayerIndex(times, currentTime)) {
+                        statusItem.classList.add('next');
+                    } else if (prayerTime <= currentTime && this.isCurrentPrayer(prayerTime, currentTime)) {
+                        statusItem.classList.add('current');
+                    }
+                    
+                    statusItem.innerHTML = `
+                        <div style="font-weight: 600; color: var(--primary);">${prayer.name}</div>
+                        <div style="font-size: 1.2rem; margin: 5px 0;">${prayer.time}</div>
+                        <div style="font-size: 0.8rem; color: rgba(255,255,255,0.7);">
+                            ${statusItem.classList.contains('current') ? 'Now' : 
+                              statusItem.classList.contains('next') ? 'Next' : 'Later'}
+                        </div>
+                    `;
+                    
+                    statusGrid.appendChild(statusItem);
+                });
+            }
+
+            getNextPrayerIndex(times, currentTime) {
+                for (let i = 0; i < times.length; i++) {
+                    const [hours, minutes] = times[i].time.split(':').map(Number);
+                    const prayerTime = hours * 60 + minutes;
+                    if (prayerTime > currentTime) {
+                        return i;
+                    }
+                }
+                return 0; // Return to first prayer (Fajr) if no next prayer today
+            }
+
+            isCurrentPrayer(prayerTime, currentTime) {
+                return Math.abs(prayerTime - currentTime) <= 2; // Within 2 minutes
+            }
+
+            updateGlobalSystem() {
+                if (window.globalPrayerSystem) {
+                    window.globalPrayerSystem.updateSettings(this.currentSettings);
+                }
+            }
+
+            saveSettings() {
+                localStorage.setItem('azanDashboardSettings', JSON.stringify(this.currentSettings));
+            }
+
+            loadSettings() {
+                const saved = localStorage.getItem('azanDashboardSettings');
+                if (saved) {
+                    this.currentSettings = { ...this.currentSettings, ...JSON.parse(saved) };
+                }
+            }
+
+            showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: ${type === 'error' ? 'var(--danger)' : type === 'warning' ? 'var(--warning)' : 'var(--success)'};
+                    color: white;
+                    padding: 15px 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                    z-index: 10000;
+                    font-weight: 500;
+                `;
+                notification.textContent = message;
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.remove();
+                }, 3000);
+            }
+        }
+
+        // Test functions
+        function testAllAzanFiles() {
+            let currentIndex = 0;
+            const testInterval = setInterval(() => {
+                if (currentIndex < azanDashboard.azanFiles.length) {
+                    const azan = azanDashboard.azanFiles[currentIndex];
+                    azanDashboard.playAzan(azan.file);
+                    azanDashboard.showNotification(`Testing ${azan.name}`, 'info');
+                    currentIndex++;
+                } else {
+                    clearInterval(testInterval);
+                    azanDashboard.showNotification('All azan files tested!', 'success');
+                }
+            }, 5000);
+        }
+
+        function testPrayerAlert() {
+            if (window.globalPrayerSystem) {
+                window.globalPrayerSystem.triggerPrayerAlert('Fajr');
+                azanDashboard.showNotification('Prayer alert test triggered', 'info');
+            } else {
+                azanDashboard.showNotification('Global Prayer System not available', 'error');
+            }
+        }
+
+        function testGlobalCommunication() {
+            window.postMessage({
+                type: 'TEST_GLOBAL_COMMUNICATION',
+                source: 'azan-dashboard'
+            }, window.location.origin);
+            azanDashboard.showNotification('Communication test sent', 'info');
+        }
+
+        function exportSettings() {
+            const settings = azanDashboard.currentSettings;
+            const dataStr = JSON.stringify(settings, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'azan-dashboard-settings.json';
+            link.click();
+            
+            azanDashboard.showNotification('Settings exported successfully', 'success');
+        }
+
+        function importSettings() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const settings = JSON.parse(e.target.result);
+                            azanDashboard.currentSettings = { ...azanDashboard.currentSettings, ...settings };
+                            azanDashboard.saveSettings();
+                            azanDashboard.initializeDashboard();
+                            azanDashboard.showNotification('Settings imported successfully', 'success');
+                        } catch (error) {
+                            azanDashboard.showNotification('Error importing settings', 'error');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
+
+        // Initialize dashboard
+        let azanDashboard;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            azanDashboard = new AzanDashboard();
+            
+            // Check for global prayer system periodically
+            setInterval(() => {
+                azanDashboard.updateSystemStatus();
+            }, 5000);
+            
+            // Listen for messages from global prayer system
+            window.addEventListener('message', (event) => {
+                if (event.data.type === 'GLOBAL_PRAYER_SYSTEM_READY') {
+                    azanDashboard.showNotification('Global Prayer System connected!', 'success');
+                    azanDashboard.updateSystemStatus();
+                }
+                
+                if (event.data.type === 'PRAYER_TIMES_UPDATED') {
+                    azanDashboard.updatePrayerStatus(event.data.prayerTimes);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

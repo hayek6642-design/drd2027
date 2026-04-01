@@ -1,0 +1,35 @@
+{
+  "appId": "com.codebank.app",
+  "appName": "CodeBank",
+  "bundledWebRuntime": false,
+  "webDir": "dist",
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    },
+    "StatusBar": {
+      "style": "DARK"
+    },
+    "Keyboard": {
+      "resize": "ionic",
+      "style": "DARK"
+    }
+  },
+  "server": {
+    "cleartext": true,
+    "allowNavigation": [
+      "localhost",
+      "127.0.0.1",
+      "https://*.codebank.app",
+      "https://*.googleapis.com",
+      "https://*.youtube.com"
+    ]
+  },
+  "android": {
+    "allowMixedContent": true,
+    "webContentsDebuggingEnabled": true
+  },
+  "ios": {
+    "contentInset": "always"
+  }
+}

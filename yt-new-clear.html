@@ -1,0 +1,2821 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 🛡️ RELOAD PROTECTION (from actly.md) -->
+    <script>
+      (function() {
+        const reloadKey = 'last_reload_time';
+        const minReloadInterval = 5000; 
+        const lastReload = parseInt(localStorage.getItem(reloadKey) || '0');
+        const now = Date.now();
+        if (now - lastReload < minReloadInterval) {
+          console.error('🚨 RELOAD LOOP DETECTED - Breaking cycle');
+          localStorage.setItem('reload_loop_detected', 'true');
+          localStorage.removeItem('auth_session');
+          sessionStorage.clear();
+          document.addEventListener('DOMContentLoaded', () => {
+            document.body.innerHTML = `
+              <div style="padding: 40px; text-align: center; font-family: sans-serif; background: #0d1117; color: white; height: 100vh;">
+                <h1 style="color: #ff6b6b;">⚠️ Reload Loop Detected</h1>
+                <p>The application was reloading too quickly.</p>
+                <p>This is often caused by a ledger mismatch or auth sync error.</p>
+                <button onclick="localStorage.clear(); location.href='/login.html'" 
+                        style="padding: 12px 24px; margin-top: 20px; cursor: pointer; background: #00d4ff; border: none; border-radius: 8px; color: black; font-weight: bold;">
+                  Clear All Data & Restart
+                </button>
+              </div>
+            `;
+          });
+          throw new Error('Reload loop prevented');
+        }
+        localStorage.setItem(reloadKey, now.toString());
+      })();
+    </script>
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; font-src * data: 'self'; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src * data: blob:; media-src *; frame-src *;">
+    <title>YouTube Embed App</title>
+    <link rel="stylesheet" href="/styles/style.css">
+    <link rel="stylesheet" href="/styles/youtube-embed-responsive.css">
+    <link rel="stylesheet" href="/styles/toggle-switch-3way.css">
+    <link rel="stylesheet" href="/styles/section-switch-popup.css">
+    <link rel="stylesheet" href="/codebank/css/safe-asset-list.css">
+
+     <script>
+      window.addEventListener('securitypolicyviolation', function(e) {
+        try {
+          console.error('CSP VIOLATION:', {
+            blockedURI: e.blockedURI,
+            violatedDirective: e.violatedDirective,
+            originalPolicy: e.originalPolicy,
+            sourceFile: e.sourceFile,
+            lineNumber: e.lineNumber
+          });
+        } catch(_) {}
+      });
+     </script>
+
+     <!-- External Libraries -->
+     <script src="https://cdn.jsdelivr.net/npm/@capacitor/core/dist/capacitor.js"></script>
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+     <script src="https://unpkg.com/parse@6.1.1/dist/parse.min.js"></script>
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.0.4/pako_deflate.min.js"></script>
+     <script src="https://cdn.jsdelivr.net/npm/whatwg-fetch@3.6.2/dist/fetch.umd.js"></script>
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+
+    <!-- Browser Mode Setup -->
+    <script src="/shared/storage-adapter.js"></script>
+    <script>
+        console.warn("🟢 YT-Clear TRUE Browser Local Mode");
+
+        const realLocalStorage = window.__proto__.localStorage || window.localStorage;
+
+        // Force restore native localStorage
+        Object.defineProperty(window, "localStorage", {
+            value: realLocalStorage,
+            writable: false,
+            configurable: false,
+            enumerable: true
+        });
+
+        // Kill any guard overrides
+        delete window.StorageLord;
+        delete window.__storageLord;
+
+        // Browser mode flags
+        window.__BROWSER_MODE__ = true;
+        window.__DISABLE_STORAGE_LORD__ = true;
+        window.__YTNEW_RUNTIME__ = "browser";
+    </script>
+
+    <script>
+        try { window.__AUTH_OVERLAY_DISABLED__ = true; } catch(_){}
+        try { window.showAuthOverlay = function(){ try { console.warn('[AUTH OVERLAY BLOCKED]'); } catch(_){} }; } catch(_){}
+        try { window.openLoginModal = function(){ try { console.warn('[LOGIN MODAL BLOCKED]'); } catch(_){} }; } catch(_){}
+        try {
+            document.addEventListener('DOMContentLoaded', function(){
+                try {
+                    var nodes = document.querySelectorAll('[id*="auth"], [class*="auth"], [id*="login-overlay"], [class*="login-overlay"], [id*="auth-overlay"], [class*="auth-overlay"]');
+                    for (var i=0;i<nodes.length;i++){ try { nodes[i].remove(); } catch(_){} }
+                } catch(_){ }
+            });
+        } catch(_){}
+    </script>
+
+    <style>
+        /* 🔹 Loading Overlay Fix - Force Hidden by Default if needed */
+        #loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: #0d1117;
+            display: none; /* 🔹 Start hidden to prevent blocking if JS fails */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000000;
+            transition: opacity 0.5s ease-out, visibility 0.5s;
+        }
+        #loading-overlay.active {
+            display: flex;
+        }
+        #loading-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .progress-container {
+            width: 300px;
+            height: 8px;
+            background: #30363d;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        #loading-progress-bar {
+            width: 0%;
+            height: 100%;
+            background: #238636;
+            transition: width 0.3s ease;
+        }
+        .loading-text {
+            color: #c9d1d9;
+            font-family: sans-serif;
+            font-size: 18px;
+        }
+
+        /* Hide YouTube controls and block iframe interactions */
+        .ytp-chrome-bottom,
+        .ytp-progress-bar-container {
+            display: none !important;
+        }
+
+        /* Fixed: Block all YouTube iframe interactions */
+        #video-container iframe {
+            pointer-events: none !important;
+        }
+
+        /* Hide all YouTube UI elements */
+        .ytp-chrome-top,
+        .ytp-chrome-bottom,
+        .ytp-pause-overlay,
+        .ytp-title,
+        .ytp-watermark,
+        .ytp-show-cards-title,
+        .ytp-cards-button,
+        .ytp-watch-later-button,
+        .ytp-endscreen-content,
+        .ytp-upnext,
+        .ytp-thumbnail-overlay {
+            display: none !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        /* Theatre mode styles */
+        .theatre-mode {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background-color: black !important;
+            z-index: 1000 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            outline: none !important;
+        }
+
+        .theatre-mode iframe {
+            width: 100% !important;
+            height: 100% !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+        }
+
+        /* Ensure no parent restrictions */
+        .theatre-mode-active,
+        .theatre-mode-active .container,
+        .theatre-mode-active .row,
+        .theatre-mode-active body,
+        .theatre-mode-active html {
+            overflow: visible !important;
+            height: auto !important;
+            max-height: none !important;
+            width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Video container full screen eligibility */
+        #video-container {
+            position: relative;
+            width: 100%;
+            height: auto;
+            min-height: 200px;
+            /* fallback */
+            z-index: 1;
+        }
+
+        #video-container.theatre-mode {
+            z-index: 1000;
+        }
+
+        /* Counter and subscription button in theatre mode */
+        .theatre-mode-active #counter-container {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1001;
+            /* Ensure it is above the video */
+            font-size: 1.5em;
+            /* Increase the size of the counter frame */
+            padding: 15px;
+            /* Add padding to make the frame larger */
+            background-color: rgba(0, 0, 0, 0.5);
+            /* Add background color for better visibility */
+            border-radius: 10px;
+            /* Add border radius for rounded corners */
+        }
+
+        /* Overlay to prevent touch events */
+        .touch-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1001;
+            /* Ensure it is above the video */
+            background: transparent;
+            /* Make the overlay transparent */
+        }
+
+        #control-buttons {
+            display: flex;
+            /* Use Flexbox layout for buttons */
+            justify-content: center;
+            /* Center buttons horizontally */
+            align-items: center;
+            /* Center buttons vertically */
+            margin-bottom: 10px;
+            /* Add margin below the button container */
+        }
+
+        /* Subscribe Button Styles with Spark Effect */
+        #extra-code-bar {
+            margin-top: 10px;
+            font-size: 0.5em;
+            /* Adjust font size as needed */
+            color: whitesmoke;
+            background-color: rgba(247, 242, 242, 0.123);
+            padding: 9px;
+            border-radius: 5px;
+            position: relative;
+            overflow: hidden;
+            transition: background-color 0.5s, box-shadow 0.5s;
+            word-break: break-all;
+            /* Key for wrapping */
+            width: 100%;
+        }
+
+        #extra-code-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(90deg,
+                    rgba(255, 255, 255, 0) 0%,
+                    rgba(255, 255, 255, 0.4) 50%,
+                    rgba(255, 255, 255, 0) 100%);
+            animation: spark 1.5s linear infinite;
+            transform: skewX(-20deg);
+        }
+
+        #extra-code-bar:hover {
+            transform: scale(1.1);
+        }
+
+        .extra-mode #extra-code-bar {
+            display: block;
+        }
+
+        /* Sound button styles */
+        #sound-button {
+            position: absolute;
+            top: -10px;
+            /* Distance from top */
+            left: 50%;
+            transform: translateX(-50%);
+            /* Center horizontally */
+            background-color: rgba(247, 242, 242, 0.075);
+            color: rgba(247, 242, 242, 0.075);
+            border: none;
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 20px;
+            -webkit-backdrop-filter: blur(3px);
+            backdrop-filter: blur(3px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1002;
+            /* Ensure it stays above other elements */
+            margin-top: 10px;
+            /* Space between button and counter */
+            transition: all 0.3s ease;
+        }
+
+        /* Add to counter container to create space */
+        #counter-container {
+            position: relative;
+            width: fit-content !important;
+            max-width: 100%;
+            box-sizing: border-box;
+            padding: 6px 8px !important;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #sound-button:hover {
+            background-color: rgba(9, 10, 8, 0.8);
+            /* Slightly transparent on hover */
+        }
+
+        /* Sound button hover popup – match counter container */
+        #sound-popup {
+            position: fixed;
+            bottom: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: transparent;
+            color: #ffffff;
+            padding: 10px 14px;
+            border-radius: 12px;
+            box-shadow: none;
+            z-index: 1000000;
+            display: none;
+            font-family: 'Courier New', monospace;
+            width: fit-content !important;
+            max-width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+            border: none;
+            animation: popupFadeIn 0.2s ease-out;
+        }
+
+        @keyframes popupSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-100%) translateY(0);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        #sound-popup .calendars {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        #sound-popup .calendar {
+            text-align: center;
+            padding: 6px 12px;
+            background: transparent;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            font-size: 0.95em;
+            font-weight: 600;
+            color: #ffffff;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        #sound-popup .calendar:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        #sound-popup .time-display {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 0;
+            text-shadow: none;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.5px;
+            padding: 6px 12px;
+        }
+
+        /* Toggle button and related styles moved to style.css for modularity */
+
+
+        #crypto-amount {
+            font-size: 0.4em;
+            color: white;
+            margin-bottom: -1px;
+            text-align: center;
+            z-index: 1003;
+            /* Ensure it's on top */
+        }
+
+        /* Play/Pause button styles */
+        #play-pause-button {
+            transition: all 300ms cubic-bezier(0.23, 1, 0.32, 1);
+            box-shadow: inset 0 0 5px 1px rgba(255, 255, 255, 0.8);
+            border-radius: 65px;
+            position: absolute;
+            color: rgba(0, 0, 0, 0.5);
+            font-size: 17px;
+            background: rgba(0, 0, 0, 0.5);
+            /* Default green color for playing state */
+            margin-left: -38.5px;
+            margin-top: -40px;
+            display: block;
+            height: 65px;
+            width: 65px;
+            left: 52%;
+            top: 103%;
+            cursor: pointer;
+            z-index: 10000 !important;
+            /* Fixed: ensure button is above ticker */
+        }
+
+        #play-pause-button.paused {
+            background: #ff0000;
+            /* Red color for paused state */
+        }
+
+        /* Enhanced Escape Button Animations */
+        #play-pause-button.escaping {
+            animation: escape-shake 0.2s infinite;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.8), inset 0 0 5px 1px rgba(255, 255, 255, 0.8);
+            transform-origin: center;
+        }
+
+        #play-pause-button.escaping:hover {
+            animation: escape-panic 0.1s infinite;
+            box-shadow: 0 0 30px rgba(255, 100, 0, 1), inset 0 0 5px 1px rgba(255, 255, 255, 0.8);
+        }
+
+        /* Funny cursor styles during escape mode */
+        body.escape-mode {
+            cursor: crosshair !important;
+        }
+
+        body.escape-mode * {
+            cursor: inherit !important;
+        }
+
+        /* Keyframe animations for escape effects */
+        @keyframes escape-shake {
+
+            0%,
+            100% {
+                transform: translate(0, 0) rotate(0deg) scale(1);
+            }
+
+            25% {
+                transform: translate(2px, -2px) rotate(1deg) scale(1.05);
+            }
+
+            50% {
+                transform: translate(-2px, 2px) rotate(-1deg) scale(0.95);
+            }
+
+            75% {
+                transform: translate(1px, 1px) rotate(0.5deg) scale(1.02);
+            }
+        }
+
+        @keyframes escape-panic {
+
+            0%,
+            100% {
+                transform: translate(0, 0) rotate(0deg) scale(1);
+            }
+
+            20% {
+                transform: translate(5px, -5px) rotate(3deg) scale(1.1);
+            }
+
+            40% {
+                transform: translate(-5px, 5px) rotate(-3deg) scale(0.9);
+            }
+
+            60% {
+                transform: translate(3px, -3px) rotate(2deg) scale(1.05);
+            }
+
+            80% {
+                transform: translate(-3px, 3px) rotate(-2deg) scale(0.95);
+            }
+        }
+
+        @keyframes button-tremble {
+
+            0%,
+            100% {
+                transform: translate(0, 0);
+            }
+
+            10% {
+                transform: translate(-1px, -1px) rotate(-1deg);
+            }
+
+            20% {
+                transform: translate(1px, 1px) rotate(1deg);
+            }
+
+            30% {
+                transform: translate(-1px, 1px) rotate(-1deg);
+            }
+
+            40% {
+                transform: translate(1px, -1px) rotate(1deg);
+            }
+
+            50% {
+                transform: translate(-1px, -1px) rotate(-1deg);
+            }
+
+            60% {
+                transform: translate(1px, 1px) rotate(1deg);
+            }
+
+            70% {
+                transform: translate(-1px, 1px) rotate(-1deg);
+            }
+
+            80% {
+                transform: translate(1px, -1px) rotate(1deg);
+            }
+
+            90% {
+                transform: translate(-1px, -1px) rotate(-1deg);
+            }
+        }
+
+        /* Visual feedback for impossible clicks with dimensional precision */
+        .click-impossible {
+            position: relative;
+        }
+
+        .click-impossible::before {
+            content: "😏";
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 20px;
+            animation: bounce-funny 0.5s infinite;
+            pointer-events: none;
+            z-index: 10003;
+        }
+
+        @keyframes bounce-funny {
+
+            0%,
+            100% {
+                transform: translateX(-50%) translateY(0);
+            }
+
+            50% {
+                transform: translateX(-50%) translateY(-10px);
+            }
+        }
+
+        /* Enhanced escape mode indicators showing dimensional precision */
+        #play-pause-button.escaping {
+            position: relative;
+        }
+
+        #play-pause-button.escaping::after {
+            content: "";
+            position: absolute;
+            top: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 12px solid rgba(255, 0, 0, 0.8);
+            animation: precision-indicator 1s infinite;
+            pointer-events: none;
+            z-index: 10003;
+        }
+
+        #play-pause-button.escaping::before {
+            content: "";
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255, 0, 0, 0.6), transparent);
+            animation: clearance-line 0.8s infinite;
+            pointer-events: none;
+            z-index: 10003;
+        }
+
+        @keyframes precision-indicator {
+
+            0%,
+            100% {
+                opacity: 0.7;
+                transform: translateX(-50%) translateY(0);
+            }
+
+            50% {
+                opacity: 1;
+                transform: translateX(-50%) translateY(-3px);
+            }
+        }
+
+        @keyframes clearance-line {
+
+            0%,
+            100% {
+                opacity: 0.3;
+                width: 100px;
+            }
+
+            50% {
+                opacity: 0.8;
+                width: 140px;
+            }
+        }
+
+        /* Dimensional boundary visualization (debug mode) */
+        .boundary-debug {
+            position: absolute;
+            border: 1px dashed rgba(255, 165, 0, 0.5);
+            pointer-events: none;
+            z-index: 10001;
+        }
+
+        .clearance-zone {
+            position: absolute;
+            background: rgba(255, 0, 0, 0.1);
+            border: 2px solid rgba(255, 0, 0, 0.3);
+            pointer-events: none;
+            z-index: 10000;
+        }
+
+        /* Monthly limit indicator */
+        .limit-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 107, 107, 0.9);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 10002;
+            animation: pulse-warning 2s infinite;
+        }
+
+        @keyframes pulse-warning {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.7;
+                transform: scale(1.05);
+            }
+        }
+
+        /* Code display - tight fit to container */
+        #code-display {
+            margin-top: 0px !important;
+            margin-bottom: 28px !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            font-size: 0.6em;
+            color: #00ff00;
+            font-family: 'Courier New', monospace !important;
+            letter-spacing: 0.03em;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(20, 20, 30, 0.8));
+            padding: 6px 0 !important;
+            border-radius: 10px;
+            width: 100% !important;
+            min-width: 250px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            white-space: nowrap;
+            transition: margin 0.25s ease;
+            box-shadow: 0 2px 10px rgba(0, 255, 0, 0.12);
+            border: 1px solid rgba(0, 255, 0, 0.25);
+        }
+
+        /* Visual indicator when Watch-dog is active */
+        .watch-dog-active #counter-container {
+            box-shadow: inset 0 0 12px rgba(0, 255, 0, 0.35);
+        }
+
+        /* Progress text sizing inside Play/Pause */
+        #progress-text {
+            font-size: 11px;
+        }
+
+        /* Counter Container Style - FROZEN: DO NOT MODIFY */
+        /* [FROZEN] Counter container CSS and layout are locked. No modifications allowed. */
+        #counter-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            /* Reduced vertical gap */
+            padding: 6px 8px !important;
+            position: relative;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            z-index: 999999;
+            pointer-events: auto !important;
+        }
+
+
+
+        #watch-time {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+            column-gap: 12px !important;
+            width: max-content;
+            margin-top: 20px !important;
+        }
+
+        /* Spark beam effect */
+        #code-display::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0) 100%);
+            animation: spark 1s linear infinite;
+        }
+
+        /* Style for code display during long press */
+        #code-display.long-press {
+            background-color: rgba(0, 255, 0, 0.2);
+            opacity: 0.85;
+            transition: background-color 0.3s ease, opacity 0.3s ease;
+        }
+
+        /* Smooth transitions for counter container children */
+        #counter-container>* {
+            transition: opacity 300ms ease;
+        }
+
+        #counter-container.compact-mode> :not(#code-display) {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+
+        #counter {
+            position: relative;
+            display: inline-block;
+            flex: 0 0 auto;
+            width: max-content;
+            margin: 0;
+            font-size: 0.7em;
+            background: transparent !important;
+            padding: 2px 4px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 10px rgba(0, 150, 255, 0.2);
+            -webkit-backdrop-filter: blur(2px);
+            backdrop-filter: blur(2px);
+            transform: translateZ(0);
+            transition: transform 0.5s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            justify-self: start;
+        }
+
+        #counter.hidden {
+            display: block !important;
+        }
+
+        #counter span {
+            position: relative;
+            display: inline-block;
+            margin: 0 0px;
+            color: #e0f4ff;
+            font-weight: 500;
+            text-shadow: 0 0 5px rgba(100, 200, 255, 0.4);
+            overflow: hidden;
+            padding: 1px 2px;
+            background: transparent !important;
+            border-radius: 1px;
+            border: 0.5px solid rgba(100, 200, 255, 0.1);
+            transform-style: preserve-3d;
+            will-change: transform, text-shadow;
+        }
+
+        /* Make extra switch and 3-way toggle backgrounds transparent */
+        #extra-switch-container,
+        .extra-switch-track,
+        .extra-switch-knob,
+        #toggle-switch-absolute-container,
+        .three-way-toggle,
+        .three-way-toggle .toggle-track,
+        .three-way-toggle .toggle-handle {
+            background: transparent !important;
+            box-shadow: none !important;
+        }
+
+        /* Visible borders for Extra and 3-way buttons */
+        .extra-switch-knob,
+        .three-way-toggle .toggle-handle {
+            border: 1px solid rgba(255, 255, 255, 0.25) !important;
+            border-radius: 9999px !important;
+        }
+
+        .extra-switch-track,
+        .three-way-toggle .toggle-track {
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 12px !important;
+        }
+
+        /* Ensure extra code bar and sound button match container transparency */
+        #extra-code-bar,
+        #sound-button {
+            background: transparent !important;
+        }
+
+        /* Stopwatch styling */
+        #stopwatch {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: #000;
+            color: #00ff88;
+            font-family: 'Courier New', monospace !important;
+            font-size: 0.68em;
+            letter-spacing: 0.03em;
+            white-space: nowrap;
+            user-select: none;
+            transition: background-color 200ms ease, box-shadow 200ms ease, color 200ms ease;
+        }
+
+        #stopwatch.running {
+            background: #b00000;
+            color: #ffffff;
+            border-color: rgba(255, 0, 0, 0.4);
+            box-shadow: 0 0 8px rgba(255, 0, 0, 0.6);
+            animation: stopwatchPulse 1.2s ease-in-out infinite;
+        }
+
+        @keyframes stopwatchPulse {
+            0% {
+                box-shadow: 0 0 6px rgba(255, 0, 0, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 0 16px rgba(255, 0, 0, 0.85);
+            }
+
+            100% {
+                box-shadow: 0 0 6px rgba(255, 0, 0, 0.4);
+            }
+        }
+
+        #counter.paused span {
+            animation: digitPulse 1.6s ease-in-out infinite;
+        }
+
+        @keyframes digitPulse {
+
+            0%,
+            100% {
+                text-shadow: 0 0 15px rgba(100, 200, 255, 0.4),
+                    0 0 30px rgba(50, 150, 255, 0.2);
+                transform: scale(1);
+            }
+
+            50% {
+                text-shadow: 0 0 25px rgba(100, 220, 255, 0.8),
+                    0 0 45px rgba(50, 180, 255, 0.6),
+                    0 0 60px rgba(0, 150, 255, 0.3);
+                transform: scale(1.03);
+            }
+        }
+
+        #counter.paused span::before,
+        #counter.paused span::after {
+            content: '';
+            position: absolute;
+            width: 150%;
+            height: 150%;
+            background: radial-gradient(circle at center,
+                    rgba(255, 255, 255, 0.8) 0%,
+                    rgba(255, 255, 255, 0) 70%);
+            opacity: 0;
+            animation: quantumSpark 1.2s linear infinite;
+            mix-blend-mode: screen;
+            pointer-events: none;
+        }
+
+        #counter span::before {
+            top: -25%;
+            left: -25%;
+            animation-delay: 0.3s;
+        }
+
+        #counter span::after {
+            top: 35%;
+            left: 35%;
+            animation-delay: 0.7s;
+        }
+
+        @keyframes quantumSpark {
+            0% {
+                opacity: 0;
+                transform: scale(0) translate(-50%, -50%);
+            }
+
+            20% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0;
+                transform: scale(2.5) translate(50%, 50%);
+            }
+        }
+
+        /* Modern Shine Effect */
+        #counter span::selection {
+            background: transparent;
+        }
+
+        #counter span .shine {
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg,
+                    rgba(255, 255, 255, 0) 45%,
+                    rgba(255, 255, 255, 0.3) 50%,
+                    rgba(255, 255, 255, 0) 55%);
+            animation: shineSweep 4s linear infinite;
+        }
+
+        /* Force LTR orientation for progress bar, counter, and timing regardless of language */
+        #progress-bar,
+        #counter,
+        #watch-time,
+        #code-display,
+        #crypto-amount,
+        #sound-popup .time-display,
+        #sound-popup .calendar {
+            direction: ltr !important;
+            text-align: left !important;
+            unicode-bidi: embed;
+        }
+
+        /* Ensure counter digits maintain LTR layout */
+        #counter span {
+            direction: ltr !important;
+            unicode-bidi: bidi-override;
+            font-family: 'Courier New', monospace !important;
+        }
+
+        /* Force watch time display to LTR */
+        #watch-time {
+            direction: ltr !important;
+            unicode-bidi: bidi-override !important;
+            text-align: center !important;
+            font-family: 'Courier New', monospace !important;
+        }
+
+        /* Specifically force time display to maintain proper digit order */
+        #sound-popup .time-display {
+            font-variant-numeric: tabular-nums !important;
+            text-align: center !important;
+            direction: ltr !important;
+            unicode-bidi: bidi-override !important;
+            font-family: 'Courier New', monospace !important;
+            letter-spacing: 0.5px !important;
+        }
+
+        /* Force all time-related elements to LTR */
+        #current-time,
+        #gregorian-date,
+        #hijri-date {
+            direction: ltr !important;
+            unicode-bidi: bidi-override !important;
+            text-align: center !important;
+            font-family: 'Courier New', monospace !important;
+            letter-spacing: 0.5px !important;
+        }
+
+        /* Ensure time format displays correctly */
+        #current-time {
+            font-weight: bold !important;
+            color: #00ff88 !important;
+            direction: ltr !important;
+            unicode-bidi: bidi-override !important;
+            text-align: center !important;
+            font-family: 'Courier New', monospace !important;
+            letter-spacing: 1px !important;
+            white-space: nowrap !important;
+        }
+
+        @keyframes shineSweep {
+            0% {
+                transform: translateX(-100%) rotate(25deg);
+            }
+
+            100% {
+                transform: translateX(100%) rotate(25deg);
+            }
+        }
+
+
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            /* Semi-transparent overlay */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1004;
+            /* Ensure it's on top */
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .modal-buttons {
+            margin-top: 20px;
+        }
+
+        @keyframes spark {
+            0% {
+                left: -100%;
+            }
+
+            100% {
+                left: 100%;
+            }
+        }
+
+
+
+        /* Golden shiny effect for code display */
+        .silver {
+            background-color: rgb(252, 251, 245);
+            box-shadow: 0 0 10px rgb(180, 180, 179), 0 0 20px rgb(180, 180, 179), 0 0 30px rgb(180, 180, 179), 0 0 40px rgb(180, 180, 179);
+        }
+
+        .logo-container {
+            position: absolute;
+            top: 9px;
+            /* Adjust as needed */
+            right: 30px;
+            /* Adjust as needed */
+        }
+
+        .logo {
+            width: 100px;
+            /* Adjust the size as needed */
+            height: auto;
+            /* Maintain aspect ratio */
+        }
+
+        #balloonCanvas {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 999001;
+            pointer-events: none;
+            background: transparent !important;
+            display: block !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .counter-box {
+                width: 100%;
+                padding: 10px;
+            }
+
+            #counter-container {
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                bottom: 10px;
+                font-size: 0.8em;
+            }
+
+            #watch-time {
+                font-size: 0.8em;
+
+
+            }
+
+
+            #play-pause-button {
+                width: 70px;
+                height: 70px;
+                margin-left: -20px;
+                margin-top: -30px;
+            }
+
+
+        }
+
+        .news-ticker {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 5px 0;
+            font-size: 14px;
+            line-height: 1.6;
+            box-sizing: border-box;
+            z-index: 5000;
+            overflow: hidden;
+            box-shadow: 0 -5px 10px rgba(0, 0, 0, 0.4);
+            pointer-events: none;
+        }
+
+        .news-ticker-content {
+            display: inline-block;
+            white-space: nowrap;
+            animation: scroll 30s linear infinite;
+            padding-left: 100%;
+            /* Add initial padding */
+        }
+
+        /* Default media query styles */
+        @keyframes scroll {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(0);
+            }
+        }
+
+        .news-ticker-content {
+            animation: scroll 30s linear infinite;
+            padding-left: 100%;
+            /* Adjust padding based on content length */
+        }
+
+        @media (max-width: 768px) {
+            @keyframes scroll {
+                0% {
+                    transform: translateX(-100%);
+                }
+
+                100% {
+                    transform: translateX(0);
+                }
+            }
+
+            .news-ticker-content {
+                animation: scroll 15s linear infinite;
+                padding-left: 100%;
+            }
+        }
+
+        .go-sparkle {
+            color: gold;
+            font-weight: bold;
+            background: linear-gradient(90deg, #ffd700, #fff8dc, #ffec8b, #ffd700);
+            color: transparent;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 2s infinite linear;
+            position: relative;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: -200% 0;
+            }
+
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
+
+        #popup-overlay,
+        #code-popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #code-popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2147483647 !important; /* Max z-index */
+            display: none;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto !important;
+        }
+
+        #code-popup-overlay.open {
+            display: flex;
+            opacity: 1;
+        }
+
+        #popup-overlay.open {
+            display: flex;
+        }
+
+        #popup-frame {
+            position: relative;
+            width: 100vw;
+            max-width: 100vw;
+            height: 100vh;
+            background: #0d1117;
+            border: none;
+            overflow: hidden;
+            box-shadow: none;
+        }
+
+        #popup-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        #code-popup-frame {
+            position: relative;
+            width: 90vw;
+            height: 90vh;
+            background: #0d1117;
+            border-radius: 12px;
+            overflow: hidden;
+            pointer-events: auto !important;
+            z-index: 2147483647 !important;
+        }
+
+        #code-popup-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            pointer-events: auto !important;
+        }
+
+        #popup-close,
+        #code-popup-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #f85149;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 16px;
+            padding: 6px 10px;
+            cursor: pointer;
+            border-radius: 8px;
+            z-index: 10000;
+        }
+
+        /* Centered modal style over the video */
+        .modal {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #popup-overlay.modal #popup-frame {
+            width: 900px;
+            max-width: 95vw;
+            height: 600px;
+            max-height: 85vh;
+            transform: none;
+            border-radius: 16px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Spacing System: container gap 24px, padding 10px, watch-time margin-top 16px */
+        /* Constant counter container dimensions across modes */
+        #counter-container,
+        .extra-mode #counter-container,
+        .theatre-mode-active #counter-container {
+            width: fit-content !important;
+            height: auto !important;
+            min-height: 120px !important;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 32px !important;
+            padding: 12px 12px !important;
+            box-sizing: border-box;
+        }
+
+        #progress-text {
+            display: none;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 11px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: 0.5px;
+            pointer-events: none;
+        }
+
+        .extra-mode #progress-text {
+            display: inline-block !important;
+        }
+
+        #progress-bar-container {
+            display: none !important;
+        }
+
+        /* Responsive Breakpoint: Mobile */
+        @media (max-width: 768px) {
+            #counter-container {
+                width: 90vw !important;
+            }
+        }
+
+        /* Error message styling for CoRsA */
+        .corsa-error {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .corsa-error h2 {
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+
+        .corsa-error p {
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            line-height: 1.6;
+        }
+
+        .corsa-error .error-details {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .corsa-error .close-info {
+            margin-top: 20px;
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        #like-button-container {
+            position: absolute;
+            bottom: 50px;
+            /* فوق زر الصوت */
+            right: 80px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            z-index: 1000;
+        }
+
+        #custom-like-btn {
+            background: transparent;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        #like-count {
+            color: white;
+            font-size: 14px;
+        }
+
+        /* ---------- GLOBAL touch shield (prevents any click/touch on iframe) ---------- */
+        /* Shield only over the YouTube iframe */
+        #global-touch-shield {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            pointer-events: auto !important;
+            z-index: 999998;
+        }
+
+        /* Allow interactions on counter container */
+        #counter-container {
+            position: relative;
+            z-index: 999999;
+            pointer-events: auto !important;
+        }
+
+        #counter-container * {
+            pointer-events: auto !important;
+        }
+
+        /* additional safety: force iframe pointer-events off if possible */
+        #video-container iframe,
+        .theatre-mode iframe,
+        iframe.theatre-mode {
+            pointer-events: none !important;
+            -webkit-pointer-events: none !important;
+        }
+
+
+        /* Popup active state - blur non-overlay content only */
+        .popup-active .container> :not(#popup-overlay):not(#code-popup-overlay),
+        .popup-active #video-container,
+        .popup-active #counter-container,
+        .popup-active .news-ticker,
+        .popup-active #app,
+        .popup-active #balloonCanvas,
+        .popup-active #global-touch-shield {
+            filter: blur(12px);
+            pointer-events: none !important;
+            user-select: none;
+        }
+
+        .popup-active #popup-overlay,
+        .popup-active #code-popup-overlay {
+            filter: none !important;
+            pointer-events: auto !important;
+        }
+
+        /* Keep popup overlay active */
+        #first-open-overlay {
+            pointer-events: auto;
+        }
+
+        /* Screenshot functionality styles */
+        .screenshot-toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 20px;
+            font-size: 16px;
+            z-index: 99999;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            animation: fadeInOut 3s ease-in-out;
+        }
+
+        @keyframes fadeInOut {
+
+            0%,
+            100% {
+                opacity: 0;
+            }
+
+            10%,
+            90% {
+                opacity: 1;
+            }
+        }
+
+        .screenshot-popup-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999999;
+            backdrop-filter: blur(5px);
+        }
+
+        .screenshot-popup {
+            background: #fff;
+            padding: 25px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 85vh;
+            overflow-y: auto;
+            border-radius: 20px;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .close-popup {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: #f0f0f0;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .close-popup:hover {
+            background: #e0e0e0;
+        }
+
+        .screenshots-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .screenshot-item {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .screenshot-thumb {
+            width: 100%;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .screenshot-thumb:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .delete-btn {
+            margin-top: 8px;
+            padding: 6px 12px;
+            background: #ff6b6b;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .delete-btn:hover {
+            background: #ff5252;
+        }
+
+        .delete-all-btn {
+            margin-top: 25px;
+            padding: 12px;
+            width: 100%;
+            background: #d9534f;
+            color: #fff;
+            border: none;
+            font-size: 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .delete-all-btn:hover {
+            background: #c9302c;
+        }
+
+        .empty-text {
+            text-align: center;
+            color: #888;
+            font-size: 18px;
+            margin: 40px 0;
+        }
+
+        /* Flash overlay */
+        #screenshot-flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease-out;
+            z-index: 9999;
+        }
+
+        /* Preview image */
+        #screenshot-preview {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            width: 140px;
+            height: 140px;
+            border-radius: 12px;
+            overflow: hidden;
+            opacity: 0;
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.25);
+            transform: translateY(20px);
+            transition:
+                opacity 0.3s ease,
+                transform 0.4s ease;
+            z-index: 99999;
+        }
+
+        #screenshot-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* YouTube Thumbnail Layer for Screenshots */
+        #yt-thumbnail-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            display: none;
+        }
+
+        #yt-thumbnail-layer img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        #stopwatch-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: transparent;
+            display: none;
+            z-index: 100000;
+        }
+
+        #stopwatch-modal-frame {
+            background: transparent;
+            width: auto;
+            max-width: 100%;
+            border-radius: 12px;
+            box-shadow: none;
+            padding: 8px 12px;
+            position: fixed;
+            bottom: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
+            border: none;
+        }
+
+        #stopwatch-modal-close {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            border: none;
+            background: transparent;
+            font-size: 16px;
+            color: #ffffff;
+        }
+
+        #stopwatch-modal-display {
+            font-family: monospace;
+            font-size: 18px;
+            text-align: center;
+            margin: 6px 0;
+            color: #ffffff;
+            letter-spacing: 0.5px;
+        }
+
+        #stopwatch-modal-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 8px;
+            align-items: end;
+        }
+
+        #stopwatch-modal-controls label {
+            display: flex;
+            flex-direction: column;
+            font-size: 12px;
+            color: #ffffff;
+        }
+
+        #stopwatch-modal-controls input {
+            padding: 6px;
+            font-size: 14px;
+            background: transparent;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            text-align: center;
+        }
+
+        #sw-ok {
+            padding: 6px 10px;
+        }
+
+        #eye-rest-notice {
+            text-align: center;
+            font-weight: 700;
+            color: #c02;
+            margin-top: 8px;
+        }
+
+        .sw-spinner {
+            display: grid;
+            grid-template-columns: 28px 1fr 28px;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .sw-spin-btn {
+            height: 28px;
+            width: 28px;
+            border: 1px solid #ccc;
+            background: #f7f7f7;
+            border-radius: 6px;
+            font-size: 14px;
+            line-height: 1;
+        }
+
+        .sw-spin-btn:active {
+            background: #eaeaea;
+        }
+
+        .pulse {
+            animation: sw-pulse 1s infinite;
+        }
+
+        @keyframes sw-pulse {
+            0% {
+                transform: scale(1);
+                filter: brightness(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+                filter: brightness(1.3);
+            }
+
+            100% {
+                transform: scale(1);
+                filter: brightness(1);
+            }
+        }
+        #toast-container{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:100000;display:flex;flex-direction:column;gap:6px}
+        #toast-container .toast{background:rgba(0,0,0,0.75);color:#fff;padding:8px 12px;border-radius:8px;font-size:13px;animation:toast-fade 2s ease}
+        @keyframes toast-fade{0%{opacity:0;transform:translateY(10px)}10%{opacity:1;transform:translateY(0)}80%{opacity:1}100%{opacity:0}}
+    </style>
+
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+</head>
+
+<body class="bg-light">
+    <!-- 🔹 Loading Overlay (Initially Hidden, Activated by Script) -->
+    <div id="loading-overlay">
+        <div class="loading-text">جارِ التهيئة</div>
+        <div class="progress-container">
+            <div id="loading-progress-bar" style="width: 0%;"></div>
+        </div>
+        <div style="color: #8b949e; margin-top: 10px; font-size: 14px;">يتم تجهيز التطبيق، يرجى الانتظار قليلاً</div>
+        <div id="loading-percentage" style="color: #c9d1d9; margin-top: 5px;">0%</div>
+    </div>
+    
+    <script>
+        // Show loading overlay only if not already authenticated
+        (function() {
+            try {
+                // If we have a session cookie, maybe we don't need the heavy loading screen
+                const hasSession = document.cookie.indexOf('session_token') !== -1;
+                const overlay = document.getElementById('loading-overlay');
+                if (overlay && !hasSession) {
+                    overlay.classList.add('active');
+                }
+            } catch(e) {}
+        })();
+    </script>
+
+    <div class="container text-center py-5">
+        <h1 class="display-4" data-i18n="general.siteName">My YouTube Channel</h1>
+
+        <div class="touch-disabled"></div>
+
+        <div class="video-wrapper">
+            <div id="video-container"></div>
+            <div id="global-touch-shield" class="touch-overlay" aria-hidden="true"></div>
+            <div id="counter-container" class="bg-dark text-white p-3 rounded">
+
+                <div id="extra-switch-absolute-container">
+                    <div id="extra-switch-container">
+                        <div id="extra-switch-track" class="extra-switch-track">
+                            <div id="extra-switch-knob" class="extra-switch-knob"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="watch-time" class="h5">
+                    <span id="counter">000:00:00.000</span>
+                    <span id="stopwatch">00:00:0</span>
+                </div>
+
+                <div id="control-buttons" class="d-flex justify-content-center gap-2">
+                    <button id="sound-button" class="btn btn-secondary" title="Toggle Sound"
+                        data-i18n-title="buttons.soundToggle">🔊</button>
+                </div>
+
+                <div id="toggle-switch-absolute-container">
+                    <div id="three-way-toggle" class="three-way-toggle">
+                        <div class="toggle-track">
+                            <div class="toggle-handle"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="code-display" class="mt-3 p-2 bg-secondary text-white rounded"
+                    data-i18n="labels.waitingForCode">
+                    Waiting for code...
+                </div>
+
+                <div id="progress-bar-container" class="mt-3">
+                    <div id="sparkle-effect"></div>
+                    <div id="progress-bar" class="progress-bar"></div>
+                </div>
+            
+                <button id="play-pause-button" class="btn btn-success" title="Play/Pause" aria-label="Play/Pause"><span
+                        id="progress-text" class="pp-overlay">0%</span></button>
+            </div>
+        </div>
+
+
+
+
+        <div id="sound-popup">
+            <div class="calendars">
+                <div class="calendar" id="gregorian-date">Dec 25, 2024</div>
+                <div class="time-display" id="current-time">12:00</div>
+                <div class="calendar" id="hijri-date">15 Ramadan 1446</div>
+            </div>
+        </div>
+
+        <div class="news-ticker">
+            <span class="news-ticker-content" data-i18n="newsTicker.content">
+                TIMUR NEWS: Breaking news and updates from around the world. | NEWS: Lorem ipsum dolor sit amet |
+                SPORTS: Aliquam erat volutpat. Sed varius nulla non condimentum consequat | TIMUR CHANNEL ANNOUNCEMENT:
+                Quisque malesuada magna ac dolor tincidunt, ac dictum risus sollicitudin. | WEATHER: Sed eget lacus
+                vitae nulla laoreet ultricies. Nunc eu sapien in velit varius vulputate. | COMMUNITY: In hac habitasse
+                platea dictumst. Donec non ornare enim. | SPECIAL PROMO: Sed nec arcu ipsum. Aliquam in pharetra est.
+                TIMUR NEWS: ...
+            </span>
+        </div>
+
+        <div id="popup-overlay">
+            <div id="popup-frame">
+                <button id="popup-close">✖</button>
+                <iframe src="" id="popup-iframe" style="display:none"></iframe>
+            </div>
+        </div>
+
+        <div id="code-popup-overlay" style="display: none;">
+            <div id="code-popup-frame">
+                <button id="code-popup-close">✖</button>
+                <iframe id="code-popup-iframe" src="/services/yt-clear/codebank/indexCB.html"
+                    style="width:100%;height:100%;border:none"></iframe>
+            </div>
+        </div>
+
+        
+
+        <div id="yt-thumbnail-layer">
+            <img id="yt-thumbnail-img" src="" alt="">
+        </div>
+
+        <div id="app"></div>
+    </div>
+
+    <!-- External Scripts -->
+    <script>
+        (function () {
+            function __cbOrigin__(){ try{ var f=document.getElementById('code-popup-iframe'); if(!f) return window.location.origin; var src=f.getAttribute('src')||''; return new URL(src, window.location.href).origin; }catch(_){ return window.location.origin } }
+            try {
+                if (!window.YT) window.YT = { loading: 0, loaded: 0 };
+                if (!window.YT.ready) { window.YT.ready = function (f) { try { f && f(); } catch (_) { } }; }
+                window.onYouTubeIframeAPIReady = window.onYouTubeIframeAPIReady || function () { };
+                var s = document.createElement('script');
+                s.src = 'https://www.youtube.com/iframe_api';
+                s.async = true;
+                s.onerror = function () { console.warn('YouTube iframe API failed to load; continuing in degraded mode'); };
+                (document.head || document.body).appendChild(s);
+            } catch (e) { console.warn('YouTube API stub init failed', e); }
+        })();
+    </script>
+
+    <script>
+        (function(){
+          try {
+            var host = location && location.hostname || '';
+            var isLocal = /^(localhost|127\.0\.0\.1)$/.test(host);
+            var params = location && location.search || '';
+            var disableSW = /([?&])disable_sw=1\b/.test(params);
+            if (isLocal || disableSW) {
+              if (navigator.serviceWorker && typeof navigator.serviceWorker.getRegistrations==='function') {
+                navigator.serviceWorker.getRegistrations().then(function(regs){
+                  try { regs.forEach(function(r){ try { r.unregister(); } catch(_){} }); } catch(_){}
+                }).catch(function(){});
+              }
+            }
+          } catch(_){}
+        })();
+    </script>
+    <script>
+        (function(){
+            var container=null; var lastBalances={ codes:null }; var lastToastAt=0;
+            function ensure(){ var el=document.getElementById('toast-container'); if(!el){ el=document.createElement('div'); el.id='toast-container'; document.body.appendChild(el); } container=el }
+            function toast(text){ ensure(); var t=document.createElement('div'); t.className='toast'; t.textContent=String(text||''); container.appendChild(t); setTimeout(function(){ try{ t.remove() }catch(_){ } },2000) }
+            window.addEventListener('balances:updated', function(e){
+                var d=(e&&e.detail&&e.detail.balances)||{}; var now=Date.now(); var mark=window.__lastRewardMark||0; var recent=(mark&&(now-mark)<3000);
+                var prev=lastBalances.codes; var curr=(typeof d.codes==='number')?d.codes:prev; if(curr==null){ lastBalances.codes=curr; return }
+                var delta=(prev==null)?0:(curr-prev); lastBalances.codes=curr; if(!recent) return; if(delta===0) return; if(now-lastToastAt<800) return; lastToastAt=now;
+                toast((delta>0?'+':'')+String(delta)+' codes');
+                try{ var row=document.querySelector('#asset-dashboard > div:first-child')||document.getElementById('counter-container'); if(row){ row.classList.add('pulse'); setTimeout(function(){ try{ row.classList.remove('pulse') }catch(_){ } },800) } }catch(_){ }
+            }, { once:false });
+        })();
+    </script>
+    <script>
+(function(){
+            async function fetchSqliteCodesFirst(){
+                try {
+                    // Auth check handled by fetch patch gate
+                    var res = await fetch('/api/sqlite/codes', { method: 'GET', credentials: 'include' });
+                    if (!res.ok) return false;
+                    var data = await res.json();
+                    try { window.UVLog && window.UVLog('sqlite-codes-fetch', { status: data && data.status, count: data && data.count }, 'yt-new-clear') } catch(_){ }
+                    try { console.log('[CodeBank] SQLite sync result:', data); } catch (_) {}
+                    if (data && data.status === 'success' && Array.isArray(data.rows) && data.rows.length > 0) {
+                        var latest = (typeof data.latest==='string' ? data.latest : (data.rows[0] && data.rows[0].code) || '');
+                        var snapshot = { latest: latest, rows: data.rows };
+                        try { window.dispatchEvent(new CustomEvent('sqlite:snapshot', { detail: snapshot })); } catch(_){}
+                        try { window.UVLog && window.UVLog('sqlite:snapshot:emit', snapshot, 'yt-new-clear') } catch(_){}
+                        return true;
+                    }
+                    return false;
+                } catch(e){ return false; }
+            }
+
+            async function initAssetsFromStorage(){
+                try {
+                    function openDB(){ return new Promise(function (resolve, reject) { try { var req = indexedDB.open('CodeBankSnapshotDB', 1); req.onupgradeneeded = function () { var db = req.result; if (!db.objectStoreNames.contains('snapshots')) db.createObjectStore('snapshots'); }; req.onsuccess = function () { resolve(req.result) }; req.onerror = function () { reject(req.error) }; } catch (e) { reject(e) } }); }
+                    function readSnap(){ return openDB().then(function (db) { return new Promise(function (resolve, reject) { try { var tx = db.transaction('snapshots', 'readonly'); var store = tx.objectStore('snapshots'); var req = store.get('latest'); req.onsuccess = function () { resolve(req.result || null) }; req.onerror = function () { reject(req.error) }; } catch (e) { reject(e) } }); }); }
+                    var snap = await readSnap();
+                    if (snap && Array.isArray(snap.codesList) && snap.codesList.length > 0) { return true; }
+                    return false;
+                } catch(_) { return false; }
+            }
+
+            try {
+                window.addEventListener('auth:ready', async function(e){
+                    try {
+                        var okAuth = !!(e && e.detail && e.detail.authenticated);
+                        if (!okAuth) return;
+                        async function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms) }) }
+                        async function tryWithRetry(fn, attempts, delay){
+                            for (var i=0;i<attempts;i++){ if (await fn()) return true; await sleep(delay) }
+                            return false;
+                        }
+                        var ok = await tryWithRetry(fetchSqliteCodesFirst, 3, 1200);
+                        if (ok) return;
+                        setTimeout(async function(){ try { await tryWithRetry(fetchSqliteCodesFirst, 3, 1500) } catch(_){} }, 2500);
+                    } catch(_){}
+                });
+            } catch(_){}
+        })();
+    </script>
+    <script src="/shared_external/sync-selftest.js"></script>
+    <script src="/shared/asset-types.js"></script>
+    <script src="/shared/asset-policy.js" type="module"></script>
+    <script src="/shared/engines/likes-engine.js" type="module"></script>
+    <script src="/shared/engines/superlikes-engine.js" type="module"></script>
+    <script src="/shared/engines/games-engine.js" type="module"></script>
+    <script src="/shared/engines/transaction-engine.js" type="module"></script>
+    <script src="/ui/asset-dashboard.js"></script>
+    <script>
+        (function () {
+            function openDB() { return new Promise(function (resolve, reject) { try { var req = indexedDB.open('CodeBankSnapshotDB', 1); req.onupgradeneeded = function () { var db = req.result; if (!db.objectStoreNames.contains('snapshots')) db.createObjectStore('snapshots'); }; req.onsuccess = function () { resolve(req.result) }; req.onerror = function () { reject(req.error) }; } catch (e) { reject(e) } }); }
+            function writeSnap(obj) { return openDB().then(function (db) { return new Promise(function (resolve, reject) { try { var tx = db.transaction('snapshots', 'readwrite'); var store = tx.objectStore('snapshots'); var req = store.put(obj, 'latest'); req.onsuccess = function () { resolve(true) }; req.onerror = function () { reject(req.error) }; } catch (e) { reject(e) } }); }); }
+            function readSnap() { return openDB().then(function (db) { return new Promise(function (resolve, reject) { try { var tx = db.transaction('snapshots', 'readonly'); var store = tx.objectStore('snapshots'); var req = store.get('latest'); req.onsuccess = function () { resolve(req.result || null) }; req.onerror = function () { reject(req.error) }; } catch (e) { reject(e) } }); }); }
+            function sanitizeUISnapshot(snapshot) { try { if (snapshot && snapshot.source !== 'neon') { if (snapshot.count === 0) { delete snapshot.count; } if (snapshot.latestCode) { delete snapshot.latestCode; } if (Array.isArray(snapshot.codesList) && snapshot.codesList.length === 0) { delete snapshot.codesList; } } } catch (_) { } return snapshot; }
+            try { window.addEventListener('assets:updated', function (e) { try { var d = e && e.detail || {}; var list = Array.isArray(d && d.list) ? d.list : []; var latest = (d && d.latest) || ''; var typ = d && d.type || 'unknown'; readSnap().then(function(prev){ try {
+                                var prevLatest = prev && prev.latestCode || '';
+                                var prevList = prev && Array.isArray(prev.codesList) ? prev.codesList : [];
+                                var prevCount = prev && typeof prev.count==='number' ? prev.count : 0;
+                                var nextLatest = prevLatest;
+                                var nextList = prevList;
+                                var nextCount = prevCount;
+                                if (typ === 'codes') {
+                                    if (latest) nextLatest = latest;
+                                    if (Array.isArray(list) && list.length) nextList = list;
+                                    if (typeof d.count==='number' && d.count>0) nextCount = d.count;
+                                }
+                                const snap = AssetBus.snapshot();
+                                var uiSnap = Object.assign({}, snap, { source: 'ui' });
+                                try { if (uiSnap.source !== 'neon' && uiSnap.count === 0) { console.warn('[UI SNAPSHOT] zero-count snapshot blocked', uiSnap); } } catch(_){}
+                                uiSnap = sanitizeUISnapshot(uiSnap);
+                                writeSnap(uiSnap);
+                            } catch(_){ } }); } catch(_){ } }); } catch (_) { }
+            try { window.addEventListener('message', function (ev) { try { var data = ev && ev.data || {}; if (data && data.type === 'CODEBANK_ASSETS_HANDSHAKE') { try { var snap = AssetBus.snapshot(); if (snap && ev.source) { try { var out = sanitizeUISnapshot(Object.assign({}, snap, { source: 'ui' })); if (out && out.count === 0) { console.warn('[UI SNAPSHOT] zero-count snapshot blocked', out); }
+                        try { window.__CODEBANK_ALLOWED_ORIGIN__ = ev && ev.origin || __cbOrigin__(); } catch(_){ }
+                        var authed = false; try { authed = (window.Auth && typeof window.Auth.isAuthenticated==='function' && window.Auth.isAuthenticated()) || (window.AuthCore && typeof window.AuthCore.isAuthenticated==='function' && window.AuthCore.isAuthenticated()) || (!!window.__AUTH_READY__ && !!(window.APP_AUTH && window.APP_AUTH.user)); } catch(_){ authed = false }
+                        if (!authed) { console.warn('[SNAPSHOT BLOCKED] not authenticated'); return; }
+                         console.log('[SNAPSHOT SENT]', out);
+                        // 🧠 FIX: Use ev.origin as target origin for better compatibility and to avoid YouTube mismatch
+                        var targetOrigin = (ev.origin && ev.origin !== 'null') ? ev.origin : window.location.origin;
+                        ev.source.postMessage({ type: 'CODEBANK_ASSETS_SYNC', payload: out }, targetOrigin); } catch (_) { } } } catch (_) { } } } catch (_) { } }); } catch (_) { }
+            try { window.addEventListener('message', function (ev) { try { var data = ev && ev.data || {}; if (data && data.type === 'CODEBANK_INTENT') { try { var intent = data.intent || ''; var detail = data.detail || {}; console.log('[CODEBANK INTENT]', intent, detail); if (intent === 'compress') { window.dispatchEvent(new CustomEvent('intent:compress', { detail: detail })); } else if (intent === 'convert') { window.dispatchEvent(new CustomEvent('intent:convert', { detail: detail })); } else if (intent === 'grind') { window.dispatchEvent(new CustomEvent('intent:grind', { detail: detail })); } } catch(_){} } } catch(_){} }); } catch(_){}
+            try { var frame = document.getElementById('code-popup-iframe'); if (frame) { frame.addEventListener('load', function () { try { var snap = AssetBus.snapshot(); if (snap && frame.contentWindow) { try { var out2 = sanitizeUISnapshot(Object.assign({}, snap, { source: 'ui' })); if (out2 && out2.count === 0) { console.warn('[UI SNAPSHOT] zero-count snapshot blocked', out2); }
+                        var authed2 = false; try { authed2 = (window.Auth && typeof window.Auth.isAuthenticated==='function' && window.Auth.isAuthenticated()) || (window.AuthCore && typeof window.AuthCore.isAuthenticated==='function' && window.AuthCore.isAuthenticated()) || (!!window.__AUTH_READY__ && !!(window.APP_AUTH && window.APP_AUTH.user)); } catch(_){ authed2 = false }
+                        if (!authed2) { console.warn('[SNAPSHOT BLOCKED] not authenticated (frame load)'); return; }
+                        frame.contentWindow.postMessage({ type: 'CODEBANK_ASSETS_SYNC', payload: out2 }, window.location.origin); } catch (_) { } } } catch (_) { } }); } } catch (_) { }
+        })();
+    </script>
+    <script>
+        (function(){
+            try {
+                window.addEventListener('auth:ready', async function (e) {
+                    try { if (!(e && e.detail && e.detail.authenticated === true)) return; } catch(_) { return }
+                    try {
+                        var res = await fetch('/api/balances', { method: 'GET', credentials: 'include' });
+                        var data = null;
+                        try { data = await res.json(); } catch(_) { data = null }
+                        try { console.log('[SQLite] balances aggregation:', data); } catch(_){}
+                        try {
+                            var bal = (data && data.status==='success' && data.balances && typeof data.balances==='object') ? data.balances : null;
+                            if (bal) {
+                                try { window.UVLog && window.UVLog('balances:sqlite', bal, 'yt-new-clear') } catch(_){}
+                                try { window.dispatchEvent(new CustomEvent('balances:updated', { detail: { balances: bal } })); } catch(_){}
+                                var det = {
+                                    count: (typeof bal.codes==='number' ? bal.codes : undefined),
+                                    likes: (typeof bal.likes==='number' ? bal.likes : undefined),
+                                    superlikes: (typeof bal.superlikes==='number' ? bal.superlikes : undefined),
+                                    games: (typeof bal.games==='number' ? bal.games : undefined),
+                                    transactions: (typeof bal.transactions==='number' ? bal.transactions : undefined)
+                                };
+                                
+                            }
+                        } catch(_){}
+                    } catch(_){}
+                });
+            } catch(_){}
+        })();
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var sw = document.getElementById('stopwatch');
+            if (!sw) return;
+            var running = false;
+            var startTs = 0;
+            var elapsedMs = 0;
+            var intervalId = null;
+            var pressTimer = null;
+            var longPressReset = false;
+            var modal = document.getElementById('stopwatch-modal-overlay');
+            var modalDisplay = document.getElementById('stopwatch-modal-display');
+            var modalClose = document.getElementById('stopwatch-modal-close');
+            var setBtn = document.getElementById('sw-ok');
+            var minsIn = document.getElementById('sw-mins');
+            var secsIn = document.getElementById('sw-secs');
+            var deciIn = document.getElementById('sw-deci');
+            var eyeNotice = document.getElementById('eye-rest-notice');
+            var alarmMs = null;
+            var alarmActive = false;
+            var alarmStart = 0;
+            var lockRun = false;
+            var audioCtx = null;
+            var alarmOsc = null;
+            var dimActive = false;
+            var dimStart = null;
+            var dimMaxMs = 30 * 60 * 1000;
+            var body = document.body;
+            try {
+                var ds = sessionStorage.getItem('dimMode:start');
+                if (ds) { var t = parseInt(ds, 10); if (!isNaN(t)) { var delta = Date.now() - t; if (delta < dimMaxMs) { dimActive = true; dimStart = t; body.style.transition = 'opacity 0.6s ease'; body.style.opacity = '0.05'; } else { sessionStorage.removeItem('dimMode:start'); } } }
+            } catch (_) { }
+
+            function fmt() {
+                var total = elapsedMs + (running ? (Date.now() - startTs) : 0);
+                var deci = Math.floor(total / 100) % 10; // 0..9 tenths
+                var secs = Math.floor(total / 1000) % 60;
+                var mins = Math.floor(total / 60000) % 60;
+                sw.textContent = String(deci).padStart(2, '0') + ':' + String(secs).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
+                if (modalDisplay) modalDisplay.textContent = sw.textContent;
+                if (alarmMs != null && !alarmActive) { if (total >= alarmMs) { alarmActive = true; lockRun = true; alarmStart = Date.now(); try { sw.classList.add('pulse'); } catch (_) { } try { eyeNotice.style.display = 'block'; } catch (_) { } try { if (audioCtx) { audioCtx.resume(); } else { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } var g = audioCtx.createGain(); g.gain.value = 0.15; g.connect(audioCtx.destination); alarmOsc = audioCtx.createOscillator(); alarmOsc.type = 'sine'; alarmOsc.frequency.value = 660; alarmOsc.connect(g); alarmOsc.start(); setTimeout(function () { try { alarmOsc.stop(); } catch (_) { } alarmOsc = null; try { sw.classList.remove('pulse'); } catch (_) { } if (!dimActive) { dimActive = true; dimStart = Date.now(); sessionStorage.setItem('dimMode:start', String(dimStart)); body.style.transition = 'opacity 1.2s ease'; body.style.opacity = '0.05'; setTimeout(function () { dimActive = false; sessionStorage.removeItem('dimMode:start'); body.style.opacity = '1'; }, dimMaxMs); } }, 60000); } catch (_) { } } }
+            }
+
+            function start() {
+                if (running) return;
+                running = true;
+                startTs = Date.now();
+                intervalId = setInterval(fmt, 100);
+                try { sw.classList.add('running'); } catch (_) { }
+                fmt();
+            }
+
+            function pause() {
+                if (!running) return;
+                running = false;
+                elapsedMs += (Date.now() - startTs);
+                startTs = 0;
+                if (intervalId) { clearInterval(intervalId); intervalId = null; }
+                try { sw.classList.remove('running'); } catch (_) { }
+                fmt();
+            }
+
+            function reset() {
+                if (lockRun) return;
+                running = false;
+                startTs = 0;
+                elapsedMs = 0;
+                if (intervalId) { clearInterval(intervalId); intervalId = null; }
+                try { sw.classList.remove('running'); } catch (_) { }
+                fmt();
+            }
+
+            sw.addEventListener('click', function (e) {
+                if (lockRun) { e.preventDefault(); e.stopPropagation(); return; }
+                if (longPressReset) { longPressReset = false; e.preventDefault(); e.stopPropagation(); return; }
+                if (running) pause(); else start();
+            });
+
+            sw.addEventListener('dblclick', function () {
+                if (!modal) return; if (modal.style.display === 'block') return; modal.style.display = 'block'; modal.setAttribute('aria-hidden', 'false'); try { if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } audioCtx.resume(); } catch (_) { }
+            });
+            var wt = document.getElementById('watch-time');
+            if (wt) { wt.addEventListener('dblclick', function () { if (!modal) return; if (modal.style.display === 'block') return; modal.style.display = 'block'; modal.setAttribute('aria-hidden', 'false'); try { if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } audioCtx.resume(); } catch (_) { } }); }
+            if (modalClose) { modalClose.addEventListener('click', function () { modal.style.display = 'none'; modal.setAttribute('aria-hidden', 'true'); }); }
+            if (setBtn) { setBtn.addEventListener('click', function () { var m = parseInt(minsIn.value || '0', 10); var s = parseInt(secsIn.value || '0', 10); if (isNaN(m) || isNaN(s)) return; if (m < 0) m = 0; if (s < 0) s = 0; if (m > 59) m = 59; if (s > 59) s = 59; alarmMs = m * 60000 + s * 1000; alarmActive = false; lockRun = (alarmMs === 0); eyeNotice.style.display = 'none'; sw.classList.remove('pulse'); if (modal) { modal.style.display = 'none'; modal.setAttribute('aria-hidden', 'true'); } start(); }); }
+
+            function spinAdjust(btn) {
+                var id = btn.getAttribute('data-target'); var dir = btn.getAttribute('data-dir'); var inp = document.getElementById(id);
+                if (!inp) return; var min = parseInt(inp.getAttribute('min') || '0', 10); var max = parseInt(inp.getAttribute('max') || '59', 10); var v = parseInt(inp.value || String(min), 10);
+                if (dir === 'up') v = Math.min(max, v + 1); else v = Math.max(min, v - 1);
+                inp.value = String(v).padStart(2, '0');
+            }
+            Array.from(document.querySelectorAll('.sw-spin-btn')).forEach(function (b) { b.addEventListener('click', function () { spinAdjust(b); }); });
+
+            function startLong() {
+                if (lockRun) return;
+                pressTimer = setTimeout(function () { longPressReset = true; reset(); }, 800);
+            }
+            function cancelLong() {
+                if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+            }
+            sw.addEventListener('mousedown', startLong);
+            sw.addEventListener('mouseup', cancelLong);
+            sw.addEventListener('mouseleave', cancelLong);
+            sw.addEventListener('touchstart', function (e) { e.preventDefault(); startLong(); }, { passive: false });
+            sw.addEventListener('touchend', function (e) { e.preventDefault(); cancelLong(); });
+            sw.addEventListener('touchcancel', cancelLong);
+
+            fmt();
+        });
+    </script>
+
+    <!-- Modular JavaScript Files -->
+    <!-- modules: migrated from yt-coder to yt-clear -->
+    <!-- 1. Core -->
+    <script src="/shared/auth-core.js"></script>
+    
+    <!-- 2. Layout (creates video-container) -->
+    <script type="module" src="/layout-bootstrap.js"></script>
+    
+    <!-- 3. Bankode (must finish before bridge) -->
+    <script src="/shared/bankode-core.js"></script>
+    
+    <!-- 4. AssetBus & Bridge Initialization -->
+    <script type="module">
+      import { AssetBus } from '/shared/local-asset-bus.js';
+      
+      // 🛡️ Global init guard (from actly.md)
+      if (window.__assetbus_initialized) {
+          console.warn('[INIT] AssetBus multiple initialization detected and blocked.');
+      } else {
+          window.__assetbus_initialized = true;
+          console.log('[INIT] AssetBus loaded');
+          
+          // 🛡️ Signal AssetBus is ready for non-module scripts
+          window.dispatchEvent(new CustomEvent('assetbus:ready'));
+
+          // 🧠 Ensure Bridge is initialized AFTER AssetBus
+          if (window.BankodeAssetBusBridge) {
+              console.log('[INIT] Bridge detected, re-triggering parent setup');
+          }
+      }
+    </script>
+
+    <!-- 5. Bridge (regular script will now find AssetBus via deferred mode) -->
+    <script src="/codebank/bankode-assetbus-bridge.js"></script>
+    
+    <!-- 6. Safe Asset List - REMOVED from main page, only in CodeBank iframe -->
+    <script src="/codebank/js/safe-storage.js"></script>
+    <script src="/codebank/js/guardian-3d.js"></script>
+    
+    <!-- 7. YT Player -->
+    <script src="/yt-player/yt-player.init.js"></script>
+    
+    <script type="module" src="/touch-shield/global-touch-shield.js"></script>
+    <script type="module">
+        import { initTranslations } from '/shared/js/translate.js';
+        
+        // 🛡️ Global init guard (from actly.md)
+        if (window.__translations_initialized) {
+            console.warn('[INIT] Translations multiple initialization detected.');
+        } else {
+            window.__translations_initialized = true;
+            try { initTranslations(); } catch (_) { }
+        }
+    </script>
+    <script type="module" src="/js/section-switch-popup.js"></script>
+    <script type="module" src="/3way-switch-b/yt-section-switch.js"></script>
+    <script type="module" src="/3way-switch-b/toggle-switch-3way.js"></script>
+    <script type="module" src="/extra-mode-b/yt-extramode.js"></script>
+    <script src="/extra-mode-b/watch-dog-action.js"></script>
+    <script type="module" src="/counter/yt-counter.js"></script>
+    <script type="module" src="/sound-b/yt-sound-button.js"></script>
+    <script type="module" src="/play-pause-b/yt-play-pause-button.js"></script>
+
+    <!-- Inline orchestration removed per integration rules -->
+
+    <!-- Screenshot Module removed (migrated above) -->
+    <script type="module" src="/main.js"></script>
+    <script>
+        (function () {
+            // 🔐 YT-Clear Auth Redirect: If not authenticated, go to login.html
+            function checkAuth() {
+                // If we're already on login page, don't check
+                if (window.location.pathname.includes('login.html')) return true;
+
+                const sessionToken = localStorage.getItem('session_token');
+                const cookieToken = document.cookie.split('; ').find(row => row.startsWith('session_token='))?.split('=')[1];
+                
+                if (!sessionToken && !cookieToken && window.USER_MODE !== 'auth') {
+                    console.warn('[AUTH] No session detected, checking if we should redirect...');
+                    
+                    // 🛡️ MODIFIED: Only redirect if we are SURE there's no session after a delay
+                    setTimeout(() => {
+                        const currentSession = localStorage.getItem('session_token') || document.cookie.includes('session_token');
+                        if (!currentSession && window.USER_MODE !== 'auth') {
+                            console.log('[AUTH] Redirecting to login.html');
+                            window.location.href = '/login.html';
+                        }
+                    }, 2000); 
+                    return false;
+                }
+                return true;
+            }
+            checkAuth();
+
+            try { window.__UV_TRACE__ = Array.isArray(window.__UV_TRACE__) ? window.__UV_TRACE__ : []; } catch(_){}
+            function __uvlog__(type, data, source){ try { var rec = { type: String(type||''), data: data||{}, source: String(source||'unknown'), ts: Date.now() }; window.__UV_TRACE__.push(rec); console.log('[UV]', rec); } catch(_){} }
+            try { window.UVLog = __uvlog__ } catch(_){}
+            try { window.dumpUVTrace = function(){ try { return (window.__UV_TRACE__||[]).slice() } catch(_){ return [] } } } catch(_){}
+            try { window.addEventListener('auth:ready', function(e){ try { __uvlog__('auth:ready', e&&e.detail||{}, 'auth-core') } catch(_){} }); } catch(_){}
+            try { window.addEventListener('assets:updated', function(e){ try { __uvlog__('assets:updated', e&&e.detail||{}, 'assetbus') } catch(_){} }); } catch(_){}
+        })();
+    </script>
+
+
+
+    <!-- CodeBank Bridge -->
+    <script type="module" src="/code-display-bar/codebank-bridge.js"></script>
+    <script type="module" src="/code-display-bar/codebank-panel.js"></script>
+    <script src="/shared/ui-state-authority.js"></script>
+
+    
+
+<!-- Initialize Bankode timers after auth -->
+<script>
+document.addEventListener('DOMContentLoaded', async function(){
+  if (!window.Bankode) return;
+  try {
+    if (window.Auth && typeof window.Auth.isAuthenticated === 'function') {
+      if (window.Auth.isAuthenticated()) { Bankode.startTimer(300000) } else { window.addEventListener('auth:ready', function(e){ try { var ok=!!(e&&e.detail&&e.detail.authenticated); if(ok){ Bankode.startTimer(300000) } } catch(_){} }) }
+    } else { Bankode.startTimer(300000) }
+  } catch(_){}
+});
+</script>
+
+
+    <script src="/player/ui-controller.js"></script>
+    <script>
+        (function () {
+            // Make ACTIVE_ASSET_TAB accessible globally
+            window.ACTIVE_ASSET_TAB = 'normal';
+            
+            // Function to switch between asset tabs
+            window.switchAssetTab = function(tab) {
+                if (tab !== 'normal' && tab !== 'silver' && tab !== 'gold') {
+                    console.warn('[UI] Invalid asset tab:', tab);
+                    return;
+                }
+                window.ACTIVE_ASSET_TAB = tab;
+                console.log('[UI] Switched to asset tab:', tab);
+            };
+        })();
+    </script>
+    <script>
+        (function () {
+            // 🔹 Safety timeout for loading overlay
+            setTimeout(() => {
+                const loadingOv = document.getElementById('loading-overlay');
+                if (loadingOv) {
+                    loadingOv.classList.remove('active');
+                    loadingOv.classList.add('hidden');
+                    console.log("⚠️ Loading overlay hidden by safety timeout");
+                }
+            }, 3000); // Reduced to 3s for faster recovery
+
+            window.USER_MODE = (window.Auth && typeof window.Auth.isAuthenticated==='function' && window.Auth.isAuthenticated()) ? 'auth' : null;
+            function closeInit() {
+                 try {
+                     document.body.classList.remove('popup-active');
+                     var ov = document.getElementById('popup-overlay');
+                     if (ov) {
+                         ov.classList.remove('open');
+                         ov.style.display = 'none'; // 🔹 Force hide
+                     }
+                     
+                     // Clear messages
+                     var msg = document.getElementById('login-msg');
+                     if (msg) msg.style.display = 'none';
+
+                     // Also trigger the full post-login init if we logged in
+                     if (window.initAfterLogin) {
+                         window.initAfterLogin();
+                     }
+                 } catch (_) { }
+             }
+            function sendAuthContext() { 
+                try { 
+                    var frame = document.getElementById('code-popup-iframe'); 
+                    if (frame && frame.contentWindow) { 
+                        var u = (window.APP_AUTH && window.APP_AUTH.user) || (window.Auth && window.Auth.getUser && window.Auth.getUser()) || null; 
+                        var authData = {
+                            type: 'AUTH_SYNC',
+                            authenticated: !!u,
+                            userId: u ? u.id : null,
+                            sessionId: (window.Auth && window.Auth.sessionId && window.Auth.sessionId()) || (window.APP_AUTH && window.APP_AUTH.sessionId) || null,
+                            user: u
+                        };
+                        
+                        // Send to main CodeBank frame
+                        frame.contentWindow.postMessage(authData, '*');
+                        console.log('[AUTH] Sent AUTH_SYNC to CodeBank frame');
+                        
+                        // Legacy support
+                        frame.contentWindow.postMessage({ type: 'AUTH_CONTEXT', payload: u }, '*'); 
+                    } 
+                } catch (_) { } 
+            }
+            window.sendAuthContext = sendAuthContext;
+            window.closeInit = closeInit;
+        })();
+    </script>
+    <script>
+        (function () {
+            function basicHandleExtraModeChange(active) {
+                try {
+                    if (typeof window.setWatchDogActive === 'function') {
+                        window.setWatchDogActive(!!active);
+                    } else {
+                        window.watchDogActive = !!active;
+                        try { console.log('Watch-dog (fallback) active:', !!active); } catch (_) { }
+                        try { document.body.classList.toggle('watch-dog-active', !!active); } catch (_) { }
+                    }
+                } catch (_) { }
+            }
+            try { window.addEventListener('extra-mode:changed', function (e) { basicHandleExtraModeChange(!!(e && e.detail && e.detail.active)); }); } catch (_) { }
+            if (!window.handleExtraModeChange) { window.handleExtraModeChange = basicHandleExtraModeChange; }
+        })();
+    </script>
+    <canvas id="balloonCanvas"></canvas>
+    <script src="/node_modules/matter-js/build/matter.min.js"></script>
+    <script src="/node_modules/gsap/dist/gsap.min.js"></script>
+    <script type="importmap">
+    {
+      "imports": {
+        "matter-js": "/codebank/js/matter-shim.js",
+        "gsap": "/codebank/js/gsap-shim.js"
+      }
+    }
+    </script>
+    <script type="module" src="/codebank/js/balloon-engine-advanced.js"></script>
+    <script>
+        (function(){
+            async function ensureUser(){
+                try {
+                    const r = await fetch('/api/me', { credentials: 'include' }).then(x=>x.json());
+                    if (r && r.user && r.user.id) return r.user.id;
+                    const d = await fetch('/api/auth/dev-login', { method: 'POST', credentials: 'include' }).then(x=>x.json());
+                    return d && d.userId ? d.userId : null;
+                } catch(_){ return null }
+            }
+            async function init(){
+                const uid = await ensureUser();
+                if (!uid) return;
+                try { new window.AdvancedBalloonEngine(uid) } catch(_){}
+            }
+            if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init) } else { init() }
+        })();
+    </script>
+    <script>
+        // 🔹 Login Auto-Enable Script (v2 - Robust)
+        (function () {
+            function enableLogin() {
+                const initLogin = document.querySelector('#init-login');
+                if (!initLogin) return;
+
+                // 1. Force higher z-index for the overlay
+                const ov = document.getElementById('popup-overlay');
+                if (ov) {
+                    ov.style.zIndex = '2000000';
+                    ov.style.pointerEvents = 'auto';
+                    if (ov.classList.contains('open')) {
+                        ov.style.display = 'flex';
+                    }
+                }
+
+                // 2. Explicitly disable blocking layers
+                const blockers = ['global-touch-shield', 'code-popup-overlay', 'first-open-overlay'];
+                blockers.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.style.pointerEvents = 'none';
+                    }
+                });
+
+                // Ensure balloonCanvas is non-interactive during login but still visible
+                const bc = document.getElementById('balloonCanvas');
+                if (bc) bc.style.pointerEvents = 'none';
+
+                // 3. Enable form fields and buttons
+                initLogin.querySelectorAll('input, button').forEach(el => {
+                    el.disabled = false;
+                    el.style.pointerEvents = 'auto';
+                    el.style.position = 'relative';
+                    el.style.zIndex = '2000001';
+                });
+                
+                // 4. Ensure container allows interaction
+                initLogin.style.pointerEvents = 'auto';
+                initLogin.style.zIndex = '2000001';
+                const frame = document.getElementById('popup-frame');
+                if (frame) {
+                    frame.style.pointerEvents = 'auto';
+                    frame.style.zIndex = '2000001';
+                }
+
+                console.log("✅ Login interaction fully restored (v2)");
+            }
+
+            // Initialization
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => setTimeout(enableLogin, 500));
+            } else {
+                setTimeout(enableLogin, 500);
+            }
+
+            // Periodic check to maintain interactivity
+            setInterval(() => {
+                const ov = document.getElementById('popup-overlay');
+                if (ov && (ov.classList.contains('open') || ov.style.display === 'flex')) {
+                    enableLogin();
+                }
+            }, 1000);
+        })();
+    </script>
+    <script>
+        // 🔹 AuthCore Ready Transition Script
+        (function () {
+            window.initAfterLogin = function() {
+                if (window.__INIT_AFTER_LOGIN_CALLED__) return;
+                window.__INIT_AFTER_LOGIN_CALLED__ = true;
+                
+                console.log("🚀 Starting post-login initialization...");
+                
+                // 🔹 إخفاء شاشة التحميل (Loading Overlay)
+                try {
+                    const loadingOv = document.getElementById('loading-overlay');
+                    if (loadingOv) {
+                        loadingOv.classList.remove('active');
+                        loadingOv.classList.add('hidden');
+                        loadingOv.style.display = 'none'; // 🔹 Force remove from layout
+                    }
+                    console.log("✅ Loading screen hidden");
+                } catch (e) { console.error("Error hiding loading screen:", e); }
+
+                // 1. إخفاء الـ login overlay وحذف فلاتر الـ blur
+                try {
+                    document.body.classList.remove('popup-active');
+                    const ov = document.getElementById('popup-overlay');
+                    if (ov) {
+                        ov.classList.remove('open');
+                        ov.style.display = 'none';
+                    }
+                    console.log("✅ Login overlay hidden");
+                } catch (e) { console.error("Error hiding login overlay:", e); }
+
+                // 2. تشغيل محرك البالونات (إذا لم يكن قد بدأ بالفعل)
+                try {
+                    // 🚫 GLOBAL LOCK: Only standalone visual engine is allowed
+                    window.__BALLOON_SYSTEM_LOCK__ = true;
+                    console.log("🛡️ Balloon system globally locked (Standalone mode only)");
+
+                    const bc = document.getElementById('balloonCanvas');
+                    if (bc) {
+                        bc.style.pointerEvents = 'none'; // 🔹 Default to none to allow clicking through
+                    }
+
+                    if (window.__YTNEW_RUNTIME__ === "browser" || true) { // Force enable for testing
+                        // محاولة جلب المستخدم من AuthCore
+                        let userId = null;
+                        if (window.Auth && window.Auth.userId) {
+                            userId = typeof window.Auth.userId === 'function' ? window.Auth.userId() : window.Auth.userId;
+                        } else if (window.APP_AUTH && window.APP_AUTH.user) {
+                            userId = window.APP_AUTH.user.id;
+                        } else {
+                            userId = 'guest_' + Math.floor(Math.random() * 1000000); // 🔹 Fallback for guests
+                        }
+
+                        if (!window.__BALLOON_ENGINE_STARTED__) {
+                            const start = () => {
+                                if (window.AdvancedBalloonEngine) {
+                                    if (window.__USE_ADVANCED_BALLOONS__) {
+                                        console.log("🎈 Starting Balloon Engine for user:", userId);
+                                        new window.AdvancedBalloonEngine(userId);
+                                        window.__BALLOON_ENGINE_STARTED__ = true;
+                                    } else {
+                                        console.warn("🚫 Advanced engine blocked (Using Standalone only)");
+                                    }
+                                } else {
+                                    console.warn("⏳ Waiting for AdvancedBalloonEngine to load...");
+                                    setTimeout(start, 500);
+                                }
+                            };
+                            start();
+                        }
+                    }
+                } catch (e) { console.warn("Balloon Engine init failed:", e); }
+
+                // 3. أي تهيئة إضافية للصفحة يمكن وضعها هنا
+                // ملاحظة: yt-new-clear تعتمد بشكل أساسي على أحداث DOM و AuthCore
+                window.dispatchEvent(new CustomEvent('yt-clear:ready'));
+                
+                // 🎈 Trigger standalone balloon system after successful login/ready
+                if (window.startBalloonSystem) {
+                    window.startBalloonSystem();
+                    console.log("🎈 Balloon system triggered after login transition");
+                }
+
+                console.log("✅ yt-new-clear transition complete");
+            };
+
+            // الربط مع Auth (auth-core.js defines window.Auth)
+            function checkAuth() {
+                if (window.Auth && (window.Auth.isAuthenticated && window.Auth.isAuthenticated())) {
+                    window.initAfterLogin();
+                    return true;
+                }
+                return false;
+            }
+
+            // الاستماع للحدث auth:ready المنبعث من AuthCore
+            window.addEventListener('auth:ready', (e) => {
+                console.log("🔑 Auth Ready Event received:", e.detail);
+                if (e.detail && e.detail.authenticated) {
+                    window.initAfterLogin();
+                    sendAuthContext();
+                }
+            });
+
+            // الاستماع للحدث auth:changed (للمزيد من الموثوقية)
+            window.addEventListener('auth:changed', (e) => {
+                console.log("🔑 Auth Changed Event received:", e.detail);
+                if (e.detail && e.detail.authenticated) {
+                    window.initAfterLogin();
+                    sendAuthContext();
+                }
+            });
+
+            // تحقق فوري
+            if (!checkAuth()) {
+                // تحقق دوري إذا لم يتم الحدث بعد
+                const authCheckInterval = setInterval(() => {
+                    if (checkAuth()) clearInterval(authCheckInterval);
+                }, 500);
+            }
+        })();
+    </script>
+    <script src="/codebank/js/balloon-visual-standalone.js"></script>
+    
+    <!-- 🚀 Global Lifecycle Controller (from actly.md) -->
+    <script src="/acc/acc-client.js"></script>
+    <script src="/acc/asset-mirror.js"></script>
+    <script src="/acc/transaction-gateway.js"></script>
+    <script src="/acc/service-bridge-base.js"></script>
+    <script src="/acc/bridges/pebalaash-bridge.js"></script>
+    <script src="/acc/bridges/farragna-bridge.js"></script>
+    <script src="/acc/bridges/battalooda-bridge.js"></script>
+    <script src="/acc/bridges/safecode-bridge.js"></script>
+    <script type="module" src="/main.js"></script>
+    
+    <!-- 🛡️ Unified UI Handler for Code Display -->
+    <script>
+    (function() {
+      const codeDisplay = document.getElementById('code-display');
+      if (!codeDisplay) return;
+
+      let lastDisplayedCode = null;
+
+      function updateUI(code, source) {
+        if (!code || code === lastDisplayedCode) return;
+        
+        console.log(`[UI SYNC] Updating #code-display from ${source}:`, code);
+        codeDisplay.textContent = code;
+        lastDisplayedCode = code;
+        
+        // Visual feedback
+        codeDisplay.classList.add('pulse');
+        setTimeout(() => codeDisplay.classList.remove('pulse'), 800);
+      }
+
+      function handleEvent(e) {
+        const d = e.detail || {};
+        let code = null;
+
+        console.log(`[UI SYNC] Event received: ${e.type}`, d);
+
+        // Try various properties where code might be
+        if (typeof d === 'string') code = d;
+        else if (d.code) code = d.code;
+        else if (d.latestCode) code = d.latestCode;
+        else if (d.latest) code = d.latest;
+        else if (Array.isArray(d.codes) && d.codes.length > 0) {
+          code = d.codes[d.codes.length - 1];
+        } else if (Array.isArray(d) && d.length > 0) {
+          code = d[d.length - 1];
+        }
+
+        if (code) {
+          const codeVal = typeof code === 'string' ? code : (code.code || code);
+          updateUI(codeVal, e.type);
+        }
+      }
+
+      // Listen to ALL possible sources of truth
+      const events = [
+        'assets:updated', 
+        'codes:updated', 
+        'bankode:code-generated', 
+        'SQLITE_CODE_SYNCED',
+        'bridge:snapshot-applied',
+        'sqlite:snapshot'
+      ];
+
+      events.forEach(evt => window.addEventListener(evt, handleEvent));
+
+      // Initial check
+      window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+          if (window.AssetBus && typeof window.AssetBus.snapshot === 'function') {
+            const snap = window.AssetBus.snapshot();
+            if (snap && (snap.latest || snap.latestCode)) {
+              updateUI(snap.latest || snap.latestCode, 'initial-assetbus');
+            }
+          }
+          if (window.Bankode && window.Bankode.codes && window.Bankode.codes.length > 0) {
+            const last = window.Bankode.codes[window.Bankode.codes.length - 1];
+            updateUI(last, 'initial-bankode');
+          }
+        }, 1500);
+      });
+    })();
+    </script>
+</body>
+
+</html>
+<div id="stopwatch-modal-overlay" aria-hidden="true" role="dialog" style="display:none">
+    <div id="stopwatch-modal-frame">
+        <button id="stopwatch-modal-close" aria-label="Close">✖</button>
+        <div id="stopwatch-modal-content">
+            <div id="stopwatch-modal-display">00:00:0</div>
+            <div id="stopwatch-modal-controls">
+                <label>Minutes
+                    <div class="sw-spinner">
+                        <button class="sw-spin-btn" data-target="sw-mins" data-dir="up">▲</button>
+                        <input type="number" id="sw-mins" name="sw-mins" min="0" max="59" value="05">
+                        <button class="sw-spin-btn" data-target="sw-mins" data-dir="down">▼</button>
+                    </div>
+                </label>
+                <label>Seconds
+                    <div class="sw-spinner">
+                        <button class="sw-spin-btn" data-target="sw-secs" data-dir="up">▲</button>
+                        <input type="number" id="sw-secs" name="sw-secs" min="0" max="59" value="00">
+                        <button class="sw-spin-btn" data-target="sw-secs" data-dir="down">▼</button>
+                    </div>
+                </label>
+
+                <button id="sw-ok">OK</button>
+            </div>
+            <div id="eye-rest-notice" style="display:none">Take an eye rest</div>
+        </div>
+    </div>
+</div>
+<!-- Auth + Neon Adapter (non-UI listeners) -->
+<script>window.__DISABLE_AUTH_FETCH__ = true;</script>
+<script src="/shared/sqlite-adapter.js"></script>
+
+<!-- 🔐 SQLite autosave for assets (Silver / Gold / future assets) -->
+<script>
+window.addEventListener('assets:updated', (e) => {
+  try {
+    // Rely on StorageAdapter and Server Ledger for state
+    // Manual Neon snapshots disabled to prevent console noise
+  } catch (err) {}
+});
+</script>
+        

@@ -1,0 +1,338 @@
+🎴 PROMPT – Islamic-Compliant Cards Game (Vanilla JS Only)
+⚠️ IMPORTANT – READ CAREFULLY
+
+You MUST build this project using Vanilla JavaScript only.
+
+❌ DO NOT use:
+
+React
+
+Vue
+
+Angular
+
+Svelte
+
+Any JS framework
+
+✅ ALLOWED:
+
+Plain HTML
+
+Plain CSS
+
+Plain JavaScript (ES6 modules)
+
+This game will be used as a MASTER TEMPLATE for all other games in a larger Games-Centre system.
+
+1️⃣ Project Goal
+
+Build a Cards Game as an Islamic-compliant competitive skill game, NOT gambling.
+
+The game must follow a service-fee + system-reward model and be fully compatible with:
+
+Assets Bus architecture
+
+Ledger (witness only)
+
+Neon DB (state persistence only)
+
+Anti-collusion & recovery logic
+
+2️⃣ Core Philosophy (MANDATORY)
+
+❌ NO money usage
+
+❌ NO player-to-player asset transfer
+
+❌ NO zero-sum mechanics
+
+✅ Only Codes / Bars as virtual internal assets
+
+✅ Players PAY for service usage, not for betting
+
+✅ Winners receive rewards from a system reward pool
+
+✅ Zero-value (practice) mode MUST always exist
+
+This system must be Islamic-compliant:
+
+No ميسر (gambling)
+
+No غرر
+
+No ربا
+
+3️⃣ Game Modes (User Modes)
+
+Implement ALL modes below:
+
+Mode 1: Practice (Zero Value)
+
+Solo or Multiplayer
+
+No asset deduction
+
+No rewards
+
+Unlimited play
+
+Mode 2: VS Computer (AI)
+
+Optional service fee
+
+Optional reward
+
+AI difficulty levels
+
+Mode 3: Multiplayer Challenge
+
+Competitive
+
+Skill-based
+
+Service-fee model
+
+System reward
+
+4️⃣ Competition Service Levels
+
+Implement EXACTLY these three competition modes:
+
+🔹 Mode A – Basic
+
+No chat
+
+No audio
+
+No video
+
+Service Fee: 100 codes
+
+Winner Reward: 210 codes
+
+🔹 Mode B – Text Chat
+
+Text chat only
+
+Service Fee: 500 codes
+
+Winner Reward: 1050 codes
+
+🔹 Mode C – Full Service
+
+Text + Audio + Video
+
+Service Fee: 1000 codes
+
+Winner Reward: 2100 codes
+
+⚠️ Important:
+
+Rewards MUST come from system reward pool
+
+Rewards MUST NOT equal collected fees
+
+5️⃣ Assets & Balance Logic (CRITICAL)
+Assets Rules
+
+Assets = codes or bars
+
+All balance changes go through Assets Bus
+
+Game NEVER modifies balances directly
+
+Required Asset Flow
+
+Before game starts → lockBalance()
+
+On completion → system decides winner
+
+Assets Bus → settleCompetition()
+
+Ledger records events (amount = 0)
+
+Neon stores state snapshots only
+
+❌ Game must NEVER:
+
+Credit balances
+
+Deduct balances
+
+Read balances for logic decisions
+
+6️⃣ Required Files Structure
+cards-game/
+│
+├── index.html
+├── styles.css
+├── main.js
+│
+├── core/
+│   ├── game-engine.js        // game rules & state machine
+│   ├── competition-manager.js
+│   ├── service-modes.js
+│   ├── ai-engine.js
+│
+├── assets/
+│   ├── assets-bus-adapter.js // mock adapter
+│
+├── communication/
+│   ├── text-chat.js
+│   ├── audio.js
+│   ├── video.js
+│
+├── persistence/
+│   ├── state-store.js        // IndexedDB
+│
+├── anti-manipulation/
+│   ├── collusion-engine.js
+│
+└── ui/
+    ├── lobby.js
+    ├── game-ui.js
+    ├── results-ui.js
+
+7️⃣ Game State Machine (MANDATORY)
+
+Implement a strict state machine:
+
+INIT
+↓
+LOBBY
+↓
+READY
+↓
+RUNNING
+↓
+PAUSED (disconnect)
+↓
+COMPLETED
+↓
+ARCHIVED
+
+
+Must survive refresh
+
+Must recover after disconnect
+
+Must be idempotent
+
+8️⃣ Communication Integration
+
+Based on competition mode:
+
+Mode A → ❌ no communication
+
+Mode B → ✅ text chat
+
+Mode C → ✅ text + audio + video
+
+Use:
+
+WebRTC (no frameworks)
+
+Modular JS files
+
+Ability to enable/disable dynamically
+
+9️⃣ Anti-Collusion Rules (CRITICAL)
+
+Implement a standalone collusion-engine.js:
+
+Detect:
+
+Same opponent repeatedly
+
+Alternating wins
+
+Same IP / subnet
+
+Abnormal timing patterns
+
+On detection:
+
+Disable rewards
+
+Force Zero-Value mode
+
+Log event (Ledger, amount = 0)
+
+🔟 Persistence & Recovery
+
+Use IndexedDB to store:
+
+Game state
+
+Competition ID
+
+Locks reference IDs
+
+After refresh:
+
+Game must resume correctly
+
+No duplicate rewards
+
+No lost locks
+
+1️⃣1️⃣ UI Requirements (Minimal but Functional)
+
+UI must include:
+
+Mode selection
+
+Service level selection
+
+Lobby (ready / not ready)
+
+Game board (cards)
+
+Chat panel (when enabled)
+
+Results screen
+
+Status indicators
+
+Focus on logic correctness, not design beauty.
+
+1️⃣2️⃣ Testing Requirements
+
+Your implementation must pass:
+
+Disconnect during game
+
+Refresh mid-game
+
+Duplicate events
+
+No double reward
+
+No lost assets
+
+Zero-value always playable
+
+1️⃣3️⃣ Final Output
+
+Deliver:
+
+Fully working Cards Game
+
+Vanilla JS only
+
+Modular, readable code
+
+Ready to be copied as template
+
+No placeholders like “TODO”
+
+🚫 ABSOLUTE RULE
+
+If you use React or any framework, the solution is REJECTED.
+
+🎯 GOAL
+
+This Cards Game will be used as the canonical reference implementation for all future games.
+
+Build it as if every other game depends on it.

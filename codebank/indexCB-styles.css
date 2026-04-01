@@ -1,0 +1,816 @@
+/* Modern CSS Variables for indexCB */
+:root {
+    --primary-color: #FF6B35;
+    --secondary-color: #8B5CF6;
+    --accent-color: #58a6ff;
+    --bg-gradient-start: #87CEEB;
+    --bg-gradient-end: #B0E0E6;
+    --text-color: #E0E0E0;
+    --text-muted: #8b949e;
+    --text-bright: #ffffff;
+    --card-bg: rgba(22, 27, 34, 0.8);
+    --border-color: #30363d;
+    --hover-bg: #21262d;
+    --success-color: #00ff88;
+    --error-color: #f85149;
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
+    --glow-primary: 0 0 20px rgba(255, 107, 53, 0.3);
+    --glow-secondary: 0 0 20px rgba(139, 92, 246, 0.3);
+    --transition-fast: 0.2s ease;
+    --transition-normal: 0.3s ease;
+    --transition-slow: 0.6s ease;
+}
+
+/* App Launcher Grid Styles */
+.app-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.app-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    padding: 8px;
+    border-radius: 8px;
+}
+
+.app-icon:hover {
+    transform: scale(1.1);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.app-icon:active {
+    transform: scale(0.95);
+}
+
+.app-icon .icon {
+    font-size: 36px;
+    width: 70px;
+    height: 70px;
+    background: #111;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 6px;
+    box-shadow: var(--shadow-md);
+    transition: all var(--transition-normal);
+}
+
+.app-icon:hover .icon {
+    box-shadow: var(--shadow-lg);
+}
+
+.app-icon .label {
+    font-size: 13px;
+    color: var(--text-color);
+    text-align: center;
+    word-wrap: break-word;
+    max-width: 90px;
+    font-weight: 500;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .app-grid {
+        grid-template-columns: repeat(4, minmax(70px, 1fr));
+        gap: 15px;
+        padding: 15px;
+    }
+    
+    .app-icon .icon {
+        font-size: 30px;
+        width: 60px;
+        height: 60px;
+        border-radius: 16px;
+    }
+    
+    .app-icon .label {
+        font-size: 12px;
+        max-width: 70px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .app-grid {
+        grid-template-columns: repeat(8, minmax(90px, 1fr));
+    }
+}
+
+/* Modern Body Background */
+body {
+    background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+    background-attachment: fixed;
+    color: var(--text-color);
+    font-family: 'Poppins', 'Inter', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+/* Modern Card Styling */
+.card {
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    box-shadow: var(--shadow-lg);
+    transition: all var(--transition-normal);
+    position: relative;
+    overflow: hidden;
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 107, 53, 0.05), rgba(139, 92, 246, 0.05));
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+    z-index: -1;
+}
+
+.card:hover::before {
+    opacity: 1;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(255, 107, 53, 0.2);
+    border-color: rgba(255, 107, 53, 0.2);
+}
+
+/* Modern Button Styling */
+.btn {
+    background: linear-gradient(135deg, rgba(176, 67, 255, 0.15), rgba(255, 119, 233, 0.15));
+    border: 1px solid rgba(176, 67, 255, 0.3);
+    color: var(--text-color);
+    padding: 12px 24px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    font-weight: 600;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+    z-index: -1;
+}
+
+.btn:hover::before {
+    opacity: 1;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.btn:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    box-shadow: var(--glow-primary);
+}
+
+.btn-primary::before {
+    opacity: 1;
+}
+
+.btn-primary:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 12px 35px rgba(255, 107, 53, 0.6);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+/* Modern Form Inputs */
+.form-input, .form-select {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: var(--text-color);
+    padding: 12px 16px;
+    transition: all var(--transition-normal);
+    backdrop-filter: blur(10px);
+}
+
+.form-input:focus, .form-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* Modern Tab Navigation */
+.tab-navigation {
+    background: rgba(22, 27, 34, 0.6);
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 8px;
+    margin-bottom: 32px;
+}
+
+.tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 12px 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    font-weight: 500;
+    position: relative;
+    overflow: hidden;
+}
+
+.tab-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+    z-index: -1;
+}
+
+.tab-btn:hover::before {
+    opacity: 0.1;
+}
+
+.tab-btn:hover {
+    color: var(--text-color);
+    transform: translateY(-1px);
+}
+
+.tab-btn.active {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    box-shadow: var(--glow-primary);
+}
+
+.tab-btn.active::before {
+    opacity: 1;
+}
+
+/* Modern Card Headers */
+.card-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 24px;
+    margin: -24px -24px 24px -24px;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.card-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-bright);
+    margin: 0;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Modern Progress Bars */
+.progress-bar {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+.progress {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+    width: 0%;
+    transition: width 0.3s ease;
+    position: relative;
+    box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
+}
+
+.progress::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 4px;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 2px;
+}
+
+/* Modern Currency Ticker */
+.currency-ticker {
+    background: linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(139, 92, 246, 0.1));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 8px 16px;
+    backdrop-filter: blur(10px);
+    animation: tickerScroll 30s linear infinite;
+}
+
+@keyframes tickerScroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+
+/* Modern Toast Notifications */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+}
+
+.toast {
+    background: rgba(22, 27, 34, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow-lg);
+    animation: toastSlideIn 0.3s ease-out;
+    max-width: 400px;
+}
+
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Modern Loading States */
+.loading-indicator {
+    background: rgba(11, 12, 16, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 40px;
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+}
+
+.spinner {
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Modern Modal Styling */
+.modal-content {
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    box-shadow: var(--shadow-lg);
+}
+
+/* Modern Settings Panel */
+.settings-panel {
+    background: linear-gradient(135deg, rgba(11, 12, 16, 0.95), rgba(22, 27, 34, 0.95));
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Modern Switch Styling */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.2);
+    transition: 0.3s;
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background: white;
+    transition: 0.3s;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+input:checked + .slider {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+/* SafeCode iframe visibility fixes */
+#safe-asset-container,
+.safe-asset-list,
+#safeCodeFrame,
+iframe[data-service="safecode"] {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    height: 100% !important;
+    min-height: 400px !important;
+    width: 100% !important;
+    z-index: 1000 !important;
+}
+
+/* Fix for glassmorphism hiding content */
+.service-stage iframe {
+    background: #1a1a2e !important; /* Dark background to see content */
+    border: 2px solid #4a4a6a !important;
+}
+
+/* Force list items to show */
+.asset-item,
+.code-item,
+.safe-code-card {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Modern Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        box-shadow: var(--glow-primary);
+    }
+    50% {
+        box-shadow: 0 0 30px rgba(255, 107, 53, 0.6);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .card {
+        border-radius: 12px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+
+    .card-title {
+        font-size: 20px;
+    }
+
+    .tab-btn {
+        padding: 10px 16px;
+        font-size: 14px;
+    }
+}
+
+/* Global Prayer Alert System Styles */
+.global-prayer-alert-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 10006;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.global-prayer-alert-popup {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    max-width: 450px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: prayerPopupSlide 0.5s ease-out;
+}
+
+@keyframes prayerPopupSlide {
+    from {
+        opacity: 0;
+        transform: scale(0.7) translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.global-prayer-alert-content {
+    padding: 30px;
+    color: white;
+    text-align: center;
+}
+
+.global-prayer-alert-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding-bottom: 15px;
+}
+
+.global-prayer-alert-header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #FFD700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.global-prayer-alert-close-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.global-prayer-alert-close-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+.global-prayer-icon {
+    font-size: 80px;
+    margin: 20px 0;
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    animation: prayerIconPulse 2s infinite ease-in-out;
+}
+
+@keyframes prayerIconPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.global-prayer-name {
+    font-size: 32px;
+    font-weight: 700;
+    margin: 15px 0;
+    color: #FFD700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.global-prayer-status {
+    font-size: 16px;
+    margin: 10px 0;
+    color: #E0E0E0;
+    font-weight: 500;
+}
+
+.global-prayer-details {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    padding: 20px;
+    margin: 20px 0;
+    backdrop-filter: blur(10px);
+}
+
+.global-azan-timer {
+    font-size: 36px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    color: #4CAF50;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    margin-bottom: 10px;
+}
+
+.global-prayer-time {
+    font-size: 18px;
+    color: #FFD700;
+    font-weight: 600;
+}
+
+.global-component-status {
+    font-size: 14px;
+    color: #10b981;
+    margin-top: 15px;
+    font-weight: 500;
+}
+
+.global-prayer-alert-footer {
+    margin-top: 25px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Azan Clock Button Styles */
+.azan-clock-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.azan-clock-button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+}
+
+.azan-clock-button.active {
+    animation: azanButtonPulse 2s infinite;
+}
+
+@keyframes azanButtonPulse {
+    0%, 100% { box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3); }
+    50% { box-shadow: 0 8px 25px rgba(255, 215, 0, 0.6); }
+}
+
+/* CoRsA Tab Styles */
+.corsa-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.corsa-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.corsa-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-bright);
+}
+
+.corsa-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.corsa-control-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-color);
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.corsa-control-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.corsa-content {
+    flex: 1;
+    position: relative;
+}
+
+.corsa-iframe-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--text-color);
+    font-size: 16px;
+    z-index: 10;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .global-prayer-alert-popup {
+        width: 95%;
+        margin: 10px;
+    }
+
+    .global-prayer-alert-content {
+        padding: 20px;
+    }
+
+    .global-prayer-name {
+        font-size: 24px;
+    }
+
+    .global-prayer-icon {
+        font-size: 60px;
+    }
+
+    .global-azan-timer {
+        font-size: 28px;
+    }
+
+    .azan-clock-button {
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+        bottom: 15px;
+        right: 15px;
+    }
+}

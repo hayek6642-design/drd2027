@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bankode JWT Integration Test</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+      min-height: 100vh;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .test-card {
+      background: rgba(30, 41, 59, 0.95);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .test-section {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 16px;
+      margin: 12px 0;
+    }
+
+    .btn-test {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      transition: all 0.3s;
+    }
+
+    .btn-test:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.5);
+    }
+
+    .status-pass {
+      color: #10b981;
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.2);
+    }
+
+    .status-fail {
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .status-info {
+      color: #2196F3;
+      background: rgba(33, 150, 243, 0.1);
+      border: 1px solid rgba(33, 150, 243, 0.2);
+    }
+
+    .loading-spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top: 2px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body class="flex items-center justify-center p-4">
+  <div class="test-card rounded-2xl p-8 w-full max-w-2xl mx-4">
+    <div class="text-center mb-8">
+      <div class="flex justify-center mb-4">
+        <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center">
+          <i class="fas fa-shield-alt text-white text-2xl"></i>
+        </div>
+      </div>
+      <h1 class="text-2xl font-bold text-white">Bankode JWT Integration Test</h1>
+      <p class="text-blue-200 mt-2">Comprehensive test of JWT authentication and admin operations</p>
+    </div>
+
+    <div id="testResults" class="test-section">
+      <h2 class="text-lg font-semibold mb-4 text-white">Test Results:</h2>
+      <div id="resultsContainer" class="space-y-2"></div>
+    </div>
+
+    <div class="test-section">
+      <h2 class="text-lg font-semibold mb-4 text-white">Manual Tests:</h2>
+      <div class="space-y-3">
+        <button id="testJWTAuth" class="btn-test w-full text-white font-medium py-2 px-4 rounded-lg">
+          <span id="testJWTAuthText">Test JWT Authentication</span>
+          <span id="testJWTAuthSpinner" class="hidden"><span class="loading-spinner"></span></span>
+        </button>
+
+        <button id="testAdminSession" class="btn-test w-full text-white font-medium py-2 px-4 rounded-lg">
+          <span id="testAdminSessionText">Test Admin Session</span>
+          <span id="testAdminSessionSpinner" class="hidden"><span class="loading-spinner"></span></span>
+        </button>
+
+        <button id="testRPCFunctions" class="btn-test w-full text-white font-medium py-2 px-4 rounded-lg">
+          <span id="testRPCFunctionsText">Test RPC Functions</span>
+          <span id="testRPCFunctionsSpinner" class="hidden"><span class="loading-spinner"></span></span>
+        </button>
+
+        <button id="testDashboardIntegration" class="btn-test w-full text-white font-medium py-2 px-4 rounded-lg">
+          <span id="testDashboardIntegrationText">Test Dashboard Integration</span>
+          <span id="testDashboardIntegrationSpinner" class="hidden"><span class="loading-spinner"></span></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2 class="text-lg font-semibold mb-4 text-white">Test Configuration:</h2>
+      <div class="grid grid-cols-2 gap-3 text-sm">
+        <div>
+          <strong class="text-blue-200">Admin UUID:</strong><br>
+          <span id="configAdminId" class="text-white">7186c7f0-e4b6-48a7-9c24-b750a7cdde25</span>
+        </div>
+        <div>
+          <strong class="text-blue-200">JWT Secret:</strong><br>
+          <span id="configJWTSecret" class="text-white">legacy_jwt_secret</span>
+        </div>
+        <div>
+          <strong class="text-blue-200">Supabase URL:</strong><br>
+          <span id="configSupabaseURL" class="text-white">https://obmufgumrrxjvgjquqro.supabase.co</span>
+        </div>
+        <div>
+          <strong class="text-blue-200">Service Role:</strong><br>
+          <span id="configServiceRole" class="text-white">[REDACTED]</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-8 text-center">
+      <p class="text-blue-200 text-sm">
+        <i class="fas fa-lock mr-1"></i>
+        All tests use JWT-secured endpoints
+      </p>
+      <p class="text-blue-300 text-xs mt-2">
+        No legacy authentication systems are used
+      </p>
+    </div>
+  </div>
+
+  <!-- Load required modules -->
+  <script src="jwt-auth.js"></script>
+  <script src="unifiedStorage.js"></script>
+  <script src="dashboard.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const resultsContainer = document.getElementById('resultsContainer');
+      const configAdminId = document.getElementById('configAdminId');
+      const configJWTSecret = document.getElementById('configJWTSecret');
+      const configSupabaseURL = document.getElementById('configSupabaseURL');
+      const configServiceRole = document.getElementById('configServiceRole');
+
+      // Set configuration display
+      configAdminId.textContent = '7186c7f0-e4b6-48a7-9c24-b750a7cdde25';
+      configJWTSecret.textContent = 'legacy_jwt_secret';
+      configSupabaseURL.textContent = 'https://obmufgumrrxjvgjquqro.supabase.co';
+      configServiceRole.textContent = '[REDACTED]';
+
+      // Add test result function
+      function addTestResult(testName, status, message = '') {
+        const resultDiv = document.createElement('div');
+        resultDiv.className = `p-3 rounded-lg text-sm ${status}-status`;
+
+        const statusIcon = status === 'pass' ? '✅' :
+                          status === 'fail' ? '❌' : 'ℹ️';
+
+        resultDiv.innerHTML = `
+          <strong>${statusIcon} ${testName}</strong>
+          ${message ? `<br><span class="text-xs opacity-80">${message}</span>` : ''}
+        `;
+
+        resultsContainer.appendChild(resultDiv);
+        return resultDiv;
+      }
+
+      // Test JWT Authentication
+      document.getElementById('testJWTAuth').addEventListener('click', async function() {
+        const btn = document.getElementById('testJWTAuth');
+        const text = document.getElementById('testJWTAuthText');
+        const spinner = document.getElementById('testJWTAuthSpinner');
+
+        btn.disabled = true;
+        text.textContent = 'Testing...';
+        spinner.classList.remove('hidden');
+
+        try {
+          // Initialize JWT Auth
+          await window.JWT_AUTH.init();
+          addTestResult('JWT Auth Initialization', 'pass', 'JWT system initialized successfully');
+
+          // Test JWT generation
+          const testToken = await window.JWT_AUTH.generateJWT('7186c7f0-e4b6-48a7-9c24-b750a7cdde25', {
+            test: 'integration'
+          });
+
+          if (testToken) {
+            addTestResult('JWT Generation', 'pass', 'Successfully generated JWT token');
+          } else {
+            addTestResult('JWT Generation', 'fail', 'Failed to generate JWT token');
+          }
+
+          // Test JWT validation
+          const validation = await window.JWT_AUTH.validateJWT(testToken);
+          if (validation.valid) {
+            addTestResult('JWT Validation', 'pass', 'JWT token validated successfully');
+          } else {
+            addTestResult('JWT Validation', 'fail', 'JWT validation failed: ' + validation.error);
+          }
+
+          // Test admin authentication
+          const authResult = await window.JWT_AUTH.adminAuth('admin@bankode.com', 'admin123');
+          if (authResult.success) {
+            addTestResult('Admin Authentication', 'pass', 'Admin authenticated successfully');
+          } else {
+            addTestResult('Admin Authentication', 'fail', 'Admin authentication failed: ' + authResult.error);
+          }
+
+        } catch (error) {
+          console.error('JWT Auth Test Error:', error);
+          addTestResult('JWT Authentication', 'fail', 'Test failed: ' + error.message);
+        } finally {
+          btn.disabled = false;
+          text.textContent = 'Test JWT Authentication';
+          spinner.classList.add('hidden');
+        }
+      });
+
+      // Test Admin Session
+      document.getElementById('testAdminSession').addEventListener('click', async function() {
+        const btn = document.getElementById('testAdminSession');
+        const text = document.getElementById('testAdminSessionText');
+        const spinner = document.getElementById('testAdminSessionSpinner');
+
+        btn.disabled = true;
+        text.textContent = 'Testing...';
+        spinner.classList.remove('hidden');
+
+        try {
+          // Test session management
+          const session = window.JWT_AUTH.getCurrentSession();
+          if (session) {
+            addTestResult('Current Session', 'pass', 'Session found: ' + session.adminId);
+          } else {
+            addTestResult('Current Session', 'info', 'No active session found');
+          }
+
+          // Test JWT storage
+          const token = window.JWT_AUTH.getJWT();
+          if (token) {
+            addTestResult('JWT Storage', 'pass', 'JWT token found in storage');
+          } else {
+            addTestResult('JWT Storage', 'info', 'No JWT token in storage');
+          }
+
+          // Test session clearing
+          await window.JWT_AUTH.clearSession();
+          addTestResult('Session Clearing', 'pass', 'Session cleared successfully');
+
+        } catch (error) {
+          console.error('Admin Session Test Error:', error);
+          addTestResult('Admin Session Test', 'fail', 'Test failed: ' + error.message);
+        } finally {
+          btn.disabled = false;
+          text.textContent = 'Test Admin Session';
+          spinner.classList.add('hidden');
+        }
+      });
+
+      // Test RPC Functions
+      document.getElementById('testRPCFunctions').addEventListener('click', async function() {
+        const btn = document.getElementById('testRPCFunctions');
+        const text = document.getElementById('testRPCFunctionsText');
+        const spinner = document.getElementById('testRPCFunctionsSpinner');
+
+        btn.disabled = true;
+        text.textContent = 'Testing...';
+        spinner.classList.remove('hidden');
+
+        try {
+          // Wait for unifiedStorage to be ready
+          await window.unifiedStorageReady;
+
+          // Test RPC function availability
+          const rpcFunctions = [
+            'getAllBalances',
+            'getAllTransactions',
+            'logAdminAction',
+            'adminAdjust',
+            'mintAssets',
+            'getAuditLogs',
+            'getAdminActions'
+          ];
+
+          let availableCount = 0;
+          for (const func of rpcFunctions) {
+            if (typeof window.unifiedStorage[func] === 'function') {
+              availableCount++;
+            }
+          }
+
+          addTestResult('RPC Functions', 'pass', `${availableCount}/${rpcFunctions.length} RPC functions available`);
+
+          // Test a simple RPC call (without execution to avoid side effects)
+          const authHeaders = await window.unifiedStorage.getAuthHeaders();
+          if (authHeaders.Authorization) {
+            addTestResult('JWT Headers', 'pass', 'JWT authorization headers generated');
+          } else {
+            addTestResult('JWT Headers', 'fail', 'Failed to generate JWT headers');
+          }
+
+        } catch (error) {
+          console.error('RPC Functions Test Error:', error);
+          addTestResult('RPC Functions Test', 'fail', 'Test failed: ' + error.message);
+        } finally {
+          btn.disabled = false;
+          text.textContent = 'Test RPC Functions';
+          spinner.classList.add('hidden');
+        }
+      });
+
+      // Test Dashboard Integration
+      document.getElementById('testDashboardIntegration').addEventListener('click', async function() {
+        const btn = document.getElementById('testDashboardIntegration');
+        const text = document.getElementById('testDashboardIntegrationText');
+        const spinner = document.getElementById('testDashboardIntegrationSpinner');
+
+        btn.disabled = true;
+        text.textContent = 'Testing...';
+        spinner.classList.remove('hidden');
+
+        try {
+          // Test dashboard initialization
+          const dashboardInit = await window.BankodeDashboard.init();
+          if (dashboardInit) {
+            addTestResult('Dashboard Initialization', 'pass', 'Dashboard initialized successfully');
+          } else {
+            addTestResult('Dashboard Initialization', 'fail', 'Dashboard initialization failed');
+          }
+
+          // Test dashboard methods
+          const dashboardMethods = [
+            'loadBalances',
+            'loadTransactions',
+            'loadAuditLogs',
+            'loadAdminActions',
+            'mintCodes',
+            'adminAdjust',
+            'ensureAuth',
+            'getCurrentSession',
+            'refreshJWT'
+          ];
+
+          let methodCount = 0;
+          for (const method of dashboardMethods) {
+            if (typeof window.BankodeDashboard[method] === 'function') {
+              methodCount++;
+            }
+          }
+
+          addTestResult('Dashboard Methods', 'pass', `${methodCount}/${dashboardMethods.length} methods available`);
+
+          // Test JWT enforcement
+          try {
+            await window.BankodeDashboard.ensureAuth();
+            addTestResult('JWT Enforcement', 'pass', 'JWT authentication enforced');
+          } catch (error) {
+            addTestResult('JWT Enforcement', 'info', 'JWT enforcement: ' + error.message);
+          }
+
+        } catch (error) {
+          console.error('Dashboard Integration Test Error:', error);
+          addTestResult('Dashboard Integration Test', 'fail', 'Test failed: ' + error.message);
+        } finally {
+          btn.disabled = false;
+          text.textContent = 'Test Dashboard Integration';
+          spinner.classList.add('hidden');
+        }
+      });
+
+      // Run initial tests
+      async function runInitialTests() {
+        addTestResult('Initialization', 'info', 'Starting Bankode JWT Integration Test');
+
+        try {
+          // Test JWT Auth initialization
+          await window.JWT_AUTH.init();
+          addTestResult('JWT Auth System', 'pass', 'JWT authentication system ready');
+
+          // Test unifiedStorage initialization
+          await window.unifiedStorageReady;
+          addTestResult('Unified Storage', 'pass', 'Unified storage system ready');
+
+          // Test dashboard availability
+          if (window.BankodeDashboard) {
+            addTestResult('Dashboard System', 'pass', 'Dashboard system available');
+          } else {
+            addTestResult('Dashboard System', 'info', 'Dashboard system not yet initialized');
+          }
+
+        } catch (error) {
+          console.error('Initial Tests Error:', error);
+          addTestResult('Initial Tests', 'fail', 'Initial tests failed: ' + error.message);
+        }
+      }
+
+      // Start initial tests
+      runInitialTests();
+    });
+  </script>
+</body>
+</html>

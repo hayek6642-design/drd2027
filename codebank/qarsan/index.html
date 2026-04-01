@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qarsan - Risk Management System</title>
+    <link rel="stylesheet" href="/codebank/css/safe-asset-list.css">
+    <style>
+        :root {
+            --primary-color: #FF6B35;
+            --secondary-color: #8B5CF6;
+            --success-color: #10B981;
+            --warning-color: #F59E0B;
+            --danger-color: #EF4444;
+            --bg-dark: #0F172A;
+            --bg-card: #1E293B;
+            --text-primary: #F1F5F9;
+            --text-secondary: #94A3B8;
+            --border-color: #334155;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .qarsan-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .qarsan-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .qarsan-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .qarsan-subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        /* Status Cards */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .status-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .status-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .status-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .status-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: 5px;
+        }
+
+        .status-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .status-value.active { color: var(--success-color); }
+        .status-value.sleeping { color: var(--warning-color); }
+        .status-value.dead { color: var(--danger-color); }
+        .status-value.off { color: var(--text-secondary); }
+        .status-value.ranged { color: #3B82F6; }
+        .status-value.exposure { color: var(--danger-color); }
+
+        /* Warning Banner */
+        .warning-banner {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid var(--warning-color);
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .warning-banner.danger {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--danger-color);
+        }
+
+        .warning-icon {
+            font-size: 1.5rem;
+        }
+
+        .warning-text {
+            flex: 1;
+        }
+
+        .warning-title {
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .warning-description {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        /* Protected Banner */
+        .protected-banner {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--success-color);
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .protected-icon {
+            font-size: 1.5rem;
+            color: var(--success-color);
+        }
+
+        /* Dead State Block */
+        .dead-block {
+            background: rgba(239, 68, 68, 0.1);
+            border: 2px solid var(--danger-color);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .dead-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .dead-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--danger-color);
+            margin-bottom: 15px;
+        }
+
+        /* Control Panel */
+        .control-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .panel-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Mode Selector */
+        .mode-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .mode-option {
+            background: var(--bg-dark);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .mode-option:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        .mode-option.active {
+            border-color: var(--primary-color);
+            background: rgba(255, 107, 53, 0.1);
+        }
+
+        .mode-option.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .mode-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .mode-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .mode-description {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            font-size: 0.875rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 107, 53, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--primary-color);
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #DC2626;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Wallet Section */
+        .wallet-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .wallet-balance {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+
+        .wallet-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-amount {
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px 15px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            width: 120px;
+        }
+
+        .input-amount:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        /* Virtual Users Section */
+        .virtual-users-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .users-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .user-card {
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .user-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        .user-card.attackable {
+            border-color: var(--danger-color);
+        }
+
+        .user-card.attackable:hover {
+            box-shadow: 0 5px 20px rgba(239, 68, 68, 0.3);
+        }
+
+        .user-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .user-dog {
+            font-size: 1.25rem;
+        }
+
+        .user-mode {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .user-balance {
+            font-size: 0.875rem;
+            color: var(--primary-color);
+        }
+
+        .user-scope {
+            font-size: 0.75rem;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .steal-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.625rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .steal-badge.wallet {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3B82F6;
+        }
+
+        .steal-badge.all {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger-color);
+        }
+
+        /* Loading State */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Feed Dog Section */
+        .feed-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .feed-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .feed-cost {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="qarsan-container">
+        <!-- Header -->
+        <div class="qarsan-header">
+            <h1 class="qarsan-title">🦁 Qarsan</h1>
+            <p class="qarsan-subtitle">Game-Theory Risk Management System</p>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading-state" class="loading">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="main-content" class="hidden">
+            <!-- Dead State Block -->
+            <div id="dead-block" class="dead-block hidden">
+                <div class="dead-icon">💀</div>
+                <h2 class="dead-title">Your Watch-Dog has died</h2>
+                <p class="warning-description">
+                    Your guardian has passed away. Qarsan system is now disabled.<br>
+                    Buy a new dog to restore full system (coming soon)
+                </p>
+            </div>
+
+            <!-- Active Content -->
+            <div id="active-content">
+                <!-- Status Cards -->
+                <div class="status-grid">
+                    <div class="status-card">
+                        <div class="status-icon">🐕</div>
+                        <div class="status-label">Watch-Dog Status</div>
+                        <div id="watchdog-status" class="status-value sleeping">Loading...</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-icon">🦁</div>
+                        <div class="status-label">Qarsan Mode</div>
+                        <div id="qarsan-mode" class="status-value off">Loading...</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-icon">💰</div>
+                        <div class="status-label">Wallet Balance</div>
+                        <div id="wallet-balance" class="status-value">0</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-icon">📊</div>
+                        <div class="status-label">Steal Scope</div>
+                        <div id="steal-scope" class="status-value">NONE</div>
+                    </div>
+                </div>
+
+                <!-- Protected Banner (when dog is ACTIVE) -->
+                <div id="protected-banner" class="protected-banner hidden">
+                    <span class="protected-icon">🛡️</span>
+                    <div class="warning-text">
+                        <div class="warning-title">You are fully protected</div>
+                        <div class="warning-description">Your Watch-Dog is active - no theft can occur</div>
+                    </div>
+                </div>
+
+                <!-- Warning Banner (when dog is SLEEPING) -->
+                <div id="warning-banner" class="warning-banner hidden">
+                    <span class="warning-icon">⚠️</span>
+                    <div class="warning-text">
+                        <div class="warning-title">Your dog is sleeping — you are vulnerable</div>
+                        <div class="warning-description">Select a mode below to manage your risk</div>
+                    </div>
+                </div>
+
+                <!-- Feed Dog Section -->
+                <div id="feed-section" class="feed-section">
+                    <h3 class="panel-title">
+                        <span>🦴</span>
+                        <span>Feed Your Watch-Dog</span>
+                    </h3>
+                    <div class="feed-info">
+                        <span class="feed-cost">Cost: 10 codes per day to keep dog active</span>
+                        <span id="last-fed">Last fed: Never</span>
+                    </div>
+                    <button id="btn-feed" class="btn btn-primary">Feed Dog (10 codes)</button>
+                </div>
+
+                <!-- Control Panel -->
+                <div id="control-panel" class="control-panel">
+                    <h3 class="panel-title">
+                        <span>🎮</span>
+                        <span>Qarsan Controls</span>
+                    </h3>
+
+                    <!-- Mode Selector -->
+                    <div class="mode-selector">
+                        <div id="mode-off" class="mode-option active" data-mode="OFF">
+                            <div class="mode-icon">🚫</div>
+                            <div class="mode-name">OFF</div>
+                            <div class="mode-description">Outside system - No risk</div>
+                        </div>
+                        <div id="mode-rounded" class="mode-option" data-mode="RANGED">
+                            <div class="mode-icon">🎯</div>
+                            <div class="mode-name">RANGED</div>
+                            <div class="mode-description">With deposit - Only wallet at risk</div>
+                        </div>
+                        <div id="mode-exposure" class="mode-option" data-mode="EXPOSURE">
+                            <div class="mode-icon">🔥</div>
+                            <div class="mode-name">EXPOSURE</div>
+                            <div class="mode-description">No deposit - All assets at risk</div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="action-buttons">
+                        <button id="btn-activate" class="btn btn-primary">Activate Qarsan</button>
+                        <button id="btn-deactivate" class="btn btn-danger hidden">Deactivate</button>
+                    </div>
+                </div>
+
+                <!-- Wallet Section (for RANGED mode) -->
+                <div id="wallet-section" class="wallet-section hidden">
+                    <h3 class="panel-title">
+                        <span>💰</span>
+                        <span>Qarsan Wallet</span>
+                    </h3>
+                    <div class="wallet-balance">
+                        <span id="display-balance">0</span> codes
+                    </div>
+                    <div class="wallet-actions">
+                        <div class="input-group">
+                            <input type="number" id="deposit-amount" class="input-amount" placeholder="Amount" min="1">
+                            <button id="btn-deposit" class="btn btn-secondary">Deposit</button>
+                        </div>
+                        <button id="btn-withdraw" class="btn btn-secondary">Withdraw All</button>
+                    </div>
+                </div>
+
+                <!-- Virtual Users Section -->
+                <div id="virtual-users-section" class="virtual-users-section">
+                    <h3 class="panel-title">
+                        <span>👥</span>
+                        <span>Virtual Users (Attack Targets)</span>
+                    </h3>
+                    <p class="warning-description" style="margin-bottom: 15px;">
+                        These are real users in the system. You can try to steal from them based on their Qarsan mode and Watch-Dog state.
+                    </p>
+                    <div id="users-list" class="users-grid">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <button id="btn-refresh-users" class="btn btn-secondary">Refresh Users</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import Qarsan Engine
+        import QarsanEngine from '../../shared/qarsan-engine.js';
+
+        // Qarsan UI Controller
+        class QarsanUIController {
+            constructor() {
+                this.userId = null;
+                this.watchDogState = 'SLEEPING';
+                this.qarsanMode = 'OFF';
+                this.walletBalance = 0;
+                this.stealScope = 'NONE';
+                this.selectedMode = 'OFF';
+                this.init();
+            }
+
+            async init() {
+                this.userId = QarsanEngine.getCurrentUserId();
+                this.userEmail = QarsanEngine.getCurrentUserEmail();
+                
+                if (!this.userId) {
+                    console.warn('[QARSAN] No user ID found');
+                    this.showError('Please login to access Qarsan');
+                    return;
+                }
+
+                // Update UI with user email
+                if (this.userEmail) {
+                    document.querySelector('.qarsan-subtitle').textContent = 
+                        `Game-Theory Risk Management System - ${this.userEmail}`;
+                }
+
+                await this.loadStatus();
+                await this.loadVirtualUsers();
+                this.setupEventListeners();
+                this.updateUI();
+                
+                // Hide loading, show content
+                document.getElementById('loading-state').classList.add('hidden');
+                document.getElementById('main-content').classList.remove('hidden');
+            }
+
+            async loadStatus() {
+                try {
+                    const status = await QarsanEngine.getQarsanStatus(this.userId);
+                    this.watchDogState = status.watchDogState;
+                    this.qarsanMode = status.qarsanMode;
+                    this.walletBalance = status.walletBalance;
+                    this.stealScope = status.stealScope;
+                } catch (e) {
+                    console.error('[QARSAN] Error loading status:', e);
+                }
+            }
+
+            async loadVirtualUsers() {
+                try {
+                    const users = await QarsanEngine.getVirtualUsers();
+                    const attackable = await QarsanEngine.getAttackableUsers(this.userId);
+                    this.renderVirtualUsers(users, attackable);
+                } catch (e) {
+                    console.error('[QARSAN] Error loading virtual users:', e);
+                }
+            }
+
+            renderVirtualUsers(users, attackable) {
+                const container = document.getElementById('users-list');
+                container.innerHTML = '';
+
+                if (users.length === 0) {
+                    container.innerHTML = '<p class="warning-description">No virtual users available</p>';
+                    return;
+                }
+
+                const attackableIds = new Set(attackable.map(u => u.id));
+
+                users.forEach((user, index) => {
+                    const isAttackable = attackableIds.has(user.id);
+                    const card = document.createElement('div');
+                    card.className = `user-card ${isAttackable ? 'attackable' : ''}`;
+                    
+                    const dogEmoji = user.dogState === 'ACTIVE' ? '🐕' : user.dogState === 'SLEEPING' ? '💤' : '💀';
+                    const modeLabel = user.qarsanMode === 'OFF' ? '🚫 Protected' : user.qarsanMode === 'RANGED' ? '🎯 Wallet at Risk' : '🔥 ALL at Risk';
+                    const scopeLabel = user.stealScope === 'QARSAN_WALLET_ONLY' ? 'Wallet Only' : user.stealScope === 'ALL_ASSETS' ? 'ALL ASSETS' : 'None';
+                    
+                    card.innerHTML = `
+                        <div class="user-header">
+                            <span class="user-name">${user.email}</span>
+                            <span class="user-dog">${dogEmoji}</span>
+                        </div>
+                        <div class="user-mode">${modeLabel}</div>
+                        <div class="user-balance">Balance: ${user.balance || 0} codes</div>
+                        ${user.qarsanWallet > 0 ? `<div class="user-balance" style="color: #3B82F6;">Wallet: ${user.qarsanWallet} codes</div>` : ''}
+                        ${isAttackable ? `<div class="user-scope">
+                            <span class="steal-badge ${user.stealScope === 'QARSAN_WALLET_ONLY' ? 'wallet' : 'all'}">${scopeLabel}</span>
+                        </div>` : ''}
+                    `;
+
+                    if (isAttackable) {
+                        card.addEventListener('click', () => {
+                            this.attemptAttack(user);
+                        });
+                    }
+
+                    container.appendChild(card);
+                });
+            }
+
+            async attemptAttack(targetUser) {
+                if (!confirm(`Attempt to steal from ${targetUser.email}?`)) {
+                    return;
+                }
+
+                // Random steal amount between 10 and their balance
+                const maxSteal = Math.min(targetUser.balance + targetUser.qarsanWallet, 100);
+                const amount = Math.floor(Math.random() * maxSteal) + 10;
+
+                const result = await QarsanEngine.executeQarsanTheft(
+                    targetUser.id,
+                    this.userId,
+                    amount
+                );
+
+                if (result.success) {
+                    this.showToast(`Successfully stole ${result.amount} codes!`, 'success');
+                } else {
+                    this.showToast(`Attack failed: ${result.error}`, 'error');
+                }
+
+                // Refresh users list
+                await this.loadVirtualUsers();
+                await this.loadStatus();
+                this.updateUI();
+            }
+
+            setupEventListeners() {
+                // Mode selection
+                document.querySelectorAll('.mode-option').forEach(option => {
+                    option.addEventListener('click', () => {
+                        this.selectMode(option.dataset.mode);
+                    });
+                });
+
+                // Activate button
+                document.getElementById('btn-activate').addEventListener('click', () => {
+                    this.activateQarsan();
+                });
+
+                // Deactivate button
+                document.getElementById('btn-deactivate').addEventListener('click', () => {
+                    this.deactivateQarsan();
+                });
+
+                // Deposit button
+                document.getElementById('btn-deposit').addEventListener('click', () => {
+                    const amount = parseInt(document.getElementById('deposit-amount').value, 10);
+                    if (amount > 0) {
+                        this.deposit(amount);
+                    }
+                });
+
+                // Withdraw button
+                document.getElementById('btn-withdraw').addEventListener('click', () => {
+                    this.withdrawAll();
+                });
+
+                // Feed dog button
+                document.getElementById('btn-feed').addEventListener('click', () => {
+                    this.feedDog();
+                });
+
+                // Refresh users button
+                document.getElementById('btn-refresh-users').addEventListener('click', () => {
+                    this.loadVirtualUsers();
+                });
+
+                // Listen for asset updates
+                window.addEventListener('assets:updated', (e) => {
+                    if (e.detail && e.detail.type === 'qarsan-update') {
+                        this.loadStatus();
+                        this.updateUI();
+                    }
+                });
+            }
+
+            selectMode(mode) {
+                document.querySelectorAll('.mode-option').forEach(opt => {
+                    opt.classList.remove('active');
+                    if (opt.dataset.mode === mode) {
+                        opt.classList.add('active');
+                    }
+                });
+                this.selectedMode = mode;
+                this.updateUI();
+            }
+
+            async activateQarsan() {
+                const amount = parseInt(document.getElementById('deposit-amount').value, 10) || 0;
+                
+                const result = await QarsanEngine.activateQarsan(this.userId, this.selectedMode, amount);
+                
+                if (result.success) {
+                    this.showToast('Qarsan activated in ' + this.selectedMode + ' mode', 'success');
+                    await this.loadStatus();
+                    this.updateUI();
+                } else {
+                    this.showToast(result.message || 'Failed to activate', 'error');
+                }
+            }
+
+            async deactivateQarsan() {
+                const result = await QarsanEngine.deactivateQarsan(this.userId);
+                
+                if (result.success) {
+                    this.showToast('Qarsan deactivated', 'success');
+                    await this.loadStatus();
+                    this.updateUI();
+                } else {
+                    this.showToast('Failed to deactivate', 'error');
+                }
+            }
+
+            async deposit(amount) {
+                if (this.qarsanMode !== 'RANGED') {
+                    this.showToast('Switch to RANGED mode first', 'warning');
+                    return;
+                }
+
+                const result = await QarsanEngine.activateQarsan(this.userId, 'RANGED', amount);
+                
+                if (result.success) {
+                    this.showToast('Deposited ' + amount + ' codes', 'success');
+                    await this.loadStatus();
+                    this.updateUI();
+                } else {
+                    this.showToast(result.message || 'Deposit failed', 'error');
+                }
+            }
+
+            async withdrawAll() {
+                if (this.walletBalance <= 0) {
+                    this.showToast('No balance to withdraw', 'warning');
+                    return;
+                }
+
+                const result = await QarsanEngine.deactivateQarsan(this.userId);
+                
+                if (result.success) {
+                    this.showToast('Withdrew all codes', 'success');
+                    await this.loadStatus();
+                    this.updateUI();
+                } else {
+                    this.showToast('Withdrawal failed', 'error');
+                }
+            }
+
+            async feedDog() {
+                const result = await QarsanEngine.feedWatchDog(this.userId);
+                
+                if (result.success) {
+                    this.showToast('Dog fed! Now active for 24h', 'success');
+                    await this.loadStatus();
+                    this.updateUI();
+                } else {
+                    this.showToast(result.message || 'Not enough codes', 'error');
+                }
+            }
+
+            updateUI() {
+                // Update Watch-Dog status
+                const watchdogEl = document.getElementById('watchdog-status');
+                watchdogEl.textContent = this.watchDogState;
+                watchdogEl.className = 'status-value ' + this.watchDogState.toLowerCase();
+
+                // Update Qarsan mode
+                const modeEl = document.getElementById('qarsan-mode');
+                modeEl.textContent = this.qarsanMode;
+                modeEl.className = 'status-value ' + this.qarsanMode.toLowerCase();
+
+                // Update wallet balance
+                document.getElementById('wallet-balance').textContent = this.walletBalance;
+                document.getElementById('display-balance').textContent = this.walletBalance;
+
+                // Update steal scope
+                const scopeEl = document.getElementById('steal-scope');
+                scopeEl.textContent = this.stealScope;
+
+                // Handle dead state
+                if (this.watchDogState === 'DEAD') {
+                    document.getElementById('dead-block').classList.remove('hidden');
+                    document.getElementById('active-content').classList.add('hidden');
+                    return;
+                } else {
+                    document.getElementById('dead-block').classList.add('hidden');
+                    document.getElementById('active-content').classList.remove('hidden');
+                }
+
+                // Handle protected banner (ACTIVE)
+                const protectedBanner = document.getElementById('protected-banner');
+                const warningBanner = document.getElementById('warning-banner');
+                
+                if (this.watchDogState === 'ACTIVE') {
+                    protectedBanner.classList.remove('hidden');
+                    warningBanner.classList.add('hidden');
+                } else {
+                    protectedBanner.classList.add('hidden');
+                    warningBanner.classList.remove('hidden');
+                }
+
+                // Handle mode selection
+                document.querySelectorAll('.mode-option').forEach(opt => {
+                    opt.classList.remove('active');
+                    if (opt.dataset.mode === (this.qarsanMode || this.selectedMode)) {
+                        opt.classList.add('active');
+                    }
+                });
+
+                // Handle wallet section visibility
+                const walletSection = document.getElementById('wallet-section');
+                if (this.qarsanMode === 'RANGED') {
+                    walletSection.classList.remove('hidden');
+                } else {
+                    walletSection.classList.add('hidden');
+                }
+
+                // Handle activate/deactivate buttons
+                const activateBtn = document.getElementById('btn-activate');
+                const deactivateBtn = document.getElementById('btn-deactivate');
+                
+                if (this.qarsanMode === 'OFF') {
+                    activateBtn.classList.remove('hidden');
+                    deactivateBtn.classList.add('hidden');
+                } else {
+                    activateBtn.classList.add('hidden');
+                    deactivateBtn.classList.remove('hidden');
+                }
+
+                // Handle feed section
+                const feedSection = document.getElementById('feed-section');
+                if (this.watchDogState === 'ACTIVE') {
+                    feedSection.classList.add('hidden');
+                } else {
+                    feedSection.classList.remove('hidden');
+                }
+            }
+
+            showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                toast.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    background: ${type === 'success' ? '#10B981' : type === 'error' ? '#EF4444' : type === 'warning' ? '#F59E0B' : '#3B82F6'};
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                    z-index: 10000;
+                    animation: slideIn 0.3s ease;
+                `;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.animation = 'slideOut 0.3s ease';
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }
+
+            showError(message) {
+                document.getElementById('loading-state').innerHTML = `
+                    <div style="text-align: center; padding: 40px;">
+                        <div style="font-size: 3rem; margin-bottom: 20px;">⚠️</div>
+                        <div style="color: var(--text-secondary);">${message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Add toast animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100px); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100px); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Initialize
+        window.qarsanUI = new QarsanUIController();
+    </script>
+</body>
+</html>

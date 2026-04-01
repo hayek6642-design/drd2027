@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f0f0f">
+  
+  <!-- Performance: Preconnect to critical domains -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="dns-prefetch" href="https://api.codebank.app">
+  
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+  <!-- Critical CSS inline -->
+  <style>
+    /* Minimal critical CSS for first paint */
+    body { margin: 0; background: #0f0f0f; color: #fff; font-family: system-ui; }
+    #app { min-height: 100vh; }
+    .loading-screen { 
+      position: fixed; 
+      inset: 0; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+      background: #0f0f0f;
+      z-index: 99999;
+    }
+    .spinner { 
+      width: 40px; 
+      height: 40px; 
+      border: 3px solid #333; 
+      border-top-color: #00d4ff; 
+      border-radius: 50%; 
+      animation: spin 1s linear infinite; 
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+  
+  <!-- Async load non-critical CSS -->
+  <link rel="preload" href="/src/styles/performance-optimizations.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="/src/styles/performance-optimizations.css"></noscript>
+  
+  <title>CodeBank</title>
+</head>
+<body>
+  <!-- Loading screen (removed by JS when ready) -->
+  <div id="loading" class="loading-screen">
+    <div class="spinner"></div>
+  </div>
+
+  <div id="app"></div>
+
+  <!-- Module scripts (loaded asynchronously) -->
+  <script type="module">
+    // 🧠 Auth Flow Control: Skip grid if session is active
+    if (localStorage.getItem("session_active") === "true") {
+      console.log("🚀 Active session found, redirecting to app...");
+      // Show loading screen is already handled by the HTML
+      setTimeout(() => {
+        window.location.href = "/yt-new-clear.html";
+      }, 1500);
+      // Stop further execution
+      throw new Error("REDIRECTING");
+    }
+
+    // Dynamic imports for code splitting
+    const loadApp = async () => {
+      try {
+        // Core first
+        const [{ serviceManager }, { assetBus }, { watchDog }] = await Promise.all([
+          import('./src/core/service-manager-v2.js'),
+          import('./src/core/assetbus-v2.js'),
+          import('./src/core/watch-dog-optimized.js')
+        ]);
+        
+        // UI components (lazy)
+        const { renderAppGrid } = await import('./src/components/app-grid.js');
+        
+        // Initialize
+        window.serviceManager = serviceManager;
+        window.assetBus = assetBus;
+        window.watchDog = watchDog;
+        
+        // Render
+        renderAppGrid(document.getElementById('app'));
+        
+        // Remove loading screen
+        document.getElementById('loading').remove();
+        
+        // Load performance monitor (dev only)
+        if (location.hostname === 'localhost' || location.search.includes('debug')) {
+          await import('./src/utils/performance-monitor.js');
+        }
+        
+      } catch (err) {
+        console.error('Failed to load app:', err);
+        document.getElementById('loading').innerHTML = '<p>فشل التحميل. يرجى تحديث الصفحة.</p>';
+      }
+    };
+    
+    // Use requestIdleCallback for non-critical start
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(loadApp, { timeout: 2000 });
+    } else {
+      setTimeout(loadApp, 0);
+    }
+  </script>
+
+  <!-- Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js', { 
+        updateViaCache: 'imports' 
+      }).catch(console.error);
+    }
+  </script>
+</body>
+</html>

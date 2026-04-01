@@ -1,0 +1,294 @@
+
+/* Battalooda Studio UI - FL Studio Simplified Theme */
+
+:root {
+    --studio-bg: #1e1e1e; /* FL Studio Dark Grey */
+    --studio-panel-bg: #2d2d2d;
+    --studio-border: #121212;
+    --studio-accent: #ff8a00; /* FL Studio Orange */
+    --studio-text: #b0b0b0;
+    --studio-text-active: #ffffff;
+    --studio-grid: #333333;
+    --studio-step-off: #444444;
+    --studio-step-on: #ff8a00;
+    --studio-step-alt: #555555;
+    --studio-header-bg: #383838;
+}
+
+/* Studio Overlay */
+.studio-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 5000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.studio-overlay.hidden {
+    display: none;
+}
+
+.studio-container {
+    width: 95vw;
+    height: 90vh;
+    background: var(--studio-bg);
+    border: 1px solid var(--studio-border);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 50px rgba(0,0,0,0.8);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: var(--studio-text);
+}
+
+/* Studio Header - Top Bar */
+.studio-header {
+    height: 40px;
+    background: var(--studio-header-bg);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    border-bottom: 2px solid var(--studio-border);
+    justify-content: space-between;
+}
+
+.studio-menu {
+    display: flex;
+    gap: 15px;
+}
+
+.menu-item {
+    font-size: 11px;
+    color: var(--studio-text);
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.menu-item:hover {
+    color: var(--studio-text-active);
+}
+
+.studio-header h2 {
+    font-size: 14px;
+    font-weight: normal;
+    color: var(--studio-text-active);
+    margin: 0;
+}
+
+/* Main Workspace */
+.studio-workspace {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    gap: 2px;
+    background: var(--studio-border);
+}
+
+/* Sidebar - Sound Library (Simplified Browser) */
+.sound-library {
+    width: 200px;
+    background: var(--studio-panel-bg);
+    display: flex;
+    flex-direction: column;
+}
+
+.library-tabs {
+    display: flex;
+    background: #252525;
+    padding: 2px;
+}
+
+.lib-tab {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 8px 0;
+    cursor: pointer;
+    font-size: 16px;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.lib-tab.active {
+    opacity: 1;
+    background: var(--studio-panel-bg);
+    border-bottom: 2px solid var(--studio-accent);
+}
+
+.library-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 5px;
+}
+
+.sound-item {
+    padding: 6px 10px;
+    font-size: 12px;
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 2px;
+}
+
+.sound-item:hover {
+    background: #3d3d3d;
+    color: var(--studio-text-active);
+}
+
+/* Timeline / Grid Area */
+.timeline-area {
+    flex: 1;
+    background: var(--studio-bg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Channel Rack / Sequencer */
+.sequencer-grid {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sequencer-row {
+    display: flex;
+    align-items: center;
+    height: 40px;
+    background: #252525;
+    border-radius: 4px;
+    padding: 0 10px;
+    gap: 15px;
+}
+
+.sequencer-row label {
+    width: 80px;
+    font-size: 11px;
+    color: var(--studio-text-active);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.steps-container {
+    display: flex;
+    gap: 4px;
+}
+
+.step {
+    width: 25px;
+    height: 25px;
+    background: var(--studio-step-off);
+    border: 1px solid rgba(0,0,0,0.3);
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.step:nth-child(4n) {
+    margin-right: 8px;
+}
+
+.step.active {
+    background: var(--studio-step-on);
+    box-shadow: 0 0 10px rgba(255, 138, 0, 0.5);
+}
+
+/* Master Section (Simplified) */
+.master-section {
+    width: 150px;
+    background: var(--studio-panel-bg);
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.effects-rack h4 {
+    font-size: 12px;
+    margin-bottom: 15px;
+    color: var(--studio-text-active);
+    text-transform: uppercase;
+}
+
+.fx-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.fx-toggle input {
+    accent-color: var(--studio-accent);
+}
+
+/* Transport Bar (Bottom) */
+.transport-bar {
+    height: 60px;
+    background: var(--studio-header-bg);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 20px;
+    border-top: 2px solid var(--studio-border);
+}
+
+.transport-btn {
+    background: transparent;
+    border: none;
+    color: var(--studio-text-active);
+    font-size: 20px;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.transport-btn:active {
+    transform: scale(0.9);
+}
+
+.time-display {
+    background: #000;
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
+    padding: 5px 15px;
+    border-radius: 3px;
+    font-size: 18px;
+    border: 1px solid #333;
+}
+
+.export-btn {
+    margin-left: auto;
+    background: var(--studio-accent);
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.export-btn:hover {
+    filter: brightness(1.1);
+}
+
+/* Scrollbar */
+.studio-container ::-webkit-scrollbar {
+    width: 8px;
+}
+.studio-container ::-webkit-scrollbar-track {
+    background: #121212;
+}
+.studio-container ::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 4px;
+}

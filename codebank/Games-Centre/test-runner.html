@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Games Centre Critical Tests</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #0f0;
+        }
+
+        .pass {
+            color: #0f0;
+        }
+
+        .fail {
+            color: #f00;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+        }
+    </style>
+    <script type="importmap">
+    {
+        "imports": {
+            "../../../../ledger/local-transaction-ledger.js": "./tests/mock-ledger.js",
+            "/ledger/local-transaction-ledger.js": "./tests/mock-ledger.js"
+        }
+    }
+    </script>
+</head>
+
+<body>
+    <h1>Running Critical Tests...</h1>
+    <div id="test-output"></div>
+    <script type="module">
+        import { criticalTests, complianceTests } from './tests/critical-failure-tests.js';
+
+        // Override console.log to print to page
+        const originalLog = console.log;
+        const outputDiv = document.getElementById('test-output');
+
+        console.log = function (...args) {
+            originalLog.apply(console, args);
+            const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+            if (msg.includes('PASSED') || msg.includes('READY')) div.className += ' pass';
+            if (msg.includes('FAILED') || msg.includes('BLOCKED')) div.className += ' fail';
+            div.innerText = msg;
+            outputDiv.appendChild(div);
+        };
+
+        // Run tests
+        window.startTests = async () => {
+            const criticalPassed = await criticalTests.runAll();
+            const compliancePassed = await complianceTests.runAll();
+
+            const success = criticalPassed && compliancePassed;
+            const finalMsg = success ? '✅ READY FOR DEPLOYMENT' : '❌ DEPLOYMENT BLOCKED';
+            console.log('\n' + finalMsg);
+
+            // Signal for agent
+            const statusDiv = document.createElement('div');
+            statusDiv.id = 'test-status';
+            statusDiv.setAttribute('data-status', success ? 'success' : 'failure');
+            statusDiv.innerText = finalMsg;
+            document.body.appendChild(statusDiv);
+        };
+
+        startTests();
+    </script>
+</body>
+
+</html>
