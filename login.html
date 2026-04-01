@@ -299,9 +299,7 @@
 </div>
 
 <script>
-const API_BASE = (window.location.origin.includes('localhost:3001') || window.location.origin.includes('127.0.0.1:3001')) 
-  ? '' 
-  : 'http://localhost:3001';
+const API_BASE = '';
 
 console.log('🔥 API_BASE:', API_BASE);
 console.log('🔥 Window origin:', window.location.origin);
@@ -670,7 +668,7 @@ async function handleSignup() {
       }
       
       setTimeout(() => {
-        window.location.href = '/';
+        window.location.href = '/yt-new-clear.html';
       }, 1500);
     } else {
       if (data.error === 'USER_EXISTS') {
@@ -731,7 +729,7 @@ async function handleLogin() {
       }
       
       setTimeout(() => {
-        window.location.href = '/';
+        window.location.href = '/yt-new-clear.html';
       }, 1500);
     } else {
       showStatus(data.error || 'Login failed', 'error');

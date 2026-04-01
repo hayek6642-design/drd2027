@@ -2214,7 +2214,20 @@ app.post('/api/admin/deposit', async (req, res) => {
       const userId = u.rows[0].id;
 
       // Ensure type column exists
-      try { await client.query("ALTER TABLE codes ADD COLUMN IF NOT EXISTS type VARCHAR(20) DEFAULT 'codes'"); } catch(_){}
+      try { 
+         const tableInfo = await client.query("PRAGMA table_info(codes)");
+         const hasTypeCol = tableInfo.rows.some(row => {
+           const name = (typeof row === 'object' && row !== null) ? (row.name || row[1] || '') : '';
+           return name.toLowerCase() === 'type';
+         });
+         if (!hasTypeCol) {
+           await client.query("ALTER TABLE codes ADD COLUMN type VARCHAR(20) DEFAULT 'codes'");
+         }
+       } catch(e){
+        if (!e.message.includes('duplicate column name')) {
+          console.error('[DB] Failed to ensure type column in codes:', e.message);
+        }
+      }
 
       // Attempt N inserts; unique(code) prevents duplicates
       const amt = Math.max(1, parseInt(amount, 10) || 1);
@@ -4173,12 +4186,33 @@ async function applyNeonCompressionDDL(){
   // 🛡️ Ensure columns exist (Fix for "no column named religion")
   try {
     const columns = ['religion', 'country', 'phone'];
+    
+    // Check existing columns first to avoid "duplicate column" errors in logs
+    let existingColumns = [];
+    try {
+      const tableInfo = await query("PRAGMA table_info(users)");
+      existingColumns = tableInfo.rows.map(row => {
+        if (typeof row === 'object' && row !== null) {
+          return (row.name || row[1] || '').toLowerCase();
+        }
+        return '';
+      }).filter(Boolean);
+    } catch (e) {
+      console.warn('[DB] Failed to get table info, will try ALTER TABLE with catch:', e.message);
+    }
+
     for (const col of columns) {
+      if (existingColumns.includes(col.toLowerCase())) {
+        continue;
+      }
       try {
         await query(`ALTER TABLE users ADD COLUMN ${col} TEXT`);
         console.log(`[DB] Added missing column: ${col}`);
       } catch (e) {
-        // Ignore if column already exists
+        // Still ignore if column already exists (fallback)
+        if (!e.message.includes('duplicate column name')) {
+          console.error(`[DB] Failed to add column ${col}:`, e.message);
+        }
       }
     }
   } catch (e) {
