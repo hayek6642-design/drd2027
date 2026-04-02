@@ -2052,7 +2052,20 @@
                 window.addEventListener('auth:ready', async function(e){
                     try {
                         var okAuth = !!(e && e.detail && e.detail.authenticated);
-                        if (!okAuth) return;
+                        if (!okAuth) {
+                            // [FIX] auth:ready fired with unauthenticated — redirect to login
+                            // (checkAuth may have already done this; guard prevents double redirect)
+                            if (!window.__authReadyRedirected) {
+                                window.__authReadyRedirected = true;
+                                console.warn('[AUTH] auth:ready unauthenticated — redirecting to login');
+                                localStorage.removeItem('session_active');
+                                localStorage.removeItem('__cached_user__');
+                                localStorage.removeItem('__cached_session_id__');
+                                try { document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax'; } catch(_){}
+                                window.location.href = '/login.html';
+                            }
+                            return;
+                        }
                         async function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms) }) }
                         async function tryWithRetry(fn, attempts, delay){
                             for (var i=0;i<attempts;i++){ if (await fn()) return true; await sleep(delay) }
@@ -2325,19 +2338,31 @@
     <script>
         (function () {
             // 🔐 YT-Clear Auth Redirect: verify session with server before redirecting
+            // [FIX] checkAuth: added 8s timeout, full session wipe (incl. cookie + cache)
             (async function checkAuth() {
                 if (window.location.pathname.includes('login.html')) return;
                 try {
-                    const res = await fetch('/api/auth/me', { credentials: 'include' });
+                    const _ctrl = new AbortController();
+                    const _tid = setTimeout(() => _ctrl.abort(), 8000);
+                    let res;
+                    try {
+                        res = await fetch('/api/auth/me', { credentials: 'include', signal: _ctrl.signal });
+                    } finally {
+                        clearTimeout(_tid);
+                    }
                     if (!res.ok) throw new Error('not_authenticated');
                     const data = await res.json();
                     if (!data || !data.user) throw new Error('no_user');
                     console.log('[AUTH] Session verified:', data.user.username || data.user.id);
                 } catch(e) {
                     console.warn('[AUTH] Session check failed, redirecting to login:', e.message);
+                    // [FIX] Wipe ALL session state to prevent re-entry loop
                     localStorage.removeItem('session_active');
                     localStorage.removeItem('session_token');
                     localStorage.removeItem('user_data');
+                    localStorage.removeItem('__cached_user__');
+                    localStorage.removeItem('__cached_session_id__');
+                    try { document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax'; } catch(_){}
                     window.location.href = '/login.html';
                 }
             })();

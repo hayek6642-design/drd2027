@@ -131,6 +131,11 @@
         localStorage.removeItem('session_token');
         localStorage.removeItem('user_data');
         localStorage.removeItem('auth_timestamp');
+        localStorage.removeItem('__cached_user__');
+        localStorage.removeItem('__cached_session_id__');
+        localStorage.removeItem('session_active');
+        // [FIX] Expire the session cookie so auth-core won't find a stale token on next load
+        try { document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax'; } catch(_){}
       }
       
       // Update Auth interface if exists
@@ -157,13 +162,7 @@
       
       if (this._locked && nextAuthenticated === false) { return; }
       
-      // AUTO-FIX: If we have sessionId but authenticated is false, correct it (with guard)
-      if (nextSessId && !nextAuthenticated && !this._autoCorrected) {
-        console.log('[AuthCore] Auto-correcting: sessionId exists, setting authenticated=true');
-        nextAuthenticated = true;
-        nextStatus = 'authenticated';
-        this._autoCorrected = true; // Prevent repeat loops
-      }
+      // [FIX] Auto-correct removed: stale token must not override server's unauthenticated response.
 
       this._authenticated = nextAuthenticated;
       this._status = nextStatus;
@@ -188,13 +187,9 @@
           window.dispatchEvent(new CustomEvent('auth:ready', { detail: this._state }));
           window.dispatchEvent(new CustomEvent('auth:changed', { detail: this._state }));
 
-          if (window.location.pathname === '/login.html') {
-            if (!window.__alreadyRedirected) {
-              window.__alreadyRedirected = true;
-              authLog('[AUTH] Redirecting to root application...');
-              window.location.href = '/';
-            }
-          }
+          // [FIX] Auto-redirect from login page removed from _setState.
+          // login.html uses its own session_active check; this path fired too early
+          // (before server confirmation) and caused redirect loops with stale cached tokens.
       }
       return;
     }
@@ -226,10 +221,19 @@
           headers['Authorization'] = `Bearer ${this._sessionId}`;
         }
 
-        const r = await fetch('/api/auth/me', { 
-          credentials: 'include',
-          headers: headers
-        });
+        // [FIX] 8-second timeout prevents indefinite hang when API is unreachable
+        const _ctrl = new AbortController();
+        const _tid = setTimeout(() => _ctrl.abort(), 8000);
+        let r;
+        try {
+          r = await fetch('/api/auth/me', { 
+            credentials: 'include',
+            headers: headers,
+            signal: _ctrl.signal
+          });
+        } finally {
+          clearTimeout(_tid);
+        }
         
         let payload = null;
         if (r && r.ok) { 
