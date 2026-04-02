@@ -142,9 +142,17 @@ AppLifecycleManager.register("auth", {
 AppLifecycleManager.register("acc", {
   async init() {
     console.log("[ACC] init");
-    // Get user from auth or localStorage
-    const userId = localStorage.getItem('user_id') || 'user_' + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem('user_id', userId);
+    // Use real auth userId from session - DO NOT generate random user IDs
+    // This ensures ACC connects with the actual authenticated user
+    const authState = window.__AUTH_STATE__ || {};
+    const authUserId = authState.userId || (window.Auth && window.Auth.getUser && window.Auth.getUser()?.id) || null;
+    const userId = authUserId || localStorage.getItem('user_id');
+    if (!userId) {
+      console.warn("[ACC] No authenticated userId available - skipping ACC init");
+      window.accClient = { on: () => {}, registerBridge: () => {}, init: () => {} };
+      return;
+    }
+    if (userId) localStorage.setItem('user_id', userId);
     
     // Initialize ACC Client
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -198,10 +206,23 @@ AppLifecycleManager.register("yt", {
 
     console.log("[YT] start");
 
+    // Wait up to 3s for YTPlayerController to become available (script loading race condition)
+    if (!window.YTPlayerController) {
+      await new Promise(resolve => {
+        let attempts = 0;
+        const check = setInterval(() => {
+          if (window.YTPlayerController || ++attempts >= 30) {
+            clearInterval(check);
+            resolve();
+          }
+        }, 100);
+      });
+    }
+
     if (window.YTPlayerController && typeof window.YTPlayerController.start === 'function') {
         await window.YTPlayerController.start();
     } else {
-        console.warn("[YT] YouTube controller not found");
+        console.warn("[YT] YouTube controller not found after waiting");
         // Record failure to AI Brain
         AIBrainEngine.record("yt:fail", { reason: "controller_missing" });
     }

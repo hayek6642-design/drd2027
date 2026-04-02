@@ -1000,14 +1000,6 @@ function handleWindowBlur() {
     } catch(_) {}
 }
 
-function handleWindowFocus() {
-    try {
-        // When window regains focus, do NOT reactivate extra mode
-        // User must manually activate it again
-        console.log('[ExtraMode] Window focused - extra mode remains inactive');
-    } catch(_) {}
-}
-
 function handleBeforeUnload() {
     try { if (extraModeActive) deactivateExtraMode(); } catch(_) {}
 }
