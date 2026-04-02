@@ -1306,6 +1306,10 @@ app.use('/src', express.static(path.join(__dirname, 'services/codebank/src'), {
 app.get(['/', '/yt-new-clear.html'], (req, res) => {
   const session = readSessionFromCookie(req);
   if (!session || !session.userId) {
+    // 🛡️ FIX: Clear stale cookie to break client-side redirect loops
+    if (req.cookies && req.cookies.session_token) {
+      res.clearCookie('session_token', { path: '/' });
+    }
     console.log(`[route] ${req.path} → Redirecting to login.html (Session missing)`);
     return res.redirect('/login.html');
   }
@@ -1376,6 +1380,10 @@ app.get('/yt-coder', (req, res) => {
 app.get(['/yt-simple', '/yt-new', '/yt-new.html'], (req, res) => {
   const session = readSessionFromCookie(req);
   if (!session || !session.userId) {
+    // 🛡️ FIX: Clear stale cookie to break client-side redirect loops
+    if (req.cookies && req.cookies.session_token) {
+      res.clearCookie('session_token', { path: '/' });
+    }
     console.log(`[route] ${req.path} → Redirecting to login.html (Session missing)`);
     return res.redirect('/login.html');
   }
@@ -1654,6 +1662,10 @@ app.get('/api/assets/balance', requireAuth, async (req, res) => {
 app.get(['/yt-clear', '/yt-clear/yt-new-clear.html'], (req, res) => {
   const session = readSessionFromCookie(req);
   if (!session || !session.userId) {
+    // 🛡️ FIX: Clear stale cookie to break client-side redirect loops
+    if (req.cookies && req.cookies.session_token) {
+      res.clearCookie('session_token', { path: '/' });
+    }
     console.log(`[route] ${req.path} → Redirecting to login.html`);
     return res.redirect('/login.html');
   }
