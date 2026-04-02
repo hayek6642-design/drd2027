@@ -104,4 +104,52 @@ window.addEventListener('assets:updated', (e) => {
     if (silverEl) silverEl.textContent = silver;
     if (goldEl) goldEl.textContent = gold;
 });
+
+/**
+ * Emergency Asset Counter Force Update (from actly.md)
+ * Bypasses complex event chains to ensure UI reflects storage
+ */
+function forceUpdateAssetCounters() {
+    try {
+        const codes = JSON.parse(localStorage.getItem('bankode_codes') || '[]');
+        const silver = JSON.parse(localStorage.getItem('bankode_silver') || '[]');
+        const gold = JSON.parse(localStorage.getItem('bankode_gold') || '[]');
+        
+        // Find main counter display
+        const display = document.getElementById('code-display');
+        if (display && !display.classList.contains('hidden')) {
+            // Update the display content if not hidden
+            // But usually we update specific icon-based counters
+        }
+
+        // Update specific data-asset elements if they exist
+        const codeEl = document.querySelector('[data-asset="codes"]');
+        const silverEl = document.querySelector('[data-asset="silver"]');
+        const goldEl = document.querySelector('[data-asset="gold"]');
+
+        if (codeEl) codeEl.textContent = codes.length;
+        if (silverEl) silverEl.textContent = silver.length;
+        if (goldEl) goldEl.textContent = gold.length;
+
+        // Also check for common generic containers mentioned in actly.md
+        const container = document.querySelector('.asset-counters') || 
+                         document.querySelector('[data-assets]') ||
+                         document.querySelector('.codebank-header');
+        
+        if (container && container.innerHTML.includes('🔐')) {
+            container.innerHTML = `
+              <span class="counter">🔐 ${codes.length}</span>
+              <span class="counter">🥈 ${silver.length}</span>
+              <span class="counter">🥇 ${gold.length}</span>
+            `;
+        }
+    } catch(e) {
+        console.warn('[Bridge] Force update failed:', e.message);
+    }
+}
+
+// Start emergency updates
+forceUpdateAssetCounters();
+setInterval(forceUpdateAssetCounters, 2000);
+
 })(window);

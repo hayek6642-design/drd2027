@@ -577,15 +577,12 @@ function checkExtraModeActivation() {
     }
 }
 
-// Add activation check on visibility change
+// Visibility listener
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
         checkExtraModeActivation();
     }
 });
-        extraTimerInterval = null;
-    }
-}
 
 /**
  * Update Extra Mode progress bar
