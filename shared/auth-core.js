@@ -144,82 +144,80 @@
       this._syncInProgress = false;
     },
 
-    _setState(nextAuth, nextUser, nextSessionId, fullUser = null){
-      if (window.__INTERNAL_SYNC__) return; // Prevent loop from Auth interface
-      
+    _setState(nextAuth, nextUser, nextSessionId, fullUser) {
       if (this._authInitialized && nextAuth === this._authenticated && nextUser === this._userId && !fullUser) return; 
       
       if (typeof nextAuth === 'object' && nextAuth !== null) {
         const payload = nextAuth;
-        let nextAuthenticated = !!payload.authenticated;
-        let nextStatus = payload.status || (nextAuthenticated ? 'authenticated' : 'unauthenticated');
-        let nextUserId = payload.userId || null;
-        let nextSessId = payload.sessionId || this._sessionId;
-        let nextFullUser = payload.user || fullUser || null;
-        
-        if (this._locked && nextAuthenticated === false) { return; }
-        
-        // AUTO-FIX: If we have sessionId but authenticated is false, correct it (with guard)
-        if (nextSessId && !nextAuthenticated && !this._autoCorrected) {
-          console.log('[AuthCore] Auto-correcting: sessionId exists, setting authenticated=true');
-          nextAuthenticated = true;
-          nextStatus = 'authenticated';
-          this._autoCorrected = true; // Prevent repeat loops
-        }
-
-        this._authenticated = nextAuthenticated;
-        this._status = nextStatus;
-        this._userId = nextUserId;
-        this._sessionId = nextSessId;
-        this._user = nextFullUser;
-        this._state = {
-          authenticated: this._authenticated,
-          status: this._status,
-          userId: this._userId,
-          sessionId: this._sessionId,
-          user: this._user
-        };
-
-        this._syncAuthState();
-
-        if (this._status === 'authenticated' && !this._initTriggered) {
-            this._initTriggered = true; // Only trigger init once
-            window.__resolveAuthReady && window.__resolveAuthReady(true);
-            this._authStartTime = Date.now();
-
-            window.dispatchEvent(new CustomEvent('auth:ready', { detail: this._state }));
-            window.dispatchEvent(new CustomEvent('auth:changed', { detail: this._state }));
-
-            if (window.location.pathname === '/login.html') {
-              if (!window.__alreadyRedirected) {
-                window.__alreadyRedirected = true;
-                authLog('[AUTH] Redirecting to root application...');
-                window.location.href = '/';
-              }
-            }
-        }
-        return;
-      }
+      let nextAuthenticated = !!payload.authenticated;
+      let nextStatus = payload.status || (nextAuthenticated ? 'authenticated' : 'unauthenticated');
+      let nextUserId = payload.userId || null;
+      let nextSessId = payload.sessionId || this._sessionId;
+      let nextFullUser = payload.user || fullUser || null;
       
-      this._authenticated = !!nextAuth;
-      this._status = this._authenticated ? 'authenticated' : 'unauthenticated';
-      this._userId = nextUser || null;
-      this._sessionId = nextSessionId || this._sessionId;
-      this._user = fullUser || this._user;
-      this._state = { 
-        authenticated: this._authenticated, 
+      if (this._locked && nextAuthenticated === false) { return; }
+      
+      // AUTO-FIX: If we have sessionId but authenticated is false, correct it (with guard)
+      if (nextSessId && !nextAuthenticated && !this._autoCorrected) {
+        console.log('[AuthCore] Auto-correcting: sessionId exists, setting authenticated=true');
+        nextAuthenticated = true;
+        nextStatus = 'authenticated';
+        this._autoCorrected = true; // Prevent repeat loops
+      }
+
+      this._authenticated = nextAuthenticated;
+      this._status = nextStatus;
+      this._userId = nextUserId;
+      this._sessionId = nextSessId;
+      this._user = nextFullUser;
+      this._state = {
+        authenticated: this._authenticated,
         status: this._status,
-        userId: this._userId, 
+        userId: this._userId,
         sessionId: this._sessionId,
         user: this._user
       };
-      
+
       this._syncAuthState();
-      
-      if (this._status === 'authenticated') {
-        window.__resolveAuthReady && window.__resolveAuthReady(true);
+
+      if (this._status === 'authenticated' && !this._initTriggered) {
+          this._initTriggered = true; // Only trigger init once
+          window.__resolveAuthReady && window.__resolveAuthReady(true);
+          this._authStartTime = Date.now();
+
+          window.dispatchEvent(new CustomEvent('auth:ready', { detail: this._state }));
+          window.dispatchEvent(new CustomEvent('auth:changed', { detail: this._state }));
+
+          if (window.location.pathname === '/login.html') {
+            if (!window.__alreadyRedirected) {
+              window.__alreadyRedirected = true;
+              authLog('[AUTH] Redirecting to root application...');
+              window.location.href = '/';
+            }
+          }
       }
-    },
+      return;
+    }
+    
+    this._authenticated = !!nextAuth;
+    this._status = this._authenticated ? 'authenticated' : 'unauthenticated';
+    this._userId = nextUser || null;
+    this._sessionId = nextSessionId || this._sessionId;
+    this._user = fullUser || this._user;
+    this._state = { 
+      authenticated: this._authenticated, 
+      status: this._status,
+      userId: this._userId, 
+      sessionId: this._sessionId,
+      user: this._user
+    };
+    
+    this._syncAuthState();
+    
+    if (this._status === 'authenticated') {
+      window.__resolveAuthReady && window.__resolveAuthReady(true);
+    }
+  },
 
     async _fetchMeAndApply(){
       try {
