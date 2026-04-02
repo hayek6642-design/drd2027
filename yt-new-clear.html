@@ -2321,33 +2321,26 @@
     <!-- Inline orchestration removed per integration rules -->
 
     <!-- Screenshot Module removed (migrated above) -->
-    <script type="module" src="/main.js"></script>
+    <!-- main.js loaded below after acc bridges -->
     <script>
         (function () {
-            // 🔐 YT-Clear Auth Redirect: If not authenticated, go to login.html
-            function checkAuth() {
-                // If we're already on login page, don't check
-                if (window.location.pathname.includes('login.html')) return true;
-
-                const sessionToken = localStorage.getItem('session_token');
-                const cookieToken = document.cookie.split('; ').find(row => row.startsWith('session_token='))?.split('=')[1];
-                
-                if (!sessionToken && !cookieToken && window.USER_MODE !== 'auth') {
-                    console.warn('[AUTH] No session detected, checking if we should redirect...');
-                    
-                    // 🛡️ MODIFIED: Only redirect if we are SURE there's no session after a delay
-                    setTimeout(() => {
-                        const currentSession = localStorage.getItem('session_token') || document.cookie.includes('session_token');
-                        if (!currentSession && window.USER_MODE !== 'auth') {
-                            console.log('[AUTH] Redirecting to login.html');
-                            window.location.href = '/login.html';
-                        }
-                    }, 2000); 
-                    return false;
+            // 🔐 YT-Clear Auth Redirect: verify session with server before redirecting
+            (async function checkAuth() {
+                if (window.location.pathname.includes('login.html')) return;
+                try {
+                    const res = await fetch('/api/auth/me', { credentials: 'include' });
+                    if (!res.ok) throw new Error('not_authenticated');
+                    const data = await res.json();
+                    if (!data || !data.user) throw new Error('no_user');
+                    console.log('[AUTH] Session verified:', data.user.username || data.user.id);
+                } catch(e) {
+                    console.warn('[AUTH] Session check failed, redirecting to login:', e.message);
+                    localStorage.removeItem('session_active');
+                    localStorage.removeItem('session_token');
+                    localStorage.removeItem('user_data');
+                    window.location.href = '/login.html';
                 }
-                return true;
-            }
-            checkAuth();
+            })();
 
             try { window.__UV_TRACE__ = Array.isArray(window.__UV_TRACE__) ? window.__UV_TRACE__ : []; } catch(_){}
             function __uvlog__(type, data, source){ try { var rec = { type: String(type||''), data: data||{}, source: String(source||'unknown'), ts: Date.now() }; window.__UV_TRACE__.push(rec); console.log('[UV]', rec); } catch(_){} }
