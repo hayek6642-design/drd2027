@@ -309,10 +309,5 @@ export default {
   resendOTP
 };
 
-// 🛡️ Debug logging for Firebase Admin initialization (from actly.md)
-console.log('🔥 Firebase Admin initialized:', {
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
-  privateKeyLength: process.env.FIREBASE_PRIVATE_KEY?.length,
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL
-});
+// Firebase status (safe - no secrets)
+console.log('🔥 Firebase:', auth ? 'ENABLED' : 'DISABLED');
