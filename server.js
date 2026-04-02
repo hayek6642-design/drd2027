@@ -3,13 +3,9 @@ import path from 'path';
 import fs from 'fs-extra';
 import { fileURLToPath } from 'url';
 
-// 🛡️ Firebase Private Key Diagnostic
+// Firebase key check (safe - no secrets logged)
 if (process.env.FIREBASE_PRIVATE_KEY) {
-  console.log('🔥 Firebase Config Loaded:', {
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    keyLength: process.env.FIREBASE_PRIVATE_KEY.length,
-    hasNewlines: process.env.FIREBASE_PRIVATE_KEY.includes('\n')
-  });
+  console.log('🔥 Firebase: Private key loaded for project', process.env.FIREBASE_PROJECT_ID || '(unknown)');
 }
 
 const __filename = fileURLToPath(import.meta.url);
