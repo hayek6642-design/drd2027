@@ -311,10 +311,20 @@
       const db = await this.init();
       if (!db) return;
       
+      // SAFETY: Do NOT clear local IDB if server returns 0 codes
+      // but local has data — prevents destructive wipe after Render redeploy
+      if (!Array.isArray(serverCodes) || serverCodes.length === 0) {
+        const localCount = await this.getCodeCount();
+        if (localCount > 0) {
+          console.warn('[VAULT] Server returned 0 codes but local has', localCount, '- skipping destructive cache clear');
+          return;
+        }
+      }
+      
       const tx = db.transaction(this.STORE_NAME, 'readwrite');
       const store = tx.objectStore(this.STORE_NAME);
       
-      // 🛡️ PRODUCTION FIX: Clear local cache to match server authoritative list
+      // Only clear when server has authoritative data to replace it
       store.clear();
       
       for (const code of serverCodes) {

@@ -309,6 +309,33 @@
       
       await this._initFromStorage(); 
       this._loadSyncQueue();
+      
+      // FIX: If IDB returned 0 codes but sync queue has pending items,
+      // merge them into the codes array and re-persist to IDB
+      if (this.codes.length === 0 && this._syncQueue.length > 0) {
+        console.log('[Bankode] Recovering', this._syncQueue.length, 'codes from sync queue');
+        const queueCodes = this._syncQueue.map(item => item.code).filter(Boolean);
+        const seen = new Set(this.codes);
+        for (const code of queueCodes) {
+          if (!seen.has(code)) {
+            this.codes.push(code);
+            seen.add(code);
+          }
+        }
+        this.count = this.codes.length;
+        console.log('[Bankode] Recovered', this.count, 'codes from sync queue');
+        // Re-persist to IDB so they survive and can be synced to server
+        if (window.StorageAdapter && typeof window.StorageAdapter.saveCode === 'function') {
+          for (const code of queueCodes) {
+            try {
+              await window.StorageAdapter.saveCode({ code, type: 'codes', meta: { source: 'sync-queue-recovery', syncStatus: 'pending' } });
+            } catch(_) {}
+          }
+          console.log('[Bankode] Sync queue codes persisted to IDB');
+        }
+        this.publishSnapshot('sync-queue-recovery');
+      }
+      
       this.runIntegrityWatchdog(); // Start Financial Integrity Watchdog
       return true; 
     },

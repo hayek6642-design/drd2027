@@ -43,14 +43,14 @@
             const result = await res.json();
             
             if (res.ok && result.success) {
-                console.log(`✅ [Bridge] Sync SUCCESS: ${code}`);
+                console.log(`[Bridge] Sync SUCCESS: ${code}`);
                 // Notify AssetBus to refresh
                 if (window.AssetBus && typeof window.AssetBus.sync === 'function') {
                     window.AssetBus.sync();
                 }
                 return { ok: true };
             } else {
-                console.error(`❌ [Bridge] Sync FAILED: ${result.error || 'Unknown error'}`);
+                console.error(`[Bridge] Sync FAILED: ${result.error || 'Unknown error'}`);
                 return { ok: false, error: result.error };
             }
         } catch (err) {
@@ -59,7 +59,7 @@
         }
     };
 
-    // 🛡️ MODIFIED: Prevent rapid reload loops in iframes (from actly.md)
+    // MODIFIED: Prevent rapid reload loops in iframes (from actly.md)
     let reloadPrevented = false;
     window.addEventListener('beforeunload', (e) => {
         if (reloadPrevented) return;
@@ -82,5 +82,5 @@
         }
     });
 
-    console.log("✅ AssetBridge Agent: Global Provider is ACTIVE.");
+    console.log("[AssetBridge] Global Provider is ACTIVE.");
 })(window);
