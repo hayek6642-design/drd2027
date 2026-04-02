@@ -450,8 +450,10 @@ async function memCreateUser(email, username, password, profile = {}){
       // Initialize default assets
       try {
         await query('INSERT INTO user_assets(user_id, asset_id) VALUES($1,$2) ON CONFLICT DO NOTHING', [id, 'init']);
+        // Initialize balances entry
+        await query('INSERT INTO balances(user_id, codes_count, silver_count, gold_count) VALUES($1, 0, 0, 0) ON CONFLICT DO NOTHING', [id]);
       } catch(err){
-        console.error('[SIGNUP] User assets insert error:', err.message);
+        console.error('[SIGNUP] User assets/balances insert error:', err.message);
       }
     }
   } catch(e) {
@@ -1568,7 +1570,7 @@ app.post('/api/sync', requireAuth, async (req, res) => {
 
       // 🛡️ Also update the 'balances' table to stay in sync
       await client.query(
-        "INSERT INTO balances (user_id, codes_count, silver_count, gold_count, updated_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO UPDATE SET codes_count = balances.codes_count + $2, silver_count = balances.silver_count + $3, gold_count = balances.gold_count + $4, updated_at = CURRENT_TIMESTAMP",
+        "INSERT INTO balances (user_id, codes_count, silver_count, gold_count, updated_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO UPDATE SET codes_count = codes_count + EXCLUDED.codes_count, silver_count = silver_count + EXCLUDED.silver_count, gold_count = gold_count + EXCLUDED.gold_count, updated_at = CURRENT_TIMESTAMP",
         [userId, d_codes, d_silver, d_gold]
       );
 
@@ -2931,6 +2933,11 @@ async function compressToSilver(userId) {
         'UPDATE balances SET codes_count = codes_count - 100, silver_count = silver_count + 1, updated_at = CURRENT_TIMESTAMP WHERE user_id=$1',
         [userId]
       );
+      // Also sync users table
+      await query(
+        'UPDATE users SET codes_count = codes_count - 100, silver_count = silver_count + 1 WHERE id=$1',
+        [userId]
+      );
       console.log(`[COMPRESSION] 100 normal -> 1 silver for user ${userId}`);
     }
   } catch (err) {
@@ -2948,6 +2955,11 @@ async function compressToGold(userId) {
     if (r.rows.length > 0 && r.rows[0].silver_count >= 10) {
       await query(
         'UPDATE balances SET silver_count = silver_count - 10, gold_count = gold_count + 1, updated_at = CURRENT_TIMESTAMP WHERE user_id=$1',
+        [userId]
+      );
+      // Also sync users table
+      await query(
+        'UPDATE users SET silver_count = silver_count - 10, gold_count = gold_count + 1 WHERE id=$1',
         [userId]
       );
       console.log(`[COMPRESSION] 10 silver -> 1 gold for user ${userId}`);
@@ -2991,8 +3003,14 @@ app.post('/api/mint', requireAuth, async (req, res) => {
       `INSERT INTO balances (user_id, codes_count) 
        VALUES ($1, $2) 
        ON CONFLICT (user_id) 
-       DO UPDATE SET codes_count = balances.codes_count + $2, updated_at = CURRENT_TIMESTAMP`,
+       DO UPDATE SET codes_count = codes_count + EXCLUDED.codes_count, updated_at = CURRENT_TIMESTAMP`,
       [userId, codes.length]
+    );
+
+    // Also sync users table
+    await query(
+      `UPDATE users SET codes_count = COALESCE(codes_count, 0) + $1 WHERE id = $2`,
+      [codes.length, userId]
     );
 
     res.json({ minted: codes.length });
@@ -3014,7 +3032,13 @@ app.post('/api/rewards/claim', requireAuth, async (req, res) => {
     // Use UPSERT to initialize balance if it doesn't exist
     await query(
       `INSERT INTO balances (user_id, ${type}_count) VALUES ($1, 1) 
-       ON CONFLICT (user_id) DO UPDATE SET ${type}_count = balances.${type}_count + 1, updated_at = CURRENT_TIMESTAMP`,
+       ON CONFLICT (user_id) DO UPDATE SET ${type}_count = ${type}_count + 1, updated_at = CURRENT_TIMESTAMP`,
+      [userId]
+    );
+
+    // Also sync users table
+    await query(
+      `UPDATE users SET ${type}_count = COALESCE(${type}_count, 0) + 1 WHERE id = $1`,
       [userId]
     );
 
