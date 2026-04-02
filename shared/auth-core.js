@@ -250,6 +250,12 @@
           this._authInitialized = true; // 🔧 Mark as initialized
           
         } else {
+          // Server explicitly returned no valid user - clear the invalid session token
+          // to prevent auto-correction from setting authenticated:true with userId:null
+          this._sessionId = null;
+          try { localStorage.removeItem('session_token'); } catch(_) {}
+          try { localStorage.removeItem('user_data'); } catch(_) {}
+          try { document.cookie = 'session_token=; path=/; max-age=0'; } catch(_) {}
           this._setState({ authenticated: false, status: 'unauthenticated' }, null);
           window.__resolveAuthReady && window.__resolveAuthReady(false);
           this._authInitialized = true; 
