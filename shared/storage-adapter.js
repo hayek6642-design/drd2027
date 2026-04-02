@@ -128,7 +128,7 @@
               
               const request = store.put(record);
               request.onsuccess = () => {
-                console.log(`[VAULT][SUCCESS] Attempt ${attempt} - Code saved to IndexedDB:`, code);
+                // console.log(`[VAULT][SUCCESS] Attempt ${attempt} - Code saved to IndexedDB:`, code);
                 
                 // 🛡️ SYNC TO SERVER (Requirement from actly.md)
                 if (navigator.onLine) {
@@ -249,7 +249,7 @@
           if (response.ok) {
             const data = await response.json();
             if (data.success && Array.isArray(data.codes)) {
-              console.log('[VAULT] Fetched authoritative codes from server:', data.codes.length);
+              // console.log('[VAULT] Fetched authoritative codes from server:', data.codes.length);
               // Update local cache in background
               this._updateLocalCache(data.codes).catch(() => {});
               return data.codes.map(c => ({
@@ -453,7 +453,7 @@
 
        // 3. Notify AssetBus (Proactive UI Update)
        if (localResult && window.AssetBus && typeof window.AssetBus.addCode === 'function') {
-         console.log('[StorageAdapter] Notifying AssetBus of new code');
+         // console.log('[StorageAdapter] Notifying AssetBus of new code');
          window.AssetBus.addCode(code, type);
        }
 

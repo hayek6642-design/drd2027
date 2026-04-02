@@ -331,10 +331,13 @@
               await window.StorageAdapter.saveCode({ code, type: 'codes', meta: { source: 'sync-queue-recovery', syncStatus: 'pending' } });
             } catch(_) {}
           }
-          console.log('[Bankode] Sync queue codes persisted to IDB');
+          // console.log('[Bankode] Sync queue codes persisted to IDB');
         }
         this.publishSnapshot('sync-queue-recovery');
       }
+      
+      // Publish snapshot AFTER sync queue merge (deferred from _initFromStorage)
+      this.publishSnapshot('init');
       
       this.runIntegrityWatchdog(); // Start Financial Integrity Watchdog
       return true; 
@@ -443,7 +446,7 @@
       await idbPut(STORE_META, 'session', { sessionId });
       
       // 📣 Publish initial snapshot after state restoration
-      this.publishSnapshot('init');
+      // this.publishSnapshot('init'); // DEFERRED: moved to init() after sync queue merge
     },
 
     // 📣 Centralized snapshot publishing

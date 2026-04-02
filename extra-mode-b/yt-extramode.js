@@ -177,7 +177,7 @@ function setupSwitchButtonEvents() {
  * Cycle through switch modes: center -> silver -> gold -> center
  */
 function cycleSwitchMode() {
-    console.log('Cycling switch mode from:', currentSwitchMode);
+    // console.log('Cycling switch mode from:', currentSwitchMode);
     
     // Check if current section allows extra mode switching (only Home section)
     const currentSection = window.currentSection || 'home';
@@ -225,7 +225,7 @@ function updateExtraButtonDisabled() {
  * Switch to Silver Mode (left position)
  */
 function switchToSilverMode() {
-    console.log('Switching to Silver Mode');
+    // console.log('Switching to Silver Mode');
     currentSwitchMode = 'silver';
     extraBarMode = 'silver';
     
@@ -246,7 +246,7 @@ function switchToSilverMode() {
         // Reset awarded flags for new mode
         awardedSilver = false;
         awardedGold = false;
-        console.log('Switched to Silver Mode while Extra Mode is active');
+        // console.log('Switched to Silver Mode while Extra Mode is active');
     }
 }
 
@@ -254,7 +254,7 @@ function switchToSilverMode() {
  * Switch to Gold Mode (right position)
  */
 function switchToGoldMode() {
-    console.log('Switching to Gold Mode');
+    // console.log('Switching to Gold Mode');
     currentSwitchMode = 'gold';
     extraBarMode = 'gold';
     
@@ -275,7 +275,7 @@ function switchToGoldMode() {
         // Reset awarded flags for new mode
         awardedSilver = false;
         awardedGold = false;
-        console.log('Switched to Gold Mode while Extra Mode is active');
+        // console.log('Switched to Gold Mode while Extra Mode is active');
     }
 }
 
@@ -283,7 +283,7 @@ function switchToGoldMode() {
  * Switch to Center Mode (neutral position)
  */
 function switchToCenterMode() {
-    console.log('Switching to Center Mode');
+    // console.log('Switching to Center Mode');
     currentSwitchMode = 'center';
     
     const switchContainer = document.getElementById('extra-switch-container');
@@ -302,7 +302,7 @@ function switchToCenterMode() {
  * Reset switch button to center position (for external deactivation)
  */
 function resetSwitchToCenter() {
-    console.log('Resetting switch button to center position');
+    // console.log('Resetting switch button to center position');
     currentSwitchMode = 'center';
     
     const switchContainer = document.getElementById('extra-switch-container');
@@ -537,7 +537,7 @@ function startExtraTimer() {
         console.log('Starting Extra Mode timer');
         const timerFn = () => {
             extraWatchTime += 100;
-            console.log(`Extra Mode timer: ${formatTime(extraWatchTime)}`);
+            // Timer tick (log suppressed to prevent console spam)
             updateExtraProgress();
             checkForRewards();
         };
@@ -553,6 +553,17 @@ function startExtraTimer() {
         });
     }
 }
+
+/**
+ * Stop Extra Mode timer
+ */
+function stopExtraTimer() {
+    if (extraTimerInterval) {
+        clearInterval(extraTimerInterval);
+        extraTimerInterval = null;
+    }
+}
+
 
 /**
  * Handle window focus
