@@ -148,8 +148,15 @@ function forceUpdateAssetCounters() {
     }
 }
 
-// Start emergency updates
-forceUpdateAssetCounters();
-setInterval(forceUpdateAssetCounters, 2000);
+// Only run forceUpdateAssetCounters inside the CodeBank iframe,
+// NOT on the main yt-new-clear page (symbols should not appear there).
+var __isInsideIframe = (function() {
+    try { return window.self !== window.top; } catch(_) { return true; }
+})();
+var __isCodeBankPath = /indexCB|codebank/i.test(window.location.pathname);
+if (__isInsideIframe || __isCodeBankPath) {
+    forceUpdateAssetCounters();
+    setInterval(forceUpdateAssetCounters, 2000);
+}
 
 })(window);

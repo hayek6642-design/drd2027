@@ -554,6 +554,22 @@ function startExtraTimer() {
     }
 }
 
+
+/**
+ * Stop Extra Mode timer
+ */
+function stopExtraTimer() {
+    if (extraTimerInterval) {
+        if (window.TimerManager && typeof window.TimerManager.clearInterval === 'function') {
+            window.TimerManager.clearInterval(extraTimerInterval);
+        } else {
+            clearInterval(extraTimerInterval);
+        }
+        extraTimerInterval = null;
+        console.log('[ExtraMode] Extra timer stopped');
+    }
+}
+
 /**
  * Handle window focus
  */
