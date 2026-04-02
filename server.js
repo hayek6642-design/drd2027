@@ -3,9 +3,11 @@ import path from 'path';
 import fs from 'fs-extra';
 import { fileURLToPath } from 'url';
 
-// Firebase key check (safe - no secrets logged)
-if (process.env.FIREBASE_PRIVATE_KEY) {
-  console.log('🔥 Firebase: Private key loaded for project', process.env.FIREBASE_PROJECT_ID || '(unknown)');
+// Firebase key check (only when enabled)
+if (process.env.FIREBASE_ENABLED === 'true' && process.env.FIREBASE_PRIVATE_KEY) {
+  console.log('[Firebase] Configured for project', process.env.FIREBASE_PROJECT_ID || '(unknown)');
+} else if (process.env.FIREBASE_ENABLED !== 'true') {
+  console.log('[Firebase] DISABLED (FIREBASE_ENABLED is not true)');
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -102,6 +104,9 @@ import { enforceFinancialSecurity, enforceWatchDog, storeIdempotencyResponse } f
 
 
 const app = express();
+
+// Trust Render's reverse proxy (required for express-rate-limit behind proxy)
+app.set('trust proxy', 1);
 
 // ============================================
 // COUNTRY & RELIGION DATA API
