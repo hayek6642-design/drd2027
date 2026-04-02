@@ -4,21 +4,22 @@
  */
 
 class ACCClient {
-    constructor(config = {}) {
+constructor(config = {}) {
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        this.serverUrl = config.serverUrl || (isLocal ? 'ws://localhost:3999' : '');
-        this.httpUrl = config.httpUrl || (isLocal ? 'http://localhost:3999/acc' : '');
+        const isRender = window.location.hostname.includes('onrender.com');
+        this.serverUrl = config.serverUrl || (isRender ? `wss://${window.location.host}/acc` : (isLocal ? 'ws://localhost:3999' : ''));
+        this.httpUrl = config.httpUrl || (isRender ? `https://${window.location.host}/acc` : (isLocal ? 'http://localhost:3999/acc' : ''));
         this.userId = config.userId || null;
         this.token = config.token || null;
-        
+
         this.ws = null;
         this.reconnectAttempts = 0;
-        this.maxReconnectAttempts = 5;
+        this.maxReconnectAttempts = 3; // Reduced from 5 to prevent infinite loops
         this.listeners = new Map();
         this.assets = null;
         this.connected = false;
         this.serviceBridges = new Map();
-        
+
         this.init();
     }
 
@@ -28,7 +29,7 @@ class ACCClient {
         }
     }
 
-    connect() {
+connect() {
         if (this.ws?.readyState === WebSocket.OPEN) return;
 
         try {
@@ -38,7 +39,7 @@ class ACCClient {
                 console.log('[ACC Client] Connected to ACC Server');
                 this.connected = true;
                 this.reconnectAttempts = 0;
-                
+
                 // Subscribe to updates
                 this.send({
                     action: 'subscribe',
@@ -63,6 +64,7 @@ class ACCClient {
             this.ws.onerror = (error) => {
                 console.error('[ACC Client] WebSocket error:', error);
                 this.emit('error', error);
+                // Don't spam console with reconnection attempts
             };
         } catch (e) {
             console.error('[ACC Client] Connection failed:', e);
@@ -89,6 +91,9 @@ class ACCClient {
                 console.log(`[ACC Client] Reconnecting... Attempt ${this.reconnectAttempts}`);
                 this.connect();
             }, 3000 * this.reconnectAttempts);
+        } else {
+            console.log('[ACC Client] Max reconnection attempts reached, falling back to HTTP');
+            this.fallbackToHTTP();
         }
     }
 
@@ -260,9 +265,9 @@ class ACCClient {
         return 0;
     }
 
-    // Static instance for global access
+// Static instance for global access
     static instance = null;
-    
+
     static init(config) {
         if (!ACCClient.instance) {
             ACCClient.instance = new ACCClient(config);
@@ -272,6 +277,35 @@ class ACCClient {
 
     static getInstance() {
         return ACCClient.instance;
+    }
+
+    // Fallback to HTTP polling when WebSocket fails
+    fallbackToHTTP() {
+        console.log('[ACC Client] Falling back to HTTP polling');
+        this.connected = false;
+        this.ws = null;
+
+        // Poll every 30 seconds
+        this.pollInterval = setInterval(() => {
+            this.syncViaHTTP();
+        }, 30000);
+    }
+
+    // HTTP sync method
+    async syncViaHTTP() {
+        try {
+            const response = await fetch(`${this.httpUrl}/sync`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: this.userId })
+            });
+            const data = await response.json();
+            this.assets = data;
+            this.emit('assetsUpdated', this.assets);
+            this.updateAllBridges();
+        } catch (error) {
+            console.error('[ACC Client] HTTP sync failed:', error);
+        }
     }
 }
 

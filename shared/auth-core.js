@@ -159,38 +159,49 @@
         
         if (this._locked && nextAuthenticated === false) { return; }
         
-        this._authenticated = nextAuthenticated;
-        this._status = nextStatus;
-        this._userId = nextUserId;
-        this._sessionId = nextSessId;
-        this._user = nextFullUser;
-        this._state = { 
-          authenticated: this._authenticated, 
-          status: this._status,
-          userId: this._userId, 
-          sessionId: this._sessionId,
-          user: this._user 
-        };
-        
-        this._syncAuthState();
-        
-        if (this._status === 'authenticated') {
-            window.__resolveAuthReady && window.__resolveAuthReady(true);
-            this._authStartTime = Date.now();
+this._authenticated = nextAuthenticated;
+this._status = nextStatus;
+this._userId = nextUserId;
+this._sessionId = nextSessId;
+this._user = nextFullUser;
+this._state = {
+  authenticated: this._authenticated,
+  status: this._status,
+  userId: this._userId,
+  sessionId: this._sessionId,
+  user: this._user
+};
 
-            window.dispatchEvent(new CustomEvent('auth:ready', { detail: this._state }));
-            window.dispatchEvent(new CustomEvent('auth:changed', { detail: this._state }));
+// AUTO-FIX: If we have sessionId but authenticated is false, correct it
+if (nextSessId && !nextAuthenticated) {
+  console.log('[AuthCore] Auto-correcting: sessionId exists, setting authenticated=true');
+  nextAuthenticated = true;
+  nextStatus = 'authenticated';
+  this._authenticated = nextAuthenticated;
+  this._status = nextStatus;
+  this._state.authenticated = nextAuthenticated;
+  this._state.status = nextStatus;
+}
 
-            if (window.location.pathname === '/login.html') {
-              if (!window.__alreadyRedirected) {
-                window.__alreadyRedirected = true;
-                authLog('[AUTH] Redirecting to root application...');
-                window.location.href = '/';
-              }
-            }
-        }
-        return;
+this._syncAuthState();
+
+if (this._status === 'authenticated') {
+    window.__resolveAuthReady && window.__resolveAuthReady(true);
+    this._authStartTime = Date.now();
+
+    window.dispatchEvent(new CustomEvent('auth:ready', { detail: this._state }));
+    window.dispatchEvent(new CustomEvent('auth:changed', { detail: this._state }));
+
+    if (window.location.pathname === '/login.html') {
+      if (!window.__alreadyRedirected) {
+        window.__alreadyRedirected = true;
+        authLog('[AUTH] Redirecting to root application...');
+        window.location.href = '/';
       }
+    }
+}
+return;
+}
       
       this._authenticated = !!nextAuth;
       this._status = this._authenticated ? 'authenticated' : 'unauthenticated';

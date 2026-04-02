@@ -24,40 +24,48 @@
         return data;
     };
 
-    /**
-     * writeCodeToSQLite - BRIDGING AGENT
-     * Syncs a single generated code to the server's SQLite database.
-     */
-    window.writeCodeToSQLite = async function(data) {
-        const { code } = data;
-        console.log(`[Bridge] Syncing code to server: ${code}`);
-        
-        try {
-            const res = await fetch('/api/codes/sync', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code }),
-                credentials: 'include'
-            });
-            
-            const result = await res.json();
-            
-            if (res.ok && result.success) {
-                console.log(`✅ [Bridge] Sync SUCCESS: ${code}`);
-                // Notify AssetBus to refresh
-                if (window.AssetBus && typeof window.AssetBus.sync === 'function') {
-                    window.AssetBus.sync();
-                }
-                return { ok: true };
-            } else {
-                console.error(`❌ [Bridge] Sync FAILED: ${result.error || 'Unknown error'}`);
-                return { ok: false, error: result.error };
+/**
+ * writeCodeToSQLite - BRIDGING AGENT
+ * Syncs a single generated code to the server's SQLite database.
+ */
+window.writeCodeToSQLite = async function(data) {
+    const { code } = data;
+    console.log(`[Bridge] Syncing code to server: ${code}`);
+
+    try {
+        const res = await fetch('/api/codes/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code }),
+            credentials: 'include'
+        });
+
+        const result = await res.json();
+
+        if (res.ok && result.success) {
+            console.log(`✅ [Bridge] Sync SUCCESS: ${code}`);
+            // Notify AssetBus to refresh
+            if (window.AssetBus && typeof window.AssetBus.sync === 'function') {
+                window.AssetBus.sync();
             }
-        } catch (err) {
-            console.error('[Bridge] Sync EXCEPTION:', err);
-            return { ok: false, error: err.message };
+            // Force UI update
+            window.dispatchEvent(new CustomEvent('assets:updated', {
+                detail: {
+                    codes: window.AssetBus ? window.AssetBus.getState().codes.length : 0,
+                    silver: window.AssetBus ? window.AssetBus.getState().silver.length : 0,
+                    gold: window.AssetBus ? window.AssetBus.getState().gold.length : 0
+                }
+            }));
+            return { ok: true };
+        } else {
+            console.error(`❌ [Bridge] Sync FAILED: ${result.error || 'Unknown error'}`);
+            return { ok: false, error: result.error };
         }
-    };
+    } catch (err) {
+        console.error('[Bridge] Sync EXCEPTION:', err);
+        return { ok: false, error: err.message };
+    }
+};
 
     // 🛡️ MODIFIED: Prevent rapid reload loops in iframes (from actly.md)
     let reloadPrevented = false;
@@ -82,5 +90,18 @@
         }
     });
 
-    console.log("✅ AssetBridge Agent: Global Provider is ACTIVE.");
+console.log("✅ AssetBridge Agent: Global Provider is ACTIVE.");
+
+// Add UI update listener
+window.addEventListener('assets:updated', (e) => {
+    const { codes, silver, gold } = e.detail;
+    // Update DOM counters directly
+    const codeEl = document.querySelector('[data-asset="codes"]');
+    const silverEl = document.querySelector('[data-asset="silver"]');
+    const goldEl = document.querySelector('[data-asset="gold"]');
+
+    if (codeEl) codeEl.textContent = codes;
+    if (silverEl) silverEl.textContent = silver;
+    if (goldEl) goldEl.textContent = gold;
+});
 })(window);

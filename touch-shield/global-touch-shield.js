@@ -114,15 +114,15 @@ function getAuthContext() {
   return null;
 }
 
-const AuthGate = { 
-   authReady: false, 
-   pendingRequests: [], 
+const AuthGate = {
+   authReady: false,
+   pendingRequests: [],
    _ready: false,
-   
-   patchFetch() { 
-     const originalFetch = window.fetch; 
-     
-     window.fetch = async (...args) => { 
+
+   patchFetch() {
+     const originalFetch = window.fetch;
+
+     window.fetch = async (...args) => {
        // 🛡️ OFFLINE DETECTION: Prevent failed fetch spam
        if (typeof navigator !== 'undefined' && !navigator.onLine) {
          const url = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url);
@@ -131,10 +131,10 @@ const AuthGate = {
          return Promise.reject(new TypeError('Failed to fetch (offline)'));
        }
 
-       let [url, options] = args; 
+       let [url, options] = args;
        options = options || {};
        options.headers = options.headers || {};
-       
+
        // Phase 2: Sync Auth to Fetch
        const auth = getAuthContext();
        if (auth && auth.isAuthenticated && auth.isAuthenticated()) {
@@ -148,30 +148,30 @@ const AuthGate = {
            }
          }
        }
-       
-       // Check if this needs auth 
-       if (this._requiresAuth(url)) { 
-         if (!this.authReady) { 
-           console.log(`[AuthGate] Queuing fetch to ${url} until auth ready`); 
-           return new Promise((resolve, reject) => { 
-             this.pendingRequests.push({ args: [url, options], resolve, reject, timestamp: Date.now() }); 
-             
-             // Timeout after 10s to prevent hanging 
-             setTimeout(() => { 
-               const idx = this.pendingRequests.findIndex(r => r.args[0] === url); 
-               if (idx > -1) { 
-                 this.pendingRequests.splice(idx, 1); 
-                 reject(new Error('Auth timeout')); 
-               } 
-             }, 10000); 
-           }); 
-         } 
-       } 
-       
-       return originalFetch.apply(window, [url, options]); 
+
+       // Check if this needs auth
+       if (this._requiresAuth(url)) {
+         if (!this.authReady) {
+           console.log(`[AuthGate] Queuing fetch to ${url} until auth ready`);
+           return new Promise((resolve, reject) => {
+             this.pendingRequests.push({ args: [url, options], resolve, reject, timestamp: Date.now() });
+
+             // Timeout after 10s to prevent hanging
+             setTimeout(() => {
+               const idx = this.pendingRequests.findIndex(r => r.args[0] === url);
+               if (idx > -1) {
+                 this.pendingRequests.splice(idx, 1);
+                 reject(new Error('Auth timeout'));
+               }
+             }, 10000);
+           });
+         }
+       }
+
+       return originalFetch.apply(window, [url, options]);
      };
 
-     // In AuthGate init, add: 
+     // In AuthGate init, add:
      setTimeout(()=>{
        if(!this._ready){
          const auth = getAuthContext();
@@ -183,35 +183,55 @@ const AuthGate = {
          }
        }
      }, 10000);
-   }, 
- 
-   onAuthReady() { 
+   },
+
+   onAuthReady() {
      this._ready = true;
-     this.authReady = true; 
-     console.log(`[AuthGate] Auth ready, flushing ${this.pendingRequests.length} pending requests`); 
-     
+     this.authReady = true;
+     console.log(`[AuthGate] Auth ready, flushing ${this.pendingRequests.length} pending requests`);
+
      this._flush();
    },
 
    _flush(user = null) {
-     // Flush pending requests 
-     this.pendingRequests.forEach(({ args, resolve, reject }) => { 
-       window.fetch(...args).then(resolve).catch(reject); 
-     }); 
-     this.pendingRequests = []; 
+     // Flush pending requests
+     this.pendingRequests.forEach(({ args, resolve, reject }) => {
+       window.fetch(...args).then(resolve).catch(reject);
+     });
+     this.pendingRequests = [];
    },
+
+   _requiresAuth(url) {
+     const authEndpoints = ['/api/me', '/api/rewards', '/api/user'];
+     return authEndpoints.some(endpoint => url.includes(endpoint));
+   },
+
+   // Emergency flush after timeout
+   emergencyFlush() {
+     if (this.pendingRequests.length > 0) {
+       console.warn('[AuthGate] Emergency flush - auth timeout');
+       this._flush();
+     }
+   },
+
+   // Check if auth is ready
+   isReady() {
+     return this.authReady;
+   }
+ };
  
-   _requiresAuth(url) { 
-     const authEndpoints = ['/api/me', '/api/rewards', '/api/user']; 
-     return authEndpoints.some(endpoint => url.includes(endpoint)); 
-   } 
- }; 
- 
- // Initialize 
- AuthGate.patchFetch(); 
- 
- // Listen for auth ready 
- window.addEventListener('auth:ready', () => AuthGate.onAuthReady()); 
+// Initialize
+AuthGate.patchFetch();
+
+// Listen for auth ready
+window.addEventListener('auth:ready', () => AuthGate.onAuthReady());
+
+// Emergency flush after 5 seconds if auth is still not ready
+setTimeout(() => {
+  if (!AuthGate.isReady() && AuthGate.pendingRequests.length > 0) {
+    AuthGate.emergencyFlush();
+  }
+}, 5000);
 
 function blockEvent(e) {
   if (window.shieldDisabled) return;

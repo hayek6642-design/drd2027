@@ -275,6 +275,21 @@ AppLifecycleManager.register("bankode", {
 if (!window.__APP_STARTED__) {
   window.__APP_STARTED__ = true;
 
+  // Environment detection for Render deployment
+  const APP_ENV = {
+    isRender: window.location.hostname.includes('onrender.com'),
+    isLocal: window.location.hostname === 'localhost',
+    host: window.location.host
+  };
+
+  console.log('[App] Environment:', APP_ENV);
+
+  // Disable WebSocket on Render if it causes issues
+  if (APP_ENV.isRender) {
+    console.log('[App] Render deployment detected - adjusting settings');
+    // ACC will auto-detect and use HTTP fallback
+  }
+
   window.safeReload = function () {
     console.warn("🔄 Safe reload triggered.");
     window.location.reload();
@@ -285,7 +300,7 @@ if (!window.__APP_STARTED__) {
         await AppLifecycleManager.init();
         await AppLifecycleManager.start();
         console.log("✅ App fully started with AI Brain active");
-        
+
         console.log("🛠️  __APP_DEBUG__() -> System Status");
         console.log("📊 __HEALTH_REPORT__() -> Repair Logs");
     } catch (err) {

@@ -14,6 +14,7 @@ let currentWatchSession = null;
 let extraBarMode = 'silver'; // 'silver' or 'gold'
 let currentSwitchMode = 'center'; // 'center', 'silver', 'gold'
 let originalCodeDisplay = ''; // Store original code display content
+let extraModeActivationTime = 0; // Track when extra mode was activated
 function __hasBankode(){
     try{
         const last = JSON.parse(localStorage.getItem('Bankode.last')||'null');
@@ -64,7 +65,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Initialize switch button functionality
     initializeSwitchButton();
-    
+
     // Create Extra Mode UI elements if they don't exist
     createExtraModeUI();
 
@@ -77,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function () {
     } else {
         setInterval(updateExtraModeDisplay, 1000);
     }
-    
+
     // Monitor for continuous watching (check every 5 seconds)
     if (window.TimerManager) {
         window.TimerManager.setInterval(checkContinuousWatching, 5000);
@@ -87,6 +88,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Initial state update
     updateExtraModeDisplay();
+
+    // Track app start time for extra mode activation
+    window.appStartTime = Date.now();
 
     if (!window.ExtraMode) {
         window.ExtraMode = {
@@ -336,11 +340,22 @@ async function activateExtraMode(mode) {
         }
         return; // Prevent activation
     }
-    
+
+    // Check if user has been active for at least 1 minute
+    const timeOnSite = Date.now() - window.appStartTime;
+    const minTimeForExtra = 60000; // 1 minute
+    if (timeOnSite < minTimeForExtra) {
+        console.log('[Extra Mode] User has not been active long enough, waiting...');
+        setTimeout(() => {
+            activateExtraMode(mode);
+        }, minTimeForExtra - timeOnSite);
+        return;
+    }
+
     if (mode !== 'silver' && mode !== 'gold') mode = 'silver';
     extraBarMode = mode;
     console.log('Activating Extra Mode:', mode);
-    
+
     try { createWatchSession(); } catch(_) {}
     extraModeActive = true;
     window.extraModeActive = true;
@@ -351,20 +366,20 @@ async function activateExtraMode(mode) {
     rewardState = 'IDLE'; // Reset reward state to IDLE on activation
     rewardReady = false;
     activeReward = null;
-    
+
     // Reset progress bar to zero and ensure it's using Extra Mode's timer
     const progressBar = document.getElementById('progress-bar');
     if (progressBar) {
         progressBar.style.width = '0%';
         progressBar.style.transition = 'width 0.3s ease';
     }
-    
+
     // Clear any existing interval to ensure fresh start
     if (extraTimerInterval) {
         clearInterval(extraTimerInterval);
         extraTimerInterval = null;
     }
-    
+
     // Store original code display content before changing it
     const codeDisplay = document.getElementById('code-display');
     if (codeDisplay) {
@@ -379,10 +394,10 @@ async function activateExtraMode(mode) {
     try { window.handleExtraModeChange && window.handleExtraModeChange(true); } catch (_) {}
 
     // Watch session already created as guard
-    
+
     // Start extra timer regardless of player state (for testing)
     startExtraTimer();
-    
+
      // Pause normal code generation
     if (window.Bankode && typeof window.Bankode.pauseNormalGeneration === 'function') {
         window.Bankode.pauseNormalGeneration();
@@ -400,10 +415,10 @@ async function activateExtraMode(mode) {
     window.codeGenerationActive = false;
     // Disable code generation progress bar and show extra mode progress
     disableCodeGenerationProgress();
-    
+
     // Initialize challenge system
     initializeChallengeSystem();
-    
+
     console.log('Extra Mode activated successfully');
 }
 
@@ -540,15 +555,34 @@ function startExtraTimer() {
 }
 
 /**
- * Stop Extra Mode timer
+ * Handle window focus
  */
-function stopExtraTimer() {
-    if (extraTimerInterval) {
-        if (window.TimerManager) {
-            window.TimerManager.clearInterval(extraTimerInterval);
-        } else {
-            clearInterval(extraTimerInterval);
-        }
+function handleWindowFocus() {
+    try {
+        // When window regains focus, do NOT reactivate extra mode
+        // User must manually activate it again
+        console.log('[ExtraMode] Window focused - extra mode remains inactive');
+    } catch(_) {}
+}
+
+// Add time-based activation check
+function checkExtraModeActivation() {
+    // Check if user has been active for at least 1 minute
+    const timeOnSite = Date.now() - window.appStartTime;
+    const minTimeForExtra = 60000; // 1 minute
+
+    if (timeOnSite > minTimeForExtra && !extraModeActive) {
+        console.log('[Extra Mode] User has been active for 1 minute, activating extra mode');
+        activateExtraMode(extraBarMode);
+    }
+}
+
+// Add activation check on visibility change
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        checkExtraModeActivation();
+    }
+});
         extraTimerInterval = null;
     }
 }
