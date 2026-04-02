@@ -5,7 +5,6 @@ console.log("[YT-Bootstrap] Running zero-auth setup");
 function initYTBootstrap() {
   if (window.__YT_BOOTSTRAP_INIT__) return;
   window.__YT_BOOTSTRAP_INIT__ = true;
-
   console.log("[YT-Bootstrap] Initializing modules...");
 
   // Initialize counters & code display (no auth)

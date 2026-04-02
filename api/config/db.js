@@ -101,7 +101,7 @@ class Client {
     this.tx = null
   }
 
-  async query(text, params = []) {
+  async query(text, params = [], options = {}) {
     const sqliteText = convertParams(text)
     const flatParams = (Array.isArray(params) && params.length === 1 && Array.isArray(params[0])) ? params[0] : params
     
@@ -176,7 +176,9 @@ class Client {
         }
       }
     } catch (error) {
-      console.error('[DB] Client Error:', error.message, { text: sqliteText, params })
+      if (!options.silent) {
+        console.error('[DB] Client Error:', error.message, { text: sqliteText, params })
+      }
       throw error
     }
   }
@@ -214,9 +216,9 @@ class Client {
 
 export const pool = {
   connect: async () => new Client(db),
-  query: async (text, params = []) => {
+  query: async (text, params = [], options = {}) => {
     const client = new Client(db)
-    return client.query(text, params)
+    return client.query(text, params, options)
   },
   batch: async (operations) => {
     const client = new Client(db)

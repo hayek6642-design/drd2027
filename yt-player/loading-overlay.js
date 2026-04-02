@@ -434,7 +434,7 @@ class CoRsALoadingOverlay {
     
     // Start the loading animation
     this.startLoadingAnimation();
-    try { window.dispatchEvent(new CustomEvent('corsa:loading:shown')); } catch(_){}
+    try {    window.dispatchEvent(new CustomEvent('corsa:loading:shown')); } catch(_){}
   }
 
   async hide() {
@@ -447,7 +447,7 @@ class CoRsALoadingOverlay {
         this.overlay.parentNode.removeChild(this.overlay);
       }
     }, 300);
-    try { window.dispatchEvent(new CustomEvent('corsa:loading:hidden')); } catch(_){}
+    try {    window.dispatchEvent(new CustomEvent('corsa:loading:hidden')); } catch(_){}
   }
 
     startLoadingAnimation() {
@@ -524,7 +524,7 @@ class CoRsALoadingOverlay {
     // Final animation to 100%
     this.animateProgress(100, () => {
       setTimeout(() => {
-        try { window.dispatchEvent(new CustomEvent('corsa:loading:completed')); } catch(_){}
+        try {    window.dispatchEvent(new CustomEvent('corsa:loading:completed')); } catch(_){}
         this.hide();
       }, 500);
     });

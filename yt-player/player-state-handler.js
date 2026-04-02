@@ -111,7 +111,7 @@ class PlayerStateHandler {
 
         if (currentSection === 'home') {
             // Home is a playlist - loop it
-            try {
+            try {   
                 const savedData = this.getSavedPlaybackData('home');
                 this.player.loadPlaylist({
                     listType: 'playlist',
@@ -124,7 +124,7 @@ class PlayerStateHandler {
             }
         } else if (currentSection === 'afra7') {
             // Afra7 is a single video - restart from beginning
-            try {
+            try {   
                 this.player.loadVideoById({
                     videoId: 'fUehe82E5yU',
                     startSeconds: 0
@@ -139,7 +139,7 @@ class PlayerStateHandler {
      * Get saved playback data
      */
     getSavedPlaybackData(sectionId) {
-        try {
+        try {   
             const local = localStorage.getItem(`video_${sectionId}`);
             if (local) {
                 return JSON.parse(local);

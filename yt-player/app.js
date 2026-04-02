@@ -109,7 +109,7 @@ class CodeBankApp {
     async loadInitialData() {
         this.state.isLoading = true;
         
-        try {
+        try {   
             // Load all data in parallel
             const [status, assets, currencyRates, transactions, gameStats] = await Promise.all([
                 api.getStatus(),
@@ -287,7 +287,7 @@ class CodeBankApp {
     startPeriodicRefresh() {
         // Refresh status every 30 seconds
         this.refreshIntervals.push(setInterval(async () => {
-            try {
+            try {   
                 const status = await api.getStatus();
                 this.state.status = status;
                 this.updateHeaderInfo();
@@ -298,7 +298,7 @@ class CodeBankApp {
 
         // Refresh currency rates every minute
         this.refreshIntervals.push(setInterval(async () => {
-            try {
+            try {   
                 const currencyRates = await api.getCurrencyRates();
                 this.state.currencyRates = currencyRates.rates;
                 this.updateCurrencyTicker();
@@ -347,7 +347,7 @@ class CodeBankApp {
     async playQuickGame(gameType) {
         this.hideGameDialog();
         
-        try {
+        try {   
             const result = await api.playGames({
                 gameType,
                 gamesToPlay: 1,
@@ -381,7 +381,7 @@ class CodeBankApp {
             }
         };
 
-        try {
+        try {   
             const submitBtn = document.getElementById('buy-submit');
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
@@ -421,7 +421,7 @@ class CodeBankApp {
             }
         };
 
-        try {
+        try {   
             const submitBtn = document.getElementById('sell-submit');
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
@@ -452,7 +452,7 @@ class CodeBankApp {
             codesPerGame: parseInt(document.getElementById('codes-per-game').value)
         };
 
-        try {
+        try {   
             const submitBtn = document.getElementById('play-submit');
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Playing...';
@@ -477,7 +477,7 @@ class CodeBankApp {
     }
 
     async grindCodes() {
-        try {
+        try {   
             await api.grind('/api/grind');
             showToast('Grinding completed successfully!', 'success');
             await this.refreshUserData();
@@ -488,7 +488,7 @@ class CodeBankApp {
     }
 
     async compressCodes(mode) {
-        try {
+        try {   
             await api.compressCodes({ amount: 1, mode });
             showToast(`Codes compressed to ${mode} successfully!`, 'success');
             await this.refreshUserData();
@@ -499,7 +499,7 @@ class CodeBankApp {
     }
 
     async refreshUserData() {
-        try {
+        try {   
             const [assets, transactions, gameStats] = await Promise.all([
                 api.getUserAssets(),
                 api.getTransactions(),

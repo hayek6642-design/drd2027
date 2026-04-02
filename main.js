@@ -270,9 +270,9 @@ AppLifecycleManager.register("bankode", {
 if (!window.__APP_STARTED__) {
   window.__APP_STARTED__ = true;
 
-  const originalReload = window.location.reload;
-  window.location.reload = function () {
-    console.warn("⛔ Direct reload blocked. Use window.safeReload() if needed.");
+  window.safeReload = function () {
+    console.warn("🔄 Safe reload triggered.");
+    window.location.reload();
   };
 
   async function boot() {

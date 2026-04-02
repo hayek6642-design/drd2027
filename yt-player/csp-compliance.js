@@ -4,7 +4,6 @@
 class CSPCompliance {
   constructor() {
     this.isInitialized = false;
-    this.clerkSelectors = ['[data-clerk]', '[data-clerk-portal]', '[data-clerk-publishable-key]', '.clerk-', '#clerk-', '[data-clerk-loaded]'];
     this.init();
   }
 
@@ -23,36 +22,6 @@ class CSPCompliance {
 
   cleanInlineStyles() {}
 
-  // Detect whether a node is part of Clerk DOM or scripts
-  isClerkNode(node) {
-    try {
-      if (!node) return false;
-      if (node.tagName === 'SCRIPT') {
-        const src = node.getAttribute('src') || '';
-        if (src.includes('clerk') || node.hasAttribute('data-clerk-publishable-key')) return true;
-      }
-      // Check attributes
-      const hasDataClerk = Array.from(node.attributes || []).some(a => a.name.startsWith('data-clerk'));
-      if (hasDataClerk) return true;
-      const cls = (node.className || '').toString();
-      if (cls.includes('clerk-') || cls.includes('cl-root')) return true;
-      const id = (node.id || '').toString();
-      if (id.startsWith('clerk-') || id === 'clerk-auth-modal' || id === 'clerk-welcome-popup') return true;
-      // Check ancestors
-      let p = node.parentElement;
-      let depth = 0;
-      while (p && depth < 6) {
-        const pCls = (p.className || '').toString();
-        const pId = (p.id || '').toString();
-        const hasData = Array.from(p.attributes || []).some(a => a.name.startsWith('data-clerk'));
-        if (pCls.includes('clerk-') || pId.startsWith('clerk-') || hasData) return true;
-        p = p.parentElement;
-        depth++;
-      }
-    } catch (_) {}
-    return false;
-  }
-
   createCSSRule(className, style) {
     // Create a style element if it doesn't exist
     let styleElement = document.getElementById('csp-styles');
@@ -69,14 +38,7 @@ class CSPCompliance {
 
   // Method to safely execute code without eval (for critical operations)
   executeSafeCode(code) {
-    try {
-      if (typeof code !== 'string') return null;
-      const t = code.trim();
-      if ((t.startsWith('{') && t.endsWith('}')) || (t.startsWith('[') && t.endsWith(']'))) {
-        return JSON.parse(t);
-      }
-      return null;
-    } catch (error) {
+    try {   
       return null;
     }
   }

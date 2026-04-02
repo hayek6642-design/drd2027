@@ -33,7 +33,7 @@ class ApiService {
             config.body = JSON.stringify(data);
         }
 
-        try {
+        try {   
             const response = await fetch(`${this.baseURL}${endpoint}`, config);
             
             // Handle authentication errors
@@ -64,7 +64,7 @@ class ApiService {
      * @returns {Promise<Object>}
      */
     async getStatus() {
-        try {
+        try {   
             // Fetch YouTube channel statistics
             const youtubeResponse = await fetch(
                 `https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${this.CHANNEL_ID}&key=${this.YOUTUBE_API_KEY}`
@@ -107,7 +107,7 @@ class ApiService {
      * @returns {Promise<Object>}
      */
     async getUserAssets() {
-        try {
+        try {   
             const userId = window.APP_USER_ID
             if (!userId) throw new Error('Auth required')
             const response = await this.request('GET', `/api/user-assets?userId=${encodeURIComponent(userId)}`);
@@ -132,7 +132,7 @@ class ApiService {
      * @returns {Promise<Object>}
      */
     async getCurrencyRates() {
-        try {
+        try {   
             const response = await this.request('GET', '/api/currency-rates');
             const data = await response.json();
             
@@ -165,7 +165,7 @@ class ApiService {
      * @returns {Promise<Object>}
      */
     async getTransactions() {
-        try {
+        try {   
             const response = await this.request('GET', '/api/transactions');
             const data = await response.json();
             
@@ -185,7 +185,7 @@ class ApiService {
      * @returns {Promise<Object>}
      */
     async getGameStats() {
-        try {
+        try {   
             const response = await this.request('GET', '/api/game-stats');
             const data = await response.json();
             

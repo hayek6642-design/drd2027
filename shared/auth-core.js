@@ -12,15 +12,13 @@
   if (typeof window !== 'undefined') {
     // 🧪 DIAGNOSTIC: Track all reload calls (from actly.md)
     (function() {
-        const originalReload = location.reload;
-        location.reload = function(...args) {
-            console.error('🚨 [AuthCore] location.reload() called from:', new Error().stack);
-            originalReload.apply(this, args);
+        window.safeReload = function() {
+            console.error('🚨 [AuthCore] safeReload() called from:', new Error().stack);
+            location.reload();
         };
-        const originalReplace = location.replace;
-        location.replace = function(...args) {
-            console.error('🚨 [AuthCore] location.replace() called with:', args, 'from:', new Error().stack);
-            originalReplace.apply(this, args);
+        window.safeReplace = function(url) {
+            console.error('🚨 [AuthCore] safeReplace() called with:', url, 'from:', new Error().stack);
+            location.replace(url);
         };
     })();
 

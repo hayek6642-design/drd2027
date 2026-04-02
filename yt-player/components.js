@@ -477,7 +477,7 @@ function scrollToElement(element, offset = 0) {
  * @returns {Promise<boolean>} Success status
  */
 async function copyToClipboard(text) {
-    try {
+    try {   
         await navigator.clipboard.writeText(text);
         showToast('Copied to clipboard!', 'success');
         return true;

@@ -23,7 +23,7 @@ class AppInitializer {
             return;
         }
 
-        try {
+        try {   
             console.log('[App Initializer] Starting application initialization...');
 
             window.__EXTRA_MODE_LOCKED__ = true;
@@ -40,15 +40,15 @@ class AppInitializer {
 
             // Phase 2: Authentication gate
             const authDetail = await new Promise((resolve) => {
-                try {
-                    const h = (e) => { try { window.removeEventListener('auth:ready', h); resolve(e && e.detail || { authenticated: false }); } catch(_) { resolve({ authenticated: false }) } };
+                try {   
+                    const h = (e) => { try {    window.removeEventListener('auth:ready', h); resolve(e && e.detail || { authenticated: false }); } catch(_) { resolve({ authenticated: false }) } };
                     window.addEventListener('auth:ready', h);
                 } catch(_) { resolve({ authenticated: false }) }
             });
             const isAuthed = !!(authDetail && authDetail.authenticated);
             if (!isAuthed) {
-                try { this.loadingOverlay.updateProgress(100, 'جاهز'); } catch(_){}
-                try { await this.loadingOverlay.hide(); } catch(_){}
+                try {    this.loadingOverlay.updateProgress(100, 'جاهز'); } catch(_){}
+                try {    await this.loadingOverlay.hide(); } catch(_){}
                 window.__EXTRA_MODE_LOCKED__ = false;
                 this.initialized = true;
                 console.log('[App Initializer] Unauthenticated — UI unlocked for login');
@@ -222,7 +222,7 @@ class AppInitializer {
 
     initializeCodeBankApp() {
         if (this.flags.codeBankApp) return;
-        try {
+        try {   
             if (!window.__CODEBANK_APP_INIT__) {
                 window.__CODEBANK_APP_INIT__ = true;
                 window.codeBankApp = new CodeBankApp();
@@ -375,13 +375,13 @@ class AppInitializer {
         const startLongPress = () => {
             clearTimeout(longPressTimer);
             longPressTimer = setTimeout(() => {
-                try {
+                try {   
                     if (typeof window.showCodeBankPanel === 'function') {
                         window.showCodeBankPanel();
-                        try { window.CodeBankSidePanel && window.CodeBankSidePanel.switchTab && window.CodeBankSidePanel.switchTab('assets'); } catch(_){}
+                        try {    window.CodeBankSidePanel && window.CodeBankSidePanel.switchTab && window.CodeBankSidePanel.switchTab('assets'); } catch(_){}
                     }
-                    try { window.dispatchEvent(new CustomEvent('section:changed', { detail: { section: 'assets' } })); } catch(_){}
-                    try { if (window.fixAssetsAndSafeCode) window.fixAssetsAndSafeCode(); } catch(_){}
+                    try {    window.dispatchEvent(new CustomEvent('section:changed', { detail: { section: 'assets' } })); } catch(_){}
+                    try {    if (window.fixAssetsAndSafeCode) window.fixAssetsAndSafeCode(); } catch(_){}
                 } catch(_){}
             }, LONG_PRESS_MS);
         };
@@ -400,7 +400,7 @@ class AppInitializer {
      * Show alternative dashboard (stock market)
      */
     showAlternativeDashboard() {
-        try {
+        try {   
             const overlay = window.DOMUtils.safeGetElement('code-popup-overlay');
             const iframe = window.DOMUtils.safeGetElement('code-popup-iframe');
 
@@ -440,7 +440,7 @@ class AppInitializer {
      * Show azan clock popup
      */
     showAzanClockPopup() {
-        try {
+        try {   
             const url = '/services/yt-clear/azan-clock.html';
             const w = window.open(url, 'azanClock', 'width=600,height=700,resizable=yes');
             if (w) w.focus();
@@ -512,7 +512,7 @@ class AppInitializer {
     async waitForFlag(predicate) {
         return new Promise(resolve => {
             const check = () => {
-                try {
+                try {   
                     if (predicate()) {
                         resolve();
                         return;
@@ -530,7 +530,7 @@ class AppInitializer {
     async initializeSessionData() {
         // Load saved watch time and code
         if (window.AuthSyncManager && window.AuthSyncManager.isInitialized) {
-            try {
+            try {   
                 const savedWatchTime = window.AuthSyncManager.getUserData('watchTime');
                 const watchTime = window.sanitizeWatchTime ? window.sanitizeWatchTime(savedWatchTime) : 0;
 

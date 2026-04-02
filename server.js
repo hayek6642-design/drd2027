@@ -2217,16 +2217,16 @@ app.post('/api/admin/deposit', async (req, res) => {
 
       // Ensure type column exists
       try { 
-         const tableInfo = await client.query("PRAGMA table_info(codes)");
-         const hasTypeCol = tableInfo.rows.some(row => {
-           const name = (typeof row === 'object' && row !== null) ? (row.name || row[1] || '') : '';
-           return name.toLowerCase() === 'type';
-         });
-         if (!hasTypeCol) {
-           await client.query("ALTER TABLE codes ADD COLUMN type VARCHAR(20) DEFAULT 'codes'");
-         }
-       } catch(e){
-        if (!e.message.includes('duplicate column name')) {
+        const tableInfo = await client.query("PRAGMA table_info(codes)", [], { silent: true });
+        const hasTypeCol = tableInfo.rows.some(row => {
+          const name = (typeof row === 'object' && row !== null) ? (row.name || row[1] || '') : '';
+          return name.toLowerCase() === 'type';
+        });
+        if (!hasTypeCol) {
+          await client.query("ALTER TABLE codes ADD COLUMN type VARCHAR(20) DEFAULT 'codes'", [], { silent: true });
+        }
+      } catch(e){
+        if (!e.message.includes('duplicate column name') && !e.message.includes('ENOTFOUND')) {
           console.error('[DB] Failed to ensure type column in codes:', e.message);
         }
       }
@@ -4214,7 +4214,7 @@ async function applyNeonCompressionDDL(){
     // Check existing columns first to avoid "duplicate column" errors in logs
     let existingColumns = [];
     try {
-      const tableInfo = await query("PRAGMA table_info(users)");
+      const tableInfo = await query("PRAGMA table_info(users)", [], { silent: true });
       existingColumns = tableInfo.rows.map(row => {
         if (typeof row === 'object' && row !== null) {
           return (row.name || row[1] || '').toLowerCase();
@@ -4222,7 +4222,9 @@ async function applyNeonCompressionDDL(){
         return '';
       }).filter(Boolean);
     } catch (e) {
-      console.warn('[DB] Failed to get table info, will try ALTER TABLE with catch:', e.message);
+      if (!e.message.includes('ENOTFOUND')) {
+        console.warn('[DB] Failed to get table info, will try ALTER TABLE with catch:', e.message);
+      }
     }
 
     for (const col of columns) {
@@ -4230,11 +4232,11 @@ async function applyNeonCompressionDDL(){
         continue;
       }
       try {
-        await query(`ALTER TABLE users ADD COLUMN ${col} TEXT`);
+        await query(`ALTER TABLE users ADD COLUMN ${col} TEXT`, [], { silent: true });
         console.log(`[DB] Added missing column: ${col}`);
       } catch (e) {
         // Still ignore if column already exists (fallback)
-        if (!e.message.includes('duplicate column name')) {
+        if (!e.message.includes('duplicate column name') && !e.message.includes('ENOTFOUND')) {
           console.error(`[DB] Failed to add column ${col}:`, e.message);
         }
       }

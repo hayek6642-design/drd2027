@@ -123,10 +123,10 @@ class YouTubeAPIManager {
      * Create YouTube player with safe configuration - Enhanced to prevent unnecessary recreation
      */
     async createPlayer(containerId, videoId, options = {}) {
-        try {
+        try {   
             // Enhanced Guard: Check if player already exists and is working
             if (this.player && typeof this.player.getPlayerState === 'function') {
-                try {
+                try {   
                     const currentState = this.player.getPlayerState();
                     // If player exists and is in a valid state, just update content instead of recreating
                     if (currentState !== undefined && videoId) {
@@ -167,7 +167,6 @@ class YouTubeAPIManager {
                     iv_load_policy: 3,
                     loop: 1,
                     playsinline: 1,
-                    origin: `https://www.youtube.com`,
                     enablejsapi: 1
                 },
                 events: {
@@ -197,14 +196,14 @@ class YouTubeAPIManager {
 
             // Only destroy existing player if it's completely broken
             if (this.player && typeof this.player.destroy === 'function') {
-                try {
+                try {   
                     // Test if player is actually working before destroying
                     this.player.getPlayerState();
                     console.log('[YouTube Player] Keeping existing player, updating content');
                     return this.updatePlayerContent(videoId, options);
                 } catch (e) {
                     console.log('[YouTube Player] Existing player is broken, recreating');
-                    try {
+                    try {   
                         this.player.destroy();
                     } catch (destroyError) {
                         console.warn('[YouTube Player] Error destroying broken player:', destroyError);
@@ -234,7 +233,7 @@ class YouTubeAPIManager {
         }
 
         return new Promise((resolve, reject) => {
-            try {
+            try {   
                 if (videoId && videoId.startsWith('PL')) {
                     // It's a playlist
                     console.log('[YouTube Player] Loading playlist without recreation:', videoId);
@@ -306,7 +305,7 @@ class YouTubeAPIManager {
     executeReadyCallbacks() {
         while (this.readyCallbacks.length > 0) {
             const callback = this.readyCallbacks.shift();
-            try {
+            try {   
                 callback();
             } catch (error) {
                 console.error('[YouTube API] Error in ready callback:', error);
@@ -320,7 +319,7 @@ class YouTubeAPIManager {
     executeErrorCallbacks(error) {
         while (this.errorCallbacks.length > 0) {
             const callback = this.errorCallbacks.shift();
-            try {
+            try {   
                 callback(error);
             } catch (err) {
                 console.error('[YouTube API] Error in error callback:', err);
