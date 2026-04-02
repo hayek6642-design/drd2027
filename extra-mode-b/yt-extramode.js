@@ -316,7 +316,7 @@ function resetSwitchToCenter() {
  * Activate Extra Mode
  */
 async function activateExtraMode(mode) {
-    // 🛡️ WATCH-DOG DEATH CHECK
+    // WATCH-DOG DEATH CHECK
     if (window.__DOG_IS_DEAD__ || localStorage.getItem('__DOG_IS_DEAD__') === 'true') {
         console.warn('[Extra Mode] Blocked: Watch-Dog is dead.');
         if (window.showToast) {
@@ -652,7 +652,7 @@ function checkForRewards() {
         };
         activeReward = reward;
         
-        showRewardMessage(reward.type); // 👁️ Show claim message only
+        showRewardMessage(reward.type); // Show claim message only
     }
 }
 
@@ -771,7 +771,7 @@ function showRewardFailedMessage() {
     if (!notification) return;
     
     // Set notification content
-    icon.textContent = '❌';
+    icon.textContent = 'X';
     icon.className = 'reward-icon';
     title.textContent = 'Reward Claim Failed';
     description.textContent = 'Failed to claim your reward. Please try again.';
@@ -850,7 +850,7 @@ function showSuccessClaimNotification(reward) {
     if (!notification) return;
     
     // Update content for success
-    icon.textContent = '✅';
+    icon.textContent = 'OK';
     icon.className = 'reward-icon';
     title.textContent = 'Reward Claimed!';
     description.textContent = `Successfully claimed your ${reward.name}!`;
@@ -1000,13 +1000,7 @@ function handleWindowBlur() {
     } catch(_) {}
 }
 
-function handleWindowFocus() {
-    try {
-        // When window regains focus, do NOT reactivate extra mode
-        // User must manually activate it again
-        console.log('[ExtraMode] Window focused - extra mode remains inactive');
-    } catch(_) {}
-}
+
 
 function handleBeforeUnload() {
     try { if (extraModeActive) deactivateExtraMode(); } catch(_) {}
@@ -1156,7 +1150,7 @@ function showRewardMessage(type, code = null) {
     if (!notification) return;
     
     // Set notification content
-    icon.textContent = type === 'silver' ? '🥈' : '🥇';
+    icon.textContent = type === 'silver' ? 'Silver' : 'Gold';
     icon.className = `reward-icon ${type}`;
     
     if (code) {
@@ -1167,7 +1161,7 @@ function showRewardMessage(type, code = null) {
         delete notification.dataset.rewardId;
     } else {
         // Reward ready to claim
-        title.textContent = `🎁 You have a ${type.charAt(0).toUpperCase() + type.slice(1)} Bar`;
+        title.textContent = `You have a ${type.charAt(0).toUpperCase() + type.slice(1)} Bar!`;
         description.textContent = 'Click here to claim your reward!';
         notification.style.cursor = 'pointer';
         
@@ -1247,7 +1241,7 @@ function showRewardSuccess(code){
         const title = document.getElementById('reward-title');
         const description = document.getElementById('reward-description');
         if (!notification) return;
-        icon.textContent = type === 'silver' ? '🥈' : '🥇';
+        icon.textContent = type === 'silver' ? 'Silver' : 'Gold';
         icon.className = `reward-icon ${type}`;
         title.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} Bar Earned!`;
         description.textContent = `Successfully claimed your ${type.charAt(0).toUpperCase() + type.slice(1)} Bar (${code})!`;
