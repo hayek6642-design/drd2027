@@ -366,47 +366,12 @@ app.get('/api/watchdog/status', requireAuth, async (req, res) => {
   }
 });
 
-async function readSessionFromCookie(req) {
+function readSessionFromCookie(req) {
   try {
     const token = (req.cookies && req.cookies.session_token) || null;
     if (!token) return null;
-
-    // Check in-memory first (fast path)
     const s = devSessions.get(token);
-    if (s) return s;
-
-    // Check database (survives server restarts / Render redeploys)
-    try {
-      const dbResult = await query(
-        'SELECT user_id, expires_at FROM auth_sessions WHERE token = $1 OR token_hash = $1',
-        [token]
-      );
-      if (dbResult.rows && dbResult.rows.length > 0) {
-        const row = dbResult.rows[0];
-        if (new Date() < new Date(row.expires_at)) {
-          const userRes = await query(
-            'SELECT email, user_type, is_untrusted FROM users WHERE id = $1',
-            [row.user_id]
-          );
-          const user = userRes.rows && userRes.rows[0];
-          const session = {
-            userId: row.user_id,
-            role: (user && user.user_type) || 'user',
-            sessionId: token,
-            email: user && user.email,
-            isUntrusted: (user && user.is_untrusted) || false
-          };
-          // Re-hydrate in-memory cache so subsequent requests are fast
-          devSessions.set(token, session);
-          console.log('[AUTH] Session restored from DB for user:', row.user_id);
-          return session;
-        }
-      }
-    } catch (dbErr) {
-      console.error('[readSessionFromCookie] DB fallback failed:', dbErr.message);
-    }
-
-    return null;
+    return s || null;
   } catch (_) {
     return null;
   }
@@ -520,9 +485,9 @@ function __sseEmit(userId, payload) {
     for (const res of set) { try { res.write(data) } catch(err){ console.error('[SSE] Write error:', err) } }
   } catch(err){ console.error('[SSE] Broadcast error:', err) }
 }
-app.get('/events', async (req, res) => {
+app.get('/events', (req, res) => {
   try {
-    const s = await readSessionFromCookie(req);
+    const s = readSessionFromCookie(req);
     if (!s || !s.userId) return res.status(401).end();
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -730,18 +695,10 @@ app.post('/api/auth/dev-login', (req, res) => {
   }
 });
 
-app.post('/api/auth/logout', async (req, res) => {
+app.post('/api/auth/logout', (req, res) => {
   try {
     const token = req.cookies && req.cookies.session_token;
-    if (token) {
-      devSessions.delete(token);
-      // Also remove from database
-      try {
-        await query('DELETE FROM auth_sessions WHERE token = $1 OR token_hash = $1', [token]);
-      } catch (dbErr) {
-        console.error('[AUTH] Failed to delete session from DB:', dbErr.message);
-      }
-    }
+    if (token) devSessions.delete(token);
     res.clearCookie('session_token', { path: '/' });
     try { console.log('[AUTH] logout success'); } catch(err){ console.error('[AUTH] Logout success log error:', err) }
   } catch(err){ console.error('[AUTH] Logout error:', err) }
@@ -956,19 +913,6 @@ app.post('/api/auth/signup', async (req, res) => {
       country,
       verified: true
     });
-
-    // Persist session to database (survives server restarts / Render redeploys)
-    try {
-      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-      await query(
-        `INSERT INTO auth_sessions (token, token_hash, user_id, expires_at)
-         VALUES ($1, $1, $2, $3)
-         ON CONFLICT (token) DO UPDATE SET user_id = $2, expires_at = $3`,
-        [newSessionId, created.id, expiresAt]
-      );
-    } catch (dbErr) {
-      console.error('[AUTH] Failed to persist signup session to DB:', dbErr.message);
-    }
     
     // Set cookie
     const isProduction = process.env.NODE_ENV === 'production';
@@ -1061,19 +1005,6 @@ app.post('/api/auth/login', async (req, res) => {
       email: u.email,
       isUntrusted: u.is_untrusted || false
     });
-
-    // Persist session to database (survives server restarts / Render redeploys)
-    try {
-      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-      await query(
-        `INSERT INTO auth_sessions (token, token_hash, user_id, expires_at)
-         VALUES ($1, $1, $2, $3)
-         ON CONFLICT (token) DO UPDATE SET user_id = $2, expires_at = $3`,
-        [sessionId, u.id, expiresAt]
-      );
-    } catch (dbErr) {
-      console.error('[AUTH] Failed to persist login session to DB:', dbErr.message);
-    }
 
     // Set cookie
     res.cookie('session_token', sessionId, {
@@ -1221,7 +1152,7 @@ app.post('/api/sqlite/codes-legacy', async (req, res) => {
 // Unified Action Endpoint
 app.post('/api/action', async (req, res) => {
   try {
-    const s = await readSessionFromCookie(req)
+    const s = readSessionFromCookie(req)
     if (!s || !s.userId) return res.status(401).json({ status: 'failed', error: 'Unauthorized' })
     req.auth = { userId: s.userId }
     const body = req.body || {}
@@ -1372,9 +1303,13 @@ app.use('/src', express.static(path.join(__dirname, 'services/codebank/src'), {
 // env.js removed
 
 // Service-specific routes
-app.get(['/', '/yt-new-clear.html'], async (req, res) => {
-  const session = await readSessionFromCookie(req);
+app.get(['/', '/yt-new-clear.html'], (req, res) => {
+  const session = readSessionFromCookie(req);
   if (!session || !session.userId) {
+    // 🛡️ FIX: Clear stale cookie to break client-side redirect loops
+    if (req.cookies && req.cookies.session_token) {
+      res.clearCookie('session_token', { path: '/' });
+    }
     console.log(`[route] ${req.path} → Redirecting to login.html (Session missing)`);
     return res.redirect('/login.html');
   }
@@ -1442,9 +1377,13 @@ app.get('/yt-coder', (req, res) => {
   res.redirect('/');
 });
 
-app.get(['/yt-simple', '/yt-new', '/yt-new.html'], async (req, res) => {
-  const session = await readSessionFromCookie(req);
+app.get(['/yt-simple', '/yt-new', '/yt-new.html'], (req, res) => {
+  const session = readSessionFromCookie(req);
   if (!session || !session.userId) {
+    // 🛡️ FIX: Clear stale cookie to break client-side redirect loops
+    if (req.cookies && req.cookies.session_token) {
+      res.clearCookie('session_token', { path: '/' });
+    }
     console.log(`[route] ${req.path} → Redirecting to login.html (Session missing)`);
     return res.redirect('/login.html');
   }
@@ -1720,9 +1659,13 @@ app.get('/api/assets/balance', requireAuth, async (req, res) => {
 
 
 // YT-Clear routes
-app.get(['/yt-clear', '/yt-clear/yt-new-clear.html'], async (req, res) => {
-  const session = await readSessionFromCookie(req);
+app.get(['/yt-clear', '/yt-clear/yt-new-clear.html'], (req, res) => {
+  const session = readSessionFromCookie(req);
   if (!session || !session.userId) {
+    // 🛡️ FIX: Clear stale cookie to break client-side redirect loops
+    if (req.cookies && req.cookies.session_token) {
+      res.clearCookie('session_token', { path: '/' });
+    }
     console.log(`[route] ${req.path} → Redirecting to login.html`);
     return res.redirect('/login.html');
   }
@@ -1891,7 +1834,7 @@ app.get('/api/user-assets', (req, res) => { res.status(404).end() })
 
 app.get('/api/rewards/balance', requireAuth, async (req, res) => {
   try {
-    const session = await readSessionFromCookie(req);
+    const session = readSessionFromCookie(req);
     if (!session || !session.userId) return res.status(401).json({ error: 'unauthorized' });
 
     const { userId } = session;
@@ -1939,7 +1882,7 @@ app.post('/api/balloon/pop', async (req, res) => {
     const ts = Number(body.timestamp || Date.now())
     let uid = (body.userId || '').toString().trim()
     if (!uid) {
-      const s = await readSessionFromCookie(req)
+      const s = readSessionFromCookie(req)
       if (s && s.userId) uid = s.userId
     }
     if (!uid) return res.status(401).json({ ok: false, error: 'unauthorized' })
@@ -1963,7 +1906,7 @@ app.post('/api/balloon/pop', async (req, res) => {
 app.post('/api/sqlite/codes', async (req, res) => {
   try {
     const { code } = req.body || {};
-    const session = await readSessionFromCookie(req);
+    const session = readSessionFromCookie(req);
 
     if (!session || !session.userId) {
       return res.status(401).json({ success: false, error: 'unauthorized' });
@@ -2252,7 +2195,7 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
 // Admin-only manual deposit endpoint
 app.post('/api/admin/deposit', async (req, res) => {
   try {
-    const session = await readSessionFromCookie(req);
+    const session = readSessionFromCookie(req);
     let authEmail = null;
     try {
       const h = req.headers && req.headers.authorization || '';
@@ -3166,7 +3109,7 @@ app.get('/api/diag/ledger-schema', async (req, res) => {
 // Diagnostic endpoints (REMOVED balances view dependency)
 app.get('/api/diag/neon-sync', async (req, res) => {
   try {
-    const s = await readSessionFromCookie(req);
+    const s = readSessionFromCookie(req);
     if (!s || !s.userId) {
       return res.json({ ok: false, reason: 'no_session' });
     }
@@ -3179,7 +3122,7 @@ app.get('/api/diag/neon-sync', async (req, res) => {
 // Neon codes diagnostic endpoint (session required)
 app.get('/api/diag/sqlite-codes', async (req, res) => {
   try {
-    const s = await readSessionFromCookie(req);
+    const s = readSessionFromCookie(req);
     if (!s || !s.userId) {
       return res.json({ ok: false, reason: 'no_session' });
     }
@@ -3200,7 +3143,7 @@ app.get('/api/diag/sqlite-codes', async (req, res) => {
 // Rewards transfer (codes) — atomic Neon transaction - Enhanced Security
 app.post('/api/rewards/transfer', requireAuth, enforceFinancialSecurity, async (req, res) => {
   try {
-    const session = await readSessionFromCookie(req);
+    const session = readSessionFromCookie(req);
     if (!session || !session.userId) {
       return res.status(401).json({ error: 'unauthorized' });
     }
@@ -3296,7 +3239,7 @@ app.post('/api/rewards/transfer', requireAuth, enforceFinancialSecurity, async (
 // Events inbox for the current user (last 24h or unseen)
 app.get('/api/events/inbox', async (req, res) => {
   try {
-    const s = await readSessionFromCookie(req);
+    const s = readSessionFromCookie(req);
     if (!s || !s.userId) return res.status(401).json({ ok: false, error: 'unauthorized' });
     if (!process.env.DATABASE_URL) return res.json({ ok: true, events: [] });
     const { rows } = await query(
@@ -3317,7 +3260,7 @@ app.get('/api/events/inbox', async (req, res) => {
 // Acknowledge events (mark seen)
 app.post('/api/events/ack', async (req, res) => {
   try {
-    const s = await readSessionFromCookie(req);
+    const s = readSessionFromCookie(req);
     if (!s || !s.userId) return res.status(401).json({ ok: false, error: 'unauthorized' });
     const ids = Array.isArray((req.body||{}).ids) ? (req.body.ids) : [];
     if (!ids.length) return res.json({ ok: true, updated: 0 });
