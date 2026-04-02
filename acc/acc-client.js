@@ -5,9 +5,8 @@
 
 class ACCClient {
     constructor(config = {}) {
-        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        this.serverUrl = config.serverUrl || (isLocal ? 'ws://localhost:3999' : '');
-        this.httpUrl = config.httpUrl || (isLocal ? 'http://localhost:3999/acc' : '');
+        this.serverUrl = config.serverUrl || 'ws://localhost:3999';
+        this.httpUrl = config.httpUrl || 'http://localhost:3999/acc';
         this.userId = config.userId || null;
         this.token = config.token || null;
         
@@ -23,7 +22,7 @@ class ACCClient {
     }
 
     init() {
-        if (this.userId && this.serverUrl) {
+        if (this.userId) {
             this.connect();
         }
     }

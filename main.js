@@ -9,11 +9,7 @@ import { AIBrainEngine } from "./core/ai-brain.js";
 // Rule 1: Auth Desync Fix
 SelfHealing.registerRule(
   "auth-desync",
-  async () => {
-    // Only desync if we have a session but Auth isn't ready
-    const hasSession = !!localStorage.getItem('session_token');
-    return hasSession && !window.__AUTH_READY__;
-  },
+  async () => !window.__AUTH_READY__,
   async () => {
     console.warn("🔄 Re-syncing auth...");
     window.dispatchEvent(new Event("auth:retry"));
@@ -147,11 +143,10 @@ AppLifecycleManager.register("acc", {
     localStorage.setItem('user_id', userId);
     
     // Initialize ACC Client
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     window.accClient = ACCClient.init({
         userId: userId,
-        serverUrl: isLocal ? 'ws://localhost:3999' : '',
-        httpUrl: isLocal ? 'http://localhost:3999/acc' : ''
+        serverUrl: 'ws://localhost:3999',
+        httpUrl: 'http://localhost:3999/acc'
     });
     
     // Global mirror & gateway

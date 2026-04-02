@@ -404,11 +404,10 @@
         const userId = localStorage.getItem('user_id') || 'user_' + Math.random().toString(36).substr(2, 9);
         localStorage.setItem('user_id', userId);
 
-        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         const acc = ACCClient.init({
             userId: userId,
-            serverUrl: isLocal ? 'ws://localhost:3999' : '',
-            httpUrl: isLocal ? 'http://localhost:3999/acc' : ''
+            serverUrl: 'ws://localhost:3999',
+            httpUrl: 'http://localhost:3999/acc'
         });
 
         const mirror = new AssetMirror();

@@ -137,8 +137,7 @@ const AuthGate = {
        
        // Phase 2: Sync Auth to Fetch
        const auth = getAuthContext();
-       if (auth && auth.isAuthenticated && auth.isAuthenticated()) {
-         this.authReady = true; // 🛡️ Proactive: if auth is already authenticated, mark as ready
+       if (auth && auth.isAuthenticated()) {
          const token = auth.getToken();
          if (token) {
            options.headers['Authorization'] = `Bearer ${token}`;
@@ -172,17 +171,7 @@ const AuthGate = {
      };
 
      // In AuthGate init, add: 
-     setTimeout(()=>{
-       if(!this._ready){
-         const auth = getAuthContext();
-         if (auth && auth.isAuthenticated && auth.isAuthenticated()) {
-           this.onAuthReady();
-         } else {
-           console.warn('[AG] Timeout flush');
-           this._flush(null);
-         }
-       }
-     }, 10000);
+     setTimeout(()=>{if(!this._ready){console.warn('[AG] Timeout flush');this._flush(null)}},10000);
    }, 
  
    onAuthReady() { 
