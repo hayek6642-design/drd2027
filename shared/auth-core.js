@@ -188,10 +188,11 @@
           window.dispatchEvent(new CustomEvent('auth:ready', { detail: this._state }));
           window.dispatchEvent(new CustomEvent('auth:changed', { detail: this._state }));
 
-          if (window.location.pathname === '/login.html') {
+          // Only redirect away from login when userId is actually confirmed (not a ghost session)
+          if (window.location.pathname === '/login.html' && this._userId) {
             if (!window.__alreadyRedirected) {
               window.__alreadyRedirected = true;
-              authLog('[AUTH] Redirecting to root application...');
+              authLog('[AUTH] Redirecting to root application (userId confirmed)...');
               window.location.href = '/';
             }
           }
@@ -250,12 +251,18 @@
           this._authInitialized = true; // 🔧 Mark as initialized
           
         } else {
-          // Server explicitly returned no valid user - clear the invalid session token
-          // to prevent auto-correction from setting authenticated:true with userId:null
+          // 🔧 FIX: Clear ALL stale session data so redirect loops cannot occur
           this._sessionId = null;
-          try { localStorage.removeItem('session_token'); } catch(_) {}
-          try { localStorage.removeItem('user_data'); } catch(_) {}
-          try { document.cookie = 'session_token=; path=/; max-age=0'; } catch(_) {}
+          this._autoCorrected = false; // Reset auto-correct flag
+          try {
+            localStorage.removeItem('session_active');
+            localStorage.removeItem('session_token');
+            localStorage.removeItem('user_data');
+            localStorage.removeItem('auth_timestamp');
+            localStorage.removeItem('__cached_user__');
+            localStorage.removeItem('__cached_session_id__');
+            document.cookie = 'session_token=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+          } catch(_ce) {}
           this._setState({ authenticated: false, status: 'unauthenticated' }, null);
           window.__resolveAuthReady && window.__resolveAuthReady(false);
           this._authInitialized = true; 

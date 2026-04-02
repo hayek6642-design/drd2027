@@ -304,10 +304,25 @@ const API_BASE = '';
 console.log('🔥 API_BASE:', API_BASE);
 console.log('🔥 Window origin:', window.location.origin);
 
-  // 🧠 Auth Flow Control: Auto-redirect if session is active
-  if (localStorage.getItem("session_active") === "true") {
-    window.location.href = "/yt-new-clear.html";
-  }
+  // 🧠 Auth Flow Control: Verify session with server before redirecting (prevents redirect loop)
+  (function() {
+    var _tok = localStorage.getItem("session_token");
+    if (_tok) {
+      fetch('/api/auth/me', { credentials: 'include', headers: { 'Authorization': 'Bearer ' + _tok } })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(data) {
+          if (data && data.user && data.user.id) {
+            window.location.href = "/yt-new-clear.html";
+          } else {
+            // Session expired or invalid — clear stale flags so login form is visible
+            localStorage.removeItem("session_active");
+            localStorage.removeItem("session_token");
+            localStorage.removeItem("user_data");
+          }
+        })
+        .catch(function() { localStorage.removeItem("session_active"); });
+    }
+  })();
 
   let sessionId = null;
 let verificationStatus = { email: false, phone: false };

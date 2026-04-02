@@ -55,15 +55,27 @@
 
   <!-- Module scripts (loaded asynchronously) -->
   <script type="module">
-    // 🧠 Auth Flow Control: Skip grid if session is active
-    if (localStorage.getItem("session_active") === "true") {
-      console.log("🚀 Active session found, redirecting to app...");
-      // Show loading screen is already handled by the HTML
-      setTimeout(() => {
-        window.location.href = "/yt-new-clear.html";
-      }, 1500);
-      // Stop further execution
-      throw new Error("REDIRECTING");
+    // 🧠 Auth Flow Control: Verify session with server before redirecting (prevents redirect loop)
+    const _idxToken = localStorage.getItem("session_token");
+    if (_idxToken) {
+      try {
+        const _idxResp = await fetch('/api/auth/me', { 
+          credentials: 'include', 
+          headers: { 'Authorization': 'Bearer ' + _idxToken }
+        });
+        const _idxData = _idxResp.ok ? await _idxResp.json() : null;
+        if (_idxData && _idxData.user && _idxData.user.id) {
+          console.log("🚀 Active session verified, redirecting to app...");
+          window.location.href = "/yt-new-clear.html";
+          return;
+        }
+        // Session expired or invalid — clear stale flags and render app grid
+        localStorage.removeItem("session_active");
+        localStorage.removeItem("session_token");
+        localStorage.removeItem("user_data");
+      } catch(_idxErr) {
+        localStorage.removeItem("session_active");
+      }
     }
 
     // Dynamic imports for code splitting
