@@ -1,3 +1,8 @@
+/**
+ * watchdog-animator.js — Enhanced dog animation
+ * Animates the procedural 3D dog from watchdog-scene.js.
+ * States: idle | watching | alert | healing
+ */
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 import { STATES } from './watchdog-states.js';
 
@@ -9,240 +14,308 @@ export class WatchDogAnimator {
     this.time = 0;
     this.rafId = null;
     this.errorCount = 0;
-    
+
+    // Smooth interpolation targets
     this.targets = {
-      headRotX: 0, headRotY: 0, bodyRotX: 0, bodyPosY: 1.2,
-      tailRotX: -Math.PI / 4, earRotX: 0, eyeColor: new THREE.Color(0x000000),
-      glowIntensity: 0, cameraZ: 8, tongueScale: 0, torsoScale: 1
+      headRotX: 0, headRotY: 0,
+      bodyRotX: 0, bodyPosY: 1.3,
+      tailRotZ: 0.2,
+      earLean: 0,           // 0 = neutral, negative = back/alert
+      eyeEmissive: new THREE.Color(0xb043ff),
+      glowIntensity: 0,
+      cameraZ: 8,
+      tongueScale: 0,
+      torsoBreath: 1.0,
+      ringOpacity: 0.18,
+      ringColor: new THREE.Color(0xb043ff)
     };
 
     this.current = {
-      headRotX: 0, headRotY: 0, bodyRotX: 0, bodyPosY: 1.2,
-      tailRotX: -Math.PI / 4, earRotX: 0, eyeColor: new THREE.Color(0x000000),
-      glowIntensity: 0, cameraZ: 8, tongueScale: 0, torsoScale: 1
+      headRotX: 0, headRotY: 0,
+      bodyRotX: 0, bodyPosY: 1.3,
+      tailRotZ: 0.2,
+      earLean: 0,
+      eyeEmissive: new THREE.Color(0xb043ff),
+      glowIntensity: 0,
+      cameraZ: 8,
+      tongueScale: 0,
+      torsoBreath: 1.0,
+      ringOpacity: 0.18,
+      ringColor: new THREE.Color(0xb043ff)
     };
 
-    // Pause animation when tab is hidden
-    this.handleVisibilityChange = () => {
-      if (document.hidden && this.rafId) {
-        cancelAnimationFrame(this.rafId);
-        this.rafId = null;
-      } else if (!document.hidden && !this.rafId) {
+    // Pause when tab hidden
+    this._visHandler = () => {
+      if (document.hidden) {
+        if (this.rafId) { cancelAnimationFrame(this.rafId); this.rafId = null; }
+      } else if (!this.rafId) {
         this.start();
       }
     };
-
-    document.addEventListener('visibilitychange', this.handleVisibilityChange);
+    document.addEventListener('visibilitychange', this._visHandler);
   }
 
+  // ─────────────────────────────────────────────
   setState(state) {
-    if (this.state === state) return; // Deduplication logic
+    if (this.state === state) return;
     this.state = state;
-    console.log('[WATCHDOG CORE] State change:', state);
+    console.log('[WatchDog] State →', state);
+
     switch (state) {
       case STATES.IDLE:
-        this.targets.headRotX = 0; this.targets.headRotY = 0;
-        this.targets.bodyRotX = 0; this.targets.bodyPosY = 1.2;
-        this.targets.tailRotX = -Math.PI / 4; this.targets.earRotX = 0;
-        this.targets.eyeColor.setHex(0x000000); this.targets.glowIntensity = 0;
-        this.targets.cameraZ = 8; this.targets.tongueScale = 0;
+        this.targets.headRotX = 0;       this.targets.headRotY = 0;
+        this.targets.bodyRotX = 0;       this.targets.bodyPosY = 1.3;
+        this.targets.tailRotZ = 0.2;     this.targets.earLean = 0;
+        this.targets.eyeEmissive.setHex(0xb043ff);
+        this.targets.glowIntensity = 0.3;
+        this.targets.cameraZ = 8;        this.targets.tongueScale = 0;
+        this.targets.ringOpacity = 0.18; this.targets.ringColor.setHex(0xb043ff);
         break;
+
       case STATES.WATCHING:
-        this.targets.headRotX = -0.15;
-        this.targets.bodyRotX = 0; this.targets.bodyPosY = 1.2;
-        this.targets.tailRotX = -Math.PI / 6; this.targets.earRotX = -0.3;
-        this.targets.eyeColor.setHex(0x111111); this.targets.glowIntensity = 0;
-        this.targets.cameraZ = 6.5; this.targets.tongueScale = 0;
+        this.targets.headRotX = -0.18;   this.targets.headRotY = 0;
+        this.targets.bodyRotX = 0;       this.targets.bodyPosY = 1.3;
+        this.targets.tailRotZ = 0.1;     this.targets.earLean = -0.25;
+        this.targets.eyeEmissive.setHex(0x4499ff);
+        this.targets.glowIntensity = 0.8;
+        this.targets.cameraZ = 6.5;      this.targets.tongueScale = 0;
+        this.targets.ringOpacity = 0.28; this.targets.ringColor.setHex(0x4499ff);
         break;
+
       case STATES.ALERT:
-        this.targets.headRotX = 0.3;
-        this.targets.bodyRotX = -0.2; this.targets.bodyPosY = 1.0;
-        this.targets.tailRotX = Math.PI / 3; this.targets.earRotX = -0.6;
-        this.targets.eyeColor.setHex(0xff1100); this.targets.glowIntensity = 0.8;
-        this.targets.cameraZ = 5.5; this.targets.tongueScale = 0;
+        this.targets.headRotX = 0.25;    this.targets.headRotY = 0;
+        this.targets.bodyRotX = -0.18;   this.targets.bodyPosY = 1.05;
+        this.targets.tailRotZ = -0.1;    this.targets.earLean = -0.55;
+        this.targets.eyeEmissive.setHex(0xff1100);
+        this.targets.glowIntensity = 2.5;
+        this.targets.cameraZ = 5.5;      this.targets.tongueScale = 0;
+        this.targets.ringOpacity = 0.45; this.targets.ringColor.setHex(0xff2200);
         break;
+
       case STATES.HEALING:
-        this.targets.headRotX = -0.2; this.targets.headRotY = 0;
-        this.targets.bodyRotX = 0; this.targets.bodyPosY = 1.7;
-        this.targets.tailRotX = -Math.PI / 4; this.targets.earRotX = 0.4;
-        this.targets.eyeColor.setHex(0x00ffcc); this.targets.glowIntensity = 3.5;
-        this.targets.cameraZ = 8; this.targets.tongueScale = 1;
+        this.targets.headRotX = -0.22;   this.targets.headRotY = 0;
+        this.targets.bodyRotX = 0;       this.targets.bodyPosY = 1.6;
+        this.targets.tailRotZ = 0.8;     this.targets.earLean = 0.3;
+        this.targets.eyeEmissive.setHex(0x00ffcc);
+        this.targets.glowIntensity = 3.8;
+        this.targets.cameraZ = 8;        this.targets.tongueScale = 1;
+        this.targets.ringOpacity = 0.5;  this.targets.ringColor.setHex(0x00ffcc);
         break;
     }
   }
 
+  // ─────────────────────────────────────────────
   start() {
-    if (this.rafId) return; // prevent duplicate loops
-
+    if (this.rafId) return;
     this.lastTime = performance.now() / 1000;
-    this.rafId = requestAnimationFrame(this.animate);
+    this.rafId = requestAnimationFrame(this._animate);
   }
 
   stop() {
-    if (this.rafId !== null) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = null;
-    }
-
-    document.removeEventListener('visibilitychange', this.handleVisibilityChange);
-
-    console.log('[WATCHDOG CORE] Animator stopped completely.');
+    if (this.rafId !== null) { cancelAnimationFrame(this.rafId); this.rafId = null; }
+    document.removeEventListener('visibilitychange', this._visHandler);
+    console.log('[WatchDog] Animator stopped');
   }
 
-  animate = () => {
-    // 🛡️ CRITICAL FIX: Ensure animator is active before proceeding
-    if (!this.scene || this.rafId === null) {
-      return;
-    }
+  // ─────────────────────────────────────────────
+  _animate = () => {
+    if (!this.scene || this.rafId === null) return;
 
     const now = performance.now() / 1000;
     let delta = now - this.lastTime;
-    
-    // 🛡️ CRITICAL FIX: Sanitize delta to avoid NaN or negative values
-    if (isNaN(delta) || delta < 0) {
-      delta = 0.016; // Default to ~60fps
-    }
-    
+    if (isNaN(delta) || delta < 0) delta = 0.016;
     this.lastTime = now;
 
-    const safeDelta = Math.min(delta, 0.1);
-    this.time += safeDelta;
+    const dt = Math.min(delta, 0.1);
+    this.time += dt;
 
     try {
-      if (this.scene && this.scene.scene && this.scene.camera && this.scene.renderer) {
-        this.updateLogic(safeDelta);
-        this.scene.renderer.render(this.scene.scene, this.scene.camera);
+      const s = this.scene;
+      if (s?.scene && s?.camera && s?.renderer) {
+        this._update(dt);
+        s.renderer.render(s.scene, s.camera);
       }
     } catch (err) {
-      // 🛡️ CRITICAL FIX: Only log error if count is low to avoid console flooding
-      if (this.errorCount < 5) {
-        console.error('[WatchDogAnimator] Animation crash:', err);
-      }
+      if (this.errorCount < 5) console.error('[WatchDogAnimator] Error:', err);
       this.errorCount++;
-      if (this.errorCount > 10) {
-        console.warn('[WATCHDOG] Too many errors, shutting down animator');
-        this.stop();
-      }
-      return;
+      if (this.errorCount > 12) { this.stop(); return; }
     }
 
-    // 🛡️ CRITICAL FIX: Check if we should still schedule next frame
-    if (this.rafId !== null) {
-      this.rafId = requestAnimationFrame(this.animate);
-    }
+    if (this.rafId !== null) this.rafId = requestAnimationFrame(this._animate);
   }
 
-  updateLogic(delta) {
+  // ─────────────────────────────────────────────
+  _update(dt) {
     const s = this.scene;
-    // 🛡️ CRITICAL FIX: Extremely robust checks for all scene components
-    if (!s || !s.scene || !s.camera || !s.renderer || !s.headGroup || !s.body || !s.neck || !s.tail || !s.tongue || !s.leftEye || !s.rightEye || !s.glowLight) {
-      if (this.errorCount < 1) {
-          console.warn('[WatchDogAnimator] updateLogic aborted: Scene components not fully initialized');
-      }
-      return;
-    }
-    
+    if (!s?.headGroup || !s?.body || !s?.neck || !s?.tail || !s?.tongue ||
+        !s?.leftEye || !s?.rightEye || !s?.glowLight) return;
+
+    const t = this.time;
+    const lerp = 5.5 * dt;
+    const lerpFast = 10 * dt;
+
+    // ── Procedural overrides (layered on top of targets) ──
     let dynHeadX = this.targets.headRotX;
     let dynHeadY = this.targets.headRotY;
     let dynBodyY = this.targets.bodyPosY;
-    let dynTailX = this.targets.tailRotX;
-    let dynTorsoS = 1.0;
+    let dynTailZ  = this.targets.tailRotZ;
+    let dynBreath = 1.0;
 
-    // Organic behavior logic
-    if (this.state === STATES.IDLE) {
-      dynBodyY += Math.sin(this.time * 1.4) * 0.05;
-      dynHeadX += Math.sin(this.time * 0.8) * 0.03;
-      dynTailX += Math.sin(this.time * 2.8) * 0.1;
-      dynTorsoS = 1.0 + Math.sin(this.time * 1.4) * 0.02; // Breathing
-    } else if (this.state === STATES.WATCHING) {
-      dynHeadY = Math.sin(this.time * 1.5) * 0.5;
-      dynBodyY += Math.sin(this.time * 4.0) * 0.02;
-      dynTorsoS = 1.0 + Math.sin(this.time * 4.0) * 0.01;
-    } else if (this.state === STATES.ALERT) {
-      dynBodyY += Math.sin(this.time * 30) * 0.02;
-      dynHeadY = Math.sin(this.time * 8) * 0.2;
-      dynTorsoS = 1.0 + Math.sin(this.time * 10) * 0.03;
-    } else if (this.state === STATES.HEALING) {
-      dynBodyY += Math.sin(this.time * 1.2) * 0.35;
-      if (s.headGroup) s.headGroup.rotation.z = Math.sin(this.time * 1.8) * 0.1;
-      dynTorsoS = 1.0 + Math.sin(this.time * 1.2) * 0.05;
+    switch (this.state) {
+      case STATES.IDLE:
+        dynBodyY  += Math.sin(t * 1.35) * 0.045;           // Gentle body sway
+        dynHeadX  += Math.sin(t * 0.7) * 0.025;            // Slow nod
+        dynTailZ  += Math.sin(t * 2.5) * 0.18;             // Lazy wag
+        dynBreath  = 1.0 + Math.sin(t * 1.5) * 0.022;      // Breathing
+        break;
+
+      case STATES.WATCHING:
+        dynHeadY   = Math.sin(t * 1.4) * 0.55;             // Scan left-right
+        dynBodyY  += Math.sin(t * 3.8) * 0.018;
+        dynBreath  = 1.0 + Math.sin(t * 3.8) * 0.012;
+        dynTailZ  += Math.sin(t * 1.8) * 0.1;
+        break;
+
+      case STATES.ALERT:
+        dynBodyY  += Math.sin(t * 28) * 0.018;             // Tense tremor
+        dynHeadY   = Math.sin(t * 7) * 0.18;               // Jerky head track
+        dynBreath  = 1.0 + Math.sin(t * 8) * 0.03;
+        dynTailZ  += Math.sin(t * 12) * 0.05;              // Stiff tail flick
+        break;
+
+      case STATES.HEALING:
+        dynBodyY  += Math.sin(t * 1.2) * 0.28;             // Happy bounce
+        if (s.headGroup) s.headGroup.rotation.z = Math.sin(t * 1.9) * 0.12;
+        dynTailZ  += Math.sin(t * 9) * 0.55;               // Rapid wag
+        dynBreath  = 1.0 + Math.sin(t * 1.2) * 0.04;
+        break;
     }
 
-    const lerp = 6 * delta;
+    // ── Smooth-lerp all values ──────────────────
     this.current.headRotX += (dynHeadX - this.current.headRotX) * lerp;
     this.current.headRotY += (dynHeadY - this.current.headRotY) * lerp;
     this.current.bodyRotX += (this.targets.bodyRotX - this.current.bodyRotX) * lerp;
     this.current.bodyPosY += (dynBodyY - this.current.bodyPosY) * lerp;
-    this.current.tailRotX += (dynTailX - this.current.tailRotX) * lerp;
-    this.current.earRotX += (this.targets.earRotX - this.current.earRotX) * lerp;
-    this.current.cameraZ += (this.targets.cameraZ - this.current.cameraZ) * (lerp * 0.5);
+    this.current.tailRotZ += (dynTailZ - this.current.tailRotZ) * lerp;
+    this.current.earLean  += (this.targets.earLean - this.current.earLean) * lerp;
+    this.current.cameraZ  += (this.targets.cameraZ - this.current.cameraZ) * (lerp * 0.4);
     this.current.glowIntensity += (this.targets.glowIntensity - this.current.glowIntensity) * lerp;
-    
-    if (this.current.eyeColor && this.targets.eyeColor) {
-      this.current.eyeColor.lerp(this.targets.eyeColor, lerp);
-    }
-    
-    this.current.tongueScale += (this.targets.tongueScale - this.current.tongueScale) * lerp;
-    this.current.torsoScale += (dynTorsoS - this.current.torsoScale) * lerp;
+    this.current.tongueScale   += (this.targets.tongueScale - this.current.tongueScale) * lerp;
+    this.current.torsoBreath   += (dynBreath - this.current.torsoBreath) * lerpFast;
+    this.current.ringOpacity   += (this.targets.ringOpacity - this.current.ringOpacity) * lerp;
+    this.current.eyeEmissive.lerp(this.targets.eyeEmissive, lerp);
+    this.current.ringColor.lerp(this.targets.ringColor, lerp);
 
-    // Apply to objects
-    if (s.headGroup) {
-      s.headGroup.rotation.x = this.current.headRotX;
-      s.headGroup.rotation.y = this.current.headRotY;
-    }
-    
-    if (s.body) {
-      s.body.rotation.x = this.current.bodyRotX;
-      s.body.position.y = this.current.bodyPosY;
-      s.body.scale.set(this.current.torsoScale, this.current.torsoScale * 0.95, 1.8);
-    }
-    
+    const yOff = this.current.bodyPosY - 1.3;
+
+    // ── Apply: Head ─────────────────────────────
+    s.headGroup.rotation.x = this.current.headRotX;
+    s.headGroup.rotation.y = this.current.headRotY;
+    s.headGroup.position.y = 2.42 + yOff;
+    if (this.state !== STATES.HEALING) s.headGroup.rotation.z = 0;
+
+    // ── Apply: Neck ─────────────────────────────
+    s.neck.position.y = 1.85 + yOff;
+
+    // ── Apply: Body ─────────────────────────────
+    s.body.rotation.x = this.current.bodyRotX;
+    s.body.position.y = this.current.bodyPosY;
+    const bs = this.current.torsoBreath;
+    s.body.scale.set(1.1 * bs, 0.88 * bs, 2.0);
+
+    // ── Apply: Ears ─────────────────────────────
     if (s.leftEar && s.rightEar) {
-      s.leftEar.rotation.z = 0.35 + this.current.earRotX;
-      s.rightEar.rotation.z = -0.35 - this.current.earRotX;
-      const flap = Math.sin(this.time * 2.0) * 0.08;
-      s.leftEar.rotation.x = 0.3 + flap;
-      s.rightEar.rotation.x = 0.3 + flap;
+      const earTilt = this.current.earLean;
+      const earFlap = Math.sin(t * 1.8) * 0.06;
+      s.leftEar.rotation.z  = 0.28 + earTilt * 0.5 + earFlap;
+      s.rightEar.rotation.z = -(0.28 + earTilt * 0.5 + earFlap);
+      s.leftEar.rotation.x  = -0.12 + earTilt;
+      s.rightEar.rotation.x = -0.12 + earTilt;
     }
-    
-    // Snout/Neck sync
-    const yOff = this.current.bodyPosY - 1.2;
-    if (s.headGroup) s.headGroup.position.y = 2.3 + yOff;
-    if (s.neck) s.neck.position.y = 1.7 + yOff;
-    
+
+    // ── Apply: Tail ─────────────────────────────
     if (s.tail) {
-      s.tail.position.y = 1.5 + yOff;
-      s.tail.rotation.z = Math.sin(this.time * 7) * 0.3;
-      s.tail.rotation.x = -Math.PI / 2.5 + this.current.tailRotX;
+      s.tail.rotation.z = this.current.tailRotZ;
+      s.tail.position.y = 1.5 + yOff * 0.5;
     }
 
-    // Tongue
+    // ── Apply: Tongue ───────────────────────────
     if (s.tongue) {
-      s.tongue.scale.set(this.current.tongueScale, this.current.tongueScale, this.current.tongueScale);
-      s.tongue.position.y = -0.35 + Math.sin(this.time * 5) * 0.05 * this.current.tongueScale;
+      const ts = this.current.tongueScale;
+      s.tongue.scale.set(ts, ts, ts);
+      s.tongue.position.y = -0.39 + Math.sin(t * 5) * 0.04 * ts;
     }
 
-    // Blinking logic (subtle)
-    const blink = Math.sin(this.time * 0.5) > 0.98 ? 0.1 : 1.0;
-    if (s.leftEye) s.leftEye.scale.y = blink;
-    if (s.rightEye) s.rightEye.scale.y = blink;
-
-    if (s.leftEye && s.leftEye.material && s.leftEye.material.color) {
-      s.leftEye.material.color.copy(this.current.eyeColor);
+    // ── Apply: Eyes (emissive color) ────────────
+    const blinkScale = Math.sin(t * 0.45) > 0.97 ? 0.12 : 1.0;
+    if (s.leftEye?.material) {
+      s.leftEye.material.emissive.copy(this.current.eyeEmissive);
+      s.leftEye.scale.y = blinkScale;
     }
-    if (s.rightEye && s.rightEye.material && s.rightEye.material.color) {
-      s.rightEye.material.color.copy(this.current.eyeColor);
-    }
-    
-    if (s.glowLight) {
-      s.glowLight.intensity = this.current.glowIntensity;
-      if (s.glowLight.color) s.glowLight.color.copy(this.current.eyeColor);
+    if (s.rightEye?.material) {
+      s.rightEye.material.emissive.copy(this.current.eyeEmissive);
+      s.rightEye.scale.y = blinkScale;
     }
 
-    if (s.camera) {
-      s.camera.position.z = this.current.cameraZ;
-      s.camera.position.y = 3 + Math.sin(this.time * 0.4) * 0.2;
-      s.camera.lookAt(0, 1, 0);
+    // ── Apply: Eye light ────────────────────────
+    if (s.eyeLight) {
+      s.eyeLight.color.copy(this.current.eyeEmissive);
+      s.eyeLight.intensity = 0.4 + this.current.glowIntensity * 0.15;
     }
+
+    // ── Apply: Glow light ───────────────────────
+    s.glowLight.intensity = this.current.glowIntensity;
+    s.glowLight.color.copy(this.current.eyeEmissive);
+
+    // ── Apply: Guardian rings ───────────────────
+    if (s.guardianRing?.material) {
+      const ringPulse = this.state === STATES.ALERT
+        ? Math.abs(Math.sin(t * 6)) * 0.6
+        : 0.1 + Math.abs(Math.sin(t * 1.3)) * this.current.ringOpacity;
+      s.guardianRing.material.opacity = ringPulse;
+      s.guardianRing.material.color.copy(this.current.ringColor);
+    }
+    if (s.innerRing?.material) {
+      s.innerRing.material.opacity = 0.08 + Math.abs(Math.sin(t * 2.1)) * 0.12;
+      s.innerRing.material.color.copy(this.current.ringColor);
+    }
+
+    // ── Apply: Legs ─────────────────────────────
+    if (s.legGroups?.length === 4) {
+      s.legGroups.forEach(({ group, lower, isFront }, i) => {
+        const phase = i * (Math.PI / 2);
+
+        switch (this.state) {
+          case STATES.IDLE:
+            group.rotation.x = Math.sin(t * 1.1 + phase) * 0.035;
+            break;
+          case STATES.WATCHING:
+            group.rotation.x = Math.sin(t * 0.8 + phase) * 0.02;
+            break;
+          case STATES.ALERT:
+            group.rotation.x = Math.sin(t * 18 + phase) * 0.025; // Tense tremor
+            if (lower) lower.rotation.x = Math.sin(t * 14 + phase) * 0.03;
+            break;
+          case STATES.HEALING:
+            // Happy paw tapping (front legs)
+            if (isFront) {
+              const tap = Math.max(0, Math.sin(t * 5 + phase)) * 0.18;
+              group.rotation.x = tap;
+              if (lower) lower.rotation.x = -tap * 0.6;
+            } else {
+              group.rotation.x = Math.sin(t * 1.2 + phase) * 0.04;
+            }
+            break;
+          default:
+            group.rotation.x *= 0.9;
+            if (lower) lower.rotation.x *= 0.9;
+        }
+      });
+    }
+
+    // ── Apply: Camera ───────────────────────────
+    s.camera.position.z = this.current.cameraZ;
+    s.camera.position.y = 3.2 + Math.sin(t * 0.38) * 0.18;
+    s.camera.lookAt(0, 1.2, 0);
   }
 }
