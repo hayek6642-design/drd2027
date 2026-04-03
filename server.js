@@ -2287,8 +2287,8 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
       let senderBalanceRes;
       if (assetType === 'codes') {
         senderBalanceRes = await client.query(
-          "UPDATE users SET codes_count = (SELECT COUNT(*) FROM codes WHERE user_id = $1 AND spent = 0) WHERE id = $1 RETURNING codes_count",
-          [fromUserId]
+          "UPDATE users SET codes_count = (SELECT COUNT(*) FROM codes WHERE user_id = $1 AND spent = 0) WHERE id = $2 RETURNING codes_count",
+          [fromUserId, fromUserId]
         );
       } else {
         senderBalanceRes = await client.query(
@@ -2304,8 +2304,8 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
       let receiverUpdateRes;
       if (assetType === 'codes') {
         receiverUpdateRes = await client.query(
-          "UPDATE users SET codes_count = (SELECT COUNT(*) FROM codes WHERE user_id = $1 AND spent = 0) WHERE id = $1",
-          [toUserId]
+          "UPDATE users SET codes_count = (SELECT COUNT(*) FROM codes WHERE user_id = $1 AND spent = 0) WHERE id = $2",
+          [toUserId, toUserId]
         );
       } else {
         receiverUpdateRes = await client.query(
