@@ -476,9 +476,9 @@
           let currentCodes = this.codes;
           
           // Filter assets for normalization
-          const normalCodes = currentCodes.filter(c => !String(c).includes('SBAR') && !String(c).includes('GBAR'));
-          const silverBars = currentCodes.filter(c => String(c).includes('SBAR'));
-          const goldBars = currentCodes.filter(c => String(c).includes('GBAR'));
+          const normalCodes = currentCodes.filter(c => !String(c).includes('SLVR') && !String(c).includes('GOLD'));
+          const silverBars = currentCodes.filter(c => String(c).includes('SLVR'));
+          const goldBars = currentCodes.filter(c => String(c).includes('GOLD'));
 
           // 🛡️ GUARANTEE LATEST: Use the absolute last code from internal array
           const latestCode = currentCodes[currentCodes.length - 1] || null;
