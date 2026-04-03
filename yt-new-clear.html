@@ -34,60 +34,6 @@
         localStorage.setItem(reloadKey, now.toString());
       })();
     </script>
-    <!-- FIX: Suppress "Leave Site?" popup from YouTube iframe and prevent navigation spam -->
-    <script>
-      (function() {
-        // 1. Kill ALL beforeunload dialogs — prevent "Leave Site?" popup
-        // This fires before any other handler and unconditionally blocks the dialog
-        window.onbeforeunload = null;
-        window.addEventListener('beforeunload', function(e) {
-          e.stopImmediatePropagation(); // Block all other beforeunload handlers
-          delete e.returnValue;
-          return undefined;
-        }, { capture: true });
-        
-        // Also disable self-healing reload capability
-        window.selfHealingEnabled = false;
-
-        // 2. Intercept and filter YouTube postMessage errors (www-widgetapi.js spam)
-        var origAddEventListener = EventTarget.prototype.addEventListener;
-        EventTarget.prototype.addEventListener = function(type, fn, opts) {
-          if (type === 'message' && this === window) {
-            var wrappedFn = function(event) {
-              // Silently drop YouTube origin messages that cause cross-origin spam
-              if (event.origin && (
-                event.origin.indexOf('youtube.com') !== -1 ||
-                event.origin.indexOf('ytimg.com') !== -1 ||
-                event.origin.indexOf('googlevideo.com') !== -1
-              )) {
-                // Only forward to the YouTube Player API handler, block everything else
-                if (fn._ytPlayerHandler) return fn.call(this, event);
-                return;
-              }
-              return fn.call(this, event);
-            };
-            wrappedFn._original = fn;
-            return origAddEventListener.call(this, type, wrappedFn, opts);
-          }
-          return origAddEventListener.call(this, type, fn, opts);
-        };
-
-        // 3. Suppress YouTube-related console errors
-        var origConsoleError = console.error;
-        var origConsoleWarn = console.warn;
-        var ytSpamPattern = /youtube\.com|www-widgetapi|Failed to execute 'postMessage'|targetOrigin.*youtube/i;
-        console.error = function() {
-          var msg = Array.prototype.join.call(arguments, ' ');
-          if (ytSpamPattern.test(msg)) return;
-          return origConsoleError.apply(console, arguments);
-        };
-        console.warn = function() {
-          var msg = Array.prototype.join.call(arguments, ' ');
-          if (ytSpamPattern.test(msg)) return;
-          return origConsoleWarn.apply(console, arguments);
-        };
-      })();
-    </script>
     <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; font-src * data: 'self'; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src * data: blob:; media-src *; frame-src *;">
     <title>YouTube Embed App</title>
     <link rel="stylesheet" href="/styles/style.css">
@@ -2023,96 +1969,6 @@
 
         
 
-
-        <!-- ============================================================ -->
-        <!-- CodeBank Side Panel - required by /code-display-bar/codebank-panel.js -->
-        <!-- ============================================================ -->
-        <style>
-            #codebank-panel {
-                position: fixed;
-                right: 0;
-                top: 0;
-                width: 320px;
-                height: 100vh;
-                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-                z-index: 9999;
-                transform: translateX(100%);
-                transition: transform 0.3s ease;
-                overflow-y: auto;
-                padding: 16px;
-                box-shadow: -4px 0 24px rgba(0,0,0,0.6);
-                box-sizing: border-box;
-            }
-            #codebank-panel.active {
-                transform: translateX(0);
-            }
-            #codebank-toggle {
-                position: fixed;
-                right: 0;
-                top: 50%;
-                transform: translateY(-50%);
-                z-index: 10000;
-                background: #6c5ce7;
-                color: #fff;
-                border: none;
-                padding: 10px 6px;
-                cursor: pointer;
-                border-radius: 6px 0 0 6px;
-                writing-mode: vertical-rl;
-                font-size: 11px;
-                font-weight: bold;
-                letter-spacing: 1px;
-                box-shadow: -2px 0 10px rgba(108,92,231,0.4);
-                transition: background 0.2s;
-            }
-            #codebank-toggle:hover { background: #a29bfe; }
-            #codebank-close {
-                position: absolute;
-                top: 12px;
-                right: 12px;
-                background: rgba(255,255,255,0.1);
-                border: none;
-                color: #fff;
-                font-size: 18px;
-                width: 32px;
-                height: 32px;
-                border-radius: 50%;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                transition: background 0.2s;
-            }
-            #codebank-close:hover { background: rgba(255,255,255,0.2); }
-            #guardian-dog-container {
-                position: fixed;
-                bottom: 10px;
-                right: 10px;
-                width: 80px;
-                height: 80px;
-                z-index: 9998;
-                pointer-events: none;
-            }
-        </style>
-
-        <div id="codebank-panel">
-            <button id="codebank-close" title="Close">&times;</button>
-            <div style="margin-top: 50px;">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
-                    <div style="width:32px;height:32px;background:linear-gradient(135deg,#FF6B35,#8B5CF6);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;">🏦</div>
-                    <div>
-                        <div style="color:#fff;font-size:16px;font-weight:600;">CodeBank</div>
-                        <div style="color:rgba(255,255,255,0.6);font-size:11px;">Asset Manager</div>
-                    </div>
-                </div>
-                <iframe src="/codebank/indexCB.html" style="width:100%;height:calc(100vh - 120px);border:none;border-radius:8px;"></iframe>
-            </div>
-        </div>
-        <button id="codebank-toggle" title="Open CodeBank">CODE<br>BANK</button>
-
-        <!-- Guardian Dog 3D container - required by /codebank/js/guardian-3d.js -->
-        <div id="guardian-dog-container"></div>
-
         <div id="yt-thumbnail-layer">
             <img id="yt-thumbnail-img" src="" alt="">
         </div>
@@ -2612,12 +2468,11 @@ document.addEventListener('DOMContentLoaded', async function(){
                         };
                         
                         // Send to main CodeBank frame
-                        var cbOrigin = (typeof __cbOrigin__ === 'function') ? __cbOrigin__() : window.location.origin;
-                        frame.contentWindow.postMessage(authData, cbOrigin);
+                        frame.contentWindow.postMessage(authData, '*');
                         if (window.DEBUG_MODE) console.log('[AUTH] Sent AUTH_SYNC to CodeBank frame');
                         
                         // Legacy support
-                        frame.contentWindow.postMessage({ type: 'AUTH_CONTEXT', payload: u }, cbOrigin); 
+                        frame.contentWindow.postMessage({ type: 'AUTH_CONTEXT', payload: u }, '*'); 
                     } 
                 } catch (_) { } 
             }

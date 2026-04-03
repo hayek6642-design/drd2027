@@ -642,18 +642,9 @@
     async syncWithServer() {
       // 2️⃣ Prevent Duplicate Delta Sync
       if (syncLock) {
-        // FIX: Silenced — this was spamming console during rapid sync calls
-        if (window.DEBUG_MODE) console.warn("[Bankode] Sync already running");
+        console.warn("[Bankode] Sync already running");
         return { status: 'skipped', reason: 'sync_locked' };
       }
-      
-      // FIX: Debounce — max 1 sync per 2 seconds
-      var now = Date.now();
-      if (this.__lastSyncTime && (now - this.__lastSyncTime) < 2000) {
-        return { status: 'skipped', reason: 'debounced' };
-      }
-      this.__lastSyncTime = now;
-      
       syncLock = true;
 
       const online = typeof navigator !== 'undefined' && navigator.onLine === true;
@@ -798,14 +789,9 @@
               console.warn(`[LedgerMonitor] Mismatch #${this.mismatchCount}`, { local: localCounts, server: serverLedger });
               
               if (this.mismatchCount >= this.maxRetries) {
-                console.error('[LedgerMonitor] Max retries reached — recovery refresh BLOCKED to prevent reload loop');
-                // FIX: Do NOT reload — this causes "Leave Site?" popup and reload loops
-                // window.location.replace(window.location.href); // DISABLED
-                // Instead, just try one more sync and give up gracefully
-                if (window.AssetBus && typeof window.AssetBus.sync === 'function') {
-                  window.AssetBus.sync().catch(function(){});
-                }
-                this.mismatchCount = 0; // Reset counter to prevent permanent lockout
+                console.error('[LedgerMonitor] Max retries reached, forcing recovery refresh');
+                // Use replace instead of reload to prevent history spam
+                window.location.replace(window.location.href);
                 return;
               }
               

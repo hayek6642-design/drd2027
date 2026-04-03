@@ -25,13 +25,6 @@
 
         async start() {
             if (this.initialized) return;
-            
-            // FIX: Prevent concurrent start() calls
-            if (this._starting) {
-                if (window.DEBUG_MODE) console.log('[YT-INIT] start() already in progress, skipping');
-                return;
-            }
-            this._starting = true;
 
             if (window.DEBUG_MODE) console.log('[YT-INIT] Starting initialization sequence...');
 
@@ -100,8 +93,6 @@
             }
 
             this.initialized = true;
-            this._starting = false; // FIX: Clear start lock
-            window.ytPlayerFullyInitialized = true; // FIX: Global flag for external checks
         },
 
         setupYouTubePlayer(container) {
@@ -228,10 +219,7 @@
         },
 
         onPlayerError(e) {
-            // Only log real player errors, don't trigger reload or retry
-            const errorCodes = { 2: 'invalid param', 5: 'HTML5 error', 100: 'not found', 101: 'embed blocked', 150: 'embed blocked' };
-            console.warn('[YT-INIT] Player error code:', e.data, errorCodes[e.data] || 'unknown');
-            // Do NOT reload or retry on player errors - just log and continue
+            console.error('[YT-INIT] Player error code:', e.data);
         },
 
         enableTheatreMode(p) {

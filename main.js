@@ -81,25 +81,24 @@ SelfHealing.registerRule(
   10000
 );
 
-// Rule 5: Reload Loop Detection — DISABLED to prevent cascading reload loops
-// The original rule detected page reloads and could trigger stabilization that
-// itself caused further reloads, creating an infinite loop.
-// SelfHealing.registerRule(
-//   "reload-loop",
-//   async () => {
-//     try {
-//         const navigation = performance.getEntriesByType("navigation")[0];
-//         return navigation && navigation.type === 'reload';
-//     } catch (e) {
-//         return false;
-//     }
-//   },
-//   async () => {
-//     console.warn("🚨 Reload detected - system stabilizing");
-//     AIBrainEngine.record("sys:reload");
-//   },
-//   30000
-// );
+// Rule 5: Reload Loop Detection
+SelfHealing.registerRule(
+  "reload-loop",
+  async () => {
+    try {
+        const navigation = performance.getEntriesByType("navigation")[0];
+        return navigation && navigation.type === 'reload';
+    } catch (e) {
+        return false;
+    }
+  },
+  async () => {
+    console.warn("🚨 Reload detected - system stabilizing");
+    // Record to AI Brain
+    AIBrainEngine.record("sys:reload");
+  },
+  30000
+);
 
 // ==========================================
 // 🧩 2) Module Registrations
@@ -292,8 +291,8 @@ if (!window.__APP_STARTED__) {
   }
 
   window.safeReload = function () {
-    console.warn("🚫 safeReload() BLOCKED to prevent reload loops. Stack:", new Error().stack);
-    // window.location.reload(); // DISABLED — causes "Leave Site?" dialog and reload loops
+    console.warn("🔄 Safe reload triggered.");
+    window.location.reload();
   };
 
   async function boot() {

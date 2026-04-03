@@ -11,15 +11,14 @@
   
   if (typeof window !== 'undefined') {
     // 🧪 DIAGNOSTIC: Track all reload calls (from actly.md)
-    // FIX: Disabled actual reload/replace to prevent "Leave Site?" popup loops
     (function() {
         window.safeReload = function() {
-            console.warn('🚫 [AuthCore] safeReload() BLOCKED to prevent Leave Site popup. Stack:', new Error().stack);
-            // location.reload(); // DISABLED - causes "Leave Site?" dialog
+            console.error('🚨 [AuthCore] safeReload() called from:', new Error().stack);
+            location.reload();
         };
         window.safeReplace = function(url) {
-            console.warn('🚫 [AuthCore] safeReplace() BLOCKED. Target:', url, 'Stack:', new Error().stack);
-            // location.replace(url); // DISABLED - causes "Leave Site?" dialog
+            console.error('🚨 [AuthCore] safeReplace() called with:', url, 'from:', new Error().stack);
+            location.replace(url);
         };
     })();
 
@@ -151,14 +150,7 @@
     },
 
     _setState(nextAuth, nextUser, nextSessionId, fullUser) {
-      if (this._authInitialized && nextAuth === this._authenticated && nextUser === this._userId && !fullUser) return;
-      
-      // FIX: Debounce rapid-fire state updates (max 2 per second)
-      var now = Date.now();
-      if (this.__lastSetState && (now - this.__lastSetState) < 500) {
-        return;
-      }
-      this.__lastSetState = now; 
+      if (this._authInitialized && nextAuth === this._authenticated && nextUser === this._userId && !fullUser) return; 
       
       if (typeof nextAuth === 'object' && nextAuth !== null) {
         const payload = nextAuth;
