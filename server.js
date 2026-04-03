@@ -2135,12 +2135,27 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
       }
 
       // [SECURITY] STEP 2: PRE-TRANSACTION BALANCE SNAPSHOT
-      const preSnapshot = await client.query(
-        `SELECT id, ${balanceField} FROM users WHERE id IN ($1, $2)`,
-        [fromUserId, toUserId]
-      );
-      const senderPre = preSnapshot.rows.find(r => r.id === fromUserId)?.[balanceField] || 0;
-      const receiverPre = preSnapshot.rows.find(r => r.id === toUserId)?.[balanceField] || 0;
+      // FIX: For 'codes' type, use live COUNT from codes table (users.codes_count is denormalized and can be stale)
+      let senderPre, receiverPre;
+      if (assetType === 'codes') {
+        const senderCountRes = await client.query(
+          "SELECT COUNT(*) AS cnt FROM codes WHERE user_id = $1 AND spent = 0",
+          [fromUserId]
+        );
+        senderPre = parseInt(senderCountRes.rows[0]?.cnt || 0, 10);
+        const receiverCountRes = await client.query(
+          "SELECT COUNT(*) AS cnt FROM codes WHERE user_id = $1 AND spent = 0",
+          [toUserId]
+        );
+        receiverPre = parseInt(receiverCountRes.rows[0]?.cnt || 0, 10);
+      } else {
+        const preSnapshot = await client.query(
+          `SELECT id, ${balanceField} FROM users WHERE id IN ($1, $2)`,
+          [fromUserId, toUserId]
+        );
+        senderPre = preSnapshot.rows.find(r => r.id === fromUserId)?.[balanceField] || 0;
+        receiverPre = preSnapshot.rows.find(r => r.id === toUserId)?.[balanceField] || 0;
+      }
 
       if (senderPre < amount) {
         throw new Error('INSUFFICIENT_BALANCE');
@@ -2167,31 +2182,63 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
       }
 
       // [SECURITY] STEP 4: BALANCE UPDATES
-      const senderBalanceRes = await client.query(
-        `UPDATE users SET ${balanceField} = ${balanceField} - $1 WHERE id = $2 AND ${balanceField} >= $1 RETURNING ${balanceField}`,
-        [amount, fromUserId]
-      );
+      // FIX: For 'codes' type, recount from codes table (STEP 3 already transferred ownership rows)
+      let senderBalanceRes;
+      if (assetType === 'codes') {
+        senderBalanceRes = await client.query(
+          "UPDATE users SET codes_count = (SELECT COUNT(*) FROM codes WHERE user_id = $1 AND spent = 0) WHERE id = $1 RETURNING codes_count",
+          [fromUserId]
+        );
+      } else {
+        senderBalanceRes = await client.query(
+          `UPDATE users SET ${balanceField} = ${balanceField} - $1 WHERE id = $2 AND ${balanceField} >= $1 RETURNING ${balanceField}`,
+          [amount, fromUserId]
+        );
+      }
 
       if (senderBalanceRes.rows.length === 0) {
         throw new Error('INSUFFICIENT_BALANCE_DURING_UPDATE');
       }
 
-      const receiverUpdateRes = await client.query(
-        `UPDATE users SET ${balanceField} = COALESCE(${balanceField}, 0) + $1 WHERE id = $2`,
-        [amount, toUserId]
-      );
+      let receiverUpdateRes;
+      if (assetType === 'codes') {
+        receiverUpdateRes = await client.query(
+          "UPDATE users SET codes_count = (SELECT COUNT(*) FROM codes WHERE user_id = $1 AND spent = 0) WHERE id = $1",
+          [toUserId]
+        );
+      } else {
+        receiverUpdateRes = await client.query(
+          `UPDATE users SET ${balanceField} = COALESCE(${balanceField}, 0) + $1 WHERE id = $2`,
+          [amount, toUserId]
+        );
+      }
 
       if (receiverUpdateRes.rowCount === 0) {
         throw new Error('RECEIVER_BALANCE_UPDATE_FAILED');
       }
 
       // [SECURITY] STEP 5: POST-TRANSACTION SNAPSHOT VERIFICATION
-      const postSnapshot = await client.query(
-        `SELECT id, ${balanceField} FROM users WHERE id IN ($1, $2)`,
-        [fromUserId, toUserId]
-      );
-      const senderPost = postSnapshot.rows.find(r => r.id === fromUserId)?.[balanceField] || 0;
-      const receiverPost = postSnapshot.rows.find(r => r.id === toUserId)?.[balanceField] || 0;
+      // FIX: For 'codes' type, verify using live COUNT from codes table
+      let senderPost, receiverPost;
+      if (assetType === 'codes') {
+        const senderPostRes = await client.query(
+          "SELECT COUNT(*) AS cnt FROM codes WHERE user_id = $1 AND spent = 0",
+          [fromUserId]
+        );
+        senderPost = parseInt(senderPostRes.rows[0]?.cnt || 0, 10);
+        const receiverPostRes = await client.query(
+          "SELECT COUNT(*) AS cnt FROM codes WHERE user_id = $1 AND spent = 0",
+          [toUserId]
+        );
+        receiverPost = parseInt(receiverPostRes.rows[0]?.cnt || 0, 10);
+      } else {
+        const postSnapshot = await client.query(
+          `SELECT id, ${balanceField} FROM users WHERE id IN ($1, $2)`,
+          [fromUserId, toUserId]
+        );
+        senderPost = postSnapshot.rows.find(r => r.id === fromUserId)?.[balanceField] || 0;
+        receiverPost = postSnapshot.rows.find(r => r.id === toUserId)?.[balanceField] || 0;
+      }
 
       if (senderPost !== (senderPre - amount) || receiverPost !== (receiverPre + amount)) {
         console.error(`[AUDIT] [FRAUD_FLAG] [BALANCE_MISMATCH] txId=${transactionId} senderPre=${senderPre} senderPost=${senderPost} receiverPre=${receiverPre} receiverPost=${receiverPost} amount=${amount}`);
