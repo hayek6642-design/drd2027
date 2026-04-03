@@ -1251,7 +1251,7 @@
     const activeTab = tab || window.ACTIVE_ASSET_TAB || 'codes';
     window.ACTIVE_ASSET_TAB = activeTab;
 
-    const snapshot = providedSnapshot || ((window.AssetBus && typeof window.AssetBus.snapshot === 'function') ? window.AssetBus.snapshot() : null);
+    let snapshot = providedSnapshot || ((window.AssetBus && typeof window.AssetBus.snapshot === 'function') ? window.AssetBus.snapshot() : null);
 
     // Check if container exists or try to find it (strict selector only)
     const cont = container || document.querySelector(CODEBANK_CONTAINER_SELECTOR);
@@ -1261,8 +1261,38 @@
       return;
     }
 
+    // 🛡️ FALLBACK CHAIN: When AssetBus is unavailable (deeply nested iframe),
+    // try authoritative sources before giving up and showing a spinner.
     if (!snapshot) {
-      console.warn('[SafeAssetList] Render deferred: snapshot missing');
+      // Fallback 1: top-frame authoritative data (same source as initialRender)
+      try {
+        if (window.top && window.top !== window && typeof window.top.GET_AUTHORITATIVE_ASSETS === 'function') {
+          const topData = window.top.GET_AUTHORITATIVE_ASSETS();
+          if (topData) snapshot = topData;
+        }
+      } catch(_) {}
+      // Fallback 2: last successfully rendered snapshot (cached in-memory)
+      if (!snapshot && window.__LAST_KNOWN_SNAPSHOT__) {
+        snapshot = window.__LAST_KNOWN_SNAPSHOT__;
+        console.log('[SafeAssetList] Using cached snapshot fallback');
+      }
+      // Fallback 3: persisted snapshot from localStorage
+      if (!snapshot) {
+        try {
+          const raw = localStorage.getItem('codebank_assets');
+          if (raw) {
+            const ld = JSON.parse(raw);
+            if (ld && (Array.isArray(ld.codes) || Array.isArray(ld.silver) || Array.isArray(ld.gold))) {
+              snapshot = ld;
+              console.log('[SafeAssetList] Using localStorage snapshot fallback');
+            }
+          }
+        } catch(_) {}
+      }
+    }
+
+    if (!snapshot) {
+      console.warn('[SafeAssetList] Render deferred: snapshot missing (all fallbacks exhausted)');
       // 🛡️ If we have NO snapshot at all, we show loading but don't clear the container yet
       const loading = document.getElementById('loading');
       if (loading) loading.classList.remove('hidden');
@@ -1299,6 +1329,9 @@
      }
 
     console.log(`[SafeAssetList] Rendering ${activeTab} (${seriesKey}):`, list.length, 'items');
+    
+    // 🛡️ Cache snapshot so pagination/tab-switch can use it if AssetBus is unavailable
+    window.__LAST_KNOWN_SNAPSHOT__ = snapshot;
     
     if ((!list || list.length === 0) && (seriesKey === 'silver' || seriesKey === 'gold')) {
       try {
