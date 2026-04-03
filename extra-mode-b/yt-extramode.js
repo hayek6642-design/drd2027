@@ -61,7 +61,7 @@ const __safeTranslate = (key, vars) => {
 
 
 document.addEventListener('DOMContentLoaded', function () {
-    console.log('Extra Button JS loaded - initializing switch functionality');
+    if (window.DEBUG_MODE) console.log('Extra Button JS loaded - initializing switch functionality');
 
     // Initialize switch button functionality
     initializeSwitchButton();
@@ -132,7 +132,7 @@ function checkContinuousWatching() {
  * Initialize Switch button functionality
  */
 function initializeSwitchButton() {
-    console.log('Initializing Switch Button functionality');
+    if (window.DEBUG_MODE) console.log('Initializing Switch Button functionality');
     setupSwitchButtonEvents();
     updateExtraButtonDisabled();
 }
@@ -145,7 +145,7 @@ function setupSwitchButtonEvents() {
     const switchKnob = document.getElementById('extra-switch-knob');
     
     if (switchContainer && switchKnob) {
-        console.log('Setting up switch button events');
+        if (window.DEBUG_MODE) console.log('Setting up switch button events');
         
         // Add click event listener to the knob
         switchKnob.addEventListener('click', function(e) {
@@ -177,7 +177,7 @@ function setupSwitchButtonEvents() {
  * Cycle through switch modes: center -> silver -> gold -> center
  */
 function cycleSwitchMode() {
-    console.log('Cycling switch mode from:', currentSwitchMode);
+    // console.log('Cycling switch mode from:', currentSwitchMode);
     
     // Check if current section allows extra mode switching (only Home section)
     const currentSection = window.currentSection || 'home';
@@ -225,7 +225,7 @@ function updateExtraButtonDisabled() {
  * Switch to Silver Mode (left position)
  */
 function switchToSilverMode() {
-    console.log('Switching to Silver Mode');
+    // console.log('Switching to Silver Mode');
     currentSwitchMode = 'silver';
     extraBarMode = 'silver';
     
@@ -246,7 +246,7 @@ function switchToSilverMode() {
         // Reset awarded flags for new mode
         awardedSilver = false;
         awardedGold = false;
-        console.log('Switched to Silver Mode while Extra Mode is active');
+        // console.log('Switched to Silver Mode while Extra Mode is active');
     }
 }
 
@@ -254,7 +254,7 @@ function switchToSilverMode() {
  * Switch to Gold Mode (right position)
  */
 function switchToGoldMode() {
-    console.log('Switching to Gold Mode');
+    // console.log('Switching to Gold Mode');
     currentSwitchMode = 'gold';
     extraBarMode = 'gold';
     
@@ -275,7 +275,7 @@ function switchToGoldMode() {
         // Reset awarded flags for new mode
         awardedSilver = false;
         awardedGold = false;
-        console.log('Switched to Gold Mode while Extra Mode is active');
+        // console.log('Switched to Gold Mode while Extra Mode is active');
     }
 }
 
@@ -283,7 +283,7 @@ function switchToGoldMode() {
  * Switch to Center Mode (neutral position)
  */
 function switchToCenterMode() {
-    console.log('Switching to Center Mode');
+    // console.log('Switching to Center Mode');
     currentSwitchMode = 'center';
     
     const switchContainer = document.getElementById('extra-switch-container');
@@ -302,7 +302,7 @@ function switchToCenterMode() {
  * Reset switch button to center position (for external deactivation)
  */
 function resetSwitchToCenter() {
-    console.log('Resetting switch button to center position');
+    // console.log('Resetting switch button to center position');
     currentSwitchMode = 'center';
     
     const switchContainer = document.getElementById('extra-switch-container');
@@ -316,7 +316,7 @@ function resetSwitchToCenter() {
  * Activate Extra Mode
  */
 async function activateExtraMode(mode) {
-    // 🛡️ WATCH-DOG DEATH CHECK
+    // WATCH-DOG DEATH CHECK
     if (window.__DOG_IS_DEAD__ || localStorage.getItem('__DOG_IS_DEAD__') === 'true') {
         console.warn('[Extra Mode] Blocked: Watch-Dog is dead.');
         if (window.showToast) {
@@ -345,7 +345,7 @@ async function activateExtraMode(mode) {
     const timeOnSite = Date.now() - window.appStartTime;
     const minTimeForExtra = 60000; // 1 minute
     if (timeOnSite < minTimeForExtra) {
-        console.log('[Extra Mode] User has not been active long enough, waiting...');
+        if (window.DEBUG_MODE) console.log('[Extra Mode] User has not been active long enough, waiting...');
         setTimeout(() => {
             activateExtraMode(mode);
         }, minTimeForExtra - timeOnSite);
@@ -354,7 +354,7 @@ async function activateExtraMode(mode) {
 
     if (mode !== 'silver' && mode !== 'gold') mode = 'silver';
     extraBarMode = mode;
-    console.log('Activating Extra Mode:', mode);
+    if (window.DEBUG_MODE) console.log('Activating Extra Mode:', mode);
 
     try { createWatchSession(); } catch(_) {}
     extraModeActive = true;
@@ -419,7 +419,7 @@ async function activateExtraMode(mode) {
     // Initialize challenge system
     initializeChallengeSystem();
 
-    console.log('Extra Mode activated successfully');
+    if (window.DEBUG_MODE) console.log('Extra Mode activated successfully');
 }
 
 /**
@@ -427,7 +427,7 @@ async function activateExtraMode(mode) {
  */
 function deactivateExtraMode() {
     try {
-        console.log('Deactivating Extra Mode');
+        if (window.DEBUG_MODE) console.log('Deactivating Extra Mode');
         extraModeActive = false;
         window.extraModeActive = false;
         extraWatchStartTime = 0;
@@ -474,7 +474,7 @@ function deactivateExtraMode() {
             progressText.style.display = 'none';
         }
         enableCodeGenerationProgress();
-        console.log('[ExtraMode] Fully deactivated and cleaned up');
+        if (window.DEBUG_MODE) console.log('[ExtraMode] Fully deactivated and cleaned up');
     } catch (error) {
         console.error('[ExtraMode] Deactivation failed:', error);
         extraModeActive = false;
@@ -534,10 +534,10 @@ function updateExtraModeUI(isActive) {
  */
 function startExtraTimer() {
     if (!extraTimerInterval && extraModeActive) {
-        console.log('Starting Extra Mode timer');
+        if (window.DEBUG_MODE) console.log('Starting Extra Mode timer');
         const timerFn = () => {
             extraWatchTime += 100;
-            console.log(`Extra Mode timer: ${formatTime(extraWatchTime)}`);
+            // Timer tick (log suppressed to prevent console spam)
             updateExtraProgress();
             checkForRewards();
         };
@@ -547,12 +547,23 @@ function startExtraTimer() {
             extraTimerInterval = setInterval(timerFn, 100);
         }
     } else {
-        console.log('Extra timer not started:', { 
+        if (window.DEBUG_MODE) console.log('Extra timer not started:', {
             hasInterval: !!extraTimerInterval, 
             extraModeActive: extraModeActive 
         });
     }
 }
+
+/**
+ * Stop Extra Mode timer
+ */
+function stopExtraTimer() {
+    if (extraTimerInterval) {
+        clearInterval(extraTimerInterval);
+        extraTimerInterval = null;
+    }
+}
+
 
 /**
  * Handle window focus
@@ -561,28 +572,17 @@ function handleWindowFocus() {
     try {
         // When window regains focus, do NOT reactivate extra mode
         // User must manually activate it again
-        console.log('[ExtraMode] Window focused - extra mode remains inactive');
+        if (window.DEBUG_MODE) console.log('[ExtraMode] Window focused - extra mode remains inactive');
     } catch(_) {}
 }
 
-// Add time-based activation check
+// Auto-activation removed – extra mode now starts only via user switch toggle
 function checkExtraModeActivation() {
-    // Check if user has been active for at least 1 minute
-    const timeOnSite = Date.now() - window.appStartTime;
-    const minTimeForExtra = 60000; // 1 minute
-
-    if (timeOnSite > minTimeForExtra && !extraModeActive) {
-        console.log('[Extra Mode] User has been active for 1 minute, activating extra mode');
-        activateExtraMode(extraBarMode);
-    }
+    // No-op: user must toggle the switch manually
 }
 
-// Visibility listener
-document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-        checkExtraModeActivation();
-    }
-});
+// Visibility listener (auto-activation disabled)
+// document.addEventListener('visibilitychange', ...)
 
 /**
  * Update Extra Mode progress bar
@@ -652,7 +652,7 @@ function checkForRewards() {
         };
         activeReward = reward;
         
-        showRewardMessage(reward.type); // 👁️ Show claim message only
+        showRewardMessage(reward.type); // Show claim message only
     }
 }
 
@@ -712,7 +712,7 @@ function stopWatchDog() {
             watchDogAudio.currentTime = 0;
         }
         challengeActive = false;
-        console.log('[Reward] Watchdog stopped');
+        if (window.DEBUG_MODE) console.log('[Reward] Watchdog stopped');
     } catch(_) {}
 }
 
@@ -732,7 +732,7 @@ function disableRewardUI() {
             notification.style.cursor = 'default';
             notification.onclick = null;
         }
-        console.log('[Reward] UI disabled');
+        if (window.DEBUG_MODE) console.log('[Reward] UI disabled');
     } catch(_) {}
 }
 
@@ -753,7 +753,7 @@ function cleanupExtraModeUI() {
             notification.style.cursor = 'default';
             delete notification.dataset.rewardId;
         }
-        console.log('[Reward] UI cleaned up');
+        if (window.DEBUG_MODE) console.log('[Reward] UI cleaned up');
     } catch(_) {}
 }
 
@@ -771,7 +771,7 @@ function showRewardFailedMessage() {
     if (!notification) return;
     
     // Set notification content
-    icon.textContent = '❌';
+    icon.textContent = 'X';
     icon.className = 'reward-icon';
     title.textContent = 'Reward Claim Failed';
     description.textContent = 'Failed to claim your reward. Please try again.';
@@ -810,7 +810,7 @@ function removeUnclaimedReward(rewardId) {
         return; // Already claimed
     }
     
-    console.log(`Reward ${reward.name} expired - not claimed in time`);
+    if (window.DEBUG_MODE) console.log(`Reward ${reward.name} expired - not claimed in time`);
     
     // Remove from active rewards
     activeRewards.splice(rewardIndex, 1);
@@ -850,7 +850,7 @@ function showSuccessClaimNotification(reward) {
     if (!notification) return;
     
     // Update content for success
-    icon.textContent = '✅';
+    icon.textContent = 'OK';
     icon.className = 'reward-icon';
     title.textContent = 'Reward Claimed!';
     description.textContent = `Successfully claimed your ${reward.name}!`;
@@ -922,7 +922,7 @@ async function createWatchSession() {
         
         if (response.ok) {
             currentWatchSession = await response.json();
-            console.log('Watch session created:', currentWatchSession);
+            if (window.DEBUG_MODE) console.log('Watch session created:', currentWatchSession);
             return true;
         } else {
             return true;
@@ -979,13 +979,13 @@ function handleVisibilityChange() {
         if (document.hidden) {
             // Deactivate extra mode when tab is hidden/switched
             if (extraModeActive) {
-                console.log('[ExtraMode] Tab hidden - deactivating extra mode');
+                if (window.DEBUG_MODE) console.log('[ExtraMode] Tab hidden - deactivating extra mode');
                 deactivateExtraMode();
             }
         } else {
             // When tab becomes visible again, do NOT reactivate extra mode
             // User must manually activate it again
-            console.log('[ExtraMode] Tab visible - extra mode remains inactive');
+            if (window.DEBUG_MODE) console.log('[ExtraMode] Tab visible - extra mode remains inactive');
         }
     } catch(_) {}
 }
@@ -994,19 +994,13 @@ function handleWindowBlur() {
     try {
         // Deactivate extra mode when window loses focus (user switches to another app)
         if (extraModeActive) {
-            console.log('[ExtraMode] Window lost focus - deactivating extra mode');
+            if (window.DEBUG_MODE) console.log('[ExtraMode] Window lost focus - deactivating extra mode');
             deactivateExtraMode();
         }
     } catch(_) {}
 }
 
-function handleWindowFocus() {
-    try {
-        // When window regains focus, do NOT reactivate extra mode
-        // User must manually activate it again
-        console.log('[ExtraMode] Window focused - extra mode remains inactive');
-    } catch(_) {}
-}
+
 
 function handleBeforeUnload() {
     try { if (extraModeActive) deactivateExtraMode(); } catch(_) {}
@@ -1059,7 +1053,7 @@ async function claimReward(reward) {
     try {
         // STATE TRANSITION: READY -> CLAIMING
         rewardState = 'CLAIMING';
-        console.log('[Reward] State: READY -> CLAIMING');
+        if (window.DEBUG_MODE) console.log('[Reward] State: READY -> CLAIMING');
         
         // STEP 1: Disable reward UI
         disableRewardUI();
@@ -1098,7 +1092,7 @@ async function claimReward(reward) {
         
         // STATE TRANSITION: CLAIMING -> DONE
         rewardState = 'DONE';
-        console.log('[Reward] State: CLAIMING -> DONE');
+        if (window.DEBUG_MODE) console.log('[Reward] State: CLAIMING -> DONE');
         
         // STEP 4: Show success message
         showRewardSuccess(reward.type.toUpperCase());
@@ -1106,7 +1100,7 @@ async function claimReward(reward) {
         // STEP 5: Cleanup and DEACTIVATE Extra Mode
         const cleanupFn = () => {
             deactivateExtraMode(); // Return to normal mode
-            console.log('[Reward] State: DONE -> IDLE (cleanup complete)');
+            if (window.DEBUG_MODE) console.log('[Reward] State: DONE -> IDLE (cleanup complete)');
         };
         if (window.TimerManager) {
             window.TimerManager.setTimeout(cleanupFn, 3000);
@@ -1139,7 +1133,7 @@ async function claimReward(reward) {
  */
 function handlePageHide() {
     if (extraModeActive) {
-        console.log('Page hiding - deactivating extra mode');
+        if (window.DEBUG_MODE) console.log('Page hiding - deactivating extra mode');
         deactivateExtraMode();
     }
 }
@@ -1156,7 +1150,7 @@ function showRewardMessage(type, code = null) {
     if (!notification) return;
     
     // Set notification content
-    icon.textContent = type === 'silver' ? '🥈' : '🥇';
+    icon.textContent = type === 'silver' ? 'Silver' : 'Gold';
     icon.className = `reward-icon ${type}`;
     
     if (code) {
@@ -1167,7 +1161,7 @@ function showRewardMessage(type, code = null) {
         delete notification.dataset.rewardId;
     } else {
         // Reward ready to claim
-        title.textContent = `🎁 You have a ${type.charAt(0).toUpperCase() + type.slice(1)} Bar`;
+        title.textContent = `You have a ${type.charAt(0).toUpperCase() + type.slice(1)} Bar!`;
         description.textContent = 'Click here to claim your reward!';
         notification.style.cursor = 'pointer';
         
@@ -1247,7 +1241,7 @@ function showRewardSuccess(code){
         const title = document.getElementById('reward-title');
         const description = document.getElementById('reward-description');
         if (!notification) return;
-        icon.textContent = type === 'silver' ? '🥈' : '🥇';
+        icon.textContent = type === 'silver' ? 'Silver' : 'Gold';
         icon.className = `reward-icon ${type}`;
         title.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} Bar Earned!`;
         description.textContent = `Successfully claimed your ${type.charAt(0).toUpperCase() + type.slice(1)} Bar (${code})!`;
@@ -1313,7 +1307,7 @@ function isExtraModeActive() {
  * Initialize random challenge system
  */
 function initializeChallengeSystem() {
-    console.log('Initializing challenge system');
+    if (window.DEBUG_MODE) console.log('Initializing challenge system');
     
     // Create audio for alarm
     try {
@@ -1342,7 +1336,7 @@ function scheduleNextChallenge() {
     
     nextChallengeTime = Date.now() + randomDelay;
     
-    console.log(`Next challenge scheduled in ${formatTime(randomDelay)}`);
+    if (window.DEBUG_MODE) console.log(`Next challenge scheduled in ${formatTime(randomDelay)}`);
     
     const challengeFn = () => {
         if (extraModeActive && !challengeActive) {
@@ -1362,7 +1356,7 @@ function scheduleNextChallenge() {
 function startChallenge() {
     if (challengeActive || !extraModeActive) return;
     
-    console.log('Starting challenge: Press Now!');
+    if (window.DEBUG_MODE) console.log('Starting challenge: Press Now!');
     challengeActive = true;
     
     // Show challenge message in the extra code bar
@@ -1378,7 +1372,7 @@ function startChallenge() {
             watchDogAudio.currentTime = 0;
             watchDogAudio.play();
         } catch (error) {
-            console.log('Could not play watch-dog sound');
+            if (window.DEBUG_MODE) console.log('Could not play watch-dog sound');
         }
     }
     
@@ -1456,7 +1450,7 @@ function startChallengeCountdown() {
 function completeChallenge() {
     if (!challengeActive) return;
     
-    console.log('Challenge completed successfully!');
+    if (window.DEBUG_MODE) console.log('Challenge completed successfully!');
     challengeActive = false;
     
     // Clear timeout
@@ -1491,7 +1485,7 @@ function completeChallenge() {
  * Fail challenge and deactivate Extra Mode
  */
 function failChallenge() {
-    console.log('Challenge failed - deactivating Extra Mode');
+    if (window.DEBUG_MODE) console.log('Challenge failed - deactivating Extra Mode');
     challengeActive = false;
     
     // Reset UI
@@ -1570,7 +1564,7 @@ function showChallengeFailureMessage() {
  * Stop challenge system
  */
 function stopChallengeSystem() {
-    console.log('Stopping challenge system');
+    if (window.DEBUG_MODE) console.log('Stopping challenge system');
     
     challengeActive = false;
     
@@ -1614,7 +1608,7 @@ function getChallengeStatus() {
  * Disable code generation progress bar and show extra mode progress
  */
 function disableCodeGenerationProgress() {
-    console.log('Disabling code generation progress bar');
+    if (window.DEBUG_MODE) console.log('Disabling code generation progress bar');
     
     // Store original progress bar state and prepare for Extra Mode
     const progressBar = document.getElementById('progress-bar');
@@ -1637,7 +1631,7 @@ function disableCodeGenerationProgress() {
         window.originalUpdateProgressBar = window.updateProgressBar;
         window.updateProgressBar = function() {
             // Do nothing - this prevents code generation progress updates
-            console.log('Code generation progress disabled - Extra Mode active');
+            if (window.DEBUG_MODE) console.log('Code generation progress disabled - Extra Mode active');
         };
     }
     
@@ -1662,7 +1656,7 @@ function disableCodeGenerationProgress() {
  * Enable code generation progress bar and restore original functionality
  */
 function enableCodeGenerationProgress() {
-    console.log('Re-enabling code generation progress bar');
+    if (window.DEBUG_MODE) console.log('Re-enabling code generation progress bar');
     
     // Restore original progress bar state
     const progressBar = document.getElementById('progress-bar');

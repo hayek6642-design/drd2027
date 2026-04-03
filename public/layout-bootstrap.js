@@ -1,5 +1,5 @@
 (function() {
-  // 4️⃣ Prevent duplicate initialization
+  // 4 Prevent duplicate initialization
   if (window.__LAYOUT_BOOTSTRAP__) return;
   window.__LAYOUT_BOOTSTRAP__ = true;
 
@@ -63,7 +63,7 @@
     
     const now = Date.now();
     if (now - _lastLayoutLog > 5000) {
-      try{ console.log('[LAYOUT] using video box from '+(videoBoxEl.id?('#'+videoBoxEl.id):(videoBoxEl.tagName.toLowerCase()))); }catch(_){ }
+      try{ if (window.DEBUG_MODE) console.log('[LAYOUT] using video box from '+(videoBoxEl.id?('#'+videoBoxEl.id):(videoBoxEl.tagName.toLowerCase()))); }catch(_){ }
       _lastLayoutLog = now;
     }
   }

@@ -12,11 +12,11 @@
   let lastCheck = 0;
   window.DEBUG_MODE = false; // Set to true in console to see verbose logs
 
-  // 📦 WEB STORAGE (IndexedDB - The Code Vault)
+  //  WEB STORAGE (IndexedDB - The Code Vault)
   const WebStorage = {
     DB_NAME: 'CodeVault',
     STORE_NAME: 'codes_store',
-    VERSION: 4, // 🛡️ UPGRADED VERSION TO FIX IDB VERSION ERROR
+    VERSION: 4, //  UPGRADED VERSION TO FIX IDB VERSION ERROR
     _inMemoryVault: [],
 
     async autoHealState(code) {
@@ -74,23 +74,23 @@
       const code = entry.code;
       const userId = window.Auth?._userId || 'guest';
       
-      // 🛡️ 1. Validate input
+      //  1. Validate input
       if (!code || typeof code !== 'string' || code.trim() === '') {
         console.error('[VAULT][ERROR] Invalid code input:', code);
         return false;
       }
       
-      // 🛡️ FORMAT VALIDATION
+      //  FORMAT VALIDATION
       const formatRegex = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-P[0-9]$/; 
       if (!formatRegex.test(code)) { 
         console.error('[VAULT] Code format validation failed:', code); 
         // Still save it (don't block), but warn 
       } 
       
-      // 🛡️ 2. Ensure record has a valid ID (Requirement 1)
+      //  2. Ensure record has a valid ID (Requirement 1)
       const id = entry.id || code; // Use existing ID or fallback to code
       
-      // 🛡️ 3. Double Save Protection (Requirement 5)
+      //  3. Double Save Protection (Requirement 5)
       const isDuplicate = await this.checkDuplicate(code);
       if (isDuplicate) {
         if (window.DEBUG_MODE) console.log('[VAULT][SKIP] Code already exists, ignoring double save:', code);
@@ -101,7 +101,7 @@
       const integrityHash = await this._generateHash(integrityRaw);
       
       const record = {
-        id: id, // 👈 REQUIRED: Valid ID field
+        id: id, //  REQUIRED: Valid ID field
         code: code,
         type: entry.type || 'codes',
         status: 'owned',
@@ -117,7 +117,7 @@
         return true;
       }
 
-      // 🛡️ 4. Retry Mechanism & Self-Healing (Requirement 5)
+      //  4. Retry Mechanism & Self-Healing (Requirement 5)
       const MAX_RETRIES = 3;
       for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
@@ -130,7 +130,7 @@
               request.onsuccess = () => {
                 // console.log(`[VAULT][SUCCESS] Attempt ${attempt} - Code saved to IndexedDB:`, code);
                 
-                // 🛡️ SYNC TO SERVER (Requirement from actly.md)
+                //  SYNC TO SERVER (Requirement from actly.md)
                 if (navigator.onLine) {
                   this.syncToServer(record).catch(err => console.warn('[VAULT][SYNC] Background sync failed:', err));
                 }
@@ -237,10 +237,10 @@
     async getCodes(skipIntegrity = false) {
       const db = await this.init();
       
-      // 🛡️ AUTH CHECK - Require authentication for authoritative data
+      //  AUTH CHECK - Require authentication for authoritative data
       const isAuth = window.Auth?.isAuthenticated() || window.__AUTH_STATE__?.authenticated;
       
-      // 🛡️ FETCH FROM SERVER IF ONLINE & AUTHENTICATED (Source of Truth)
+      //  FETCH FROM SERVER IF ONLINE & AUTHENTICATED (Source of Truth)
       if (isAuth && navigator.onLine) {
         try {
           const response = await fetch('/api/codes/list', {
@@ -292,13 +292,13 @@
             if (!shouldCheckIntegrity || await this.verifyIntegrity(rec)) {
               verified.push(rec);
             } else {
-              if (window.DEBUG_MODE) console.warn('[vault] ⚠️ integrity violation detected - soft fixing for:', rec.code);
+              if (window.DEBUG_MODE) console.warn('[vault] ⚠ integrity violation detected - soft fixing for:', rec.code);
               // Trigger auto-heal but continue with this batch to avoid UI freeze
               setTimeout(() => this.autoHealState(rec.code), 100);
             }
           }
           
-          // 🛡️ Chronological Sort (Requirement: Latest first/last consistency)
+          //  Chronological Sort (Requirement: Latest first/last consistency)
           verified.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
           
           resolve(verified);
@@ -352,7 +352,7 @@
       });
     },
 
-    // 🛡️ HOLE 5 FIX: Transaction Queue in IndexedDB
+    //  HOLE 5 FIX: Transaction Queue in IndexedDB
     async savePendingTx(tx) {
       const db = await this.init();
       if (!db) return false;
@@ -390,7 +390,7 @@
     }
   };
 
-  // 📱 CAPACITOR STORAGE (SQLite Fallback)
+  //  CAPACITOR STORAGE (SQLite Fallback)
   const CapacitorStorage = {
     async isAvailable() {
       return !!(window.Capacitor && window.Capacitor.isNativePlatform());
@@ -426,7 +426,7 @@
          }
        };
 
-       if (window.DEBUG_MODE) console.log(`[StorageAdapter] 🚀 START SYNC SAVE: ${code} (${type})`);
+       if (window.DEBUG_MODE) console.log(`[StorageAdapter]  START SYNC SAVE: ${code} (${type})`);
 
        // 1. IndexedDB Save (Primary Local)
        let localResult = false;
@@ -444,7 +444,7 @@
        try {
          if (window.writeCodeToSQLite) {
            window.writeCodeToSQLite({ code, ts: entry.createdAt })
-             .then(res => { if (window.DEBUG_MODE) console.log('[StorageAdapter] SQLite saved'); })
+             .then(res => if (window.DEBUG_MODE) console.log('[StorageAdapter] SQLite saved'))
              .catch(err => console.warn('[StorageAdapter] SQLite sync failed (will retry later):', err));
          }
        } catch (e) {
@@ -453,7 +453,7 @@
 
        // 3. Notify AssetBus (Proactive UI Update)
        if (localResult && window.AssetBus && typeof window.AssetBus.addCode === 'function') {
-         // console.log('[StorageAdapter] Notifying AssetBus of new code');
+         // if (window.DEBUG_MODE) console.log('[StorageAdapter] Notifying AssetBus of new code');
          window.AssetBus.addCode(code, type);
        }
 
@@ -491,7 +491,7 @@
      },
 
      async getCodeCount() {
-       // 🛡️ STABILITY FIX: Ensure we get the most accurate count from multiple sources if possible
+       //  STABILITY FIX: Ensure we get the most accurate count from multiple sources if possible
        let count = 0;
        try {
          if (await CapacitorStorage.isAvailable()) {
@@ -507,5 +507,5 @@
    };
 
   window.StorageAdapter = StorageAdapter;
-  if (window.DEBUG_MODE) console.log('✅ [StorageAdapter] Initialized - Fixed version (PASSIVE MODE)');
+  if (window.DEBUG_MODE) console.log('[OK] [StorageAdapter] Initialized - Fixed version (PASSIVE MODE)');
 })();

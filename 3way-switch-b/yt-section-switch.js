@@ -107,7 +107,7 @@ window.saveCurrentSectionTime = async function(sectionId) {
 
     if (window.AuthSyncManager && window.AuthSyncManager.setUserData) {
       // Auth logic removed for mirror-only mode
-      console.log(`[Section Switch] Saved time for ${sectionId}:`, saveData);
+      if (window.DEBUG_MODE) console.log(`[Section Switch] Saved time for ${sectionId}:`, saveData);
     } else {
       // Fallback to localStorage
       localStorage.setItem(`video_${videoIdsMap[sectionId]}`, JSON.stringify(saveData));
@@ -119,11 +119,11 @@ window.saveCurrentSectionTime = async function(sectionId) {
 
 // Section switching functions - called by 3-way toggle (OPTIMIZED)
 window.showHomeSection = async function() {
-  console.log('[Section Switch] Switching to Home section');
+  if (window.DEBUG_MODE) console.log('[Section Switch] Switching to Home section');
 
   // Return existing promise if already initializing
   if (homeInitPromise) {
-    console.log('[Section Switch] Home section initialization already in progress');
+    if (window.DEBUG_MODE) console.log('[Section Switch] Home section initialization already in progress');
     return homeInitPromise;
   }
 
@@ -188,7 +188,7 @@ window.showHomeSection = async function() {
   try {
     // OPTIMIZED: Use player content update instead of recreation
     if (window.YouTubeAPIManager && typeof window.YouTubeAPIManager.updatePlayerContent === 'function') {
-      console.log('[Section Switch] Using optimized player content update for Home');
+      if (window.DEBUG_MODE) console.log('[Section Switch] Using optimized player content update for Home');
       await window.YouTubeAPIManager.updatePlayerContent(videoIdsMap.home);
 
       // Seek to saved position after content loads
@@ -204,7 +204,7 @@ window.showHomeSection = async function() {
 
     } else {
       // FALLBACK: Traditional method for backward compatibility
-      console.log('[Section Switch] Using fallback method for Home section');
+      if (window.DEBUG_MODE) console.log('[Section Switch] Using fallback method for Home section');
 
       // Check if player is ready and in a valid state
       if (!player || typeof player.getPlayerState !== 'function') {
@@ -232,7 +232,7 @@ window.showHomeSection = async function() {
               index: startIndex,
               startSeconds: startSeconds
             });
-          console.log(`[Section Switch] Home playlist loaded from saved position: ${startSeconds}s, index: ${startIndex}`);
+          if (window.DEBUG_MODE) console.log(`[Section Switch] Home playlist loaded from saved position: ${startSeconds}s, index: ${startIndex}`);
         } catch (loadError) {
           console.warn('[Section Switch] Error with loadPlaylist, trying alternative method:', loadError);
           // Alternative: cue playlist first, then load
@@ -266,18 +266,18 @@ window.showHomeSection = async function() {
     console.error('[Section Switch] Error loading Home playlist:', e);
     // Retry after a short delay
     setTimeout(() => {
-      console.log('[Section Switch] Retrying Home section load...');
+      if (window.DEBUG_MODE) console.log('[Section Switch] Retrying Home section load...');
       window.showHomeSection();
     }, 1000);
   }
 }
 
 window.showNourSection = async function() {
-  console.log('[Section Switch] Switching to Nour section');
+  if (window.DEBUG_MODE) console.log('[Section Switch] Switching to Nour section');
 
   // Return existing promise if already initializing
   if (nourInitPromise) {
-    console.log('[Section Switch] Nour section initialization already in progress');
+    if (window.DEBUG_MODE) console.log('[Section Switch] Nour section initialization already in progress');
     return nourInitPromise;
   }
 
@@ -312,7 +312,7 @@ window.showNourSection = async function() {
 
   // Deactivate extra mode if active (extra mode only works on Home)
   if (window.ExtraMode && window.ExtraMode.isActive && window.ExtraMode.isActive()) {
-    console.log('[Section Switch] Deactivating extra mode (not available on Nour section)');
+    if (window.DEBUG_MODE) console.log('[Section Switch] Deactivating extra mode (not available on Nour section)');
     if (window.ExtraMode.deactivate) {
       window.ExtraMode.deactivate();
     }
@@ -356,7 +356,7 @@ window.showNourSection = async function() {
         videoId: videoIdsMap.nour,
         startSeconds: startSeconds
       });
-      console.log(`[Section Switch] Nour loaded from saved position: ${startSeconds}s`);
+      if (window.DEBUG_MODE) console.log(`[Section Switch] Nour loaded from saved position: ${startSeconds}s`);
     }
   } catch (e) {
     console.error('[Section Switch] Error loading Nour video:', e);
@@ -364,11 +364,11 @@ window.showNourSection = async function() {
 };
 
 window.showAfra7Section = async function() {
-  console.log('[Section Switch] Switching to Afra7 section');
+  if (window.DEBUG_MODE) console.log('[Section Switch] Switching to Afra7 section');
 
   // Return existing promise if already initializing
   if (afra7InitPromise) {
-    console.log('[Section Switch] Afra7 section initialization already in progress');
+    if (window.DEBUG_MODE) console.log('[Section Switch] Afra7 section initialization already in progress');
     return afra7InitPromise;
   }
 
@@ -403,7 +403,7 @@ window.showAfra7Section = async function() {
 
   // Deactivate extra mode if active (extra mode only works on Home)
   if (window.ExtraMode && window.ExtraMode.isActive && window.ExtraMode.isActive()) {
-    console.log('[Section Switch] Deactivating extra mode (not available on Afra7 section)');
+    if (window.DEBUG_MODE) console.log('[Section Switch] Deactivating extra mode (not available on Afra7 section)');
     if (window.ExtraMode.deactivate) {
       window.ExtraMode.deactivate();
     }
@@ -422,7 +422,7 @@ window.showAfra7Section = async function() {
         videoId: videoIdsMap.afra7,
         startSeconds: startSeconds
       });
-      console.log('[Section Switch] Afra7 loaded from beginning (0s)');
+      if (window.DEBUG_MODE) console.log('[Section Switch] Afra7 loaded from beginning (0s)');
     }
   } catch (e) {
     console.error('[Section Switch] Error loading Afra7 video:', e);

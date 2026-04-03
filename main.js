@@ -107,22 +107,22 @@ SelfHealing.registerRule(
 // Auth Module
 AppLifecycleManager.register("auth", {
   async init() {
-    console.log("[Auth] init");
+    if (window.DEBUG_MODE) console.log("[Auth] init");
     window.__API_ERRORS__ = 0;
   },
 
   async start() {
-    console.log("[Auth] start");
+    if (window.DEBUG_MODE) console.log("[Auth] start");
 
     return new Promise((resolve) => {
       if (window.__AUTH_READY__) {
-        console.log("[Auth] already ready ✅");
+        if (window.DEBUG_MODE) console.log("[Auth] already ready ✅");
         resolve();
         return;
       }
 
       onceEvent("auth:ready", () => {
-        console.log("[Auth] ready handled once ✅");
+        if (window.DEBUG_MODE) console.log("[Auth] ready handled once ✅");
         // Record auth change to AI Brain
         AIBrainEngine.record("auth:change", { status: "ready" });
         resolve();
@@ -141,7 +141,7 @@ AppLifecycleManager.register("auth", {
 // ACC Module (Assets Central Core)
 AppLifecycleManager.register("acc", {
   async init() {
-    console.log("[ACC] init");
+    if (window.DEBUG_MODE) console.log("[ACC] init");
     // Get user from auth or localStorage
     const userId = localStorage.getItem('user_id') || 'user_' + Math.random().toString(36).substr(2, 9);
     localStorage.setItem('user_id', userId);
@@ -160,7 +160,7 @@ AppLifecycleManager.register("acc", {
   },
 
   async start() {
-    console.log("[ACC] start");
+    if (window.DEBUG_MODE) console.log("[ACC] start");
     
     // Register bridges
     if (window.PebalaashBridge) window.accClient.registerBridge('pebalaash', new PebalaashBridge());
@@ -168,12 +168,12 @@ AppLifecycleManager.register("acc", {
     if (window.BattaloodaBridge) window.accClient.registerBridge('battalooda', new BattaloodaBridge());
     if (window.SafeCodeBridge) window.accClient.registerBridge('safecode', new SafeCodeBridge());
     
-    // Create a compact mirror on the page
-    window.assetMirror.createMirror('main', 'body', { compact: true });
+    // ACC AssetMirror compact counter removed from yt-new-clear UI
+    // window.assetMirror.createMirror('main', 'body', { compact: true });
     
     return new Promise((resolve) => {
         window.accClient.on('connected', () => {
-            console.log("[ACC] Connected and synchronized");
+            if (window.DEBUG_MODE) console.log("[ACC] Connected and synchronized");
             resolve();
         });
         
@@ -189,14 +189,14 @@ AppLifecycleManager.register("acc", {
 // YouTube Module
 AppLifecycleManager.register("yt", {
   async init() {
-    console.log("[YT] init");
+    if (window.DEBUG_MODE) console.log("[YT] init");
   },
 
   async start() {
     if (window.__YT_STARTED__) return;
     window.__YT_STARTED__ = true;
 
-    console.log("[YT] start");
+    if (window.DEBUG_MODE) console.log("[YT] start");
 
     if (window.YTPlayerController && typeof window.YTPlayerController.start === 'function') {
         await window.YTPlayerController.start();
@@ -214,7 +214,7 @@ AppLifecycleManager.register("watchdog", {
     if (window.__WATCHDOG_RUNNING__) return;
     window.__WATCHDOG_RUNNING__ = true;
 
-    console.log("[WatchDog] start");
+    if (window.DEBUG_MODE) console.log("[WatchDog] start");
 
     setInterval(async () => {
       if (window.DEBUG_MODE) console.log("🐶 AI WatchDog scanning...");
@@ -244,7 +244,7 @@ AppLifecycleManager.register("bankode", {
     if (window.__BANKODE_STARTED__) return;
     window.__BANKODE_STARTED__ = true;
 
-    console.log("[Bankode] start");
+    if (window.DEBUG_MODE) console.log("[Bankode] start");
 
     let isFetching = false;
     setInterval(async () => {
@@ -282,11 +282,11 @@ if (!window.__APP_STARTED__) {
     host: window.location.host
   };
 
-  console.log('[App] Environment:', APP_ENV);
+  if (window.DEBUG_MODE) console.log('[App] Environment:', APP_ENV);
 
   // Disable WebSocket on Render if it causes issues
   if (APP_ENV.isRender) {
-    console.log('[App] Render deployment detected - adjusting settings');
+    if (window.DEBUG_MODE) console.log('[App] Render deployment detected - adjusting settings');
     // ACC will auto-detect and use HTTP fallback
   }
 
@@ -299,10 +299,10 @@ if (!window.__APP_STARTED__) {
     try {
         await AppLifecycleManager.init();
         await AppLifecycleManager.start();
-        console.log("✅ App fully started with AI Brain active");
+        if (window.DEBUG_MODE) console.log("✅ App fully started with AI Brain active");
 
-        console.log("🛠️  __APP_DEBUG__() -> System Status");
-        console.log("📊 __HEALTH_REPORT__() -> Repair Logs");
+        if (window.DEBUG_MODE) console.log("🛠️  __APP_DEBUG__() -> System Status");
+        if (window.DEBUG_MODE) console.log("📊 __HEALTH_REPORT__() -> Repair Logs");
     } catch (err) {
         console.error("❌ App boot failed:", err);
     }

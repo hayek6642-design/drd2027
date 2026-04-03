@@ -36,7 +36,7 @@ connect() {
             this.ws = new WebSocket(this.serverUrl);
 
             this.ws.onopen = () => {
-                console.log('[ACC Client] Connected to ACC Server');
+                if (window.DEBUG_MODE) console.log('[ACC Client] Connected to ACC Server');
                 this.connected = true;
                 this.reconnectAttempts = 0;
 
@@ -56,7 +56,7 @@ connect() {
             };
 
             this.ws.onclose = () => {
-                console.log('[ACC Client] Disconnected');
+                if (window.DEBUG_MODE) console.log('[ACC Client] Disconnected');
                 this.connected = false;
                 this.attemptReconnect();
             };
@@ -88,11 +88,11 @@ connect() {
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++;
             setTimeout(() => {
-                console.log(`[ACC Client] Reconnecting... Attempt ${this.reconnectAttempts}`);
+                if (window.DEBUG_MODE) console.log(`[ACC Client] Reconnecting... Attempt ${this.reconnectAttempts}`);
                 this.connect();
             }, 3000 * this.reconnectAttempts);
         } else {
-            console.log('[ACC Client] Max reconnection attempts reached, falling back to HTTP');
+            if (window.DEBUG_MODE) console.log('[ACC Client] Max reconnection attempts reached, falling back to HTTP');
             this.fallbackToHTTP();
         }
     }
@@ -281,7 +281,7 @@ connect() {
 
     // Fallback to HTTP polling when WebSocket fails
     fallbackToHTTP() {
-        console.log('[ACC Client] Falling back to HTTP polling');
+        if (window.DEBUG_MODE) console.log('[ACC Client] Falling back to HTTP polling');
         this.connected = false;
         this.ws = null;
 

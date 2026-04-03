@@ -3,7 +3,7 @@
     if (window.__BALLOON_STANDALONE_INITIALIZED__) return;
     window.__BALLOON_STANDALONE_INITIALIZED__ = true;
 
-    console.log("🎈 Standalone Visual Balloon Engine Loaded (Ready for trigger)");
+    if (window.DEBUG_MODE) console.log("🎈 Standalone Visual Balloon Engine Loaded (Ready for trigger)");
 
     // Global State
     let activeBalloon = null;
@@ -28,7 +28,7 @@
     // Update global points and dispatch event
     function updateBalloonPoints(delta, side) {
         window.__BALLOON_POINTS__ += delta;
-        console.log("🎯 Balloon Points:", window.__BALLOON_POINTS__, "Side:", side);
+        if (window.DEBUG_MODE) console.log("🎯 Balloon Points:", window.__BALLOON_POINTS__, "Side:", side);
         window.dispatchEvent(new CustomEvent('balloon:points:update', {
             detail: { 
                 points: window.__BALLOON_POINTS__,
@@ -80,9 +80,9 @@
 
             const delta = (balloonEl.dataset.type === 'danger') ? -10 : 10;
             if (balloonEl.dataset.type === 'danger') {
-                console.log("💣 Dangerous balloon clicked");
+                if (window.DEBUG_MODE) console.log("💣 Dangerous balloon clicked");
             } else {
-                console.log("🎁 Reward balloon clicked");
+                if (window.DEBUG_MODE) console.log("🎁 Reward balloon clicked");
             }
             updateBalloonPoints(delta, balloonEl.dataset.side);
             
@@ -115,7 +115,7 @@
         window.__BALLOON_STANDALONE_RUNNING__ = true;
         window.__BALLOON_SYSTEM_LOCK__ = false;
 
-        console.log("🎈 Standalone Balloon system started via trigger");
+        if (window.DEBUG_MODE) console.log("🎈 Standalone Balloon system started via trigger");
         // No score UI creation here, only logic
 
         // Spawn first balloon after 10 seconds

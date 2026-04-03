@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- 🛡️ RELOAD PROTECTION (from actly.md) -->
+    <!--  RELOAD PROTECTION (from actly.md) -->
     <script>
       (function() {
         const reloadKey = 'last_reload_time';
@@ -12,14 +12,14 @@
         const lastReload = parseInt(localStorage.getItem(reloadKey) || '0');
         const now = Date.now();
         if (now - lastReload < minReloadInterval) {
-          console.error('🚨 RELOAD LOOP DETECTED - Breaking cycle');
+          console.error(' RELOAD LOOP DETECTED - Breaking cycle');
           localStorage.setItem('reload_loop_detected', 'true');
           localStorage.removeItem('auth_session');
           sessionStorage.clear();
           document.addEventListener('DOMContentLoaded', () => {
             document.body.innerHTML = `
               <div style="padding: 40px; text-align: center; font-family: sans-serif; background: #0d1117; color: white; height: 100vh;">
-                <h1 style="color: #ff6b6b;">⚠️ Reload Loop Detected</h1>
+                <h1 style="color: #ff6b6b;">Warning: Reload Loop Detected</h1>
                 <p>The application was reloading too quickly.</p>
                 <p>This is often caused by a ledger mismatch or auth sync error.</p>
                 <button onclick="localStorage.clear(); location.href='/login.html'" 
@@ -69,7 +69,7 @@
     <!-- Browser Mode Setup -->
     <script src="/shared/storage-adapter.js"></script>
     <script>
-        console.warn("🟢 YT-Clear TRUE Browser Local Mode");
+        console.warn("[OK] YT-Clear TRUE Browser Local Mode");
 
         const realLocalStorage = window.__proto__.localStorage || window.localStorage;
 
@@ -106,12 +106,12 @@
     </script>
 
     <style>
-        /* 🔹 Loading Overlay Fix - Force Hidden by Default if needed */
+        /*  Loading Overlay Fix - Force Hidden by Default if needed */
         #loading-overlay {
             position: fixed;
             inset: 0;
             background: #0d1117;
-            display: none; /* 🔹 Start hidden to prevent blocking if JS fails */
+            display: none; /*  Start hidden to prevent blocking if JS fails */
             flex-direction: column;
             align-items: center;
             justify-content: center;
@@ -575,7 +575,7 @@
         }
 
         .click-impossible::before {
-            content: "😏";
+            content: "";
             position: absolute;
             top: -30px;
             left: 50%;
@@ -1141,6 +1141,13 @@
             visibility: visible !important;
         }
 
+
+        /* ACC AssetMirror emoji counter – removed from UI */
+        .acc-asset-mirror,
+        .acc-mirror-compact,
+        .acc-mirror-main {
+            display: none !important;
+        }
 
         /* Responsive design */
         @media (max-width: 768px) {
@@ -1848,7 +1855,7 @@
 </head>
 
 <body class="bg-light">
-    <!-- 🔹 Loading Overlay (Initially Hidden, Activated by Script) -->
+    <!--  Loading Overlay (Initially Hidden, Activated by Script) -->
     <div id="loading-overlay">
         <div class="loading-text">جارِ التهيئة</div>
         <div class="progress-container">
@@ -1897,7 +1904,7 @@
 
                 <div id="control-buttons" class="d-flex justify-content-center gap-2">
                     <button id="sound-button" class="btn btn-secondary" title="Toggle Sound"
-                        data-i18n-title="buttons.soundToggle">🔊</button>
+                        data-i18n-title="buttons.soundToggle" aria-label="Sound"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.536 14.01A8.47 8.47 0 0 0 14.026 8a8.47 8.47 0 0 0-2.49-6.01l-.708.707A7.48 7.48 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303l.708.707z"/><path d="M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.48 5.48 0 0 1 11.025 8a5.48 5.48 0 0 1-1.611 3.889l.707.707z"/><path d="M8.707 11.182A4.49 4.49 0 0 0 10.025 8a4.49 4.49 0 0 0-1.318-3.182L8 5.525A3.49 3.49 0 0 1 9.025 8 3.49 3.49 0 0 1 8 10.475l.707.707zM6.717 3.55A.5.5 0 0 1 7.025 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.525a.5.5 0 0 1-.5-.5V6a.5.5 0 0 1 .5-.5h2.3l2.388-1.89a.5.5 0 0 1 .504-.06z"/></svg></button>
                 </div>
 
                 <div id="toggle-switch-absolute-container">
@@ -1919,7 +1926,7 @@
                 </div>
             
                 <button id="play-pause-button" class="btn btn-success" title="Play/Pause" aria-label="Play/Pause"><span
-                        id="progress-text" class="pp-overlay">0%</span></button>
+                        id="progress-text" class="pp-overlay" style="display:none">0%</span></button>
             </div>
         </div>
 
@@ -1947,14 +1954,14 @@
 
         <div id="popup-overlay">
             <div id="popup-frame">
-                <button id="popup-close">✖</button>
+                <button id="popup-close">&times;</button>
                 <iframe src="" id="popup-iframe" style="display:none"></iframe>
             </div>
         </div>
 
         <div id="code-popup-overlay" style="display: none;">
             <div id="code-popup-frame">
-                <button id="code-popup-close">✖</button>
+                <button id="code-popup-close">&times;</button>
                 <iframe id="code-popup-iframe" src="/services/yt-clear/codebank/indexCB.html"
                     style="width:100%;height:100%;border:none"></iframe>
             </div>
@@ -2026,7 +2033,7 @@
                     if (!res.ok) return false;
                     var data = await res.json();
                     try { window.UVLog && window.UVLog('sqlite-codes-fetch', { status: data && data.status, count: data && data.count }, 'yt-new-clear') } catch(_){ }
-                    try { console.log('[CodeBank] SQLite sync result:', data); } catch (_) {}
+                    try { if (window.DEBUG_MODE) console.log('[CodeBank] SQLite sync result:', data); } catch (_) {}
                     if (data && data.status === 'success' && Array.isArray(data.rows) && data.rows.length > 0) {
                         var latest = (typeof data.latest==='string' ? data.latest : (data.rows[0] && data.rows[0].code) || '');
                         var snapshot = { latest: latest, rows: data.rows };
@@ -2052,7 +2059,20 @@
                 window.addEventListener('auth:ready', async function(e){
                     try {
                         var okAuth = !!(e && e.detail && e.detail.authenticated);
-                        if (!okAuth) return;
+                        if (!okAuth) {
+                            // [FIX] auth:ready fired with unauthenticated — redirect to login
+                            // (checkAuth may have already done this; guard prevents double redirect)
+                            if (!window.__authReadyRedirected) {
+                                window.__authReadyRedirected = true;
+                                console.warn('[AUTH] auth:ready unauthenticated — redirecting to login');
+                                localStorage.removeItem('session_active');
+                                localStorage.removeItem('__cached_user__');
+                                localStorage.removeItem('__cached_session_id__');
+                                try { document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax'; } catch(_){}
+                                window.location.href = '/login.html';
+                            }
+                            return;
+                        }
                         async function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms) }) }
                         async function tryWithRetry(fn, attempts, delay){
                             for (var i=0;i<attempts;i++){ if (await fn()) return true; await sleep(delay) }
@@ -2102,8 +2122,8 @@
                         try { window.__CODEBANK_ALLOWED_ORIGIN__ = ev && ev.origin || __cbOrigin__(); } catch(_){ }
                         var authed = false; try { authed = (window.Auth && typeof window.Auth.isAuthenticated==='function' && window.Auth.isAuthenticated()) || (window.AuthCore && typeof window.AuthCore.isAuthenticated==='function' && window.AuthCore.isAuthenticated()) || (!!window.__AUTH_READY__ && !!(window.APP_AUTH && window.APP_AUTH.user)); } catch(_){ authed = false }
                         if (!authed) { console.warn('[SNAPSHOT BLOCKED] not authenticated'); return; }
-                         console.log('[SNAPSHOT SENT]', out);
-                        // 🧠 FIX: Use ev.origin as target origin for better compatibility and to avoid YouTube mismatch
+                         if (window.DEBUG_MODE) console.log('[SNAPSHOT SENT]', out);
+                        //  FIX: Use ev.origin as target origin for better compatibility and to avoid YouTube mismatch
                         var targetOrigin = (ev.origin && ev.origin !== 'null') ? ev.origin : window.location.origin;
                         ev.source.postMessage({ type: 'CODEBANK_ASSETS_SYNC', payload: out }, targetOrigin); } catch (_) { } } } catch (_) { } } } catch (_) { } }); } catch (_) { }
             try { window.addEventListener('message', function (ev) { try { var data = ev && ev.data || {}; if (data && data.type === 'CODEBANK_INTENT') { try { var intent = data.intent || ''; var detail = data.detail || {}; console.log('[CODEBANK INTENT]', intent, detail); if (intent === 'compress') { window.dispatchEvent(new CustomEvent('intent:compress', { detail: detail })); } else if (intent === 'convert') { window.dispatchEvent(new CustomEvent('intent:convert', { detail: detail })); } else if (intent === 'grind') { window.dispatchEvent(new CustomEvent('intent:grind', { detail: detail })); } } catch(_){} } } catch(_){} }); } catch(_){}
@@ -2122,7 +2142,7 @@
                         var res = await fetch('/api/balances', { method: 'GET', credentials: 'include' });
                         var data = null;
                         try { data = await res.json(); } catch(_) { data = null }
-                        try { console.log('[SQLite] balances aggregation:', data); } catch(_){}
+                        try { if (window.DEBUG_MODE) console.log('[SQLite] balances aggregation:', data); } catch(_){}
                         try {
                             var bal = (data && data.status==='success' && data.balances && typeof data.balances==='object') ? data.balances : null;
                             if (bal) {
@@ -2270,17 +2290,17 @@
     <script type="module">
       import { AssetBus } from '/shared/local-asset-bus.js';
       
-      // 🛡️ Global init guard (from actly.md)
+      //  Global init guard (from actly.md)
       if (window.__assetbus_initialized) {
           console.warn('[INIT] AssetBus multiple initialization detected and blocked.');
       } else {
           window.__assetbus_initialized = true;
-          console.log('[INIT] AssetBus loaded');
+          if (window.DEBUG_MODE) console.log('[INIT] AssetBus loaded');
           
-          // 🛡️ Signal AssetBus is ready for non-module scripts
+          //  Signal AssetBus is ready for non-module scripts
           window.dispatchEvent(new CustomEvent('assetbus:ready'));
 
-          // 🧠 Ensure Bridge is initialized AFTER AssetBus
+          //  Ensure Bridge is initialized AFTER AssetBus
           if (window.BankodeAssetBusBridge) {
               console.log('[INIT] Bridge detected, re-triggering parent setup');
           }
@@ -2301,7 +2321,7 @@
     <script type="module">
         import { initTranslations } from '/shared/js/translate.js';
         
-        // 🛡️ Global init guard (from actly.md)
+        //  Global init guard (from actly.md)
         if (window.__translations_initialized) {
             console.warn('[INIT] Translations multiple initialization detected.');
         } else {
@@ -2324,26 +2344,38 @@
     <!-- main.js loaded below after acc bridges -->
     <script>
         (function () {
-            // 🔐 YT-Clear Auth Redirect: verify session with server before redirecting
+            //  YT-Clear Auth Redirect: verify session with server before redirecting
+            // [FIX] checkAuth: added 8s timeout, full session wipe (incl. cookie + cache)
             (async function checkAuth() {
                 if (window.location.pathname.includes('login.html')) return;
                 try {
-                    const res = await fetch('/api/auth/me', { credentials: 'include' });
+                    const _ctrl = new AbortController();
+                    const _tid = setTimeout(() => _ctrl.abort(), 8000);
+                    let res;
+                    try {
+                        res = await fetch('/api/auth/me', { credentials: 'include', signal: _ctrl.signal });
+                    } finally {
+                        clearTimeout(_tid);
+                    }
                     if (!res.ok) throw new Error('not_authenticated');
                     const data = await res.json();
                     if (!data || !data.user) throw new Error('no_user');
                     console.log('[AUTH] Session verified:', data.user.username || data.user.id);
                 } catch(e) {
                     console.warn('[AUTH] Session check failed, redirecting to login:', e.message);
+                    // [FIX] Wipe ALL session state to prevent re-entry loop
                     localStorage.removeItem('session_active');
                     localStorage.removeItem('session_token');
                     localStorage.removeItem('user_data');
+                    localStorage.removeItem('__cached_user__');
+                    localStorage.removeItem('__cached_session_id__');
+                    try { document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax'; } catch(_){}
                     window.location.href = '/login.html';
                 }
             })();
 
             try { window.__UV_TRACE__ = Array.isArray(window.__UV_TRACE__) ? window.__UV_TRACE__ : []; } catch(_){}
-            function __uvlog__(type, data, source){ try { var rec = { type: String(type||''), data: data||{}, source: String(source||'unknown'), ts: Date.now() }; window.__UV_TRACE__.push(rec); console.log('[UV]', rec); } catch(_){} }
+            function __uvlog__(type, data, source){ try { var rec = { type: String(type||''), data: data||{}, source: String(source||'unknown'), ts: Date.now() }; window.__UV_TRACE__.push(rec); } catch(_){} }
             try { window.UVLog = __uvlog__ } catch(_){}
             try { window.dumpUVTrace = function(){ try { return (window.__UV_TRACE__||[]).slice() } catch(_){ return [] } } } catch(_){}
             try { window.addEventListener('auth:ready', function(e){ try { __uvlog__('auth:ready', e&&e.detail||{}, 'auth-core') } catch(_){} }); } catch(_){}
@@ -2386,19 +2418,19 @@ document.addEventListener('DOMContentLoaded', async function(){
                     return;
                 }
                 window.ACTIVE_ASSET_TAB = tab;
-                console.log('[UI] Switched to asset tab:', tab);
+                if (window.DEBUG_MODE) console.log('[UI] Switched to asset tab:', tab);
             };
         })();
     </script>
     <script>
         (function () {
-            // 🔹 Safety timeout for loading overlay
+            //  Safety timeout for loading overlay
             setTimeout(() => {
                 const loadingOv = document.getElementById('loading-overlay');
                 if (loadingOv) {
                     loadingOv.classList.remove('active');
                     loadingOv.classList.add('hidden');
-                    console.log("⚠️ Loading overlay hidden by safety timeout");
+                    if (window.DEBUG_MODE) console.log(" Loading overlay hidden by safety timeout");
                 }
             }, 3000); // Reduced to 3s for faster recovery
 
@@ -2409,7 +2441,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                      var ov = document.getElementById('popup-overlay');
                      if (ov) {
                          ov.classList.remove('open');
-                         ov.style.display = 'none'; // 🔹 Force hide
+                         ov.style.display = 'none'; //  Force hide
                      }
                      
                      // Clear messages
@@ -2437,7 +2469,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                         
                         // Send to main CodeBank frame
                         frame.contentWindow.postMessage(authData, '*');
-                        console.log('[AUTH] Sent AUTH_SYNC to CodeBank frame');
+                        if (window.DEBUG_MODE) console.log('[AUTH] Sent AUTH_SYNC to CodeBank frame');
                         
                         // Legacy support
                         frame.contentWindow.postMessage({ type: 'AUTH_CONTEXT', payload: u }, '*'); 
@@ -2496,7 +2528,7 @@ document.addEventListener('DOMContentLoaded', async function(){
         })();
     </script>
     <script>
-        // 🔹 Login Auto-Enable Script (v2 - Robust)
+        //  Login Auto-Enable Script (v2 - Robust)
         (function () {
             function enableLogin() {
                 const initLogin = document.querySelector('#init-login');
@@ -2542,7 +2574,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                     frame.style.zIndex = '2000001';
                 }
 
-                console.log("✅ Login interaction fully restored (v2)");
+                console.log(" Login interaction fully restored (v2)");
             }
 
             // Initialization
@@ -2562,23 +2594,23 @@ document.addEventListener('DOMContentLoaded', async function(){
         })();
     </script>
     <script>
-        // 🔹 AuthCore Ready Transition Script
+        //  AuthCore Ready Transition Script
         (function () {
             window.initAfterLogin = function() {
                 if (window.__INIT_AFTER_LOGIN_CALLED__) return;
                 window.__INIT_AFTER_LOGIN_CALLED__ = true;
                 
-                console.log("🚀 Starting post-login initialization...");
+                if (window.DEBUG_MODE) console.log(" Starting post-login initialization...");
                 
-                // 🔹 إخفاء شاشة التحميل (Loading Overlay)
+                //  إخفاء شاشة التحميل (Loading Overlay)
                 try {
                     const loadingOv = document.getElementById('loading-overlay');
                     if (loadingOv) {
                         loadingOv.classList.remove('active');
                         loadingOv.classList.add('hidden');
-                        loadingOv.style.display = 'none'; // 🔹 Force remove from layout
+                        loadingOv.style.display = 'none'; //  Force remove from layout
                     }
-                    console.log("✅ Loading screen hidden");
+                    if (window.DEBUG_MODE) console.log(" Loading screen hidden");
                 } catch (e) { console.error("Error hiding loading screen:", e); }
 
                 // 1. إخفاء الـ login overlay وحذف فلاتر الـ blur
@@ -2589,18 +2621,18 @@ document.addEventListener('DOMContentLoaded', async function(){
                         ov.classList.remove('open');
                         ov.style.display = 'none';
                     }
-                    console.log("✅ Login overlay hidden");
+                    if (window.DEBUG_MODE) console.log(" Login overlay hidden");
                 } catch (e) { console.error("Error hiding login overlay:", e); }
 
                 // 2. تشغيل محرك البالونات (إذا لم يكن قد بدأ بالفعل)
                 try {
-                    // 🚫 GLOBAL LOCK: Only standalone visual engine is allowed
+                    //  GLOBAL LOCK: Only standalone visual engine is allowed
                     window.__BALLOON_SYSTEM_LOCK__ = true;
-                    console.log("🛡️ Balloon system globally locked (Standalone mode only)");
+                    if (window.DEBUG_MODE) console.log(" Balloon system globally locked (Standalone mode only)");
 
                     const bc = document.getElementById('balloonCanvas');
                     if (bc) {
-                        bc.style.pointerEvents = 'none'; // 🔹 Default to none to allow clicking through
+                        bc.style.pointerEvents = 'none'; //  Default to none to allow clicking through
                     }
 
                     if (window.__YTNEW_RUNTIME__ === "browser" || true) { // Force enable for testing
@@ -2611,18 +2643,18 @@ document.addEventListener('DOMContentLoaded', async function(){
                         } else if (window.APP_AUTH && window.APP_AUTH.user) {
                             userId = window.APP_AUTH.user.id;
                         } else {
-                            userId = 'guest_' + Math.floor(Math.random() * 1000000); // 🔹 Fallback for guests
+                            userId = 'guest_' + Math.floor(Math.random() * 1000000); //  Fallback for guests
                         }
 
                         if (!window.__BALLOON_ENGINE_STARTED__) {
                             const start = () => {
                                 if (window.AdvancedBalloonEngine) {
                                     if (window.__USE_ADVANCED_BALLOONS__) {
-                                        console.log("🎈 Starting Balloon Engine for user:", userId);
+                                        console.log(" Starting Balloon Engine for user:", userId);
                                         new window.AdvancedBalloonEngine(userId);
                                         window.__BALLOON_ENGINE_STARTED__ = true;
                                     } else {
-                                        console.warn("🚫 Advanced engine blocked (Using Standalone only)");
+                                        console.warn(" Advanced engine blocked (Using Standalone only)");
                                     }
                                 } else {
                                     console.warn("⏳ Waiting for AdvancedBalloonEngine to load...");
@@ -2638,13 +2670,13 @@ document.addEventListener('DOMContentLoaded', async function(){
                 // ملاحظة: yt-new-clear تعتمد بشكل أساسي على أحداث DOM و AuthCore
                 window.dispatchEvent(new CustomEvent('yt-clear:ready'));
                 
-                // 🎈 Trigger standalone balloon system after successful login/ready
+                //  Trigger standalone balloon system after successful login/ready
                 if (window.startBalloonSystem) {
                     window.startBalloonSystem();
-                    console.log("🎈 Balloon system triggered after login transition");
+                    if (window.DEBUG_MODE) console.log(" Balloon system triggered after login transition");
                 }
 
-                console.log("✅ yt-new-clear transition complete");
+                if (window.DEBUG_MODE) console.log(" yt-new-clear transition complete");
             };
 
             // الربط مع Auth (auth-core.js defines window.Auth)
@@ -2658,7 +2690,7 @@ document.addEventListener('DOMContentLoaded', async function(){
 
             // الاستماع للحدث auth:ready المنبعث من AuthCore
             window.addEventListener('auth:ready', (e) => {
-                console.log("🔑 Auth Ready Event received:", e.detail);
+                if (window.DEBUG_MODE) console.log(" Auth Ready Event received:", e.detail);
                 if (e.detail && e.detail.authenticated) {
                     window.initAfterLogin();
                     sendAuthContext();
@@ -2667,7 +2699,7 @@ document.addEventListener('DOMContentLoaded', async function(){
 
             // الاستماع للحدث auth:changed (للمزيد من الموثوقية)
             window.addEventListener('auth:changed', (e) => {
-                console.log("🔑 Auth Changed Event received:", e.detail);
+                if (window.DEBUG_MODE) console.log(" Auth Changed Event received:", e.detail);
                 if (e.detail && e.detail.authenticated) {
                     window.initAfterLogin();
                     sendAuthContext();
@@ -2685,7 +2717,7 @@ document.addEventListener('DOMContentLoaded', async function(){
     </script>
     <script src="/codebank/js/balloon-visual-standalone.js"></script>
     
-    <!-- 🚀 Global Lifecycle Controller (from actly.md) -->
+    <!--  Global Lifecycle Controller (from actly.md) -->
     <script src="/acc/acc-client.js"></script>
     <script src="/acc/asset-mirror.js"></script>
     <script src="/acc/transaction-gateway.js"></script>
@@ -2696,7 +2728,7 @@ document.addEventListener('DOMContentLoaded', async function(){
     <script src="/acc/bridges/safecode-bridge.js"></script>
     <script type="module" src="/main.js"></script>
     
-    <!-- 🛡️ Unified UI Handler for Code Display -->
+    <!--  Unified UI Handler for Code Display -->
     <script>
     (function() {
       const codeDisplay = document.getElementById('code-display');
@@ -2707,7 +2739,7 @@ document.addEventListener('DOMContentLoaded', async function(){
       function updateUI(code, source) {
         if (!code || code === lastDisplayedCode) return;
         
-        console.log(`[UI SYNC] Updating #code-display from ${source}:`, code);
+        if (window.DEBUG_MODE) console.log(`[UI SYNC] Updating #code-display from ${source}:`, code);
         codeDisplay.textContent = code;
         lastDisplayedCode = code;
         
@@ -2720,7 +2752,7 @@ document.addEventListener('DOMContentLoaded', async function(){
         const d = e.detail || {};
         let code = null;
 
-        console.log(`[UI SYNC] Event received: ${e.type}`, d);
+        if (window.DEBUG_MODE) console.log(`[UI SYNC] Event received: ${e.type}`, d);
 
         // Try various properties where code might be
         if (typeof d === 'string') code = d;
@@ -2773,7 +2805,7 @@ document.addEventListener('DOMContentLoaded', async function(){
 </html>
 <div id="stopwatch-modal-overlay" aria-hidden="true" role="dialog" style="display:none">
     <div id="stopwatch-modal-frame">
-        <button id="stopwatch-modal-close" aria-label="Close">✖</button>
+        <button id="stopwatch-modal-close" aria-label="Close">&times;</button>
         <div id="stopwatch-modal-content">
             <div id="stopwatch-modal-display">00:00:0</div>
             <div id="stopwatch-modal-controls">
@@ -2802,7 +2834,7 @@ document.addEventListener('DOMContentLoaded', async function(){
 <script>window.__DISABLE_AUTH_FETCH__ = true;</script>
 <script src="/shared/sqlite-adapter.js"></script>
 
-<!-- 🔐 SQLite autosave for assets (Silver / Gold / future assets) -->
+<!--  SQLite autosave for assets (Silver / Gold / future assets) -->
 <script>
 window.addEventListener('assets:updated', (e) => {
   try {

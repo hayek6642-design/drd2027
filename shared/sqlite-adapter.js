@@ -24,14 +24,14 @@
                     locateFile: file => `https://sql.js.org/dist/${file}`
                 });
                 db = new SQL.Database();
-                console.log('[SQLITE] SQL.js initialized');
+                if (window.DEBUG_MODE) console.log('[SQLITE] SQL.js initialized');
             } else if (window.sqlitePlugin) {
                 // Cordova/Capacitor SQLite
                 db = window.sqlitePlugin.openDatabase({
                     name: DB_NAME,
                     location: 'default'
                 });
-                console.log('[SQLITE] Native SQLite initialized');
+                if (window.DEBUG_MODE) console.log('[SQLITE] Native SQLite initialized');
             } else {
                 // Fallback to IndexedDB wrapper
                 console.warn('[SQLITE] No native SQLite, using IndexedDB fallback');
@@ -44,12 +44,12 @@
             window.addEventListener('auth:ready', (e) => {
                 if (e.detail?.userId) {
                     currentUserId = e.detail.userId;
-                    console.log('[SQLITE] Auth ready, userId:', currentUserId);
+                    if (window.DEBUG_MODE) console.log('[SQLITE] Auth ready, userId:', currentUserId);
                     flushQueue();
                 }
             });
 
-            console.log('[SQLITE] Adapter initialized');
+            if (window.DEBUG_MODE) console.log('[SQLITE] Adapter initialized');
             return true;
         } catch (err) {
             console.error('[SQLITE] Init failed:', err);
@@ -98,7 +98,7 @@
             
             // Queue for later if auth not ready
             if (!currentUserId) {
-                console.log('[SQLITE] Queuing for post-auth sync');
+                if (window.DEBUG_MODE) console.log('[SQLITE] Queuing for post-auth sync');
                 syncQueue.push({ ...codeData, retryCount: 0 });
             }
             
@@ -148,7 +148,7 @@
                 // Check why - does code exist with different user?
                 const existing = await querySQL('SELECT * FROM codes WHERE code = ?', [code]);
                 if (existing.length > 0) {
-                    console.log('[SQLITE] Code exists:', existing[0]);
+                    if (window.DEBUG_MODE) console.log('[SQLITE] Code exists:', existing[0]);
                     return { 
                         ok: true,  // Not a failure, just a duplicate
                         saved: 0, 
@@ -161,7 +161,7 @@
                 return { ok: false, error: 'Unknown write failure', saved: 0, code };
             }
 
-            console.log(`[SQLITE SYNC SUCCESS] {saved: ${saved}, code: ${code}, user: ${effectiveUserId}}`);
+            if (window.DEBUG_MODE) console.log(`[SQLITE SYNC SUCCESS] {saved: ${saved}, code: ${code}, user: ${effectiveUserId}}`);
             
             // Publish success event for other components
             publishEvent('sqlite:sync-success', { code, userId: effectiveUserId, saved });
@@ -174,7 +174,7 @@
             // Queue for retry if it's a transient error
             if (isRetryableError(err) && codeData.retryCount < 3) {
                 syncQueue.push({ ...codeData, retryCount: (codeData.retryCount || 0) + 1 });
-                console.log('[SQLITE] Queued for retry, attempt', codeData.retryCount + 1);
+                if (window.DEBUG_MODE) console.log('[SQLITE] Queued for retry, attempt', codeData.retryCount + 1);
             }
             
             return { ok: false, error: err.message, saved: 0, code };
@@ -189,19 +189,19 @@
         // Don't queue if already processing this code
         const exists = syncQueue.find(q => q.code === codeData.code);
         if (exists) {
-            console.log('[SQLITE] Code already in queue:', codeData.code);
+            if (window.DEBUG_MODE) console.log('[SQLITE] Code already in queue:', codeData.code);
             return;
         }
         
         syncQueue.push({ ...codeData, queuedAt: Date.now() });
-        console.log('[SQLITE] Queued:', codeData.code, 'Queue size:', syncQueue.length);
+        if (window.DEBUG_MODE) console.log('[SQLITE] Queued:', codeData.code, 'Queue size:', syncQueue.length);
     }
 
     async function flushQueue() {
         if (isProcessing || syncQueue.length === 0 || !currentUserId) return;
         
         isProcessing = true;
-        console.log('[SQLITE] Flushing queue, items:', syncQueue.length);
+        if (window.DEBUG_MODE) console.log('[SQLITE] Flushing queue, items:', syncQueue.length);
         
         const batch = [...syncQueue];
         syncQueue = []; // Clear before processing to avoid duplicates
@@ -375,7 +375,7 @@
         // Manual retry
         retryFailed: () => {
             const failed = syncQueue.filter(q => q.retryCount > 0);
-            console.log('[SQLITE] Retrying', failed.length, 'failed items');
+            if (window.DEBUG_MODE) console.log('[SQLITE] Retrying', failed.length, 'failed items');
             flushQueue();
         }
     };

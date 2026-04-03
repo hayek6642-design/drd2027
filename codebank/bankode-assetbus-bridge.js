@@ -17,7 +17,7 @@
         if (data) {
             const now = Date.now();
             if (now - _lastPullLog > 1000) { // Debounce logging to 1s
-                console.log(`[Bridge] Direct Pull: Serving ${data.codes?.length || 0} codes.`);
+                if(window.DEBUG_MODE) console.log(`[Bridge] Direct Pull: Serving ${data.codes?.length || 0} codes.`);
                 _lastPullLog = now;
             }
         }
@@ -30,7 +30,7 @@
      */
     window.writeCodeToSQLite = async function(data) {
         const { code } = data;
-        console.log(`[Bridge] Syncing code to server: ${code}`);
+        if (window.DEBUG_MODE) console.log(`[Bridge] Syncing code to server: ${code}`);
         
         try {
             const res = await fetch('/api/codes/sync', {
@@ -43,14 +43,14 @@
             const result = await res.json();
             
             if (res.ok && result.success) {
-                console.log(`✅ [Bridge] Sync SUCCESS: ${code}`);
+                if(window.DEBUG_MODE) console.log(`[Bridge] Sync SUCCESS: ${code}`);
                 // Notify AssetBus to refresh
                 if (window.AssetBus && typeof window.AssetBus.sync === 'function') {
                     window.AssetBus.sync();
                 }
                 return { ok: true };
             } else {
-                console.error(`❌ [Bridge] Sync FAILED: ${result.error || 'Unknown error'}`);
+                console.error(`[Bridge] Sync FAILED: ${result.error || 'Unknown error'}`);
                 return { ok: false, error: result.error };
             }
         } catch (err) {
@@ -59,7 +59,7 @@
         }
     };
 
-    // 🛡️ MODIFIED: Prevent rapid reload loops in iframes (from actly.md)
+    // MODIFIED: Prevent rapid reload loops in iframes (from actly.md)
     let reloadPrevented = false;
     window.addEventListener('beforeunload', (e) => {
         if (reloadPrevented) return;
@@ -82,5 +82,5 @@
         }
     });
 
-    console.log("✅ AssetBridge Agent: Global Provider is ACTIVE.");
+    if (window.DEBUG_MODE) console.log("[AssetBridge] Global Provider is ACTIVE.");
 })(window);

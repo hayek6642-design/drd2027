@@ -29,7 +29,7 @@
  })();
 
 (function(){
-  // 1️⃣ Enforce SINGLETON for Bankode Core
+  // 1 Enforce SINGLETON for Bankode Core
   if (window.__BANKODE_CORE__) {
     if (window.DEBUG_MODE) console.log("BANKODE INSTANCE", window.__BANKODE_CORE__, "(already initialized)");
     return;
@@ -62,11 +62,11 @@
   const FIVE_MIN = 5 * 60 * 1000;
   let __isGenerating = false;
   let __lastGenTime = 0;
-  let syncLock = false; // 2️⃣ Sync Lock
+  let syncLock = false; // 2 Sync Lock
   function canGenerate(){ 
     const now = Date.now(); 
     if (now - __lastGenTime < FIVE_MIN) return false; 
-    // 🛡️ FIX: Don't update __lastGenTime here. Update it in generateIfDue() after actual generation.
+    //  FIX: Don't update __lastGenTime here. Update it in generateIfDue() after actual generation.
     return true; 
   }
 
@@ -75,21 +75,21 @@
     return `${s4()}${s4()}-${s4()}-${s4()}-${s4()}-${s4()}${s4()}${s4()}`;
   }
 
-  // 🧪 DIAGNOSTIC: Track all reload calls (from actly.md)
+  //  DIAGNOSTIC: Track all reload calls (from actly.md)
   (function() {
       window.addEventListener('beforeunload', (e) => {
-          console.trace('🚨 RELOAD TRIGGERED FROM:');
+          console.trace(' RELOAD TRIGGERED FROM:');
       });
 
       const originalReload = location.reload;
       location.reload = function(...args) {
-          console.error('🚨 location.reload() called from:', new Error().stack);
+          console.error(' location.reload() called from:', new Error().stack);
           originalReload.apply(this, args);
       };
 
       const originalReplace = location.replace;
       location.replace = function(...args) {
-          console.error('🚨 location.replace() called with:', args, 'from:', new Error().stack);
+          console.error(' location.replace() called with:', args, 'from:', new Error().stack);
           originalReplace.apply(this, args);
       };
   })();
@@ -101,7 +101,7 @@
 
   function openDB() {
     return new Promise((resolve, reject) => {
-      const req = indexedDB.open(DB_NAME, 4); // 🛡️ UPGRADED VERSION TO MATCH StorageAdapter
+      const req = indexedDB.open(DB_NAME, 4); //  UPGRADED VERSION TO MATCH StorageAdapter
       req.onupgradeneeded = (e) => {
         const db = req.result;
         const oldVersion = e.oldVersion;
@@ -210,7 +210,7 @@
      parts.push(part); 
    } 
  
-   // 🛡️ FIX: Use monotonic generation counter instead of rotating index 
+   //  FIX: Use monotonic generation counter instead of rotating index 
    // This ensures we never go backwards (P2 → P0) 
    let genCount; 
    try { 
@@ -246,7 +246,7 @@
      return generateSecureCode(); 
    } 
    
-   if (window.DEBUG_MODE) console.log(`[Bankode] Generated: ${finalCode} (genCount: ${genCount}, idx: ${idx}, next: ${nextCount})`);
+   if (window.DEBUG_MODE) console.log(`[Bankode] Generated: ${finalCode} (genCount: ${genCount}, idx: ${idx}, next: ${nextCount})`); 
    return finalCode; 
  }
 
@@ -275,16 +275,16 @@
   if (window.__bankodeInitialized) return;
   window.__bankodeInitialized = true;
 
-  // 🛡️ Global Auth Ready Promise
+  //  Global Auth Ready Promise
   window.authReadyPromise = window.authReadyPromise || new Promise((resolve) => {
     window.__resolveAuthReady = resolve;
   });
 
-  // 🛡️ Send Lock
+  //  Send Lock
   window.__sendLock = false;
 
   const Bankode = {
-    _generatedCodes: new Set(), // 🛡️ Prevent session duplicates
+    _generatedCodes: new Set(), //  Prevent session duplicates
     sessionId: null,
     codes: [],
     count: 0,
@@ -331,7 +331,7 @@
               await window.StorageAdapter.saveCode({ code, type: 'codes', meta: { source: 'sync-queue-recovery', syncStatus: 'pending' } });
             } catch(_) {}
           }
-          // console.log('[Bankode] Sync queue codes persisted to IDB');
+          // if (window.DEBUG_MODE) console.log('[Bankode] Sync queue codes persisted to IDB');
         }
         this.publishSnapshot('sync-queue-recovery');
       }
@@ -370,7 +370,7 @@
       
       let code = this.generateAsset(type);
       
-      // 🛡️ DUPLICATE CHECK: Before saving locally via StorageAdapter
+      //  DUPLICATE CHECK: Before saving locally via StorageAdapter
       let attempts = 0;
       const checker = window.StorageAdapter ? window.StorageAdapter.checkDuplicate.bind(window.StorageAdapter) : idbCheckDuplicate;
       while (await checker(code) && attempts < 10) {
@@ -401,7 +401,7 @@
       // 2. Trigger shadow sync (Async)
       this.syncWithServer().catch(_ => {});
 
-      // 📣 Update SSoT state and publish
+      //  Update SSoT state and publish
       this.codes.push(code);
       this.count = this.codes.length;
       await this.publishSnapshot('reward');
@@ -410,7 +410,7 @@
     },
 
     async _initFromStorage(){
-      // 2️⃣ Ensure Bankode restores state only once
+      // 2 Ensure Bankode restores state only once
       if (this.__stateRestored) {
         if (window.DEBUG_MODE) console.log('[Bankode] State already restored, skipping duplicate call');
         return;
@@ -422,9 +422,9 @@
       const meta = ls.get('Bankode.meta', { count: 0, nextDueAt: 0 });
       this._nextDueAt = meta.nextDueAt || 0;
       
-      // 🛡️ SSoT: Load full codes list from IDB on init
+      //  SSoT: Load full codes list from IDB on init
       try {
-        // 🛡️ FIX: Use StorageAdapter if available to avoid DB mismatch (CodeVault vs BankodeDB)
+        //  FIX: Use StorageAdapter if available to avoid DB mismatch (CodeVault vs BankodeDB)
         let all = [];
         if (window.StorageAdapter && typeof window.StorageAdapter.getCodes === 'function') {
           if (window.DEBUG_MODE) console.log('[Bankode] Restoring state via StorageAdapter...');
@@ -445,14 +445,14 @@
 
       await idbPut(STORE_META, 'session', { sessionId });
       
-      // 📣 Publish initial snapshot after state restoration
+      //  Publish initial snapshot after state restoration
       // this.publishSnapshot('init'); // DEFERRED: moved to init() after sync queue merge
     },
 
-    // 📣 Centralized snapshot publishing
+    //  Centralized snapshot publishing
     async publishSnapshot(triggerSource = 'internal') {
       try {
-        // 🛡️ REPEAT UNTIL READY: AssetBus might be late to the party
+        //  REPEAT UNTIL READY: AssetBus might be late to the party
         let attempts = 0;
         while (!window.AssetBus && attempts < 10) {
           await new Promise(r => setTimeout(r, 500));
@@ -460,7 +460,7 @@
         }
 
         if (window.AssetBus && typeof window.AssetBus.update === 'function') {
-          // 🛡️ RE-LOAD FROM IDB: If codes array is empty, force reload from StorageAdapter
+          //  RE-LOAD FROM IDB: If codes array is empty, force reload from StorageAdapter
           if (this.codes.length === 0) {
             if (window.DEBUG_MODE) console.log('[Bankode] Empty codes array during publish, reloading...');
             let all = [];
@@ -480,7 +480,7 @@
           const silverBars = currentCodes.filter(c => String(c).includes('SBAR'));
           const goldBars = currentCodes.filter(c => String(c).includes('GBAR'));
 
-          // 🛡️ GUARANTEE LATEST: Use the absolute last code from internal array
+          //  GUARANTEE LATEST: Use the absolute last code from internal array
           const latestCode = currentCodes[currentCodes.length - 1] || null;
 
           const snapshot = {
@@ -514,13 +514,13 @@
       ls.set('Bankode.meta', { count: this.count, nextDueAt: this._nextDueAt });
       ls.set('Bankode.last', entry);
       
-      // 4️⃣ Ensure IndexedDB writes trigger AssetBus publish
+      // 4 Ensure IndexedDB writes trigger AssetBus publish
       if (window.DEBUG_MODE) console.log('[Bankode] Legacy persist complete, publishing snapshot...');
       await this.publishSnapshot('legacy-persist');
     },
 
     startSession(){
-      // 3️⃣ Prevent Bankode Double Session
+      // 3 Prevent Bankode Double Session
       if (window.__BANKODE_RUNNING__) {
         console.warn("[Bankode] Session already running");
         return;
@@ -640,7 +640,7 @@
     },
 
     async syncWithServer() {
-      // 2️⃣ Prevent Duplicate Delta Sync
+      // 2 Prevent Duplicate Delta Sync
       if (syncLock) {
         console.warn("[Bankode] Sync already running");
         return { status: 'skipped', reason: 'sync_locked' };
@@ -695,7 +695,7 @@
 
         if (res.ok) {
           const data = await res.json();
-          if (window.DEBUG_MODE) console.log('[Bankode] ✅ Delta sync successful. New balance:', data);
+          if (window.DEBUG_MODE) console.log('[Bankode]  Delta sync successful. New balance:', data);
           
           // 5. Mark codes as synced in IDB
           for (const entry of unsynced) {
@@ -715,14 +715,14 @@
           return { status: 'success', balance: data };
         } else {
           const errData = await res.json().catch(() => ({}));
-          console.warn('[Bankode] ❌ Delta sync failed:', res.status, errData.error);
+          console.warn('[Bankode]  Delta sync failed:', res.status, errData.error);
           return { status: 'failed', code: res.status, error: errData.error };
         }
       } catch (err) {
-        console.error('[Bankode] ❌ Delta sync error:', err.message);
+        console.error('[Bankode]  Delta sync error:', err.message);
         return { status: 'error', error: err.message };
       } finally {
-        syncLock = false; // 🛡️ Guarantee lock release
+        syncLock = false; //  Guarantee lock release
       }
     },
 
@@ -730,12 +730,12 @@
     // FINANCIAL INTEGRITY WATCHDOG (FIXED)
     // =====================================================
     runIntegrityWatchdog() {
-      // 🛡️ Singleton guard (from actly.md)
+      //  Singleton guard (from actly.md)
       if (this.__integrityWatchdogRunning || window.__bankode_watchdog_running) return;
       this.__integrityWatchdogRunning = true;
       window.__bankode_watchdog_running = true;
 
-      // ✅ FIXED - Event-driven with backoff (from actly.md)
+      //  FIXED - Event-driven with backoff (from actly.md)
       class LedgerMonitor {
         constructor(bankode) {
           this.bankode = bankode;
@@ -824,7 +824,7 @@
     },
 
     async resyncFromServer() {
-      if (window.DEBUG_MODE) console.log('[RESYNC] Synchronizing client state from authoritative server ledger...');
+      console.log('[RESYNC] Synchronizing client state from authoritative server ledger...');
       // In a ledger-only model, we can't recover full code strings from the server.
       // But we can mark existing ones as synced and align counters.
       // For now, we trigger AssetBus sync to refresh UI counters from server totals.
@@ -896,7 +896,7 @@
         try {
           const idem = tx.id || ('tx_'+Date.now());
           const body = { codes: Array.isArray(tx.codes)?tx.codes: [tx.code || ''], receiverEmail: tx.to };
-          try { if(window.DEBUG_MODE) console.log('[API BODY]', body); } catch(_){}
+          try { console.log('[API BODY]', body); } catch(_){}
           const res = await fetch('/api/send-codes', { method:'POST', headers:{ 'Content-Type':'application/json', 'Idempotency-Key': idem }, credentials:'include', body: JSON.stringify(body) });
           const j = await res.json().catch(()=>({}));
           if (res.ok && j && (j.ok || j.success)) {
@@ -925,13 +925,13 @@
       const extraActive = !!(window.extraModeActive || (document && document.body && document.body.classList.contains('extra-mode')));
       const hasPending = !!(window.ExtraMode && typeof window.ExtraMode.hasPendingReward==='function' && window.ExtraMode.hasPendingReward());
       if (this.isPaused || extraActive || hasPending) {
-        if (window.DEBUG_MODE) console.log('[Bankode] Normal code generation skipped -', this.isPaused ? 'paused' : 'Extra Mode or pending reward');
+        console.log('[Bankode] Normal code generation skipped -', this.isPaused ? 'paused' : 'Extra Mode or pending reward');
         return;
       }
       
       let code = generateNormalCode();
       
-      // 🛡️ SESSION-LEVEL DUPLICATE CHECK
+      //  SESSION-LEVEL DUPLICATE CHECK
       if (this._generatedCodes.has(code)) {
         console.warn('[Bankode] Session duplicate code prevented:', code);
         return; // Skip this tick
@@ -944,11 +944,11 @@
       const localCount = this.codes.length;
       const pendingSyncCount = this._syncQueue.length;
       
-      if (window.DEBUG_MODE) console.log(
+      console.log(
         `[Bankode] Generated: ${code} | total=${genCount} | local=${localCount} | pendingSync=${pendingSyncCount}`
       );
       
-      // 🛡️ DUPLICATE CHECK: Before saving locally via StorageAdapter
+      //  DUPLICATE CHECK: Before saving locally via StorageAdapter
       let genAttempts = 0;
       const genChecker = window.StorageAdapter ? window.StorageAdapter.checkDuplicate.bind(window.StorageAdapter) : idbCheckDuplicate;
       while (await genChecker(code) && genAttempts < 10) {
@@ -975,7 +975,7 @@
       };
       
       try { 
-        if (window.DEBUG_MODE) console.log('[CODE GENERATED]', {
+        console.log('[CODE GENERATED]', { 
           code, 
           codeType: isPP ? 'PP (offline/local)' : 'P0-P9 (sync-capable)',
           suffix: isPP ? 'PP' : code.match(/P[0-9]$/)[0]
@@ -990,7 +990,7 @@
       
       if (isPn && window.writeCodeToSQLite) {
         try {
-          if (window.DEBUG_MODE) console.log('[SQLITE SYNC] Attempting sync for P-code:', code);
+          console.log('[SQLITE SYNC] Attempting sync for P-code:', code);
           
           const writeResult = await window.writeCodeToSQLite({ code, ts: now });
           
@@ -1000,9 +1000,9 @@
             meta.source = 'sqlite';
             meta.syncStatus = 'synced';
             meta.syncedAt = now;
-            if (window.DEBUG_MODE) console.log('[SQLITE SYNC SUCCESS] Code persisted to SQLite:', code);
+            console.log('[SQLITE SYNC SUCCESS] Code persisted to SQLite:', code);
             
-            // 🛡️ UI UPDATE FIX: Emit event immediately after sync
+            //  UI UPDATE FIX: Emit event immediately after sync
             try {
               if (window.BankodeEvents && typeof window.BankodeEvents.emit==='function') {
                 window.BankodeEvents.emit('SQLITE_CODE_SYNCED', { code, userId: this.sessionId, meta });
@@ -1041,7 +1041,7 @@
         meta.persisted = false;
         meta.source = 'local';
         meta.syncStatus = 'local-only';
-        if (window.DEBUG_MODE) console.log('[PP CODE] Local-only, no SQLite sync needed:', code);
+        console.log('[PP CODE] Local-only, no SQLite sync needed:', code);
       }
       
       // =====================================================
@@ -1051,7 +1051,7 @@
       
       if (window.StorageAdapter) {
         await window.StorageAdapter.saveCode({ code, meta }); // Pass as object
-        if (window.DEBUG_MODE) console.log('[BANKODE] Code persisted locally via StorageAdapter', { code, meta });
+        console.log('[BANKODE] Code persisted locally via StorageAdapter', { code, meta });
       } else {
         // Fallback to legacy
         const entry = { id: undefined, code, createdAt: now, meta };
@@ -1064,10 +1064,10 @@
       this.codes.push(code);
       this.count = this.codes.length;
       
-      // 📣 SSoT: Centralized snapshot publication
+      //  SSoT: Centralized snapshot publication
       await this.publishSnapshot('generation');
       
-      // 🛡️ Also dispatch directly for maximum compatibility
+      //  Also dispatch directly for maximum compatibility
       window.dispatchEvent(new CustomEvent('bankode:code-generated', {
         detail: { code, count: this.count, source: 'bankode-core' }
       }));
@@ -1081,12 +1081,12 @@
   Bankode.on = function(fn){ BankodeBus.on(fn); };
   Bankode.emit = function(){ throw new Error('External emit forbidden. Bankode is the sole emitter.'); };
 
-  // 🛡️ INITIALIZATION BOOTSTRAP
+  //  INITIALIZATION BOOTSTRAP
   async function bootstrap(){
     try {
-      // 🧠 WAIT FOR ASSETBUS: Ensure we can publish initial state
+      //  WAIT FOR ASSETBUS: Ensure we can publish initial state
       if (!window.AssetBus) {
-          if (window.DEBUG_MODE) console.log('[Bankode] AssetBus not ready, waiting for assetbus:ready...');
+          console.log('[Bankode] AssetBus not ready, waiting for assetbus:ready...');
           await new Promise(resolve => {
               window.addEventListener('assetbus:ready', resolve, { once: true });
               // Safety timeout
@@ -1095,11 +1095,11 @@
       }
 
       await Bankode.init();
-      // 🛡️ FIX: Start the generation session automatically on bootstrap
+      //  FIX: Start the generation session automatically on bootstrap
       Bankode.startSession();
-      if (window.DEBUG_MODE) console.log('[Bankode] Bootstrap complete');
+      console.log('[Bankode] Bootstrap complete');
       
-      // 🔔 Dispatch ready event for subscribers
+      //  Dispatch ready event for subscribers
       window.dispatchEvent(new CustomEvent('bankode:ready'));
     } catch(e) {
       console.error('[Bankode] Bootstrap failed:', e);
@@ -1118,7 +1118,7 @@
     if (!canGenerate()) return; 
     __isGenerating = true; 
     try { 
-      if (window.DEBUG_MODE) console.log('[Bankode] Generation due! Executing generateIfDue()');
+      console.log('[Bankode] Generation due! Executing generateIfDue()');
       await Bankode.generateIfDue(); 
     } finally { 
       __isGenerating = false; 
@@ -1139,7 +1139,7 @@
   // =====================================================
   try {
     window.addEventListener('online', function() {
-      if (window.DEBUG_MODE) console.log('[NETWORK] Back online - processing sync queue');
+      console.log('[NETWORK] Back online - processing sync queue');
       if (Bankode.processSyncQueue) {
         Bankode.processSyncQueue();
       }
@@ -1148,7 +1148,7 @@
     
     window.addEventListener('auth:ready', function(e) {
       if (navigator.onLine && e && e.detail && e.detail.authenticated) {
-        if (window.DEBUG_MODE) console.log('[AUTH] Ready and online - processing sync queue');
+        console.log('[AUTH] Ready and online - processing sync queue');
         if (Bankode.processSyncQueue) {
           Bankode.processSyncQueue();
         }
