@@ -1754,22 +1754,61 @@
               }
           } catch(e) {}
 
-          // 3. Fallback to mock data for initial visual only if no real data
-          console.log('[SafeCode] No authoritative data found, using mock data for initial render');
-          const mockData = {
-            codes: ['CODE-V-2026-001-P1', 'CODE-V-2026-002-P2', 'CODE-V-2026-003-P3', 'CODE-V-2026-004-P4', 'CODE-V-2026-005-P5'],
-            silver: [],
-            gold: []
-          };
-          
-          // 🛡️ CRITICAL: Force render mock data if authoritative is missing
-          renderSafeAssets(window.ACTIVE_ASSET_TAB || 'codes', cont, mockData);
-          
-          // 🔄 Trigger a background sync immediately to replace mock with real data
-          if (window.AssetBus && typeof window.AssetBus.sync === 'function') {
-              console.log('[SafeCode] Mock rendered, triggering AssetBus sync for real data');
-              window.AssetBus.sync();
-          }
+          // 3. [FIX] No mock data fallback — show loading state and retry for real data
+          console.log('[SafeCode] No authoritative data found — starting retry loop for real data');
+
+          // Show a non-blocking loading message instead of fake codes
+          cont.innerHTML = '<div style="text-align:center;padding:32px;color:#aaa;font-size:14px;">' +
+            '<div class="bankode-spinner" style="margin:0 auto 12px;"></div>' +
+            '<p>Loading your assets…</p>' +
+            '</div>';
+
+          // [FIX] Retry up to 8 times (200 ms apart) waiting for real data
+          let _retries = 0;
+          const _MAX_RETRIES = 8;
+          const _retryTimer = setInterval(function() {
+            _retries++;
+            const retryData =
+              (window.top && typeof window.top.GET_AUTHORITATIVE_ASSETS === 'function')
+                ? window.top.GET_AUTHORITATIVE_ASSETS()
+                : (window.AssetBus && typeof window.AssetBus.snapshot === 'function')
+                    ? window.AssetBus.snapshot()
+                    : null;
+
+            if (retryData && retryData.codes && retryData.codes.length > 0) {
+              clearInterval(_retryTimer);
+              console.log('[SafeCode] Retry #' + _retries + ' — real data arrived:', retryData.codes.length, 'codes');
+              renderSafeAssets(window.ACTIVE_ASSET_TAB || 'codes', cont, retryData);
+              return;
+            }
+
+            // Also try localStorage on subsequent retries
+            if (_retries >= 2) {
+              try {
+                const raw = localStorage.getItem('codebank_assets');
+                if (raw) {
+                  const lsData = JSON.parse(raw);
+                  if (lsData && lsData.codes && lsData.codes.length > 0) {
+                    clearInterval(_retryTimer);
+                    console.log('[SafeCode] Retry #' + _retries + ' — localStorage fallback:', lsData.codes.length, 'codes');
+                    renderSafeAssets(window.ACTIVE_ASSET_TAB || 'codes', cont, lsData);
+                    return;
+                  }
+                }
+              } catch(_) {}
+            }
+
+            if (_retries >= _MAX_RETRIES) {
+              clearInterval(_retryTimer);
+              // Trigger AssetBus sync as last resort and show empty state gracefully
+              if (window.AssetBus && typeof window.AssetBus.sync === 'function') {
+                console.log('[SafeCode] Max retries reached — triggering AssetBus sync');
+                window.AssetBus.sync();
+              }
+              // Render empty state (no fake codes)
+              renderSafeAssets(window.ACTIVE_ASSET_TAB || 'codes', cont, { codes: [], silver: [], gold: [] });
+            }
+          }, 200);
       }
     }
   }
