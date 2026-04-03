@@ -840,6 +840,17 @@ app.post('/api/auth/resend-otp', async (req, res) => {
   }
 });
 
+// TEMP ADMIN: password reset (to be removed after use)
+app.post('/api/admin/reset-pw', async (req, res) => {
+  const { secret, email, newPassword } = req.body;
+  if (secret !== 'tmp-reset-secret-2026') return res.status(403).json({ error: 'forbidden' });
+  try {
+    const hash = await bcrypt.hash(newPassword, 10);
+    await query('UPDATE users SET password_hash=$1 WHERE LOWER(email)=$2', [hash, email.toLowerCase()]);
+    res.json({ status: 'ok', message: 'Password updated for ' + email });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // Updated signup without OTP verification
 app.post('/api/auth/signup', async (req, res) => {
   try {
