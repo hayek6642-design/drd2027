@@ -13,37 +13,37 @@ if (process.env.FIREBASE_ENABLED === 'true' && process.env.FIREBASE_PRIVATE_KEY)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 🛡️ Secure Database Path & Directory
+// [SECURITY] Secure Database Path & Directory
 const DATA_DIR = path.join(__dirname, 'data');
 fs.ensureDirSync(DATA_DIR);
 
 // Use Turso if configured, otherwise local SQLite
 const tursoUrl = process.env.TURSO_URL || process.env.TURSO_DATABASE_URL;
 if (tursoUrl) {
-  process.env.DATABASE_URL = tursoUrl; // 🛡️ UNIFY: Set DATABASE_URL for Turso too
-  console.log(`🚀 [DB] Using Turso Database: ${tursoUrl.split('@').pop()}`); // Log domain only for security
+  process.env.DATABASE_URL = tursoUrl; // [SECURITY] UNIFY: Set DATABASE_URL for Turso too
+  console.log(`[INFO] [DB] Using Turso Database: ${tursoUrl.split('@').pop()}`); // Log domain only for security
 } else {
   const DB_PATH = process.env.DATABASE_URL?.replace('sqlite://', '') || path.join(DATA_DIR, 'database.sqlite');
   if (DB_PATH.startsWith('postgres')) {
-    console.warn('⚠️ [DB] WARNING: DATABASE_URL is set to PostgreSQL but Turso is not configured. This may cause issues if the app expects SQLite.');
+    console.warn('[WARN] [DB] WARNING: DATABASE_URL is set to PostgreSQL but Turso is not configured. This may cause issues if the app expects SQLite.');
   }
   process.env.DATABASE_URL = `sqlite://${DB_PATH}`;
-  console.log(`🚀 [DB] Using absolute database path: ${DB_PATH}`);
+  console.log(`[INFO] [DB] Using absolute database path: ${DB_PATH}`);
 }
 
 const PORT = process.env.PORT || 3001;
 
 // Global error handlers with enhanced logging
 process.on('uncaughtException', (err) => {
-  console.error('💥 [CRITICAL] UNCAUGHT EXCEPTION:', err.message);
+  console.error('[CRASH] [CRITICAL] UNCAUGHT EXCEPTION:', err.message);
   console.error(err.stack);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('💥 [CRITICAL] UNHANDLED REJECTION at:', promise, 'reason:', reason);
+  console.error('[CRASH] [CRITICAL] UNHANDLED REJECTION at:', promise, 'reason:', reason);
 });
 
-console.log("🚀 SEND-CODES VERSION: CLEAN V2");
+console.log("[INFO] SEND-CODES VERSION: CLEAN V2");
 
 import express from 'express';
 import { Server } from 'socket.io';
@@ -98,7 +98,7 @@ import {
   resendOTP 
 } from './hybrid-otp-service.js';
 
-// 🛡️ Security Middleware
+// [SECURITY] Security Middleware
 import { requireAuth, devSessions } from './api/middleware/auth.js';
 import { enforceFinancialSecurity, enforceWatchDog, storeIdempotencyResponse } from './shared/security-middleware.js';
 
@@ -286,10 +286,10 @@ cloudinary.v2.config({
 // Middleware
 // Helmet removed
 
-// 🛡️ CRITICAL: CORS must be configured properly (from actly.md)
+// [SECURITY] CRITICAL: CORS must be configured properly (from actly.md)
 app.use(cors({
   origin: ['http://localhost:3001', 'http://127.0.0.1:3001', 'http://localhost:3000', 'http://127.0.0.1:3000'],
-  credentials: true,  // 🛡️ CRITICAL: Allow cookies
+  credentials: true,  // [SECURITY] CRITICAL: Allow cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
@@ -299,9 +299,16 @@ app.options('*', cors());
 
 app.use(cookieParser());
 
-// 🛡️ Debug logging middleware - add this FIRST (from actly.md)
+// Request logging middleware (logs after response completes with status code)
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`, req.body);
+  const start = Date.now();
+  res.on('finish', () => {
+    const ms = Date.now() - start;
+    // Only log API calls and page navigations, skip static assets
+    if (req.path.startsWith('/api/') || req.path.endsWith('.html') || req.path === '/') {
+      console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} ${res.statusCode} ${ms}ms`);
+    }
+  });
   next();
 });
 
@@ -867,7 +874,7 @@ app.post('/api/auth/signup', async (req, res) => {
       });
     }
 
-    // 🛡️ MODIFIED: Clear any existing sessions for this email to prevent stale session conflicts
+    // [SECURITY] MODIFIED: Clear any existing sessions for this email to prevent stale session conflicts
     for (const [sid, sess] of devSessions.entries()) {
       if (sess.email === email) {
         devSessions.delete(sid);
@@ -890,7 +897,7 @@ app.post('/api/auth/signup', async (req, res) => {
       throw new Error("User creation failed");
     }
 
-    // 🛡️ MODIFIED: Ensure user is registered in the UsersManager/Ledger if needed
+    // [SECURITY] MODIFIED: Ensure user is registered in the UsersManager/Ledger if needed
     try {
       if (global.UsersManager && typeof global.UsersManager.registerUser === 'function') {
         await global.UsersManager.registerUser(created);
@@ -918,7 +925,7 @@ app.post('/api/auth/signup', async (req, res) => {
     // Set cookie
     const isProduction = process.env.NODE_ENV === 'production';
     res.cookie('session_token', newSessionId, {
-      httpOnly: false, // 🛡️ MODIFIED: Allow client-side JS to see the cookie for redirection logic
+      httpOnly: false, // [SECURITY] MODIFIED: Allow client-side JS to see the cookie for redirection logic
       path: '/',
       sameSite: 'lax',
       secure: isProduction,
@@ -952,14 +959,14 @@ app.post('/api/auth/signup', async (req, res) => {
 
 app.post('/api/auth/login', async (req, res) => {
   try {
-    console.log("🔥 [LOGIN ATTEMPT] BODY:", req.body);
+    console.log("[LOGIN ATTEMPT] BODY:", req.body);
     const { email, password } = req.body || {};
     if (!email || !password) return res.status(400).json({ status: 'failed', error: 'Email and password required' });
 
     // Check in database or memory
     const u = process.env.DATABASE_URL ? await sqliteFindUserByEmail(email) : memFindUserByEmail(email);
 
-    console.log("🔍 [LOGIN] User lookup result:", {
+    console.log("[SEARCH] [LOGIN] User lookup result:", {
         found: !!u,
         hasPasswordHash: !!(u && u.password_hash),
         userId: u?.id,
@@ -967,31 +974,31 @@ app.post('/api/auth/login', async (req, res) => {
     });
 
     if (!u) {
-      console.warn("⚠️ [LOGIN] User not found:", email);
+      console.warn("[WARN] [LOGIN] User not found:", email);
       return res.status(401).json({ status: 'failed', error: 'Invalid credentials' });
     }
 
     // Verify password
     if (!u.password_hash) {
-      console.error("❌ [LOGIN] User account has no password hash:", email);
+      console.error("[ERROR] [LOGIN] User account has no password hash:", email);
       return res.status(500).json({ status: 'failed', error: 'Account corrupted' });
     }
 
-    // 🔧 FIX: Ensure password_hash is a string and handle PHP bcrypt format ($2y$ -> $2a$)
+    // [FIX] FIX: Ensure password_hash is a string and handle PHP bcrypt format ($2y$ -> $2a$)
     let storedHash = String(u.password_hash).trim();
     if (storedHash.startsWith('$2y$')) {
       storedHash = '$2a$' + storedHash.substring(4);
-      console.log("🔄 [LOGIN] Normalized PHP bcrypt hash to $2a$ format");
+      console.log("[SYNC] [LOGIN] Normalized PHP bcrypt hash to $2a$ format");
     }
     const inputPassword = String(password).trim();
 
-    console.log("🔐 [LOGIN] Attempting password comparison...");
+    console.log("[CODE] [LOGIN] Attempting password comparison...");
     const ok = await bcrypt.compare(inputPassword, storedHash);
 
-    console.log("🔐 [LOGIN] Password comparison result:", ok);
+    console.log("[CODE] [LOGIN] Password comparison result:", ok);
 
     if (!ok) {
-      console.warn("⚠️ [LOGIN] Password mismatch for user:", email);
+      console.warn("[WARN] [LOGIN] Password mismatch for user:", email);
       return res.status(401).json({ status: 'failed', error: 'Invalid credentials' });
     }
 
@@ -1009,7 +1016,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Set cookie
     res.cookie('session_token', sessionId, {
-      httpOnly: false, // 🛡️ MODIFIED: Allow client-side JS to see the cookie for redirection logic
+      httpOnly: false, // [SECURITY] MODIFIED: Allow client-side JS to see the cookie for redirection logic
       path: '/',
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
@@ -1019,7 +1026,7 @@ app.post('/api/auth/login', async (req, res) => {
     console.log('[AUTH] Login success - userId:', u.id, 'sessionId:', sessionId);
     return res.json({ status: 'success', userId: u.id, token, sessionId });
   } catch (err) {
-    console.error('🔥 [LOGIN ERROR]:', err);
+    console.error('[LOGIN ERROR]:', err);
     return res.status(500).json({ status: 'failed', error: 'Login failed' });
   }
 });
@@ -1121,7 +1128,7 @@ app.get('/api/sqlite/ledger', requireAuth, async (req, res) => {
       return res.status(403).json({ status: 'failed', error: 'unauthorized_access' })
     }
     
-    // 🛡️ MODIFIED: Add a small delay to prevent rapid polling spam (from actly.md)
+    // [SECURITY] MODIFIED: Add a small delay to prevent rapid polling spam (from actly.md)
     // await new Promise(r => setTimeout(r, 100));
 
     const r = await query(`SELECT * FROM ledger WHERE user_id=$1 ORDER BY created_at DESC LIMIT 100`, [uid])
@@ -1307,7 +1314,7 @@ app.use('/src', express.static(path.join(__dirname, 'services/codebank/src'), {
 app.get(['/', '/yt-new-clear.html'], (req, res) => {
   const session = readSessionFromCookie(req);
   if (!session || !session.userId) {
-    // 🛡️ FIX: Clear stale cookie to break client-side redirect loops
+    // [SECURITY] FIX: Clear stale cookie to break client-side redirect loops
     if (req.cookies && req.cookies.session_token) {
       res.clearCookie('session_token', { path: '/' });
     }
@@ -1324,7 +1331,7 @@ app.get(['/', '/yt-new-clear.html'], (req, res) => {
   res.sendFile(path.join(__dirname, 'yt-new-clear.html'));
 });
 
-// 🛡️ Serve Lifecycle files (Explicitly)
+// [SECURITY] Serve Lifecycle files (Explicitly)
 app.get('/main.js', (req, res) => res.sendFile(path.join(__dirname, 'main.js')));
 app.get('/core/app-lifecycle.js', (req, res) => res.sendFile(path.join(__dirname, 'core/app-lifecycle.js')));
 
@@ -1381,7 +1388,7 @@ app.get('/yt-coder', (req, res) => {
 app.get(['/yt-simple', '/yt-new', '/yt-new.html'], (req, res) => {
   const session = readSessionFromCookie(req);
   if (!session || !session.userId) {
-    // 🛡️ FIX: Clear stale cookie to break client-side redirect loops
+    // [SECURITY] FIX: Clear stale cookie to break client-side redirect loops
     if (req.cookies && req.cookies.session_token) {
       res.clearCookie('session_token', { path: '/' });
     }
@@ -1472,7 +1479,7 @@ async function autoCompressUserCodes(userId) {
           [crypto.randomUUID(), userId, silverCode]
         );
         await client.query('COMMIT');
-        console.log(`✅ [COMPRESSION] Compressed 100 normal codes to 1 silver for user ${userId}`);
+        console.log(`[OK] [COMPRESSION] Compressed 100 normal codes to 1 silver for user ${userId}`);
         
         // Recursive check for silver -> gold
         await autoCompressUserCodes(userId); 
@@ -1507,14 +1514,14 @@ async function autoCompressUserCodes(userId) {
           [crypto.randomUUID(), userId, goldCode]
         );
         await client.query('COMMIT');
-        console.log(`✅ [COMPRESSION] Compressed 10 silver codes to 1 gold for user ${userId}`);
+        console.log(`[OK] [COMPRESSION] Compressed 10 silver codes to 1 gold for user ${userId}`);
       } catch (e) {
         await client.query('ROLLBACK');
         throw e;
       }
     }
   } catch (err) {
-    console.error('❌ [COMPRESSION ERROR]', err.message);
+    console.error('[ERROR] [COMPRESSION ERROR]', err.message);
   }
 }
 
@@ -1577,13 +1584,13 @@ app.post('/api/sync', requireAuth, async (req, res) => {
         [d_codes, d_silver, d_gold, userId]
       );
 
-      // 🛡️ Also update the 'balances' table to stay in sync
+      // [SECURITY] Also update the 'balances' table to stay in sync
       await client.query(
         "INSERT INTO balances (user_id, codes_count, silver_count, gold_count, updated_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO UPDATE SET codes_count = codes_count + EXCLUDED.codes_count, silver_count = silver_count + EXCLUDED.silver_count, gold_count = gold_count + EXCLUDED.gold_count, updated_at = CURRENT_TIMESTAMP",
         [userId, d_codes, d_silver, d_gold]
       );
 
-      // 🛡️ RECORD IN LEDGER: So items show up in the SafeCode list
+      // [SECURITY] RECORD IN LEDGER: So items show up in the SafeCode list
       if (d_codes > 0) {
         await client.query(
           "INSERT INTO ledger (tx_id, user_id, direction, asset_type, amount, reference) VALUES ($1, $2, 'credit', 'codes', $3, 'sync')",
@@ -1623,7 +1630,7 @@ app.post('/api/sync', requireAuth, async (req, res) => {
 
     return res.json({ status: 'success', synced_at: Date.now() });
   } catch (err) {
-    console.error('🔥 [SYNC ERROR]:', err);
+    console.error('[ALERT] [SYNC ERROR]:', err);
     return res.status(500).json({ status: 'failed', error: err.message });
   }
 });
@@ -1663,7 +1670,7 @@ app.get('/api/assets/balance', requireAuth, async (req, res) => {
 app.get(['/yt-clear', '/yt-clear/yt-new-clear.html'], (req, res) => {
   const session = readSessionFromCookie(req);
   if (!session || !session.userId) {
-    // 🛡️ FIX: Clear stale cookie to break client-side redirect loops
+    // [SECURITY] FIX: Clear stale cookie to break client-side redirect loops
     if (req.cookies && req.cookies.session_token) {
       res.clearCookie('session_token', { path: '/' });
     }
@@ -1814,7 +1821,7 @@ app.get('/login.html', (req, res) => {
 // Public health/version endpoints
 app.get('/api/health', (req, res) => { res.status(404).end() });
 app.get('/api/reconcile', (req, res) => {
-  // 🛡️ HOLE 7 FIX: Remove dangerous client-authoritative reconciliation
+  // [SECURITY] HOLE 7 FIX: Remove dangerous client-authoritative reconciliation
   return res.status(403).json({ status: 'failed', error: 'dangerous_operation_blocked', message: 'Client cannot send ledger values to server.' });
 });
 
@@ -1841,7 +1848,7 @@ app.get('/api/rewards/balance', requireAuth, async (req, res) => {
     const { userId } = session;
     
     if (process.env.DATABASE_URL) {
-      // 🛡️ ARCHITECTURE ALIGNMENT: Fetch counts only from users table
+      // [SECURITY] ARCHITECTURE ALIGNMENT: Fetch counts only from users table
       const result = await dbQuery(
         "SELECT COALESCE(codes_count, 0) as codes, COALESCE(silver_count, 0) as silver, COALESCE(gold_count, 0) as gold FROM users WHERE id = $1::uuid",
         [userId]
@@ -1872,7 +1879,7 @@ app.get('/api/rewards/balance', requireAuth, async (req, res) => {
 app.get('/api/rewards', (req, res) => { res.status(404).end() })
 
 app.post('/api/telemetry', (req, res) => {
-  try { console.error('📡 TELEMETRY', req.body) } catch (_) { }
+  try { console.error('[SIGNAL] TELEMETRY', req.body) } catch (_) { }
   res.sendStatus(204)
 })
 
@@ -1944,7 +1951,7 @@ app.post('/api/sqlite/codes', async (req, res) => {
         [userId]
       );
 
-      // 🛡️ ARCHITECTURE FIX: Actually persist the code string to the codes table
+      // [SECURITY] ARCHITECTURE FIX: Actually persist the code string to the codes table
       // This ensures the GET /api/sqlite/codes endpoint can return the actual codes
       await query(
         "INSERT INTO codes (id, user_id, code, type, created_at) VALUES ($1, $2, $3, 'codes', CURRENT_TIMESTAMP)",
@@ -1976,7 +1983,7 @@ app.get('/api/codes/list', requireAuth, async (req, res) => {
   try { 
     const userId = req.user.id;
 
-    // 🛡️ ARCHITECTURE RESTORATION: Return actual codes for SafeCode rendering
+    // [SECURITY] ARCHITECTURE RESTORATION: Return actual codes for SafeCode rendering
     const userRes = await query(
       "SELECT COALESCE(codes_count, 0) as count, COALESCE(silver_count, 0) as silver, COALESCE(gold_count, 0) as gold FROM users WHERE id = $1",
       [userId]
@@ -2045,7 +2052,7 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
   if (!receiverEmail) return res.status(400).json({ success: false, error: 'MISSING_RECEIVER' });
   if (amount <= 0) return res.status(400).json({ success: false, error: 'NO_ASSETS_PROVIDED' });
 
-  // 🛡️ STEP 0: WATCHDOG AI RISK ANALYSIS
+  // [SECURITY] STEP 0: WATCHDOG AI RISK ANALYSIS
   const riskAnalysis = WatchdogAI.evaluateRisk(fromUserId);
   if (riskAnalysis.decision !== 'ALLOW') {
     console.warn(`[AUDIT] [WATCHDOG_BLOCK] user=${fromUserId} | decision=${riskAnalysis.decision} | reason=${riskAnalysis.reasons}`);
@@ -2075,7 +2082,7 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
     // 2. ATOMIC LOCKING & TRANSACTION
     await client.query('BEGIN');
     try {
-      // 🛡️ STEP 1: IDEMPOTENCY BINDING (Inside transaction)
+      // [SECURITY] STEP 1: IDEMPOTENCY BINDING (Inside transaction)
       const idempRes = await client.query(
         "INSERT INTO processed_transactions (tx_id) VALUES ($1) ON CONFLICT DO NOTHING",
         [transactionId]
@@ -2087,7 +2094,7 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
         return res.json({ success: true, message: 'ALREADY_PROCESSED', txId: transactionId });
       }
 
-      // 🛡️ STEP 2: PRE-TRANSACTION BALANCE SNAPSHOT
+      // [SECURITY] STEP 2: PRE-TRANSACTION BALANCE SNAPSHOT
       const preSnapshot = await client.query(
         `SELECT id, ${balanceField} FROM users WHERE id IN ($1, $2)`,
         [fromUserId, toUserId]
@@ -2099,7 +2106,7 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
         throw new Error('INSUFFICIENT_BALANCE');
       }
 
-      // 🛡️ STEP 3: OWNERSHIP TRANSFER
+      // [SECURITY] STEP 3: OWNERSHIP TRANSFER
       if (assetType === 'codes') {
         let transferredCount = 0;
         for (const code of codes) {
@@ -2119,7 +2126,7 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
         }
       }
 
-      // 🛡️ STEP 4: BALANCE UPDATES
+      // [SECURITY] STEP 4: BALANCE UPDATES
       const senderBalanceRes = await client.query(
         `UPDATE users SET ${balanceField} = ${balanceField} - $1 WHERE id = $2 AND ${balanceField} >= $1 RETURNING ${balanceField}`,
         [amount, fromUserId]
@@ -2138,7 +2145,7 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
         throw new Error('RECEIVER_BALANCE_UPDATE_FAILED');
       }
 
-      // 🛡️ STEP 5: POST-TRANSACTION SNAPSHOT VERIFICATION
+      // [SECURITY] STEP 5: POST-TRANSACTION SNAPSHOT VERIFICATION
       const postSnapshot = await client.query(
         `SELECT id, ${balanceField} FROM users WHERE id IN ($1, $2)`,
         [fromUserId, toUserId]
@@ -2151,7 +2158,7 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
         throw new Error('BALANCE_INTEGRITY_VIOLATION');
       }
 
-      // 🛡️ STEP 6: RECORD LEDGER
+      // [SECURITY] STEP 6: RECORD LEDGER
       await client.query(
         "INSERT INTO ledger (tx_id, user_id, direction, asset_type, amount, reference) VALUES ($1, $2, 'debit', $3, $4, 'transfer_out')",
         [transactionId, fromUserId, assetType, amount]
@@ -2163,7 +2170,7 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
 
       await client.query('COMMIT');
       
-      // 🛡️ WATCHDOG AI SUCCESS TRACKING
+      // [SECURITY] WATCHDOG AI SUCCESS TRACKING
       WatchdogAI.trackSuccess(fromUserId, 'TRANSFER');
       
       console.log(`[AUDIT] [SUCCESS] txId=${transactionId} | sender=${fromUserId} | receiver=${toUserId} | amount=${amount} | asset=${assetType}`);
@@ -2178,7 +2185,7 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
     } catch (txError) {
       await client.query('ROLLBACK');
       
-      // 🛡️ WATCHDOG AI FAILURE TRACKING
+      // [SECURITY] WATCHDOG AI FAILURE TRACKING
       WatchdogAI.trackFailure(fromUserId, txError.message);
       
       console.error(`[AUDIT] [FAIL] txId=${transactionId} | error=${txError.message}`);
@@ -2314,7 +2321,7 @@ app.get('/api/sqlite/diag', async (req, res) => {
 })
 
 // Watch-Dog Guardian API Endpoints
-// 🛡️ PROTECTOR: Enforcer | Gatekeeper | Security Layer
+// [SECURITY] PROTECTOR: Enforcer | Gatekeeper | Security Layer
 
 // Tables initialization - disabled due to startup crashes
 // Tables will be created on first API call instead
@@ -2340,7 +2347,7 @@ app.post('/api/watchdog/feed', requireAuth, enforceFinancialSecurity, async (req
     }
     
     if (result.success) {
-      console.log(`[WATCHDOG] ✅ Dog fed for user ${userId}, cost: ${result.cost} codes`)
+      console.log(`[WATCHDOG] [OK] Dog fed for user ${userId}, cost: ${result.cost} codes`)
       return res.json({ 
         success: true, 
         cost: result.cost, 
@@ -3370,7 +3377,7 @@ app.post('/api/transactions', async (req, res) => {
 // New endpoint for Samma3ny with direct Cloudinary fetch
 app.get('/api/samma3ny/list', async (req, res) => {
   try {
-    console.log('🔄 Fetching Samma3ny songs with direct Cloudinary API call...');
+    console.log('[SYNC] Fetching Samma3ny songs with direct Cloudinary API call...');
 
     const CLOUDINARY_CLOUD = process.env.CLOUDINARY_CLOUD_NAME || 'dhpyneqgk';
     const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || '799518422494748';
@@ -3393,11 +3400,11 @@ app.get('/api/samma3ny/list', async (req, res) => {
     const data = await response.json();
     const files = data.resources || [];
 
-    console.log(`✅ Direct fetch: Found ${files.length} resources in samma3ny/ folder`);
+    console.log(`[OK] Direct fetch: Found ${files.length} resources in samma3ny/ folder`);
 
     res.json({ ok: true, files });
   } catch (error) {
-    console.error('❌ Direct Cloudinary fetch error:', error.message);
+    console.error('[ERROR] Direct Cloudinary fetch error:', error.message);
     res.status(500).json({ ok: false, error: error.message });
   }
 });
@@ -3417,7 +3424,7 @@ app.post('/api/samma3ny/upload', upload.any(), async (req, res) => {
       });
     }
 
-    console.log(`📤 Starting bulk upload for ${files.length} Samma3ny files`);
+    console.log(`[SEND] Starting bulk upload for ${files.length} Samma3ny files`);
 
     const uploadResults = [];
     const errors = [];
@@ -3430,7 +3437,7 @@ app.post('/api/samma3ny/upload', upload.any(), async (req, res) => {
       const fileIndex = i + 1;
 
       try {
-        console.log(`📤 Processing file ${fileIndex}/${files.length}: ${file.originalname}`);
+        console.log(`[SEND] Processing file ${fileIndex}/${files.length}: ${file.originalname}`);
 
         // Validate file type
         if (!file.mimetype.startsWith('audio/')) {
@@ -3516,10 +3523,10 @@ app.post('/api/samma3ny/upload', upload.any(), async (req, res) => {
           uploadResults.push(uploadResult);
           successCount++;
 
-          console.log(`✅ Successfully uploaded: ${file.originalname} (${formatFileSize(result.bytes)})`);
+          console.log(`[OK] Successfully uploaded: ${file.originalname} (${formatFileSize(result.bytes)})`);
 
         } catch (uploadError) {
-          console.error(`❌ Cloudinary upload failed for ${file.originalname}:`, uploadError.message);
+          console.error(`[ERROR] Cloudinary upload failed for ${file.originalname}:`, uploadError.message);
 
           // Fallback to local storage
           try {
@@ -3556,10 +3563,10 @@ app.post('/api/samma3ny/upload', upload.any(), async (req, res) => {
             uploadResults.push(uploadResult);
             successCount++;
 
-            console.log(`⚠️ Uploaded locally: ${file.originalname}`);
+            console.log(`[WARN] Uploaded locally: ${file.originalname}`);
 
           } catch (localError) {
-            console.error(`❌ Local storage failed for ${file.originalname}:`, localError.message);
+            console.error(`[ERROR] Local storage failed for ${file.originalname}:`, localError.message);
             errors.push({
               file: file.originalname,
               error: 'Upload failed',
@@ -3575,7 +3582,7 @@ app.post('/api/samma3ny/upload', upload.any(), async (req, res) => {
         }
 
       } catch (fileError) {
-        console.error(`❌ Error processing ${file.originalname}:`, fileError.message);
+        console.error(`[ERROR] Error processing ${file.originalname}:`, fileError.message);
         errors.push({
           file: file.originalname,
           error: 'Processing failed',
@@ -3601,16 +3608,16 @@ app.post('/api/samma3ny/upload', upload.any(), async (req, res) => {
     };
 
     // Log summary
-    console.log(`📊 Bulk upload completed: ${successCount}/${files.length} files successful`);
+    console.log(`[STATS] Bulk upload completed: ${successCount}/${files.length} files successful`);
 
     if (successCount > 0) {
-      console.log('🎵 New songs are now available in the playlist');
+      console.log('[MUSIC] New songs are now available in the playlist');
     }
 
     res.json(response);
 
   } catch (error) {
-    console.error('❌ Bulk upload error:', error);
+    console.error('[ERROR] Bulk upload error:', error);
     res.status(500).json({
       error: 'Bulk upload service error',
       message: error.message,
@@ -3678,7 +3685,7 @@ app.post('/api/farragna/upload', upload.any(), async (req, res) => {
       });
     }
 
-    console.log(`📤 Starting bulk upload for ${files.length} Farragna files`);
+    console.log(`[SEND] Starting bulk upload for ${files.length} Farragna files`);
 
     const uploadResults = [];
     const errors = [];
@@ -3691,7 +3698,7 @@ app.post('/api/farragna/upload', upload.any(), async (req, res) => {
       const fileIndex = i + 1;
 
       try {
-        console.log(`📤 Processing file ${fileIndex}/${files.length}: ${file.originalname}`);
+        console.log(`[SEND] Processing file ${fileIndex}/${files.length}: ${file.originalname}`);
 
         // Validate file type
         if (!file.mimetype.startsWith('video/')) {
@@ -3777,10 +3784,10 @@ app.post('/api/farragna/upload', upload.any(), async (req, res) => {
           uploadResults.push(uploadResult);
           successCount++;
 
-          console.log(`✅ Successfully uploaded: ${file.originalname} (${formatFileSize(result.bytes)})`);
+          console.log(`[OK] Successfully uploaded: ${file.originalname} (${formatFileSize(result.bytes)})`);
 
         } catch (uploadError) {
-          console.error(`❌ Cloudinary upload failed for ${file.originalname}:`, uploadError.message);
+          console.error(`[ERROR] Cloudinary upload failed for ${file.originalname}:`, uploadError.message);
 
           // Fallback to local storage
           try {
@@ -3818,10 +3825,10 @@ app.post('/api/farragna/upload', upload.any(), async (req, res) => {
             uploadResults.push(uploadResult);
             successCount++;
 
-            console.log(`⚠️ Uploaded locally: ${file.originalname}`);
+            console.log(`[WARN] Uploaded locally: ${file.originalname}`);
 
           } catch (localError) {
-            console.error(`❌ Local storage failed for ${file.originalname}:`, localError.message);
+            console.error(`[ERROR] Local storage failed for ${file.originalname}:`, localError.message);
             errors.push({
               file: file.originalname,
               error: 'Upload failed',
@@ -3837,7 +3844,7 @@ app.post('/api/farragna/upload', upload.any(), async (req, res) => {
         }
 
       } catch (fileError) {
-        console.error(`❌ Error processing ${file.originalname}:`, fileError.message);
+        console.error(`[ERROR] Error processing ${file.originalname}:`, fileError.message);
         errors.push({
           file: file.originalname,
           error: 'Processing failed',
@@ -3863,16 +3870,16 @@ app.post('/api/farragna/upload', upload.any(), async (req, res) => {
     };
 
     // Log summary
-    console.log(`📊 Bulk upload completed: ${successCount}/${files.length} files successful`);
+    console.log(`[STATS] Bulk upload completed: ${successCount}/${files.length} files successful`);
 
     if (successCount > 0) {
-      console.log('🎥 New videos are now available in the gallery');
+      console.log('[VIDEO] New videos are now available in the gallery');
     }
 
     res.json(response);
 
   } catch (error) {
-    console.error('❌ Bulk upload error:', error);
+    console.error('[ERROR] Bulk upload error:', error);
     res.status(500).json({
       error: 'Bulk upload service error',
       message: error.message,
@@ -3943,13 +3950,13 @@ app.get('/api/auth/test', (req, res) => { res.status(404).end() });
 // Screenshot Service Integration
 // Global crash protection handlers with enhanced logging
 process.on('uncaughtException', (err) => {
-  console.error('💥 [CRITICAL] UNCAUGHT EXCEPTION DETECTED:');
+  console.error('[CRASH] [CRITICAL] UNCAUGHT EXCEPTION DETECTED:');
   console.error('Error message:', err.message);
   console.error('Error stack:', err.stack);
   console.error('Error code:', err.code);
   console.error('Timestamp:', new Date().toISOString());
   
-  // 🛡️ CRITICAL: If we hit a serious error, we MUST exit so PM2 can restart the process
+  // [SECURITY] CRITICAL: If we hit a serious error, we MUST exit so PM2 can restart the process
   // This prevents the server from hanging in a broken state.
   if (err.code === 'EADDRINUSE') {
     console.error('Port already in use, exiting...');
@@ -3960,7 +3967,7 @@ process.on('uncaughtException', (err) => {
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('💥 [CRITICAL] UNHANDLED REJECTION DETECTED:');
+  console.error('[CRASH] [CRITICAL] UNHANDLED REJECTION DETECTED:');
   console.error('Promise:', promise);
   console.error('Reason:', reason);
   console.error('Timestamp:', new Date().toISOString());
@@ -3968,26 +3975,26 @@ process.on('unhandledRejection', (reason, promise) => {
   // Most unhandled rejections are recoverable, but logging is vital
 });
 
-// 🛡️ CRITICAL: Global Server Error Handling
+// [SECURITY] CRITICAL: Global Server Error Handling
 let isRetrying = false;
 server.on('error', (e) => {
   if (e.code === 'EADDRINUSE') {
     if (isRetrying) return;
     isRetrying = true;
-    console.error(`💥 Port ${PORT} is already in use. Retrying in 5 seconds...`);
+    console.error(`[CRASH] Port ${PORT} is already in use. Retrying in 5 seconds...`);
     setTimeout(() => {
       isRetrying = false;
       server.close();
       server.listen(PORT);
     }, 5000);
   } else {
-    console.error('💥 Server error:', e);
+    console.error('[CRASH] Server error:', e);
   }
 });
 
 // Port availability check & server start
 server.once('listening', async () => {
-  console.log(`🚀 [SERVER] Ledger Absolutism active on http://localhost:${PORT}`);
+  console.log(`[INFO] [SERVER] Ledger Absolutism active on http://localhost:${PORT}`);
   
   // Apply DDL and start event processor
   try {
@@ -4000,18 +4007,18 @@ server.once('listening', async () => {
     try {
       await query('PRAGMA journal_mode = WAL;');
       await query('PRAGMA synchronous = NORMAL;');
-      console.log('✅ [SQLITE] WAL mode enabled for high concurrency');
+      console.log('[OK] [SQLITE] WAL mode enabled for high concurrency');
     } catch (e) {
-      console.warn('⚠️ [SQLITE] WAL mode failed:', e.message);
+      console.warn('[WARN] [SQLITE] WAL mode failed:', e.message);
     }
   }
 
     await __startEventProcessor();
     await ensureQarsanVirtualUsers();
-    console.log('✅ [INIT] All systems ready');
+    console.log('[OK] [INIT] All systems ready');
   } catch (err) {
-    console.error('❌ [INIT] Startup sequence failed:', err);
-    // 🛡️ CRITICAL: If startup fails, we MUST exit so PM2 can restart
+    console.error('[ERROR] [INIT] Startup sequence failed:', err);
+    // [SECURITY] CRITICAL: If startup fails, we MUST exit so PM2 can restart
     setTimeout(() => process.exit(1), 1000);
   }
 
@@ -4028,7 +4035,7 @@ server.once('listening', async () => {
           await watchdog.autoHeal(result.issues);
         }
       } catch (e) {
-        console.error('⚠️ [WATCHDOG LOOP ERROR]', e.message);
+        console.error('[WARN] [WATCHDOG LOOP ERROR]', e.message);
       } finally {
         global.isWatchdogRunning = false;
       }
@@ -4040,12 +4047,12 @@ server.listen(PORT);
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
-  console.log('🛑 Shutting down server gracefully...');
+  console.log('[STOP] Shutting down server gracefully...');
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
-  console.log('🛑 Shutting down server gracefully...');
+  console.log('[STOP] Shutting down server gracefully...');
   process.exit(0);
 });
 // Consolidated API Router
@@ -4211,16 +4218,16 @@ apiRouter.get('/sqlite/assets/sync', async (req, res) => {
 // Finally mount the consolidated router
 app.use('/api', apiRouter);
 
-// 🛡️ Global error handler - add this at the END of all routes (from actly.md)
+// [SECURITY] Global error handler - add this at the END of all routes (from actly.md)
 app.use((err, req, res, next) => {
-  console.error('🔥 GLOBAL ERROR:', err);
+  console.error('[ALERT] GLOBAL ERROR:', err);
   console.error('Stack:', err.stack);
   res.status(500).json({ success: false, error: err.message });
 });
 
 // Apply DDL (Unified Schema Verification)
 async function applyNeonCompressionDDL(){
-  // 🛡️ Ensure columns exist (Fix for "no column named religion")
+  // [SECURITY] Ensure columns exist (Fix for "no column named religion")
   try {
     const columns = ['religion', 'country', 'phone'];
     
@@ -4388,7 +4395,7 @@ async function applyNeonCompressionDDL(){
     for (const sql of statements) {
       try { await query(sql) } catch (e) { console.warn('[DB DDL] stmt failed:', e.message) }
     }
-    console.log('✅ [DB] Schema Verified on startup');
+    console.log('[OK] [DB] Schema Verified on startup');
   } catch(e) { console.warn('[DB DDL] apply failed:', e.message) }
 }
 
