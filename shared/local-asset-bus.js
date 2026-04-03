@@ -5,6 +5,17 @@
 import { AssetPolicy } from './asset-policy.js';
 
 let __VERIFIED_STATE__ = null;
+// 🛡️ IFRAME-BOOTSTRAP FIX: Read from localStorage immediately so iframes get state without waiting for storage events
+try {
+  const _bootstrapRaw = localStorage.getItem('codebank_assets');
+  if (_bootstrapRaw) {
+    const _bootstrapParsed = JSON.parse(_bootstrapRaw);
+    if (_bootstrapParsed && _bootstrapParsed.updatedAt) {
+      __VERIFIED_STATE__ = _bootstrapParsed;
+      console.log('[AssetBus] Bootstrapped from localStorage on init, codes:', (_bootstrapParsed.codes || []).length);
+    }
+  }
+} catch (_bootstrapErr) { /* ignore */ }
 let __IS_SYNCING__ = false;
 let __LEDGER_LOCKED__ = true; // Default to locked
 let __DRIFT_COUNT__ = 0; // 🛡️ DRIFT LOOP PREVENTION

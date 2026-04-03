@@ -1086,7 +1086,7 @@
       const payload = { codes, receiverEmail };
       const idempotencyKey = (tx.id || '') + '_' + (tx.retries || 0) + '_' + retryAttempt;
       
-      let res = await fetch('/api/send-codes', {
+      let res = await fetch('/api/codes/send-codes', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json', 
@@ -1109,7 +1109,7 @@
           }
           
           console.log('[SEND] Retrying after recovery...');
-          res = await fetch('/api/send-codes', {
+          res = await fetch('/api/codes/send-codes', {
             method: 'POST',
             headers: { 
               'Content-Type': 'application/json', 
@@ -1251,7 +1251,11 @@
     const activeTab = tab || window.ACTIVE_ASSET_TAB || 'codes';
     window.ACTIVE_ASSET_TAB = activeTab;
 
-    const snapshot = providedSnapshot || ((window.AssetBus && typeof window.AssetBus.snapshot === 'function') ? window.AssetBus.snapshot() : null);
+    // 🛡️ CROSS-IFRAME FIX: Resolve snapshot from multiple sources
+    const snapshot = providedSnapshot || 
+      ((window.AssetBus && typeof window.AssetBus.snapshot === 'function') ? window.AssetBus.snapshot() : null) ||
+      (window.top && typeof window.top.GET_AUTHORITATIVE_ASSETS === 'function' ? window.top.GET_AUTHORITATIVE_ASSETS() : null) ||
+      (() => { try { const _raw = localStorage.getItem('codebank_assets'); return _raw ? JSON.parse(_raw) : null; } catch(_e) { return null; } })();
 
     // Check if container exists or try to find it (strict selector only)
     const cont = container || document.querySelector(CODEBANK_CONTAINER_SELECTOR);
