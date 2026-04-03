@@ -1978,6 +1978,46 @@ app.post('/api/sqlite/codes', async (req, res) => {
   }
 });
 
+
+// GET /api/sqlite/codes — returns user's codes from DB
+// Called by bankode-core.js and yt-new-clear.html
+app.get('/api/sqlite/codes', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Fetch counts from users table
+    const userRes = await query(
+      "SELECT COALESCE(codes_count, 0) as count, COALESCE(silver_count, 0) as silver, COALESCE(gold_count, 0) as gold FROM users WHERE id = $1",
+      [userId]
+    );
+    const userRow = userRes.rows[0] || { count: 0, silver: 0, gold: 0 };
+
+    // Fetch actual codes from codes table
+    const codesRes = await query(
+      "SELECT code, type, created_at FROM codes WHERE user_id = $1 AND spent = 0 ORDER BY created_at DESC",
+      [userId]
+    );
+
+    return res.json({
+      success: true,
+      status: 'success',
+      count: Number(userRow.count),
+      silver_count: Number(userRow.silver),
+      gold_count: Number(userRow.gold),
+      codes: codesRes.rows,
+      rows: codesRes.rows,
+      latest: codesRes.rows.length > 0 ? codesRes.rows[0].code : null
+    });
+  } catch (e) {
+    console.error('[API] GET /api/sqlite/codes error:', e.message);
+    return res.status(500).json({
+      success: false,
+      status: 'failed',
+      error: 'internal_error'
+    });
+  }
+});
+
 // AUTHORITATIVE CODES RETRIEVAL
 app.get('/api/codes/list', requireAuth, async (req, res) => { 
   try { 
