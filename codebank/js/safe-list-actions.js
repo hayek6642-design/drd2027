@@ -239,8 +239,25 @@
     }
 
     function showSendPopup(codes) {
-        // 🛡️ CRITICAL AUTH status check
-        const authStatus = window.Auth?.getStatus();
+        // 🛡️ CRITICAL AUTH status check — robust multi-fallback (fixes iframe context where getStatus() may not exist)
+        function _resolveAuthStatus() {
+            if (window.Auth && typeof window.Auth.getStatus === 'function') {
+                return window.Auth.getStatus();
+            }
+            if (window.Auth && typeof window.Auth.isAuthenticated === 'function') {
+                return window.Auth.isAuthenticated() ? 'authenticated' : 'unauthenticated';
+            }
+            if (window.__AUTH_READY__ || window.__AUTH_STATE__?.authenticated) {
+                return 'authenticated';
+            }
+            try {
+                if (window.top && window.top !== window && window.top.Auth && typeof window.top.Auth.isAuthenticated === 'function') {
+                    return window.top.Auth.isAuthenticated() ? 'authenticated' : 'unauthenticated';
+                }
+            } catch(e) {}
+            return 'unauthenticated';
+        }
+        const authStatus = _resolveAuthStatus();
         if (authStatus !== 'authenticated') {
             const overlay = document.createElement('div');
             overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:30000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);';
