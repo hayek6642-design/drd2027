@@ -44,7 +44,7 @@
       if (videoBoxEl.id === 'video-container') {
         const now = Date.now();
         if (now - _lastLayoutLog > 5000) {
-            console.log('[LAYOUT] video-container has no dimensions, skipping update');
+            if (window.DEBUG_MODE) console.log('[LAYOUT] video-container has no dimensions, skipping update');
             _lastLayoutLog = now;
         }
         return;

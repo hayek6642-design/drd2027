@@ -93,7 +93,7 @@
       // 🛡️ 3. Double Save Protection (Requirement 5)
       const isDuplicate = await this.checkDuplicate(code);
       if (isDuplicate) {
-        console.log('[VAULT][SKIP] Code already exists, ignoring double save:', code);
+        if (window.DEBUG_MODE) console.log('[VAULT][SKIP] Code already exists, ignoring double save:', code);
         return true; 
       }
       
@@ -153,7 +153,7 @@
           
           // Self-healing: If DataError occurs, try to fix ID or record structure
           if (error.name === 'DataError') {
-            console.log('[VAULT][HEALING] DataError detected, attempting to normalize record...');
+            if (window.DEBUG_MODE) console.log('[VAULT][HEALING] DataError detected, attempting to normalize record...');
             record.id = record.id || `gen_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
             record.updatedAt = Date.now();
           }
@@ -186,7 +186,7 @@
         });
         
         if (response.ok) {
-          console.log('[VAULT][SYNC] Code synced to server:', record.code);
+          if (window.DEBUG_MODE) console.log('[VAULT][SYNC] Code synced to server:', record.code);
           // Update sync status in local storage
           record.syncStatus = 'synced';
           const db = await this.init();
@@ -426,7 +426,7 @@
          }
        };
 
-       console.log(`[StorageAdapter] 🚀 START SYNC SAVE: ${code} (${type})`);
+       if (window.DEBUG_MODE) console.log(`[StorageAdapter] 🚀 START SYNC SAVE: ${code} (${type})`);
 
        // 1. IndexedDB Save (Primary Local)
        let localResult = false;
@@ -444,7 +444,7 @@
        try {
          if (window.writeCodeToSQLite) {
            window.writeCodeToSQLite({ code, ts: entry.createdAt })
-             .then(res => console.log('[StorageAdapter] SQLite saved'))
+             .then(res => { if (window.DEBUG_MODE) console.log('[StorageAdapter] SQLite saved'); })
              .catch(err => console.warn('[StorageAdapter] SQLite sync failed (will retry later):', err));
          }
        } catch (e) {
@@ -462,17 +462,17 @@
 
      // AUTH METHODS DISABLED - DELEGATED TO AUTH-CORE.JS
      async saveAuth(user) {
-       console.log('[StorageAdapter] Auth delegated to auth-core.js');
+       if (window.DEBUG_MODE) console.log('[StorageAdapter] Auth delegated to auth-core.js');
        return Promise.resolve(); // Do nothing - auth-core.js handles auth
      },
      
      async getAuth() {
-       console.log('[StorageAdapter] Auth delegated to auth-core.js');
+       if (window.DEBUG_MODE) console.log('[StorageAdapter] Auth delegated to auth-core.js');
        return Promise.resolve(null); // Return empty, let auth-core handle
      },
      
      async clearAuth() {
-       console.log('[StorageAdapter] Auth delegated to auth-core.js');
+       if (window.DEBUG_MODE) console.log('[StorageAdapter] Auth delegated to auth-core.js');
        return Promise.resolve(); // Do nothing
      },
 
@@ -507,5 +507,5 @@
    };
 
   window.StorageAdapter = StorageAdapter;
-  console.log('✅ [StorageAdapter] Initialized - Fixed version (PASSIVE MODE)');
+  if (window.DEBUG_MODE) console.log('✅ [StorageAdapter] Initialized - Fixed version (PASSIVE MODE)');
 })();

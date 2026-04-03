@@ -52,23 +52,23 @@ export function initThreeWayToggle() {
         console.error('[3-way-toggle] Track or handle not found!', { track, handle });
         return;
     }
-    console.log('[3-way-toggle] Initialized successfully!', { root, track, handle });
+    if (window.DEBUG_MODE) console.log('[3-way-toggle] Initialized successfully!', { root, track, handle });
     window.__SWITCHES_READY__ = true;
     let current = 1; // 0=Afra7(left), 1=Home(center), 2=Nour(right)
     root.dataset.state = 'home';
 
     // Cycle function - same behavior as extra button
     async function cycleSection() {
-        console.log('[3-way-toggle] Cycling from position:', current, ['Afra7', 'Home', 'Nour'][current]);
+        if (window.DEBUG_MODE) console.log('[3-way-toggle] Cycling from position:', current, ['Afra7', 'Home', 'Nour'][current]);
         const nextIdx = current === 1 ? 0 : (current === 0 ? 2 : 1);
         await switchToSection(nextIdx);
     }
 
     // Switch to specific section
     async function switchToSection(idx) {
-        console.log('[3-way-toggle] switchToSection called with idx:', idx, 'current:', current);
+        if (window.DEBUG_MODE) console.log('[3-way-toggle] switchToSection called with idx:', idx, 'current:', current);
         // Always allow switching (for cycling behavior)
-        console.log('[3-way-toggle] Switching to section:', idx, ['Afra7', 'Home', 'Nour'][idx]);
+        if (window.DEBUG_MODE) console.log('[3-way-toggle] Switching to section:', idx, ['Afra7', 'Home', 'Nour'][idx]);
         
         // Save current section time before switching (only for Home and Nour)
         if (current === 1 && window.saveCurrentSectionTime) {
@@ -102,7 +102,7 @@ export function initThreeWayToggle() {
         if (window.__EXTRA_MODE_LOCKED__ === true) return;
         e.stopPropagation();
         e.preventDefault();
-        console.log('[3-way-toggle] Handle clicked, current position:', current);
+        if (window.DEBUG_MODE) console.log('[3-way-toggle] Handle clicked, current position:', current);
         cycleSection().catch(err => console.error('[3-way-toggle] Error in cycleSection:', err));
     }, true); // Use capture phase
 
@@ -122,7 +122,7 @@ export function initThreeWayToggle() {
     // Initialize: Load Home section on page load (since handle starts in center)
     function initializeHomeSection() {
         if (window.showHomeSection && window.player) {
-            console.log('[3-way-toggle] Initializing with Home section');
+            if (window.DEBUG_MODE) console.log('[3-way-toggle] Initializing with Home section');
             window.showHomeSection().catch(err => console.error('[3-way-toggle] Error initializing Home:', err));
             return true;
         }
@@ -132,13 +132,13 @@ export function initThreeWayToggle() {
     // Try immediately if player is ready (only after auth)
     var __authed = false; try { __authed = (window.Auth && typeof window.Auth.isAuthenticated==='function' && window.Auth.isAuthenticated()) || (window.AuthCore && typeof window.AuthCore.isAuthenticated==='function' && window.AuthCore.isAuthenticated()); } catch(_){ __authed = false }
     if (__authed && initializeHomeSection()) {
-        console.log('[3-way-toggle] Home section initialized immediately');
+        if (window.DEBUG_MODE) console.log('[3-way-toggle] Home section initialized immediately');
     } else {
         if (__authed) {
-            console.log('[3-way-toggle] Waiting for player to be ready...');
+            if (window.DEBUG_MODE) console.log('[3-way-toggle] Waiting for player to be ready...');
             const checkInterval = setInterval(() => {
                 if (initializeHomeSection()) {
-                    console.log('[3-way-toggle] Home section initialized after wait');
+                    if (window.DEBUG_MODE) console.log('[3-way-toggle] Home section initialized after wait');
                     clearInterval(checkInterval);
                 }
             }, 500);
@@ -181,7 +181,7 @@ export function initThreeWayToggle() {
 
     // Section callback function
     async function sectionCallback(idx) {
-        console.log('[3-way-toggle] Section callback for index:', idx);
+        if (window.DEBUG_MODE) console.log('[3-way-toggle] Section callback for index:', idx);
         if (idx === 0) {
             showSectionPopup('Afra7');
             if (window.showAfra7Section) {

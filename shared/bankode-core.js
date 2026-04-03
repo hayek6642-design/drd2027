@@ -31,11 +31,11 @@
 (function(){
   // 1️⃣ Enforce SINGLETON for Bankode Core
   if (window.__BANKODE_CORE__) {
-    console.log("BANKODE INSTANCE", window.__BANKODE_CORE__, "(already initialized)");
+    if (window.DEBUG_MODE) console.log("BANKODE INSTANCE", window.__BANKODE_CORE__, "(already initialized)");
     return;
   }
   window.__BANKODE_CORE__ = true;
-  console.log("BANKODE INSTANCE", window.__BANKODE_CORE__, "(first initialization)");
+  if (window.DEBUG_MODE) console.log("BANKODE INSTANCE", window.__BANKODE_CORE__, "(first initialization)");
 
   try {
     if (!window.BankodeEvents) {
@@ -105,7 +105,7 @@
       req.onupgradeneeded = (e) => {
         const db = req.result;
         const oldVersion = e.oldVersion;
-        console.log(`[BankodeDB] Upgrading from ${oldVersion} to 4`);
+        if (window.DEBUG_MODE) console.log(`[BankodeDB] Upgrading from ${oldVersion} to 4`);
         
         if (!db.objectStoreNames.contains(STORE_CODES)) {
           db.createObjectStore(STORE_CODES, { keyPath: 'id', autoIncrement: true });
@@ -246,7 +246,7 @@
      return generateSecureCode(); 
    } 
    
-   console.log(`[Bankode] Generated: ${finalCode} (genCount: ${genCount}, idx: ${idx}, next: ${nextCount})`); 
+   if (window.DEBUG_MODE) console.log(`[Bankode] Generated: ${finalCode} (genCount: ${genCount}, idx: ${idx}, next: ${nextCount})`);
    return finalCode; 
  }
 
@@ -313,7 +313,7 @@
       // FIX: If IDB returned 0 codes but sync queue has pending items,
       // merge them into the codes array and re-persist to IDB
       if (this.codes.length === 0 && this._syncQueue.length > 0) {
-        console.log('[Bankode] Recovering', this._syncQueue.length, 'codes from sync queue');
+        if (window.DEBUG_MODE) console.log('[Bankode] Recovering', this._syncQueue.length, 'codes from sync queue');
         const queueCodes = this._syncQueue.map(item => item.code).filter(Boolean);
         const seen = new Set(this.codes);
         for (const code of queueCodes) {
@@ -323,7 +323,7 @@
           }
         }
         this.count = this.codes.length;
-        console.log('[Bankode] Recovered', this.count, 'codes from sync queue');
+        if (window.DEBUG_MODE) console.log('[Bankode] Recovered', this.count, 'codes from sync queue');
         // Re-persist to IDB so they survive and can be synced to server
         if (window.StorageAdapter && typeof window.StorageAdapter.saveCode === 'function') {
           for (const code of queueCodes) {
@@ -348,12 +348,12 @@
     
     pauseNormalGeneration() {
       this.isPaused = true;
-      console.log('[Bankode] Normal code generation paused');
+      if (window.DEBUG_MODE) console.log('[Bankode] Normal code generation paused');
     },
     
     resumeNormalGeneration() {
       this.isPaused = false;
-      console.log('[Bankode] Normal code generation resumed');
+      if (window.DEBUG_MODE) console.log('[Bankode] Normal code generation resumed');
     },
 
     // Unified Asset Generator
@@ -390,7 +390,7 @@
       // 1. ALWAYS succeed locally first via StorageAdapter
       if (window.StorageAdapter) {
         await window.StorageAdapter.saveCode({ code, type, meta }); // Pass as object
-        console.log('[REWARD LOCAL SUCCESS] via StorageAdapter', { code, type });
+        if (window.DEBUG_MODE) console.log('[REWARD LOCAL SUCCESS] via StorageAdapter', { code, type });
       } else {
         // Fallback to legacy if StorageAdapter missing
         const entry = { code, createdAt: now, meta };
@@ -412,7 +412,7 @@
     async _initFromStorage(){
       // 2️⃣ Ensure Bankode restores state only once
       if (this.__stateRestored) {
-        console.log('[Bankode] State already restored, skipping duplicate call');
+        if (window.DEBUG_MODE) console.log('[Bankode] State already restored, skipping duplicate call');
         return;
       }
       this.__stateRestored = true;
@@ -427,16 +427,16 @@
         // 🛡️ FIX: Use StorageAdapter if available to avoid DB mismatch (CodeVault vs BankodeDB)
         let all = [];
         if (window.StorageAdapter && typeof window.StorageAdapter.getCodes === 'function') {
-          console.log('[Bankode] Restoring state via StorageAdapter...');
+          if (window.DEBUG_MODE) console.log('[Bankode] Restoring state via StorageAdapter...');
           all = await window.StorageAdapter.getCodes();
         } else {
-          console.log('[Bankode] Restoring state via legacy IDB helper...');
+          if (window.DEBUG_MODE) console.log('[Bankode] Restoring state via legacy IDB helper...');
           all = await idbGetAllCodes();
         }
         
         this.codes = Array.isArray(all) ? all.map(c => c.code || c) : [];
         this.count = this.codes.length;
-        console.log('[Bankode] State restored from storage:', this.count, 'codes');
+        if (window.DEBUG_MODE) console.log('[Bankode] State restored from storage:', this.count, 'codes');
       } catch(e) {
         console.warn('[Bankode] Failed to restore codes from storage:', e);
         this.codes = [];
@@ -462,7 +462,7 @@
         if (window.AssetBus && typeof window.AssetBus.update === 'function') {
           // 🛡️ RE-LOAD FROM IDB: If codes array is empty, force reload from StorageAdapter
           if (this.codes.length === 0) {
-            console.log('[Bankode] Empty codes array during publish, reloading...');
+            if (window.DEBUG_MODE) console.log('[Bankode] Empty codes array during publish, reloading...');
             let all = [];
             if (window.StorageAdapter && typeof window.StorageAdapter.getCodes === 'function') {
               all = await window.StorageAdapter.getCodes();
@@ -499,7 +499,7 @@
           };
           
           window.AssetBus.update(snapshot, 'internal-verified');
-          console.log(`[Bankode] Snapshot published (trigger: ${triggerSource}) with ${currentCodes.length} codes. Latest:`, latestCode);
+          if (window.DEBUG_MODE) console.log(`[Bankode] Snapshot published (trigger: ${triggerSource}) with ${currentCodes.length} codes. Latest:`, latestCode);
         } else {
           console.warn('[Bankode] AssetBus not found after 5s, snapshot deferred');
         }
@@ -515,7 +515,7 @@
       ls.set('Bankode.last', entry);
       
       // 4️⃣ Ensure IndexedDB writes trigger AssetBus publish
-      console.log('[Bankode] Legacy persist complete, publishing snapshot...');
+      if (window.DEBUG_MODE) console.log('[Bankode] Legacy persist complete, publishing snapshot...');
       await this.publishSnapshot('legacy-persist');
     },
 
@@ -531,9 +531,9 @@
       if (!this._nextDueAt || Date.now() >= this._nextDueAt) { this._nextDueAt = Date.now(); }
       try { if (window.__CODEGEN_INTERVAL__) { clearInterval(window.__CODEGEN_INTERVAL__); } } catch(_){}
       
-      console.log('[Bankode] Starting generation session (5 min interval)');
+      if (window.DEBUG_MODE) console.log('[Bankode] Starting generation session (5 min interval)');
       window.__CODEGEN_INTERVAL__ = setInterval(async () => { 
-        console.log('[Bankode] Generation tick (checking if due)');
+        if (window.DEBUG_MODE) console.log('[Bankode] Generation tick (checking if due)');
         await generateCode(); 
       }, 30000); // Check every minute to be safe
     },
@@ -541,7 +541,7 @@
     stopSession(){
       if (this._timer) { clearInterval(this._timer); this._timer = null; }
       try { if (window.__CODEGEN_INTERVAL__) { clearInterval(window.__CODEGEN_INTERVAL__); window.__CODEGEN_INTERVAL__ = null; } } catch(_){}
-      console.log('[Bankode] Generation session stopped');
+      if (window.DEBUG_MODE) console.log('[Bankode] Generation session stopped');
     },
 
     // =====================================================
@@ -552,7 +552,7 @@
         const stored = localStorage.getItem('Bankode.syncQueue');
         if (stored) {
           this._syncQueue = JSON.parse(stored);
-          console.log('[SYNC QUEUE] Loaded', this._syncQueue.length, 'pending codes');
+          if (window.DEBUG_MODE) console.log('[SYNC QUEUE] Loaded', this._syncQueue.length, 'pending codes');
         }
       } catch(e) {
         this._syncQueue = [];
@@ -573,7 +573,7 @@
       
       this._syncQueue.push({ code, ts, attempts: 0, queuedAt: Date.now() });
       this._saveSyncQueue();
-      console.log('[SYNC QUEUE] Code queued for later sync:', code);
+      if (window.DEBUG_MODE) console.log('[SYNC QUEUE] Code queued for later sync:', code);
     },
 
     // =====================================================
@@ -599,7 +599,7 @@
 
       // 1. Normal -> Silver (100:1)
       if (normalCodes.length >= 100) {
-        console.log('[COMPRESSION] 100 normal codes -> 1 silver bar');
+        if (window.DEBUG_MODE) console.log('[COMPRESSION] 100 normal codes -> 1 silver bar');
         // Delete 100 codes
         const toDelete = normalCodes.slice(0, 100);
         const db = await openDB();
@@ -617,7 +617,7 @@
 
       // 2. Silver -> Gold (100:1)
       if (silverBars.length >= 100) {
-        console.log('[COMPRESSION] 100 silver bars -> 1 gold bar');
+        if (window.DEBUG_MODE) console.log('[COMPRESSION] 100 silver bars -> 1 gold bar');
         // Delete 100 silver bars
         const toDelete = silverBars.slice(0, 100);
         const db = await openDB();
@@ -664,7 +664,7 @@
         const unsynced = allCodes.filter(c => !c.meta?.synced);
         
         if (unsynced.length === 0) {
-          console.log('[Bankode] No new codes to sync.');
+          if (window.DEBUG_MODE) console.log('[Bankode] No new codes to sync.');
           syncLock = false; // Release lock
           return { status: 'success', delta: 0 };
         }
@@ -685,7 +685,7 @@
           sync_id
         };
 
-        console.log('[Bankode] Syncing deltas to server...', payload);
+        if (window.DEBUG_MODE) console.log('[Bankode] Syncing deltas to server...', payload);
 
         const res = await fetch('/api/sync', {
           method: 'POST',
@@ -695,7 +695,7 @@
 
         if (res.ok) {
           const data = await res.json();
-          console.log('[Bankode] ✅ Delta sync successful. New balance:', data);
+          if (window.DEBUG_MODE) console.log('[Bankode] ✅ Delta sync successful. New balance:', data);
           
           // 5. Mark codes as synced in IDB
           for (const entry of unsynced) {
@@ -748,7 +748,7 @@
         start() {
           if (this.isRunning) return;
           this.isRunning = true;
-          console.log('[LedgerMonitor] Started (30s interval)');
+          if (window.DEBUG_MODE) console.log('[LedgerMonitor] Started (30s interval)');
           this.scheduleCheck();
         }
 
@@ -802,7 +802,7 @@
 
               // Exponential backoff
               this.checkInterval = Math.min(this.checkInterval * 2, 300000); 
-              console.log(`[LedgerMonitor] Backoff: next check in ${this.checkInterval}ms`);
+              if (window.DEBUG_MODE) console.log(`[LedgerMonitor] Backoff: next check in ${this.checkInterval}ms`);
             } else {
               this.mismatchCount = 0; 
               this.checkInterval = 30000;
@@ -824,7 +824,7 @@
     },
 
     async resyncFromServer() {
-      console.log('[RESYNC] Synchronizing client state from authoritative server ledger...');
+      if (window.DEBUG_MODE) console.log('[RESYNC] Synchronizing client state from authoritative server ledger...');
       // In a ledger-only model, we can't recover full code strings from the server.
       // But we can mark existing ones as synced and align counters.
       // For now, we trigger AssetBus sync to refresh UI counters from server totals.
@@ -896,7 +896,7 @@
         try {
           const idem = tx.id || ('tx_'+Date.now());
           const body = { codes: Array.isArray(tx.codes)?tx.codes: [tx.code || ''], receiverEmail: tx.to };
-          try { console.log('[API BODY]', body); } catch(_){}
+          try { if(window.DEBUG_MODE) console.log('[API BODY]', body); } catch(_){}
           const res = await fetch('/api/send-codes', { method:'POST', headers:{ 'Content-Type':'application/json', 'Idempotency-Key': idem }, credentials:'include', body: JSON.stringify(body) });
           const j = await res.json().catch(()=>({}));
           if (res.ok && j && (j.ok || j.success)) {
@@ -925,7 +925,7 @@
       const extraActive = !!(window.extraModeActive || (document && document.body && document.body.classList.contains('extra-mode')));
       const hasPending = !!(window.ExtraMode && typeof window.ExtraMode.hasPendingReward==='function' && window.ExtraMode.hasPendingReward());
       if (this.isPaused || extraActive || hasPending) {
-        console.log('[Bankode] Normal code generation skipped -', this.isPaused ? 'paused' : 'Extra Mode or pending reward');
+        if (window.DEBUG_MODE) console.log('[Bankode] Normal code generation skipped -', this.isPaused ? 'paused' : 'Extra Mode or pending reward');
         return;
       }
       
@@ -944,7 +944,7 @@
       const localCount = this.codes.length;
       const pendingSyncCount = this._syncQueue.length;
       
-      console.log(
+      if (window.DEBUG_MODE) console.log(
         `[Bankode] Generated: ${code} | total=${genCount} | local=${localCount} | pendingSync=${pendingSyncCount}`
       );
       
@@ -975,7 +975,7 @@
       };
       
       try { 
-        console.log('[CODE GENERATED]', { 
+        if (window.DEBUG_MODE) console.log('[CODE GENERATED]', {
           code, 
           codeType: isPP ? 'PP (offline/local)' : 'P0-P9 (sync-capable)',
           suffix: isPP ? 'PP' : code.match(/P[0-9]$/)[0]
@@ -990,7 +990,7 @@
       
       if (isPn && window.writeCodeToSQLite) {
         try {
-          console.log('[SQLITE SYNC] Attempting sync for P-code:', code);
+          if (window.DEBUG_MODE) console.log('[SQLITE SYNC] Attempting sync for P-code:', code);
           
           const writeResult = await window.writeCodeToSQLite({ code, ts: now });
           
@@ -1000,7 +1000,7 @@
             meta.source = 'sqlite';
             meta.syncStatus = 'synced';
             meta.syncedAt = now;
-            console.log('[SQLITE SYNC SUCCESS] Code persisted to SQLite:', code);
+            if (window.DEBUG_MODE) console.log('[SQLITE SYNC SUCCESS] Code persisted to SQLite:', code);
             
             // 🛡️ UI UPDATE FIX: Emit event immediately after sync
             try {
@@ -1041,7 +1041,7 @@
         meta.persisted = false;
         meta.source = 'local';
         meta.syncStatus = 'local-only';
-        console.log('[PP CODE] Local-only, no SQLite sync needed:', code);
+        if (window.DEBUG_MODE) console.log('[PP CODE] Local-only, no SQLite sync needed:', code);
       }
       
       // =====================================================
@@ -1051,7 +1051,7 @@
       
       if (window.StorageAdapter) {
         await window.StorageAdapter.saveCode({ code, meta }); // Pass as object
-        console.log('[BANKODE] Code persisted locally via StorageAdapter', { code, meta });
+        if (window.DEBUG_MODE) console.log('[BANKODE] Code persisted locally via StorageAdapter', { code, meta });
       } else {
         // Fallback to legacy
         const entry = { id: undefined, code, createdAt: now, meta };
@@ -1086,7 +1086,7 @@
     try {
       // 🧠 WAIT FOR ASSETBUS: Ensure we can publish initial state
       if (!window.AssetBus) {
-          console.log('[Bankode] AssetBus not ready, waiting for assetbus:ready...');
+          if (window.DEBUG_MODE) console.log('[Bankode] AssetBus not ready, waiting for assetbus:ready...');
           await new Promise(resolve => {
               window.addEventListener('assetbus:ready', resolve, { once: true });
               // Safety timeout
@@ -1097,7 +1097,7 @@
       await Bankode.init();
       // 🛡️ FIX: Start the generation session automatically on bootstrap
       Bankode.startSession();
-      console.log('[Bankode] Bootstrap complete');
+      if (window.DEBUG_MODE) console.log('[Bankode] Bootstrap complete');
       
       // 🔔 Dispatch ready event for subscribers
       window.dispatchEvent(new CustomEvent('bankode:ready'));
@@ -1118,7 +1118,7 @@
     if (!canGenerate()) return; 
     __isGenerating = true; 
     try { 
-      console.log('[Bankode] Generation due! Executing generateIfDue()');
+      if (window.DEBUG_MODE) console.log('[Bankode] Generation due! Executing generateIfDue()');
       await Bankode.generateIfDue(); 
     } finally { 
       __isGenerating = false; 
@@ -1139,7 +1139,7 @@
   // =====================================================
   try {
     window.addEventListener('online', function() {
-      console.log('[NETWORK] Back online - processing sync queue');
+      if (window.DEBUG_MODE) console.log('[NETWORK] Back online - processing sync queue');
       if (Bankode.processSyncQueue) {
         Bankode.processSyncQueue();
       }
@@ -1148,7 +1148,7 @@
     
     window.addEventListener('auth:ready', function(e) {
       if (navigator.onLine && e && e.detail && e.detail.authenticated) {
-        console.log('[AUTH] Ready and online - processing sync queue');
+        if (window.DEBUG_MODE) console.log('[AUTH] Ready and online - processing sync queue');
         if (Bankode.processSyncQueue) {
           Bankode.processSyncQueue();
         }

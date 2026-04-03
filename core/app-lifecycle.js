@@ -43,11 +43,11 @@ class AppLifecycle {
       return
     }
 
-    console.log("🚀 [Lifecycle] Initializing...")
+    if (window.DEBUG_MODE) console.log("🚀 [Lifecycle] Initializing...")
 
     for (const [name, mod] of this.modules) {
       if (mod.init && !mod.initialized) {
-        console.log(`⚙️ init → ${name}`)
+        if (window.DEBUG_MODE) console.log(`⚙️ init → ${name}`)
         await mod.init()
         mod.initialized = true
       }
@@ -68,14 +68,14 @@ class AppLifecycle {
       for (const dep of mod.deps || []) {
         const depModule = this.modules.get(dep)
         if (!depModule?.started) {
-          console.log(`⏳ waiting ${dep} before starting ${name}`)
+          if (window.DEBUG_MODE) console.log(`⏳ waiting ${dep} before starting ${name}`)
           allStarted = false
           break
         }
       }
 
       if (allStarted && mod.start && !mod.started) {
-        console.log(`▶️ start → ${name}`)
+        if (window.DEBUG_MODE) console.log(`▶️ start → ${name}`)
         await mod.start()
         mod.started = true
         // After starting a module, restart loop to check if other modules can now start
@@ -90,7 +90,7 @@ class AppLifecycle {
     }
 
     this.started = true
-    console.log("✅ [Lifecycle] All modules started")
+    if (window.DEBUG_MODE) console.log("✅ [Lifecycle] All modules started")
   }
 
   /**

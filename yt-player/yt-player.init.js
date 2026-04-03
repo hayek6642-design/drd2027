@@ -8,7 +8,7 @@
 
     // 1. DUPLICATION GUARD
     if (window.YTPlayerController) {
-        console.log('[YT-INIT] Controller already exists, skipping re-init');
+        if (window.DEBUG_MODE) console.log('[YT-INIT] Controller already exists, skipping re-init');
         return;
     }
 
@@ -26,7 +26,7 @@
         async start() {
             if (this.initialized) return;
 
-            console.log('[YT-INIT] Starting initialization sequence...');
+            if (window.DEBUG_MODE) console.log('[YT-INIT] Starting initialization sequence...');
 
             // Wait for DOM container
             const container = document.getElementById('video-container');
@@ -78,7 +78,7 @@
         initialize(degraded = false) {
             if (this.initialized) return;
 
-            console.log(`[YT-INIT] Initializing (degraded: ${degraded})`);
+            if (window.DEBUG_MODE) console.log(`[YT-INIT] Initializing (degraded: ${degraded})`);
 
             const container = document.getElementById('video-container');
             if (!container) return;
@@ -155,7 +155,7 @@
         },
 
         onPlayerReady(e) {
-            console.log('[YT-INIT] ✅ Player ready');
+            if (window.DEBUG_MODE) console.log('[YT-INIT] ✅ Player ready');
             const c = document.getElementById('video-container');
             if (c) {
                 c.style.display = 'block';
@@ -169,7 +169,7 @@
             const playVideo = () => {
                 try {
                     e.target.playVideo();
-                    console.log('[YT-INIT] playVideo() called');
+                    if (window.DEBUG_MODE) console.log('[YT-INIT] playVideo() called');
                     
                     // Double check state after a moment
                     setTimeout(() => {
@@ -190,7 +190,7 @@
             // Also trigger on any user interaction as a fallback for strict browser policies
             const userInteractionHandler = () => {
                 if (e.target.getPlayerState() !== 1) {
-                    console.log('[YT-INIT] Resuming play on user interaction');
+                    if (window.DEBUG_MODE) console.log('[YT-INIT] Resuming play on user interaction');
                     playVideo();
                 }
                 document.removeEventListener('mousedown', userInteractionHandler);
@@ -213,7 +213,7 @@
             if (e.data === YT.PlayerState.PAUSED) {
                 // If it was playing and now paused (but not by user), try to resume
                 // We only do this if it was recently playing
-                console.log('[YT-INIT] State changed to PAUSED; attempt auto-resume...');
+                if (window.DEBUG_MODE) console.log('[YT-INIT] State changed to PAUSED; attempt auto-resume...');
                 // e.target.playVideo(); 
             }
         },
@@ -254,21 +254,21 @@
     // Backup triggers
     window.addEventListener('load', () => {
         if (!YTPlayerController.initialized) {
-            console.log('[YT-INIT] Backup trigger (window load)');
+            if (window.DEBUG_MODE) console.log('[YT-INIT] Backup trigger (window load)');
             YTPlayerController.start();
         }
     });
 
     window.addEventListener('auth:ready', () => {
         if (!YTPlayerController.initialized) {
-            console.log('[YT-INIT] Backup trigger (auth ready)');
+            if (window.DEBUG_MODE) console.log('[YT-INIT] Backup trigger (auth ready)');
             YTPlayerController.start();
         }
     });
 
     // Handle the legacy global callback
     window.onYouTubeIframeAPIReady = function() {
-        console.log('[YT-INIT] Global API callback received');
+        if (window.DEBUG_MODE) console.log('[YT-INIT] Global API callback received');
         if (window.YTPlayerController && !window.YTPlayerController.initialized) {
             window.YTPlayerController.start();
         }

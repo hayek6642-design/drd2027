@@ -23,7 +23,7 @@
     })();
 
     // 🧪 DEBUG: Page loaded log
-    console.log('[DEBUG] Page loaded at:', new Date().toISOString());
+    if (window.DEBUG_MODE) console.log('[DEBUG] Page loaded at:', new Date().toISOString());
 
     // 🔧 FIX 5: Loop Guard (sessionStorage)
     const now = Date.now();
@@ -291,7 +291,7 @@
           if (window.__AUTH_INIT_DONE__) return;
           window.__AUTH_INIT_DONE__ = true;
 
-          console.log('[AuthCore] Initializing auth state...');
+          if (window.DEBUG_MODE) console.log('[AuthCore] Initializing auth state...');
           this._status = 'loading';
           this._syncAuthState();
 
@@ -299,7 +299,7 @@
           if (window.self !== window.top) {
             try {
               if (window.top && window.top.Auth && typeof window.top.Auth.isAuthenticated === 'function') {
-                console.log('[AuthCore] Iframe detected parent Auth, inheriting state');
+                if (window.DEBUG_MODE) console.log('[AuthCore] Iframe detected parent Auth, inheriting state');
                 const parentAuth = window.top.Auth;
                 const parentUser = parentAuth.getUser ? parentAuth.getUser() : null;
                 const parentStatus = parentAuth.getStatus ? parentAuth.getStatus() : (parentAuth.isAuthenticated() ? 'authenticated' : 'unauthenticated');
@@ -335,7 +335,7 @@
           const localToken = localStorage.getItem('session_token');
           
           if (!this._sessionId && localToken) {
-            console.log('[AuthCore] No cookie but found token in localStorage, restoring...');
+            if (window.DEBUG_MODE) console.log('[AuthCore] No cookie but found token in localStorage, restoring...');
             this._sessionId = localToken;
             document.cookie = `session_token=${localToken}; path=/; max-age=${7*24*60*60}`;
           }
@@ -346,7 +346,7 @@
               const cachedSessionId = localStorage.getItem('__cached_session_id__');
               
               if (cachedUser && (cachedSessionId === this._sessionId || localToken === this._sessionId)) {
-                console.log('[AuthCore] Restoring auth state from cache');
+                if (window.DEBUG_MODE) console.log('[AuthCore] Restoring auth state from cache');
                 this._setState({
                   authenticated: true,
                   status: 'authenticated',
@@ -369,7 +369,7 @@
           // 🛡️ IFRAME AUTH INHERITANCE: PostMessage listener
           window.addEventListener('message', (event) => {
             if (event.data && event.data.type === 'AUTH_SYNC') {
-              console.log('[AuthCore] Received AUTH_SYNC from parent window');
+              if (window.DEBUG_MODE) console.log('[AuthCore] Received AUTH_SYNC from parent window');
               const { authenticated, userId, sessionId, user } = event.data;
               if (authenticated && userId && sessionId) {
                 this._setState({
@@ -386,7 +386,7 @@
           });
           
           if (!this._sessionId) {
-            console.log('[AuthCore] No session token found, user is guest');
+            if (window.DEBUG_MODE) console.log('[AuthCore] No session token found, user is guest');
             this._setState({ authenticated: false, status: 'unauthenticated' }, null);
             this._authInitialized = true;
             window.__resolveAuthReady && window.__resolveAuthReady(false);
@@ -420,19 +420,19 @@
     getState(){ return { ...this._state } },
 
     async refresh(){
-      try { console.log('[AuthCore] refresh() start'); } catch(_){};
+      try { if(window.DEBUG_MODE) console.log('[AuthCore] refresh() start'); } catch(_){};
       if (this._locked) { 
-        try { console.log('[AuthCore] refresh() skipped: state locked'); } catch(_){}; 
+        try { if(window.DEBUG_MODE) console.log('[AuthCore] refresh() skipped: state locked'); } catch(_){}; 
         return; 
       }
       
       const beforeStatus = this._status;
       await this._fetchMeAndApply();
       
-      try { console.log('[AuthCore] refresh() done', { from: beforeStatus, to: this._status }); } catch(_){}
+      try { if(window.DEBUG_MODE) console.log('[AuthCore] refresh() done', { from: beforeStatus, to: this._status }); } catch(_){}
       
       if (beforeStatus !== this._status) {
-        try { console.log('[AuthCore] auth:changed →', { 
+        try { if(window.DEBUG_MODE) console.log('[AuthCore] auth:changed →', { 
           authenticated: this.isAuthenticated(), 
           status: this._status,
           userId: this._userId 
@@ -519,7 +519,7 @@
           stores.forEach(storeName => {
             if (!db.objectStoreNames.contains(storeName)) {
               db.createObjectStore(storeName, { keyPath: 'id' });
-              console.log(`[AuthCore] Created object store: ${storeName}`);
+              if (window.DEBUG_MODE) console.log(`[AuthCore] Created object store: ${storeName}`);
             }
           });
         };
@@ -598,7 +598,7 @@
         // Internal update method
         _updateInternal: (state) => {
           if (!state) return;
-          console.log('[Auth] Internal update received:', state);
+          if (window.DEBUG_MODE) console.log('[Auth] Internal update received:', state);
           AuthCore._setState(state);
         }
       };
@@ -613,7 +613,7 @@
         version: '2.0.0'
       };
       
-      console.log("✅ [AuthCore] Parent window Auth initialized");
+      if (window.DEBUG_MODE) console.log("✅ [AuthCore] Parent window Auth initialized");
     }
   } catch(_) {}
 
@@ -660,8 +660,8 @@
       if (window.self !== window.top) return; // Only in parent
       
       window.addEventListener('message', this.handleMessage.bind(this));
-      console.log('[AuthBridge] PostMessage bridge initialized');
-      console.log('[AuthBridge] Allowed origins:', this.config.allowedOrigins);
+      if (window.DEBUG_MODE) console.log('[AuthBridge] PostMessage bridge initialized');
+      if (window.DEBUG_MODE) console.log('[AuthBridge] Allowed origins:', this.config.allowedOrigins);
     },
     
     isAllowedOrigin: function(origin) {
@@ -723,7 +723,7 @@
           
         case 'auth:done':
           // 🔧 FIX 4: Handle iframe reload request via postMessage
-          console.log('[AuthBridge] auth:done received from iframe, refreshing parent state');
+          if (window.DEBUG_MODE) console.log('[AuthBridge] auth:done received from iframe, refreshing parent state');
           if (window.Auth && window.Auth.refresh) {
             window.Auth.refresh().then(() => {
               // Optionally notify other iframes or perform a safe top-level reload if absolutely necessary
@@ -748,7 +748,7 @@
       const iframeId = data.iframeId || 'unknown';
       
       if (this.config.debug) {
-        console.log('[AuthBridge] Auth request from:', origin, 'iframe:', iframeId);
+        if (window.DEBUG_MODE) console.log('[AuthBridge] Auth request from:', origin, 'iframe:', iframeId);
       }
       
       // Get current auth state
@@ -778,7 +778,7 @@
         source.postMessage(authState, origin);
         
         if (this.config.debug) {
-          console.log('[AuthBridge] Auth sent to:', origin, 'authenticated:', authState.authenticated);
+          if (window.DEBUG_MODE) console.log('[AuthBridge] Auth sent to:', origin, 'authenticated:', authState.authenticated);
         }
       } catch(e) {
         console.error('[AuthBridge] Failed to send auth:', e);
@@ -813,7 +813,7 @@
     handleIframeReady: function(source, origin, data) {
       // Iframe signals it's ready
       if (this.config.debug) {
-        console.log('[AuthBridge] Iframe ready:', data.iframeId, 'from:', origin);
+        if (window.DEBUG_MODE) console.log('[AuthBridge] Iframe ready:', data.iframeId, 'from:', origin);
       }
       
       // Send current auth state immediately

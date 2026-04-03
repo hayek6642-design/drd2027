@@ -1142,6 +1142,13 @@
         }
 
 
+        /* ACC AssetMirror emoji counter – removed from UI */
+        .acc-asset-mirror,
+        .acc-mirror-compact,
+        .acc-mirror-main {
+            display: none !important;
+        }
+
         /* Responsive design */
         @media (max-width: 768px) {
             .counter-box {
@@ -1919,7 +1926,7 @@
                 </div>
             
                 <button id="play-pause-button" class="btn btn-success" title="Play/Pause" aria-label="Play/Pause"><span
-                        id="progress-text" class="pp-overlay">0%</span></button>
+                        id="progress-text" class="pp-overlay" style="display:none">0%</span></button>
             </div>
         </div>
 
@@ -2026,7 +2033,7 @@
                     if (!res.ok) return false;
                     var data = await res.json();
                     try { window.UVLog && window.UVLog('sqlite-codes-fetch', { status: data && data.status, count: data && data.count }, 'yt-new-clear') } catch(_){ }
-                    try { console.log('[CodeBank] SQLite sync result:', data); } catch (_) {}
+                    try { if (window.DEBUG_MODE) console.log('[CodeBank] SQLite sync result:', data); } catch (_) {}
                     if (data && data.status === 'success' && Array.isArray(data.rows) && data.rows.length > 0) {
                         var latest = (typeof data.latest==='string' ? data.latest : (data.rows[0] && data.rows[0].code) || '');
                         var snapshot = { latest: latest, rows: data.rows };
@@ -2115,7 +2122,7 @@
                         try { window.__CODEBANK_ALLOWED_ORIGIN__ = ev && ev.origin || __cbOrigin__(); } catch(_){ }
                         var authed = false; try { authed = (window.Auth && typeof window.Auth.isAuthenticated==='function' && window.Auth.isAuthenticated()) || (window.AuthCore && typeof window.AuthCore.isAuthenticated==='function' && window.AuthCore.isAuthenticated()) || (!!window.__AUTH_READY__ && !!(window.APP_AUTH && window.APP_AUTH.user)); } catch(_){ authed = false }
                         if (!authed) { console.warn('[SNAPSHOT BLOCKED] not authenticated'); return; }
-                         console.log('[SNAPSHOT SENT]', out);
+                         if (window.DEBUG_MODE) console.log('[SNAPSHOT SENT]', out);
                         //  FIX: Use ev.origin as target origin for better compatibility and to avoid YouTube mismatch
                         var targetOrigin = (ev.origin && ev.origin !== 'null') ? ev.origin : window.location.origin;
                         ev.source.postMessage({ type: 'CODEBANK_ASSETS_SYNC', payload: out }, targetOrigin); } catch (_) { } } } catch (_) { } } } catch (_) { } }); } catch (_) { }
@@ -2135,7 +2142,7 @@
                         var res = await fetch('/api/balances', { method: 'GET', credentials: 'include' });
                         var data = null;
                         try { data = await res.json(); } catch(_) { data = null }
-                        try { console.log('[SQLite] balances aggregation:', data); } catch(_){}
+                        try { if (window.DEBUG_MODE) console.log('[SQLite] balances aggregation:', data); } catch(_){}
                         try {
                             var bal = (data && data.status==='success' && data.balances && typeof data.balances==='object') ? data.balances : null;
                             if (bal) {
@@ -2288,7 +2295,7 @@
           console.warn('[INIT] AssetBus multiple initialization detected and blocked.');
       } else {
           window.__assetbus_initialized = true;
-          console.log('[INIT] AssetBus loaded');
+          if (window.DEBUG_MODE) console.log('[INIT] AssetBus loaded');
           
           //  Signal AssetBus is ready for non-module scripts
           window.dispatchEvent(new CustomEvent('assetbus:ready'));
@@ -2368,7 +2375,7 @@
             })();
 
             try { window.__UV_TRACE__ = Array.isArray(window.__UV_TRACE__) ? window.__UV_TRACE__ : []; } catch(_){}
-            function __uvlog__(type, data, source){ try { var rec = { type: String(type||''), data: data||{}, source: String(source||'unknown'), ts: Date.now() }; window.__UV_TRACE__.push(rec); console.log('[UV]', rec); } catch(_){} }
+            function __uvlog__(type, data, source){ try { var rec = { type: String(type||''), data: data||{}, source: String(source||'unknown'), ts: Date.now() }; window.__UV_TRACE__.push(rec); } catch(_){} }
             try { window.UVLog = __uvlog__ } catch(_){}
             try { window.dumpUVTrace = function(){ try { return (window.__UV_TRACE__||[]).slice() } catch(_){ return [] } } } catch(_){}
             try { window.addEventListener('auth:ready', function(e){ try { __uvlog__('auth:ready', e&&e.detail||{}, 'auth-core') } catch(_){} }); } catch(_){}
@@ -2411,7 +2418,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                     return;
                 }
                 window.ACTIVE_ASSET_TAB = tab;
-                console.log('[UI] Switched to asset tab:', tab);
+                if (window.DEBUG_MODE) console.log('[UI] Switched to asset tab:', tab);
             };
         })();
     </script>
@@ -2423,7 +2430,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                 if (loadingOv) {
                     loadingOv.classList.remove('active');
                     loadingOv.classList.add('hidden');
-                    console.log(" Loading overlay hidden by safety timeout");
+                    if (window.DEBUG_MODE) console.log(" Loading overlay hidden by safety timeout");
                 }
             }, 3000); // Reduced to 3s for faster recovery
 
@@ -2462,7 +2469,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                         
                         // Send to main CodeBank frame
                         frame.contentWindow.postMessage(authData, '*');
-                        console.log('[AUTH] Sent AUTH_SYNC to CodeBank frame');
+                        if (window.DEBUG_MODE) console.log('[AUTH] Sent AUTH_SYNC to CodeBank frame');
                         
                         // Legacy support
                         frame.contentWindow.postMessage({ type: 'AUTH_CONTEXT', payload: u }, '*'); 
@@ -2593,7 +2600,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                 if (window.__INIT_AFTER_LOGIN_CALLED__) return;
                 window.__INIT_AFTER_LOGIN_CALLED__ = true;
                 
-                console.log(" Starting post-login initialization...");
+                if (window.DEBUG_MODE) console.log(" Starting post-login initialization...");
                 
                 //  إخفاء شاشة التحميل (Loading Overlay)
                 try {
@@ -2603,7 +2610,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                         loadingOv.classList.add('hidden');
                         loadingOv.style.display = 'none'; //  Force remove from layout
                     }
-                    console.log(" Loading screen hidden");
+                    if (window.DEBUG_MODE) console.log(" Loading screen hidden");
                 } catch (e) { console.error("Error hiding loading screen:", e); }
 
                 // 1. إخفاء الـ login overlay وحذف فلاتر الـ blur
@@ -2614,14 +2621,14 @@ document.addEventListener('DOMContentLoaded', async function(){
                         ov.classList.remove('open');
                         ov.style.display = 'none';
                     }
-                    console.log(" Login overlay hidden");
+                    if (window.DEBUG_MODE) console.log(" Login overlay hidden");
                 } catch (e) { console.error("Error hiding login overlay:", e); }
 
                 // 2. تشغيل محرك البالونات (إذا لم يكن قد بدأ بالفعل)
                 try {
                     //  GLOBAL LOCK: Only standalone visual engine is allowed
                     window.__BALLOON_SYSTEM_LOCK__ = true;
-                    console.log(" Balloon system globally locked (Standalone mode only)");
+                    if (window.DEBUG_MODE) console.log(" Balloon system globally locked (Standalone mode only)");
 
                     const bc = document.getElementById('balloonCanvas');
                     if (bc) {
@@ -2666,10 +2673,10 @@ document.addEventListener('DOMContentLoaded', async function(){
                 //  Trigger standalone balloon system after successful login/ready
                 if (window.startBalloonSystem) {
                     window.startBalloonSystem();
-                    console.log(" Balloon system triggered after login transition");
+                    if (window.DEBUG_MODE) console.log(" Balloon system triggered after login transition");
                 }
 
-                console.log(" yt-new-clear transition complete");
+                if (window.DEBUG_MODE) console.log(" yt-new-clear transition complete");
             };
 
             // الربط مع Auth (auth-core.js defines window.Auth)
@@ -2683,7 +2690,7 @@ document.addEventListener('DOMContentLoaded', async function(){
 
             // الاستماع للحدث auth:ready المنبعث من AuthCore
             window.addEventListener('auth:ready', (e) => {
-                console.log(" Auth Ready Event received:", e.detail);
+                if (window.DEBUG_MODE) console.log(" Auth Ready Event received:", e.detail);
                 if (e.detail && e.detail.authenticated) {
                     window.initAfterLogin();
                     sendAuthContext();
@@ -2692,7 +2699,7 @@ document.addEventListener('DOMContentLoaded', async function(){
 
             // الاستماع للحدث auth:changed (للمزيد من الموثوقية)
             window.addEventListener('auth:changed', (e) => {
-                console.log(" Auth Changed Event received:", e.detail);
+                if (window.DEBUG_MODE) console.log(" Auth Changed Event received:", e.detail);
                 if (e.detail && e.detail.authenticated) {
                     window.initAfterLogin();
                     sendAuthContext();
@@ -2732,7 +2739,7 @@ document.addEventListener('DOMContentLoaded', async function(){
       function updateUI(code, source) {
         if (!code || code === lastDisplayedCode) return;
         
-        console.log(`[UI SYNC] Updating #code-display from ${source}:`, code);
+        if (window.DEBUG_MODE) console.log(`[UI SYNC] Updating #code-display from ${source}:`, code);
         codeDisplay.textContent = code;
         lastDisplayedCode = code;
         
@@ -2745,7 +2752,7 @@ document.addEventListener('DOMContentLoaded', async function(){
         const d = e.detail || {};
         let code = null;
 
-        console.log(`[UI SYNC] Event received: ${e.type}`, d);
+        if (window.DEBUG_MODE) console.log(`[UI SYNC] Event received: ${e.type}`, d);
 
         // Try various properties where code might be
         if (typeof d === 'string') code = d;

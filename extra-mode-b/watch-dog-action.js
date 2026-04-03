@@ -35,7 +35,7 @@ function fetchPrayerTimes() {
               { name: 'Maghrib', time: t.Maghrib },
               { name: 'Isha', time: t.Isha }
             ];
-            console.log('[ActionLayer] Fetched prayer times:', PRAYER_TIMES);
+            if (window.DEBUG_MODE) console.log('[ActionLayer] Fetched prayer times:', PRAYER_TIMES);
           }
         })
         .catch(err => {
@@ -81,7 +81,7 @@ function setWatchDogActive(active) {
   const tm = window.TimerManager;
   
   if (active) {
-    console.log('[ActionLayer] Watch-dog activated');
+    if (window.DEBUG_MODE) console.log('[ActionLayer] Watch-dog activated');
     try { document.body.classList.add('watch-dog-active'); } catch(_){}
     
     // Set 3D state to monitoring if active
@@ -89,7 +89,7 @@ function setWatchDogActive(active) {
       guardian.setState('monitoring');
     }
   } else {
-    console.log('[ActionLayer] Watch-dog deactivated');
+    if (window.DEBUG_MODE) console.log('[ActionLayer] Watch-dog deactivated');
     try { document.body.classList.remove('watch-dog-active'); } catch(_){}
     
     // Set 3D state to idle if deactivated
