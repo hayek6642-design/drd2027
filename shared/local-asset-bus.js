@@ -7,7 +7,7 @@ import { AssetPolicy } from './asset-policy.js';
 let __VERIFIED_STATE__ = null;
 let __IS_SYNCING__ = false;
 let __LEDGER_LOCKED__ = true; // Default to locked
-let __DRIFT_COUNT__ = 0; // 🛡️ DRIFT LOOP PREVENTION
+let __DRIFT_COUNT__ = 0; // [GUARD] DRIFT LOOP PREVENTION
 
 // ========================
 // Utilities
@@ -18,7 +18,7 @@ function now() {
 
 /**
  * Fetch authoritative state from ledger (backend)
- * 🛡️ OFFLINE-FIRST: In shadow mode, this returns counters, not full data.
+ * [GUARD] OFFLINE-FIRST: In shadow mode, this returns counters, not full data.
  */
 async function fetchLedgerState() {
   if (__IS_SYNCING__) return null;
@@ -97,7 +97,7 @@ const createAssetBus = () => {
 
       callbacks.add(actualCallback);
       
-      // 🚀 PHASE 1: Sync AssetBus snapshot to __APP__
+      // [INFO] PHASE 1: Sync AssetBus snapshot to __APP__
       if (window.top === window.self && window.__APP__) {
         window.__APP__.assets.snapshot = this.snapshot();
         window.__APP__.assets.lastUpdate = Date.now();
@@ -129,7 +129,7 @@ const createAssetBus = () => {
         }
       }
 
-      // 🚀 PHASE 1: Sync AssetBus snapshot to __APP__ on any update
+      // [INFO] PHASE 1: Sync AssetBus snapshot to __APP__ on any update
       if (window.top === window.self && window.__APP__) {
         window.__APP__.assets.snapshot = this.snapshot();
         window.__APP__.assets.lastUpdate = Date.now();
@@ -138,7 +138,7 @@ const createAssetBus = () => {
 
     // -------- Authoritative State --------
     getState() {
-      // 🧠 READ-ONLY: This method should not mutate state. It reflects the last known state.
+      // [NOTE] READ-ONLY: This method should not mutate state. It reflects the last known state.
       const state = __VERIFIED_STATE__ || {
         codes: [], silver: [], gold: [],
         likes: 0, superlikes: 0, games: 0, transactions: 0,
@@ -161,7 +161,7 @@ const createAssetBus = () => {
 
     /**
      * Force a synchronization with the shadow ledger (backend)
-     * 🛡️ OFFLINE-FIRST: Client pushes its state to the server shadow.
+     * [GUARD] OFFLINE-FIRST: Client pushes its state to the server shadow.
      */
     async sync() {
       if (this._aligning) return false;
@@ -171,15 +171,15 @@ const createAssetBus = () => {
         // 1. Get current local authoritative state
         const current = this.getState();
         
-        // 🛡️ ALIGNMENT LAYER: Synchronize with persistent StorageAdapter
+        // [GUARD] ALIGNMENT LAYER: Synchronize with persistent StorageAdapter
         try {
           if (window.StorageAdapter && typeof window.StorageAdapter.getCodes === 'function') {
-            if (window.DEBUG_MODE) console.log('[AssetBus] Aligning with StorageAdapter (IndexedDB)...');
+            if (window.DEBUG_MODE) if (window.DEBUG_MODE) console.log('[AssetBus] Aligning with StorageAdapter (IndexedDB)...');
             let persistentCodes = await window.StorageAdapter.getCodes();
             
-            // 🛡️ FALLBACK 1: If IndexedDB is empty, try the server's diagnostic endpoint
+            // [GUARD] FALLBACK 1: If IndexedDB is empty, try the server's diagnostic endpoint
             if (persistentCodes.length === 0) {
-              if (window.DEBUG_MODE) console.log('[AssetBus] Local storage empty, attempting server diagnostic fetch...');
+              if (window.DEBUG_MODE) if (window.DEBUG_MODE) console.log('[AssetBus] Local storage empty, attempting server diagnostic fetch...');
               try {
                 const resp = await fetch('/api/diag/sqlite-codes');
                 const data = await resp.json();
@@ -192,14 +192,14 @@ const createAssetBus = () => {
               }
             }
             
-            // 🛡️ FALLBACK 2: If still empty, check legacy localStorage keys
+            // [GUARD] FALLBACK 2: If still empty, check legacy localStorage keys
             if (persistentCodes.length === 0) {
-              if (window.DEBUG_MODE) console.log('[AssetBus] Still empty, checking legacy localStorage keys...');
+              if (window.DEBUG_MODE) if (window.DEBUG_MODE) console.log('[AssetBus] Still empty, checking legacy localStorage keys...');
               try {
                 const legacy = JSON.parse(localStorage.getItem('safeCodes') || localStorage.getItem('bankode_codes') || '[]');
                 if (legacy.length > 0) {
                   persistentCodes = legacy;
-                  if (window.DEBUG_MODE) console.log('[AssetBus] Found', legacy.length, 'codes in legacy localStorage');
+                  if (window.DEBUG_MODE) if (window.DEBUG_MODE) console.log('[AssetBus] Found', legacy.length, 'codes in legacy localStorage');
                 }
               } catch(e) {}
             }
@@ -220,7 +220,7 @@ const createAssetBus = () => {
                   return false;
                 }
                 
-                if (window.DEBUG_MODE) console.log('[AssetBus] State drift detected, re-aligning codes:', { hasNew, hasRemoved });
+                if (window.DEBUG_MODE) if (window.DEBUG_MODE) console.log('[AssetBus] State drift detected, re-aligning codes:', { hasNew, hasRemoved });
                 __DRIFT_COUNT__++;
                 
                 // Merge: keep persistent codes + any bootstrapped placeholders
@@ -231,7 +231,7 @@ const createAssetBus = () => {
                 
                 this.update({ codes: mergedCodes }, 'internal-verified');
               } else {
-                if (window.DEBUG_MODE) console.log('[AssetBus] State already aligned with StorageAdapter');
+                if (window.DEBUG_MODE) if (window.DEBUG_MODE) console.log('[AssetBus] State already aligned with StorageAdapter');
                 __DRIFT_COUNT__ = 0; // Reset count on successful alignment
               }
             }
@@ -248,9 +248,9 @@ const createAssetBus = () => {
         // 3. Fetch server shadow state just to see if we're aligned
         const shadow = await fetchLedgerState();
         if (shadow) {
-          if (window.DEBUG_MODE) console.log('[AssetBus] Server shadow state received:', shadow);
+          if (window.DEBUG_MODE) if (window.DEBUG_MODE) console.log('[AssetBus] Server shadow state received:', shadow);
           
-          // 🧠 INITIAL LOAD FIX: If local state is empty but server has counts, populate local state
+          // [NOTE] INITIAL LOAD FIX: If local state is empty but server has counts, populate local state
           const hasLocalData = current.codes.length > 0 || current.likes > 0 || current.transactions > 0;
           const hasServerData = shadow.codes_count > 0 || shadow.likes > 0 || shadow.transactions > 0;
 
@@ -290,7 +290,7 @@ const createAssetBus = () => {
 
      // -------- Protected Update (Only for internal/server events) --------
     async update(data, source = 'unknown') { 
-     // 🧠 UNIVERSAL NORMALIZATION LAYER (as per actly.md)
+     // [NOTE] UNIVERSAL NORMALIZATION LAYER (as per actly.md)
      // Extract latest code if it's explicitly provided or at the end of the array
      const codes = Array.isArray(data.codes) ? data.codes : (Array.isArray(data) ? data : (this.state?.codes || []));
      const latest = data.latest || data.latestCode || data.code || (codes.length > 0 ? codes[codes.length - 1] : null);
@@ -312,7 +312,7 @@ const createAssetBus = () => {
 
      // If locked, queue instead of reject 
      if (this.ledgerLocked) { 
-       console.log(`[AssetBus] Queuing update from ${source} (ledger locked)`); 
+       if (window.DEBUG_MODE) console.log(`[AssetBus] Queuing update from ${source} (ledger locked)`); 
        this.pendingUpdates.push({ data: snapshot, source, timestamp: Date.now() }); 
        this._processQueue(); // Try to process when unlocked 
        return false; 
@@ -324,7 +324,7 @@ const createAssetBus = () => {
 
     lockLedger(duration = 5000) { 
      this.ledgerLocked = true; 
-     console.log(`[AssetBus] Ledger locked for ${duration}ms`); 
+     if (window.DEBUG_MODE) console.log(`[AssetBus] Ledger locked for ${duration}ms`); 
      
      // Auto-release after duration 
      clearTimeout(this._unlockTimer); 
@@ -336,7 +336,7 @@ const createAssetBus = () => {
     unlockLedger() { 
      if (!this.ledgerLocked) return; 
      this.ledgerLocked = false; 
-     console.log('[AssetBus] Ledger unlocked'); 
+     if (window.DEBUG_MODE) console.log('[AssetBus] Ledger unlocked'); 
      this._processQueue(); // Process pending updates 
     }, 
 
@@ -347,7 +347,7 @@ const createAssetBus = () => {
      
      while (this.pendingUpdates.length > 0 && !this.ledgerLocked) { 
        const { data, source } = this.pendingUpdates.shift(); 
-       console.log(`[AssetBus] Processing queued update from ${source}`); 
+       if (window.DEBUG_MODE) console.log(`[AssetBus] Processing queued update from ${source}`); 
        await this._applyUpdate(data, source); 
      } 
      
@@ -375,9 +375,9 @@ const createAssetBus = () => {
         }
 
         __VERIFIED_STATE__ = structuredClone(next);
-        this.state = __VERIFIED_STATE__; // 🛡️ Keep local reference for normalization
+        this.state = __VERIFIED_STATE__; // [GUARD] Keep local reference for normalization
         
-        // 🛡️ PERSIST TO LOCAL STORAGE: Ensure durability across sessions/reloads
+        // [GUARD] PERSIST TO LOCAL STORAGE: Ensure durability across sessions/reloads
         try {
           const ss = window.safeStorage || {
             set: (k, v) => { try { localStorage.setItem(k, v) } catch(_) {} }
@@ -385,10 +385,10 @@ const createAssetBus = () => {
           ss.set('codebank_assets', JSON.stringify(__VERIFIED_STATE__));
         } catch (_) {}
 
-        // 🛡️ CRITICAL: Always notify subscribers
+        // [GUARD] CRITICAL: Always notify subscribers
         this._notifySubscribers(__VERIFIED_STATE__);
         
-        // 🛡️ Dispatch to window for broader compatibility
+        // [GUARD] Dispatch to window for broader compatibility
         window.dispatchEvent(new CustomEvent('assets:updated', { 
           detail: { 
             ...next, 
@@ -407,7 +407,7 @@ const createAssetBus = () => {
           }));
         }
         
-        // 🛡️ NEW: Dispatch assetbus:ready event for late subscribers
+        // [GUARD] NEW: Dispatch assetbus:ready event for late subscribers
         window.dispatchEvent(new CustomEvent('assetbus:ready', {
           detail: { snapshot: __VERIFIED_STATE__ }
         }));
@@ -463,17 +463,17 @@ const createAssetBus = () => {
   
   window.__assetBusInstance = bus;
 
-  // 🛡️ SYNC ACROSS TABS/WINDOWS: Listen for localStorage changes
+  // [GUARD] SYNC ACROSS TABS/WINDOWS: Listen for localStorage changes
   window.addEventListener('storage', (event) => {
     if (event.key === 'codebank_assets' && event.newValue) {
       try {
         const parsed = JSON.parse(event.newValue);
         // Only update if it's actually newer to avoid loops
         if (!__VERIFIED_STATE__ || (parsed.updatedAt > __VERIFIED_STATE__.updatedAt)) {
-          console.log('[AssetBus] Syncing state from storage event');
+          if (window.DEBUG_MODE) console.log('[AssetBus] Syncing state from storage event');
           __VERIFIED_STATE__ = parsed;
           
-          // 🔧 FIX: Notify subscribers directly instead of triggering a potentially infinite sync() loop
+          // [FIX] FIX: Notify subscribers directly instead of triggering a potentially infinite sync() loop
           bus._notifySubscribers(__VERIFIED_STATE__);
           
           // Dispatch events for local listeners
@@ -494,7 +494,7 @@ const createAssetBus = () => {
 if (!window.AssetBus || typeof window.AssetBus.subscribe !== 'function') {
   const instance = createAssetBus();
   
-  // 🛡️ TAMPER-PROOF: Protect the global object
+  // [GUARD] TAMPER-PROOF: Protect the global object
   try {
     Object.defineProperty(window, 'AssetBus', {
       value: instance,
