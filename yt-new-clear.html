@@ -37,14 +37,17 @@
     <!-- FIX: Suppress "Leave Site?" popup from YouTube iframe and prevent navigation spam -->
     <script>
       (function() {
-        // 1. Suppress beforeunload dialogs unless there's actual user data to save
+        // 1. Kill ALL beforeunload dialogs — prevent "Leave Site?" popup
+        // This fires before any other handler and unconditionally blocks the dialog
+        window.onbeforeunload = null;
         window.addEventListener('beforeunload', function(e) {
-          if (!window.__HAS_UNSAVED_USER_DATA__) {
-            // No unsaved data - allow clean exit without "Leave site?" dialog
-            delete e.returnValue;
-            return undefined;
-          }
+          e.stopImmediatePropagation(); // Block all other beforeunload handlers
+          delete e.returnValue;
+          return undefined;
         }, { capture: true });
+        
+        // Also disable self-healing reload capability
+        window.selfHealingEnabled = false;
 
         // 2. Intercept and filter YouTube postMessage errors (www-widgetapi.js spam)
         var origAddEventListener = EventTarget.prototype.addEventListener;

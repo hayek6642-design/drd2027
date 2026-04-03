@@ -25,6 +25,13 @@
 
         async start() {
             if (this.initialized) return;
+            
+            // FIX: Prevent concurrent start() calls
+            if (this._starting) {
+                if (window.DEBUG_MODE) console.log('[YT-INIT] start() already in progress, skipping');
+                return;
+            }
+            this._starting = true;
 
             if (window.DEBUG_MODE) console.log('[YT-INIT] Starting initialization sequence...');
 
@@ -93,6 +100,8 @@
             }
 
             this.initialized = true;
+            this._starting = false; // FIX: Clear start lock
+            window.ytPlayerFullyInitialized = true; // FIX: Global flag for external checks
         },
 
         setupYouTubePlayer(container) {

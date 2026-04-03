@@ -151,7 +151,14 @@
     },
 
     _setState(nextAuth, nextUser, nextSessionId, fullUser) {
-      if (this._authInitialized && nextAuth === this._authenticated && nextUser === this._userId && !fullUser) return; 
+      if (this._authInitialized && nextAuth === this._authenticated && nextUser === this._userId && !fullUser) return;
+      
+      // FIX: Debounce rapid-fire state updates (max 2 per second)
+      var now = Date.now();
+      if (this.__lastSetState && (now - this.__lastSetState) < 500) {
+        return;
+      }
+      this.__lastSetState = now; 
       
       if (typeof nextAuth === 'object' && nextAuth !== null) {
         const payload = nextAuth;

@@ -143,8 +143,8 @@ export async function safeFetch(url, options = {}) {
  * Controlled reload that doesn't trigger loop guards
  */
 window.safeReload = () => {
-  console.warn("🔁 Controlled reload triggered")
-  window.location.href = window.location.href
+  console.warn("🚫 safeReload() BLOCKED to prevent reload loop. Stack:", new Error().stack)
+  // window.location.href = window.location.href // DISABLED — causes "Leave Site?" dialog
 }
 
 export const AppLifecycleManager = new AppLifecycle()
