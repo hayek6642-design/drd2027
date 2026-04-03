@@ -791,7 +791,10 @@
               if (this.mismatchCount >= this.maxRetries) {
                 console.error('[LedgerMonitor] Max retries reached, forcing recovery refresh');
                 // Use replace instead of reload to prevent history spam
-                window.location.replace(window.location.href);
+                console.warn('[LedgerMonitor] Max retries reached — skipping reload, resetting counter');
+                this.mismatchCount = 0;
+                this.checkInterval = 60000;
+                this.scheduleCheck();
                 return;
               }
               
