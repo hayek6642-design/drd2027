@@ -851,6 +851,20 @@ app.post('/api/admin/reset-pw', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+
+// TEMP DEBUG: check user hash
+app.post('/api/admin/debug-user', async (req, res) => {
+  const { secret, email } = req.body;
+  if (secret !== 'tmp-reset-secret-2026') return res.status(403).json({ error: 'forbidden' });
+  try {
+    const r = await query('SELECT id, email, password_hash, codes_count FROM users WHERE LOWER(email)=$1', [email.toLowerCase()]);
+    const user = r.rows[0];
+    if (!user) return res.json({ found: false });
+    const hash = user.password_hash || user[2];
+    res.json({ found: true, id: user.id || user[0], email: user.email || user[1], hashLen: hash ? hash.length : 0, hashStart: hash ? hash.substring(0, 10) : null, codes: user.codes_count || user[3] });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // Updated signup without OTP verification
 app.post('/api/auth/signup', async (req, res) => {
   try {
