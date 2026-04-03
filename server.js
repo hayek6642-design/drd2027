@@ -2158,18 +2158,20 @@ app.get('/api/codes/list', requireAuth, async (req, res) => {
       [userId]
     );
     
-    const allCodes = codesRes.rows.map(r => r.code);
-    const silverCodes = codesRes.rows.filter(r => r.type === 'silver').map(r => r.code);
-    const goldCodes = codesRes.rows.filter(r => r.type === 'gold').map(r => r.code);
+    const CODE_PATTERN = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-P[0-9]$/;
+    const validRows = codesRes.rows.filter(r => CODE_PATTERN.test(r.code));
+    const allCodes = validRows.map(r => r.code);
+    const silverCodes = validRows.filter(r => r.type === 'silver').map(r => r.code);
+    const goldCodes = validRows.filter(r => r.type === 'gold').map(r => r.code);
 
     return res.json({
       success: true,
       status: 'success',
-      count: Number(userRow.count),
-      silver_count: Number(userRow.silver),
-      gold_count: Number(userRow.gold),
-      codes: codesRes.rows, // Return full objects for storage adapter
-      rows: codesRes.rows, // For legacy compatibility
+      count: allCodes.length,
+      silver_count: silverCodes.length,
+      gold_count: goldCodes.length,
+      codes: validRows, // Return full objects for storage adapter (valid format only)
+      rows: validRows, // For legacy compatibility
       latest: allCodes.length > 0 ? allCodes[0] : null
     });
 
@@ -2182,6 +2184,24 @@ app.get('/api/codes/list', requireAuth, async (req, res) => {
     }); 
   } 
 }); 
+
+
+// Purge old-format codes from DB (client calls this once on startup)
+app.delete('/api/codes/purge-old-format', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const result = await query(
+      `DELETE FROM codes WHERE user_id = $1 AND code NOT SIMILAR TO '[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-P[0-9]'`,
+      [userId]
+    );
+    const deleted = result.rowCount || 0;
+    console.log('[PURGE OLD FORMAT] Deleted', deleted, 'legacy codes for user', userId);
+    res.json({ success: true, deleted });
+  } catch (e) {
+    console.error('[PURGE OLD FORMAT ERROR]', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
 
 import WatchdogAI from './services/watchdog-ai.js';
 
