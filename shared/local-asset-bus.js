@@ -11,6 +11,11 @@ try {
   if (_bootstrapRaw) {
     const _bootstrapParsed = JSON.parse(_bootstrapRaw);
     if (_bootstrapParsed && _bootstrapParsed.updatedAt) {
+      // Filter out legacy-format codes (old format: CODE-V-2026-XXX-PX)
+      const _validFmt = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-P[0-9]$/;
+      if (Array.isArray(_bootstrapParsed.codes)) {
+        _bootstrapParsed.codes = _bootstrapParsed.codes.filter(c => _validFmt.test(c) || c === 'BOOTSTRAPPED_CODE');
+      }
       __VERIFIED_STATE__ = _bootstrapParsed;
       console.log('[AssetBus] Bootstrapped from localStorage on init, codes:', (_bootstrapParsed.codes || []).length);
     }

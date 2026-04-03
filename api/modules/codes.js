@@ -282,12 +282,14 @@ router.get('/list', async (req, res) => {
       [identity.userId]
     )
 
-    const codes = result.rows.map(row => ({
-      code: row.code,
-      source: row.source,
-      created_at: row.created_at,
-      expires_at: row.expires_at
-    }))
+    const codes = result.rows
+      .filter(row => CODE_PATTERN.test(row.code)) // Exclude legacy-format codes
+      .map(row => ({
+        code: row.code,
+        source: row.source,
+        created_at: row.created_at,
+        expires_at: row.expires_at
+      }))
 
     res.json({
       success: true,
@@ -397,6 +399,30 @@ router.post('/send-codes', async (req, res) => {
       success: false,
       error: err.message
     });
+  }
+})
+
+
+// Purge old-format codes (legacy cleanup) - called once by client on load
+router.delete('/purge-old-format', async (req, res) => {
+  try {
+    const identity = await getIdentity(req)
+    if (!identity) {
+      return res.status(401).json({ success: false, message: 'UNAUTHORIZED' })
+    }
+
+    // Delete codes that don't match the new format
+    const result = await query(
+      `DELETE FROM codes WHERE user_id = $1 AND code NOT SIMILAR TO '[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-P[0-9]'`,
+      [identity.userId]
+    )
+
+    const deletedCount = result.rowCount || 0;
+    console.log('[CODES PURGE] Deleted', deletedCount, 'old-format codes for user', identity.userId);
+    res.json({ success: true, deleted: deletedCount })
+  } catch (err) {
+    console.error('[CODES PURGE ERROR]', err);
+    res.status(500).json({ success: false, error: err.message })
   }
 })
 
