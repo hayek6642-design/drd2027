@@ -1156,6 +1156,35 @@
           Bankode.processSyncQueue();
         }
         try { if (Bankode.retryTxQueue) Bankode.retryTxQueue(); } catch(_){ }
+        // [FIX] Auto-restore IndexedDB codes to server after auth is ready
+        try {
+          (async function autoRestoreToServer() {
+            try {
+              const allCodes = await idbGetAllCodes();
+              if (!allCodes || allCodes.length === 0) return;
+              // Get server count first
+              const serverResp = await fetch('/api/sqlite/codes', { credentials: 'include' });
+              const serverData = await serverResp.json().catch(() => ({}));
+              const serverCount = serverData.count || 0;
+              if (serverCount >= allCodes.length) return; // Server already has same or more
+              console.log(`[RESTORE] Local has ${allCodes.length} codes, server has ${serverCount} — pushing to server`);
+              const resp = await fetch('/api/sync/restore-codes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ codes: allCodes })
+              });
+              const result = await resp.json().catch(() => ({}));
+              if (result.success) {
+                console.log(`[RESTORE] ✅ Synced ${result.inserted} codes to server (skipped ${result.skipped}). Total: ${result.total_server}`);
+                // Dispatch event so UI can refresh count
+                window.dispatchEvent(new CustomEvent('codes:restored', { detail: result }));
+              }
+            } catch(e) {
+              console.warn('[RESTORE] Auto-restore failed:', e.message);
+            }
+          })();
+        } catch(_) {}
       }
     });
   } catch(_) {}

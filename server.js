@@ -1529,6 +1529,82 @@ async function autoCompressUserCodes(userId) {
 // SERVER-AUTHORITATIVE DELTA SYNC API
 // ------------------------------------------------------------------
 
+
+// ================================================================
+// [FIX] POST /api/sync/restore-codes
+// Accepts an array of code objects from IndexedDB and inserts them
+// into the codes table (de-duplicated). Keeps codes_count in sync.
+// Used to restore codes that were stored in IndexedDB but not on server.
+// ================================================================
+app.post('/api/sync/restore-codes', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { codes: incomingCodes } = req.body || {};
+
+    if (!Array.isArray(incomingCodes) || incomingCodes.length === 0) {
+      return res.status(400).json({ success: false, error: 'codes array required' });
+    }
+
+    // Safety cap: max 500 codes per restore call
+    const toRestore = incomingCodes.slice(0, 500);
+
+    // Get existing code strings for this user to avoid duplicates
+    const existingRes = await query(
+      "SELECT code FROM codes WHERE user_id = $1",
+      [userId]
+    );
+    const existingSet = new Set(existingRes.rows.map(r => r.code));
+
+    let inserted = 0;
+    let skipped = 0;
+
+    for (const entry of toRestore) {
+      const codeStr = entry.code || entry;
+      if (typeof codeStr !== 'string' || !codeStr.trim()) { skipped++; continue; }
+      if (existingSet.has(codeStr)) { skipped++; continue; }
+
+      const assetType = entry.type || entry.assetType || 'codes';
+      const createdAt = entry.createdAt || entry.created_at || null;
+
+      try {
+        await query(
+          "INSERT INTO codes (id, user_id, code, type, created_at) VALUES ($1, $2, $3, $4, COALESCE($5, CURRENT_TIMESTAMP))",
+          [crypto.randomUUID(), userId, codeStr, assetType, createdAt]
+        );
+        existingSet.add(codeStr);
+        inserted++;
+      } catch(e) {
+        if (!e.message.includes('UNIQUE')) {
+          console.error('[RESTORE] insert error:', e.message);
+        }
+        skipped++;
+      }
+    }
+
+    // Recalculate and fix codes_count
+    const countRes = await query(
+      "SELECT COUNT(*) as cnt FROM codes WHERE user_id = $1 AND spent = 0",
+      [userId]
+    );
+    const newCount = Number(countRes.rows[0]?.cnt || 0);
+    await query(
+      "UPDATE users SET codes_count = $1, last_sync_at = CURRENT_TIMESTAMP WHERE id = $2",
+      [newCount, userId]
+    );
+
+    console.log(`[RESTORE] user=${userId} inserted=${inserted} skipped=${skipped} total_server=${newCount}`);
+    return res.json({
+      success: true,
+      inserted,
+      skipped,
+      total_server: newCount
+    });
+  } catch(e) {
+    console.error('[RESTORE ERROR]', e.message);
+    return res.status(500).json({ success: false, error: 'internal_error' });
+  }
+});
+
 app.post('/api/sync', requireAuth, async (req, res) => {
   try {
     const { delta_codes, delta_silver, delta_gold, sync_id } = req.body || {}
@@ -1596,6 +1672,19 @@ app.post('/api/sync', requireAuth, async (req, res) => {
           "INSERT INTO ledger (tx_id, user_id, direction, asset_type, amount, reference) VALUES ($1, $2, 'credit', 'codes', $3, 'sync')",
           [crypto.randomUUID(), userId, d_codes]
         );
+        // [FIX] Insert actual code rows so codes table matches the counter
+        // (caller should prefer /api/sync/restore-codes with real code strings)
+        // Only insert synthetic rows if codes array not provided
+        if (!req.body.codes || !Array.isArray(req.body.codes)) {
+          for (let i = 0; i < d_codes; i++) {
+            try {
+              await client.query(
+                "INSERT INTO codes (id, user_id, code, type, created_at) VALUES ($1, $2, $3, 'codes', CURRENT_TIMESTAMP)",
+                [crypto.randomUUID(), userId, `SYNC-${Date.now()}-${i}`]
+              );
+            } catch(_) {}
+          }
+        }
       }
       if (d_silver > 0) {
         await client.query(
@@ -1998,10 +2087,18 @@ app.get('/api/sqlite/codes', requireAuth, async (req, res) => {
       [userId]
     );
 
+    // [FIX] Use live count from actual codes table (not stale counter)
+    const liveCount = codesRes.rows.length;
+    // Auto-heal: keep codes_count in sync with reality
+    if (Number(userRow.count) !== liveCount) {
+      try {
+        await query("UPDATE users SET codes_count = $1 WHERE id = $2", [liveCount, userId]);
+      } catch(_) {}
+    }
     return res.json({
       success: true,
       status: 'success',
-      count: Number(userRow.count),
+      count: liveCount,
       silver_count: Number(userRow.silver),
       gold_count: Number(userRow.gold),
       codes: codesRes.rows,
@@ -2105,7 +2202,11 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
   }
 
   try {
-    const receiver = await sqliteFindUserByEmail(receiverEmail);
+    // [FIX] Try DB first, fall back to in-memory users if not found
+    let receiver = await sqliteFindUserByEmail(receiverEmail);
+    if (!receiver || !receiver.id) {
+      receiver = memFindUserByEmail(receiverEmail);
+    }
     if (!receiver || !receiver.id) {
       console.warn(`[AUDIT] [FAIL] [RECEIVER_NOT_FOUND] sender=${fromUserId} receiverEmail=${receiverEmail}`);
       return res.status(404).json({ success: false, error: 'RECEIVER_NOT_FOUND' });
