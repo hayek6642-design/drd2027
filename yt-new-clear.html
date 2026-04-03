@@ -34,6 +34,57 @@
         localStorage.setItem(reloadKey, now.toString());
       })();
     </script>
+    <!-- FIX: Suppress "Leave Site?" popup from YouTube iframe and prevent navigation spam -->
+    <script>
+      (function() {
+        // 1. Suppress beforeunload dialogs unless there's actual user data to save
+        window.addEventListener('beforeunload', function(e) {
+          if (!window.__HAS_UNSAVED_USER_DATA__) {
+            // No unsaved data - allow clean exit without "Leave site?" dialog
+            delete e.returnValue;
+            return undefined;
+          }
+        }, { capture: true });
+
+        // 2. Intercept and filter YouTube postMessage errors (www-widgetapi.js spam)
+        var origAddEventListener = EventTarget.prototype.addEventListener;
+        EventTarget.prototype.addEventListener = function(type, fn, opts) {
+          if (type === 'message' && this === window) {
+            var wrappedFn = function(event) {
+              // Silently drop YouTube origin messages that cause cross-origin spam
+              if (event.origin && (
+                event.origin.indexOf('youtube.com') !== -1 ||
+                event.origin.indexOf('ytimg.com') !== -1 ||
+                event.origin.indexOf('googlevideo.com') !== -1
+              )) {
+                // Only forward to the YouTube Player API handler, block everything else
+                if (fn._ytPlayerHandler) return fn.call(this, event);
+                return;
+              }
+              return fn.call(this, event);
+            };
+            wrappedFn._original = fn;
+            return origAddEventListener.call(this, type, wrappedFn, opts);
+          }
+          return origAddEventListener.call(this, type, fn, opts);
+        };
+
+        // 3. Suppress YouTube-related console errors
+        var origConsoleError = console.error;
+        var origConsoleWarn = console.warn;
+        var ytSpamPattern = /youtube\.com|www-widgetapi|Failed to execute 'postMessage'|targetOrigin.*youtube/i;
+        console.error = function() {
+          var msg = Array.prototype.join.call(arguments, ' ');
+          if (ytSpamPattern.test(msg)) return;
+          return origConsoleError.apply(console, arguments);
+        };
+        console.warn = function() {
+          var msg = Array.prototype.join.call(arguments, ' ');
+          if (ytSpamPattern.test(msg)) return;
+          return origConsoleWarn.apply(console, arguments);
+        };
+      })();
+    </script>
     <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; font-src * data: 'self'; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src * data: blob:; media-src *; frame-src *;">
     <title>YouTube Embed App</title>
     <link rel="stylesheet" href="/styles/style.css">
@@ -2468,11 +2519,12 @@ document.addEventListener('DOMContentLoaded', async function(){
                         };
                         
                         // Send to main CodeBank frame
-                        frame.contentWindow.postMessage(authData, '*');
+                        var cbOrigin = (typeof __cbOrigin__ === 'function') ? __cbOrigin__() : window.location.origin;
+                        frame.contentWindow.postMessage(authData, cbOrigin);
                         if (window.DEBUG_MODE) console.log('[AUTH] Sent AUTH_SYNC to CodeBank frame');
                         
                         // Legacy support
-                        frame.contentWindow.postMessage({ type: 'AUTH_CONTEXT', payload: u }, '*'); 
+                        frame.contentWindow.postMessage({ type: 'AUTH_CONTEXT', payload: u }, cbOrigin); 
                     } 
                 } catch (_) { } 
             }

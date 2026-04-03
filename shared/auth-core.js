@@ -11,14 +11,15 @@
   
   if (typeof window !== 'undefined') {
     // 🧪 DIAGNOSTIC: Track all reload calls (from actly.md)
+    // FIX: Disabled actual reload/replace to prevent "Leave Site?" popup loops
     (function() {
         window.safeReload = function() {
-            console.error('🚨 [AuthCore] safeReload() called from:', new Error().stack);
-            location.reload();
+            console.warn('🚫 [AuthCore] safeReload() BLOCKED to prevent Leave Site popup. Stack:', new Error().stack);
+            // location.reload(); // DISABLED - causes "Leave Site?" dialog
         };
         window.safeReplace = function(url) {
-            console.error('🚨 [AuthCore] safeReplace() called with:', url, 'from:', new Error().stack);
-            location.replace(url);
+            console.warn('🚫 [AuthCore] safeReplace() BLOCKED. Target:', url, 'Stack:', new Error().stack);
+            // location.replace(url); // DISABLED - causes "Leave Site?" dialog
         };
     })();
 

@@ -219,7 +219,10 @@
         },
 
         onPlayerError(e) {
-            console.error('[YT-INIT] Player error code:', e.data);
+            // Only log real player errors, don't trigger reload or retry
+            const errorCodes = { 2: 'invalid param', 5: 'HTML5 error', 100: 'not found', 101: 'embed blocked', 150: 'embed blocked' };
+            console.warn('[YT-INIT] Player error code:', e.data, errorCodes[e.data] || 'unknown');
+            // Do NOT reload or retry on player errors - just log and continue
         },
 
         enableTheatreMode(p) {
