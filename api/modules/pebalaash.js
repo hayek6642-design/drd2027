@@ -8,7 +8,7 @@ import { requireAuth } from '../middleware/auth.js'
 const router = Router()
 
 // ─── Config ────────────────────────────────────────────────────────────────────
-const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || 'gogodblbless@gmail.com'
+const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || 'dia201244@gmail.com'
 
 // Asset conversion rates (from bankode-core.js)
 const CODES_PER_SILVER = 100    // 100 codes = 1 silver bar

@@ -4,7 +4,7 @@ import { query } from '../config/db.js'
 
 const router = Router()
 
-const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || 'gogodblbless@gmail.com'
+const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || 'dia201244@gmail.com'
 
 // ─── Email Transporter ─────────────────────────────────────────────────────
 const emailTransporter = nodemailer.createTransport({
