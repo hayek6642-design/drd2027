@@ -346,8 +346,7 @@ console.log('🔥 Window origin:', window.location.origin);
     // Quick gate: if the cookie is already gone, no point asking the server
     if (!document.cookie.includes('session_token=')) {
       localStorage.removeItem("session_active");
-      localStorage.removeItem("session_token");
-      localStorage.removeItem("user_data");
+      // Keep session_token and user_data — app will load with cached session (bg verify)
       localStorage.removeItem("__cached_user__");
       localStorage.removeItem("__cached_session_id__");
     } else {
@@ -358,13 +357,12 @@ console.log('🔥 Window origin:', window.location.origin);
           if (data.authenticated || data.ok) {
             window.location.href = "/yt-new-clear.html";
           } else {
-            // Server says NO — nuke stale client state
+            // Server session expired (e.g., server restart) — only clear active flag
+            // Keep session_token + user_data so app can still load via cached session
             localStorage.removeItem("session_active");
-            localStorage.removeItem("session_token");
-            localStorage.removeItem("user_data");
             localStorage.removeItem("__cached_user__");
             localStorage.removeItem("__cached_session_id__");
-            document.cookie = "session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            // Don't clear cookie — app will restore it from session_token if needed
           }
         })
         .catch(function() {
