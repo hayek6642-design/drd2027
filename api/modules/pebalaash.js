@@ -6,66 +6,88 @@ import { requireAuth } from '../middleware/auth.js'
 
 const router = Router()
 
-// ─── Public routes (no auth needed) ───────────────────────────────────────────
+// ─── Category → emoji mapping ─────────────────────────────────────────────────
+const CATEGORY_EMOJI = {
+  cosmetics: '💄', beauty: '✨', women: '👗', men: '👔',
+  kids: '🧒', children: '🧒', toys: '🧸', electronics: '📱',
+  food: '🍕', accessories: '👜', sports: '⚽', books: '📚',
+  home: '🏡', general: '🛍️'
+}
+function catEmoji(name) {
+  if (!name) return '🛍️'
+  return CATEGORY_EMOJI[name.toLowerCase().trim()] || '🛍️'
+}
+
+// ─── Public routes ─────────────────────────────────────────────────────────────
 
 router.get('/categories', async (_req, res) => {
   try {
-    const r = await query('SELECT id, name, slug, created_at FROM categories ORDER BY name ASC')
-    res.json(r.rows.map(row => ({
-      id: row.id,
-      name: row.name,
-      slug: row.slug,
-      createdAt: row.created_at,
-    })))
+    const r = await query('SELECT id, name, slug FROM categories ORDER BY name ASC')
+    res.json({
+      ok: true,
+      categories: r.rows.map(row => ({
+        id: row.id, name: row.name, slug: row.slug, emoji: catEmoji(row.name)
+      }))
+    })
   } catch (e) {
     console.error('[PEBALAASH] categories error:', e.message)
-    res.status(500).json({ message: 'Failed to fetch categories' })
+    res.status(500).json({ ok: false, error: 'Failed to fetch categories' })
   }
 })
 
 router.get('/products', async (req, res) => {
   try {
     const categoryId = req.query.categoryId ? Number(req.query.categoryId) : undefined
-    const r = categoryId
-      ? await query('SELECT * FROM products WHERE category_id=$1 ORDER BY id DESC', [categoryId])
-      : await query('SELECT * FROM products ORDER BY id DESC')
-    res.json(r.rows.map(row => ({
-      id: row.id,
-      name: row.name,
-      description: row.description,
-      priceCodes: row.price_codes,
-      imageUrl: row.image_url,
-      categoryId: row.category_id,
-      stock: row.stock,
-      soldCount: row.sold_count,
-      createdAt: row.created_at,
-    })))
+    const sql = categoryId
+      ? `SELECT p.*, c.name AS category_name
+         FROM products p LEFT JOIN categories c ON c.id = p.category_id
+         WHERE p.category_id = $1 ORDER BY p.id DESC`
+      : `SELECT p.*, c.name AS category_name
+         FROM products p LEFT JOIN categories c ON c.id = p.category_id
+         ORDER BY p.id DESC`
+    const r = categoryId ? await query(sql, [categoryId]) : await query(sql)
+    res.json({
+      ok: true,
+      products: r.rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        price_codes: row.price_codes,
+        image_emoji: catEmoji(row.category_name),
+        image_url: row.image_url || null,
+        category: row.category_name || 'General',
+        stock: row.stock,
+        sold_count: row.sold_count
+      }))
+    })
   } catch (e) {
     console.error('[PEBALAASH] products error:', e.message)
-    res.status(500).json({ message: 'Failed to fetch products' })
+    res.status(500).json({ ok: false, error: 'Failed to fetch products' })
   }
 })
 
 router.get('/products/:id', async (req, res) => {
   try {
-    const id = Number(req.params.id)
-    const r = await query('SELECT * FROM products WHERE id=$1', [id])
+    const r = await query(
+      `SELECT p.*, c.name AS category_name
+       FROM products p LEFT JOIN categories c ON c.id = p.category_id
+       WHERE p.id = $1`,
+      [req.params.id]
+    )
     const row = r.rows[0]
-    if (!row) return res.status(404).json({ message: 'Product not found' })
+    if (!row) return res.status(404).json({ ok: false, error: 'Product not found' })
     res.json({
-      id: row.id,
-      name: row.name,
-      description: row.description,
-      priceCodes: row.price_codes,
-      imageUrl: row.image_url,
-      categoryId: row.category_id,
-      stock: row.stock,
-      soldCount: row.sold_count,
-      createdAt: row.created_at,
+      ok: true,
+      product: {
+        id: row.id, name: row.name, description: row.description,
+        price_codes: row.price_codes, image_emoji: catEmoji(row.category_name),
+        image_url: row.image_url || null, category: row.category_name || 'General',
+        stock: row.stock, sold_count: row.sold_count
+      }
     })
   } catch (e) {
     console.error('[PEBALAASH] product/:id error:', e.message)
-    res.status(500).json({ message: 'Failed to fetch product' })
+    res.status(500).json({ ok: false, error: 'Failed to fetch product' })
   }
 })
 
@@ -73,28 +95,65 @@ router.get('/products/:id', async (req, res) => {
 
 /**
  * GET /api/pebalaash/wallet
- * Returns the authenticated user's current DR.D code balance (from `balances` table).
- * This is the real balance earned by watching — not the legacy user_rewards table.
+ * Returns the authenticated user's codes balance from DR.D's `balances` table.
+ * This is the real earned-by-watching balance — NOT the legacy user_rewards table.
  */
 router.get('/wallet', requireAuth, async (req, res) => {
   try {
     const userId = req.user.id
     const r = await query(
-      'SELECT codes_count FROM balances WHERE user_id=$1',
+      'SELECT codes_count FROM balances WHERE user_id = $1',
       [userId]
     )
-    const codes = Number(r.rows[0]?.codes_count) || 0
-    res.json({ userId, codes })
+    const codes_count = Number(r.rows[0]?.codes_count) || 0
+    res.json({ ok: true, codes_count, userId })
   } catch (e) {
     console.error('[PEBALAASH] wallet error:', e.message)
-    res.status(500).json({ message: 'Failed to fetch wallet' })
+    res.status(500).json({ ok: false, error: 'Failed to fetch wallet' })
+  }
+})
+
+/**
+ * GET /api/pebalaash/orders
+ * Returns the authenticated user's own order history (newest first, max 50).
+ */
+router.get('/orders', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id
+    const r = await query(
+      `SELECT o.id, o.status, o.total_codes, o.customer_info, o.created_at,
+              p.name AS product_name
+       FROM orders o
+       LEFT JOIN products p ON p.id = o.product_id
+       WHERE o.user_id = $1
+       ORDER BY o.created_at DESC LIMIT 50`,
+      [userId]
+    )
+    const orders = r.rows.map(row => {
+      let info = {}
+      try { info = JSON.parse(row.customer_info || '{}') } catch (_) {}
+      return {
+        id: row.id,
+        product_name: row.product_name || 'Unknown Product',
+        status: row.status,
+        codes_spent: row.total_codes,
+        customer_name: info.name || '',
+        customer_phone: info.phone || '',
+        customer_address: info.address || '',
+        created_at: row.created_at
+      }
+    })
+    res.json({ ok: true, orders })
+  } catch (e) {
+    console.error('[PEBALAASH] orders error:', e.message)
+    res.status(500).json({ ok: false, error: 'Failed to fetch orders' })
   }
 })
 
 /**
  * POST /api/pebalaash/checkout
- * Atomically deducts codes from the user's balance and creates an order.
- * Uses SELECT FOR UPDATE to prevent double-spend race conditions.
+ * Atomically deducts codes from the user's DR.D balance and creates an order.
+ * Uses BEGIN/COMMIT with SELECT FOR UPDATE to prevent double-spend race conditions.
  */
 router.post('/checkout', requireAuth, async (req, res) => {
   const client = await pool.connect()
@@ -103,76 +162,72 @@ router.post('/checkout', requireAuth, async (req, res) => {
     const userId = req.user.id
 
     if (!productId || !customerInfo) {
-      return res.status(400).json({ message: 'productId and customerInfo are required' })
+      return res.status(400).json({ ok: false, error: 'productId and customerInfo are required' })
+    }
+    if (!customerInfo.name || !customerInfo.phone || !customerInfo.address) {
+      return res.status(400).json({ ok: false, error: 'customerInfo must include name, phone, address' })
     }
 
     await client.query('BEGIN')
 
     // Lock product row to prevent overselling
     const pr = await client.query(
-      'SELECT id, price_codes, stock FROM products WHERE id=$1 FOR UPDATE',
+      'SELECT id, price_codes, stock FROM products WHERE id = $1 FOR UPDATE',
       [productId]
     )
     const product = pr.rows[0]
     if (!product) {
       await client.query('ROLLBACK')
-      return res.status(404).json({ message: 'Product not found' })
+      return res.status(404).json({ ok: false, error: 'Product not found' })
     }
     if (product.stock <= 0) {
       await client.query('ROLLBACK')
-      return res.status(400).json({ message: 'Out of stock' })
+      return res.status(400).json({ ok: false, error: 'Out of stock' })
     }
 
     // Lock user balance row to prevent double-spend
     const balRes = await client.query(
-      'SELECT codes_count FROM balances WHERE user_id=$1 FOR UPDATE',
+      'SELECT codes_count FROM balances WHERE user_id = $1 FOR UPDATE',
       [userId]
     )
     const current = Number(balRes.rows[0]?.codes_count) || 0
     if (current < product.price_codes) {
       await client.query('ROLLBACK')
-      return res.status(400).json({ message: 'Insufficient codes balance' })
+      return res.status(400).json({
+        ok: false,
+        error: `Insufficient codes: need ${product.price_codes}, have ${current}`
+      })
     }
 
     const newBalance = current - product.price_codes
 
-    // Deduct balance
+    // Deduct from DR.D balance
     await client.query(
-      'UPDATE balances SET codes_count=$1 WHERE user_id=$2',
+      'UPDATE balances SET codes_count = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2',
       [newBalance, userId]
     )
 
-    // Decrement stock, increment sold count
+    // Decrement stock + increment sold count
     await client.query(
-      'UPDATE products SET stock = stock - 1, sold_count = sold_count + 1 WHERE id=$1',
+      'UPDATE products SET stock = stock - 1, sold_count = sold_count + 1 WHERE id = $1',
       [productId]
     )
 
     // Create order record
-    const ord = await client.query(
-      `INSERT INTO orders(id, user_id, product_id, customer_info, status, total_codes, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,CURRENT_TIMESTAMP) RETURNING id`,
-      [
-        crypto.randomUUID(),
-        userId,
-        productId,
-        JSON.stringify(customerInfo),
-        'completed',
-        product.price_codes,
-      ]
+    const orderId = crypto.randomUUID()
+    await client.query(
+      `INSERT INTO orders (id, user_id, product_id, customer_info, status, total_codes, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
+      [orderId, userId, productId, JSON.stringify(customerInfo), 'pending', product.price_codes]
     )
 
     await client.query('COMMIT')
 
-    res.json({
-      success: true,
-      remainingCodes: newBalance,
-      orderId: ord.rows[0].id,
-    })
+    res.json({ ok: true, newBalance, orderId })
   } catch (e) {
     await client.query('ROLLBACK')
     console.error('[PEBALAASH] checkout error:', e.message)
-    res.status(500).json({ message: 'Transaction failed' })
+    res.status(500).json({ ok: false, error: 'Transaction failed — please try again' })
   } finally {
     client.release()
   }
@@ -185,22 +240,22 @@ router.get('/admin/stats', requireRole('admin'), async (_req, res) => {
     const recent = await query(
       `SELECT o.id, o.user_id, o.product_id, o.customer_info, o.status,
               o.total_codes, o.created_at, p.name AS product_name
-       FROM orders o
-       LEFT JOIN products p ON p.id = o.product_id
+       FROM orders o LEFT JOIN products p ON p.id = o.product_id
        ORDER BY o.created_at DESC LIMIT 50`
     )
     const totalSold = await query('SELECT COUNT(*) AS count FROM orders')
-    const totalRevenue = await query('SELECT COALESCE(SUM(total_codes),0) AS sum FROM orders')
-    const lowStock = await query('SELECT * FROM products WHERE stock < 5')
+    const totalRevenue = await query('SELECT COALESCE(SUM(total_codes), 0) AS sum FROM orders')
+    const lowStock = await query('SELECT * FROM products WHERE stock < 5 ORDER BY stock ASC')
     res.json({
+      ok: true,
       totalSold: Number(totalSold.rows[0]?.count) || 0,
       totalRevenueCodes: Number(totalRevenue.rows[0]?.sum) || 0,
       recentOrders: recent.rows,
-      lowStockProducts: lowStock.rows,
+      lowStockProducts: lowStock.rows
     })
   } catch (e) {
     console.error('[PEBALAASH] admin/stats error:', e.message)
-    res.status(500).json({ message: 'Failed to fetch admin stats' })
+    res.status(500).json({ ok: false, error: 'Failed to fetch admin stats' })
   }
 })
 
