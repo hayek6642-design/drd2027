@@ -667,30 +667,47 @@
                 try {
                     const user = JSON.parse(localStorage.getItem('user') || '{}');
                     
-                    // 🛡️ ARCHITECTURE ALIGNMENT: Get codes from AssetBus (Authoritative Runtime)
+                    // 🛡️ ARCHITECTURE ALIGNMENT: Get codes + full assets from AssetBus
                     let codes = [];
+                    let assetSnapshot = {};
                     if (window.AssetBus && typeof window.AssetBus.snapshot === 'function') {
                         const snap = window.AssetBus.snapshot();
                         codes = snap.codes || [];
+                        assetSnapshot = snap;
                     }
                     
                     // Fallback to localStorage if AssetBus is empty
                     if (!codes.length) {
                         codes = JSON.parse(localStorage.getItem('safeCodes') || localStorage.getItem('bankode_codes') || '[]');
                     }
-                    
+
+                    // Build normalised asset payload for display
+                    const assetPayload = Object.assign({}, assetSnapshot, {
+                        codes_count:  Array.isArray(assetSnapshot.codes)  ? assetSnapshot.codes.length  : (assetSnapshot.codes_count  || 0),
+                        silver_count: Array.isArray(assetSnapshot.silver) ? assetSnapshot.silver.length : (assetSnapshot.silver_count || 0),
+                        gold_count:   Array.isArray(assetSnapshot.gold)   ? assetSnapshot.gold.length   : (assetSnapshot.gold_count   || 0),
+                    });
+
+                    // ① Send dedicated assets:sync so the bridge bar updates immediately
                     modalIframe.contentWindow.postMessage({
-                        type: 'auth:ready',
-                        source: 'codebank-parent',
+                        type:   'assets:sync',
+                        assets: assetPayload
+                    }, '*');
+
+                    // ② Standard auth:ready with assets embedded
+                    modalIframe.contentWindow.postMessage({
+                        type:      'auth:ready',
+                        source:    'codebank-parent',
                         serviceId: currentServiceUrl,
                         payload: {
-                            user: user,
-                            codes: codes,
+                            user:      user,
+                            codes:     codes,
+                            assets:    assetPayload,
                             timestamp: Date.now()
                         }
                     }, '*');
                     
-                    console.log('[CodeBank] Sent auth:ready to iframe with', codes.length, 'codes');
+                    console.log('[CodeBank] Sent auth:ready + assets:sync to iframe with', codes.length, 'codes');
                 } catch (e) {
                     console.error('[CodeBank] Failed to send init:', e);
                 }
@@ -747,11 +764,133 @@
                     console.log('[CodeBank] SafeCode specifically reports ready');
                     modalLoading.classList.add('hidden');
                 }
+
+                // ── ACC Asset handling ──────────────────────────────────────
+                if (e.data?.type === 'assets:request') {
+                    // Service is asking for the current asset snapshot
+                    sendInitToIframe();
+                }
+
+                if (e.data?.type === 'assets:spend') {
+                    _handleAssetSpend(e.data);
+                }
+
+                if (e.data?.type === 'assets:earn') {
+                    _handleAssetEarn(e.data);
+                }
             });
             
             // Legacy compatibility - redirect old calls to new modal
             window.openServiceLegacy = window.openService;
-            
+
+            // ── ACC: Build normalised snapshot helper ──────────────────────
+            function _buildAssetPayload(snap) {
+                if (!snap) return {};
+                return Object.assign({}, snap, {
+                    codes_count:  Array.isArray(snap.codes)  ? snap.codes.length  : (snap.codes_count  || 0),
+                    silver_count: Array.isArray(snap.silver) ? snap.silver.length : (snap.silver_count || 0),
+                    gold_count:   Array.isArray(snap.gold)   ? snap.gold.length   : (snap.gold_count   || 0),
+                });
+            }
+
+            // ── ACC: Push fresh assets to the open service iframe ──────────
+            function _pushAssetsToService() {
+                if (!modalIframe || !modalIframe.contentWindow) return;
+                if (!modal.classList.contains('active')) return;
+                const snap = window.AssetBus ? window.AssetBus.snapshot() : null;
+                if (!snap) return;
+                modalIframe.contentWindow.postMessage({
+                    type:   'assets:sync',
+                    assets: _buildAssetPayload(snap)
+                }, '*');
+            }
+
+            // ── ACC: Handle spend request from service ─────────────────────
+            async function _handleAssetSpend(data) {
+                const { reqId, assetType, amount, serviceId, reason } = data;
+                let success = false;
+                let err = '';
+
+                try {
+                    // Map like/super/mega to the AssetBus counter names
+                    const fieldMap = { like: 'likes', super: 'superlikes', mega: 'superlikes', superlike: 'superlikes', megalike: 'superlikes' };
+                    const field = fieldMap[assetType] || assetType;
+
+                    if (window.AssetBus) {
+                        const snap = window.AssetBus.snapshot();
+                        const current = parseInt(snap[field]) || 0;
+                        const cost    = parseInt(amount)       || 1;
+                        if (current >= cost) {
+                            const upd = Object.assign({}, snap);
+                            upd[field] = current - cost;
+                            await window.AssetBus.update(upd, 'service-spend');
+                            success = true;
+                        } else {
+                            err = 'Insufficient ' + field;
+                        }
+                    } else {
+                        err = 'AssetBus unavailable';
+                    }
+                } catch (e) {
+                    err = e.message;
+                }
+
+                const freshSnap = window.AssetBus ? window.AssetBus.snapshot() : {};
+                if (modalIframe && modalIframe.contentWindow) {
+                    modalIframe.contentWindow.postMessage({
+                        type:    'assets:spend:result',
+                        reqId:   reqId,
+                        success: success,
+                        error:   err,
+                        assets:  _buildAssetPayload(freshSnap)
+                    }, '*');
+                }
+            }
+
+            // ── ACC: Handle earn request from service ──────────────────────
+            async function _handleAssetEarn(data) {
+                const { reqId, assetType, amount, serviceId, reason } = data;
+                let success = false;
+
+                try {
+                    const fieldMap = { like: 'likes', super: 'superlikes', games: 'games' };
+                    const field = fieldMap[assetType] || assetType;
+
+                    if (window.AssetBus) {
+                        const snap  = window.AssetBus.snapshot();
+                        const upd   = Object.assign({}, snap);
+                        upd[field]  = (parseInt(upd[field]) || 0) + (parseInt(amount) || 1);
+                        await window.AssetBus.update(upd, 'service-earn');
+                        success = true;
+                    }
+                } catch (e) {}
+
+                const freshSnap = window.AssetBus ? window.AssetBus.snapshot() : {};
+                if (modalIframe && modalIframe.contentWindow) {
+                    modalIframe.contentWindow.postMessage({
+                        type:    'assets:earn:result',
+                        reqId:   reqId,
+                        success: success,
+                        assets:  _buildAssetPayload(freshSnap)
+                    }, '*');
+                }
+            }
+
+            // ── ACC: Subscribe AssetBus → push to open service on every update ──
+            window.addEventListener('assetbus:ready', function () {
+                if (window.AssetBus && typeof window.AssetBus.subscribe === 'function') {
+                    window.AssetBus.subscribe('assets:updated', function () {
+                        _pushAssetsToService();
+                    });
+                }
+            });
+            // Also try subscribing immediately in case AssetBus is already ready
+            if (window.AssetBus && typeof window.AssetBus.subscribe === 'function') {
+                window.AssetBus.subscribe('assets:updated', function () {
+                    _pushAssetsToService();
+                });
+            }
+
             console.log('[CodeBank] Service Manager initialized');
         })();
 
