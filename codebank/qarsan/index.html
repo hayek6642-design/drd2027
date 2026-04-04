@@ -495,11 +495,20 @@
             <!-- Dead State Block -->
             <div id="dead-block" class="dead-block hidden">
                 <div class="dead-icon">💀</div>
-                <h2 class="dead-title">Your Watch-Dog has died</h2>
-                <p class="warning-description">
-                    Your guardian has passed away. Qarsan system is now disabled.<br>
-                    Buy a new dog to restore full system (coming soon)
+                <h2 class="dead-title">Your Watch-Dog has Died</h2>
+                <p style="color: #94A3B8; margin-bottom: 20px;">
+                    Your guardian has passed away from starvation (3 days without feeding).<br>
+                    All watchdog, guardian, and extra mode activities are now disabled.
                 </p>
+                <button id="btn-buy-dog" onclick="window.qarsanUI.buyNewDog()" style="
+                    background: linear-gradient(135deg, #7C3AED, #DB2777);
+                    color: white; border: none; padding: 16px 32px;
+                    border-radius: 12px; font-size: 1.1rem; cursor: pointer;
+                    font-weight: 700; margin-top: 10px;
+                    box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+                ">
+                    🛒 Buy New Dog from Pebalaash (1000 codes)
+                </button>
             </div>
 
             <!-- Active Content -->
@@ -892,8 +901,65 @@
                     this.showToast('Dog fed! Now active for 24h', 'success');
                     await this.loadStatus();
                     this.updateUI();
+                } else if (result.error === 'ALREADY_FED') {
+                    // Show special popup for already fed
+                    this.showAlreadyFedPopup(result.message, result.nextFeedIn);
+                } else if (result.error === 'DOG_DEAD') {
+                    this.showToast('Your dog is dead! Buy a new one from Pebalaash.', 'error');
+                    await this.loadStatus();
+                    this.updateUI();
+                } else if (result.error === 'INSUFFICIENT_CODES') {
+                    this.showToast('Not enough codes! Need ' + (result.details?.required || 10) + ' codes.', 'error');
                 } else {
-                    this.showToast(result.message || 'Not enough codes', 'error');
+                    this.showToast(result.message || 'Feeding failed', 'error');
+                }
+            }
+
+            showAlreadyFedPopup(message, nextFeedIn) {
+                const overlay = document.createElement('div');
+                overlay.style.cssText = `
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                    background: rgba(0,0,0,0.7); z-index: 99999;
+                    display: flex; align-items: center; justify-content: center;
+                `;
+                overlay.innerHTML = `
+                    <div style="
+                        background: #1E293B; border: 2px solid #F59E0B;
+                        border-radius: 20px; padding: 40px; text-align: center;
+                        max-width: 380px; box-shadow: 0 0 40px rgba(245,158,11,0.3);
+                    ">
+                        <div style="font-size: 4rem; margin-bottom: 20px;">🐕</div>
+                        <h2 style="color: #F59E0B; font-size: 1.5rem; margin-bottom: 15px;">Dog Already Fed!</h2>
+                        <p style="color: #94A3B8; margin-bottom: 10px;">${message || 'The dog is already fed today!'}</p>
+                        ${nextFeedIn ? `<p style="color: #64748B; font-size: 0.85rem; margin-bottom: 25px;">Next feeding in: <strong style="color:#F59E0B">${nextFeedIn}h</strong></p>` : ''}
+                        <button onclick="this.closest('[data-overlay]').remove()" style="
+                            background: #F59E0B; color: #000; border: none;
+                            padding: 12px 30px; border-radius: 10px;
+                            font-size: 1rem; cursor: pointer; font-weight: 600;
+                        ">Got it!</button>
+                    </div>
+                `;
+                overlay.dataset.overlay = 'true';
+                overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+                document.body.appendChild(overlay);
+            }
+
+            async buyNewDog() {
+                const confirm = window.confirm('Buy a new dog for 1000 codes from Pebalaash?');
+                if (!confirm) return;
+                const result = await QarsanEngine.buyNewDog();
+                if (result.success) {
+                    this.showToast('New dog purchased! Your guardian is alive again!', 'success');
+                    // Update guardian 3D to live state
+                    if (window.__GUARDIAN__) {
+                        window.__GUARDIAN__.setState('idle');
+                    }
+                    await this.loadStatus();
+                    this.updateUI();
+                } else if (result.error === 'INSUFFICIENT_CODES') {
+                    this.showToast(`Need 1000 codes. You have ${result.available || 0}.`, 'error');
+                } else {
+                    this.showToast(result.message || 'Purchase failed', 'error');
                 }
             }
 
@@ -1024,6 +1090,21 @@
 
         // Initialize
         window.qarsanUI = new QarsanUIController();
+
+        // Listen for dog click (raycasting) → feed the dog
+        window.addEventListener('guardian:dog-clicked', (e) => {
+            if (window.qarsanUI) {
+                window.qarsanUI.feedDog();
+            }
+        });
+
+        // Listen for successful dog purchase → refresh UI
+        window.addEventListener('watchdog:dog-purchased', async () => {
+            if (window.qarsanUI) {
+                await window.qarsanUI.loadStatus();
+                window.qarsanUI.updateUI();
+            }
+        });
     </script>
 </body>
 </html>

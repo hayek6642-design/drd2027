@@ -298,6 +298,25 @@ class QarsanEngine {
     }
   }
 
+  static async buyNewDog() {
+    try {
+      const response = await fetch('/api/watchdog/buy-dog', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+      const data = await response.json();
+      if (data.success) {
+        window.dispatchEvent(new CustomEvent('watchdog:dog-purchased', {
+          detail: { dogState: data.dogState, cost: data.cost }
+        }));
+      }
+      return data;
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }
+
   /**
    * Get Watch-Dog state
    * @param {string} userId - User ID

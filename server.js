@@ -102,6 +102,10 @@ import {
 import { requireAuth, devSessions } from './api/middleware/auth.js';
 import { enforceFinancialSecurity, enforceWatchDog, storeIdempotencyResponse } from './shared/security-middleware.js';
 
+// Watch-Dog Guardian
+import { WatchDogGuardian } from './shared/watch-dog-guardian.js';
+const { feedWatchDog } = WatchDogGuardian;
+
 
 const app = express();
 
@@ -3099,6 +3103,98 @@ app.post('/api/watchdog/feed', requireAuth, enforceFinancialSecurity, async (req
     return res.status(500).json({ success: false, error: err && err.message })
   }
 })
+
+// POST /api/watchdog/buy-dog - Buy a new dog from Pebalaash (costs 1000 codes)
+app.post('/api/watchdog/buy-dog', requireAuth, enforceFinancialSecurity, async (req, res) => {
+  try {
+    const userId = req.user && req.user.id;
+    if (!userId) return res.status(401).json({ success: false, error: 'unauthorized' });
+
+    const BUY_DOG_COST = 1000;
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Check balance
+      const balanceRes = await client.query(
+        `SELECT COUNT(*)::int as count FROM codes WHERE user_id = $1 AND (spent IS FALSE OR spent IS NULL OR spent = 0)`,
+        [userId]
+      );
+      const currentBalance = parseInt(balanceRes.rows[0]?.count || 0, 10);
+
+      if (currentBalance < BUY_DOG_COST) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          success: false,
+          error: 'INSUFFICIENT_CODES',
+          required: BUY_DOG_COST,
+          available: currentBalance
+        });
+      }
+
+      // Select codes to spend
+      const codesRes = await client.query(
+        `SELECT id FROM codes WHERE user_id = $1 AND (spent IS FALSE OR spent IS NULL OR spent = 0) ORDER BY created_at ASC LIMIT $2`,
+        [userId, BUY_DOG_COST]
+      );
+      const codeIds = codesRes.rows.map(r => r.id);
+
+      // Mark codes as spent
+      await client.query(
+        `UPDATE codes SET spent = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ANY($1)`,
+        [codeIds]
+      );
+
+      // Ledger entry
+      const txId = crypto.randomUUID();
+      await client.query(
+        `INSERT INTO ledger (id, tx_id, user_id, direction, asset_type, amount, reference, meta)
+         VALUES ($1, $2, $3, 'debit', 'codes', $4, 'PEBALAASH_BUY_DOG', $5)`,
+        [crypto.randomUUID(), txId, userId, BUY_DOG_COST, JSON.stringify({ operation: 'buy_new_dog', cost: BUY_DOG_COST })]
+      );
+
+      // Reset watchdog state to ACTIVE with fresh feed timestamp
+      await client.query(
+        `INSERT INTO watchdog_state (user_id, last_fed_at, dog_state, is_frozen, updated_at)
+         VALUES ($1, CURRENT_TIMESTAMP, 'ACTIVE', 0, CURRENT_TIMESTAMP)
+         ON CONFLICT (user_id) DO UPDATE SET
+           last_fed_at = CURRENT_TIMESTAMP,
+           dog_state = 'ACTIVE',
+           is_frozen = 0,
+           updated_at = CURRENT_TIMESTAMP`,
+        [userId]
+      );
+
+      // Audit log
+      await client.query(
+        `INSERT INTO audit_log (type, payload) VALUES ($1, $2)`,
+        ['BUY_NEW_DOG', JSON.stringify({ userId, cost: BUY_DOG_COST, txId, timestamp: new Date().toISOString() })]
+      );
+
+      await client.query('COMMIT');
+
+      // SSE notification
+      try { __sseEmit(userId, { type: 'ASSET_UPDATE', assetType: 'codes' }); } catch(_){}
+      try { __sseEmit(userId, { type: 'WATCHDOG_UPDATE', action: 'dog_purchased' }); } catch(_){}
+
+      return res.json({
+        success: true,
+        cost: BUY_DOG_COST,
+        newBalance: currentBalance - BUY_DOG_COST,
+        dogState: 'ACTIVE',
+        message: 'New dog purchased! Your guardian is now alive and active.',
+        txId
+      });
+    } catch (err) {
+      try { await client.query('ROLLBACK'); } catch(_){}
+      return res.status(500).json({ success: false, error: err.message });
+    } finally {
+      if (typeof client.release === 'function') client.release();
+    }
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err && err.message });
+  }
+});
 
 // =============================================================================
 // QARSAN API ENDPOINTS - Server-Side Financial Operations

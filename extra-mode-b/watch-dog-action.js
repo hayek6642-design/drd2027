@@ -74,6 +74,12 @@ function isWithinPrayerWindow() {
  * @param {boolean} active 
  */
 function setWatchDogActive(active) {
+  // Check if dog is dead - cannot activate if dead
+  if (active && window.__DOG_STATE__ === 'DEAD') {
+    console.warn('[ActionLayer] Cannot activate watch-dog: dog is dead');
+    return;
+  }
+
   window.watchDogActive = active;
   
   // 🔗 Communication: Action Layer -> Adapter
@@ -140,3 +146,14 @@ if (window.TimerManager) {
 // Global exports
 window.handleExtraModeChange = handleExtraModeChange;
 window.isWithinPrayerWindow = isWithinPrayerWindow;
+
+// Listen for guardian state changes to track dog death
+window.addEventListener('guardian:state-changed', (e) => {
+  if (e.detail && e.detail.state === 'dead') {
+    window.__DOG_STATE__ = 'DEAD';
+    setWatchDogActive(false);
+    window.extraModeActive = false;
+  } else if (e.detail) {
+    window.__DOG_STATE__ = e.detail.state;
+  }
+});
