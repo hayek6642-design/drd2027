@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -7,7 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Coins, Package, ShoppingCart, Search, Menu, Filter, Star, Zap, Clock } from "lucide-react";
+import {
+  Loader2, Coins, Package, ShoppingCart, Search, Menu, Filter,
+  Star, Zap, Clock, Flame, History, ChevronRight, BadgeCheck, RefreshCw,
+} from "lucide-react";
 import { AdminDashboard } from "@/components/AdminDashboard";
 import { IceOverlay } from "@/components/iceOverlay";
 import { api } from "@shared/routes";
@@ -17,102 +20,152 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
+// ─── Types ─────────────────────────────────────────────────────────────────────
+
 const purchaseSchema = z.object({
-  name: z.string().min(2, "Name is required"),
-  phone: z.string().min(5, "Valid phone required"),
+  name:    z.string().min(2, "Name is required"),
+  phone:   z.string().min(5, "Valid phone required"),
   address: z.string().min(5, "Address required"),
-  notes: z.string().optional(),
+  email:   z.string().email("Valid email required").optional().or(z.literal("")),
+  notes:   z.string().optional(),
 });
 
 type PurchaseFormData = z.infer<typeof purchaseSchema>;
+type PaymentType = "codes" | "silver" | "gold";
 
-interface Category {
-  id: number;
-  name: string;
-  slug: string;
-}
+interface Category { id: number; name: string; slug: string; }
 
 interface Product {
-  id: number;
-  name: string;
+  id:          number;
+  name:        string;
   description?: string;
-  priceCodes: number;
-  imageUrl: string;
-  categoryId: number;
-  stock: number;
-  soldCount: number;
+  priceCodes:  number;
+  priceSilver: number;
+  priceGold:   number;
+  imageUrl:    string;
+  categoryId:  number;
+  stock:       number;
+  soldCount:   number;
+  avgRating:   number | null;
+  ratingCount: number;
 }
 
 interface Wallet {
   userId: string;
-  codes: number;
+  codes:  number;
+  silver: number;
+  gold:   number;
 }
 
-interface CartItem {
-  product: Product;
-  addedAt: Date;
-}
-
-interface PurchasedItem {
-  id: number;
+interface Order {
+  id:          string;
+  productId:   number;
   productName: string;
-  priceCodes: number;
-  customerName: string;
-  purchasedAt: Date;
+  paymentType: PaymentType;
+  amountPaid:  number;
+  priceCodes:  number;
+  status:      string;
+  createdAt:   string;
 }
 
-interface FailedPurchase {
-  productName: string;
-  requiredCodes: number;
-  availableCodes: number;
-  attemptedAt: Date;
+interface CartItem      { product: Product; addedAt: Date; }
+interface PurchasedItem { id: number; productName: string; priceCodes: number; customerName: string; purchasedAt: Date; }
+interface FailedPurchase { productName: string; requiredCodes: number; availableCodes: number; attemptedAt: Date; }
+
+// ─── Constants ─────────────────────────────────────────────────────────────────
+
+const PAYMENT_LABELS: Record<PaymentType, string> = {
+  codes:  "DR.D Codes",
+  silver: "Silver Bars",
+  gold:   "Gold Bars",
+};
+const PAYMENT_EMOJI: Record<PaymentType, string> = {
+  codes:  "🔵",
+  silver: "🥈",
+  gold:   "🥇",
+};
+
+// Conversion rates (must match backend: bankode-core.js)
+const CODES_PER_SILVER = 100;
+const CODES_PER_GOLD   = 10000;
+
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+
+function getProductPrice(p: Product | null, type: PaymentType): number {
+  if (!p) return 0;
+  if (type === "silver") return p.priceSilver;
+  if (type === "gold")   return p.priceGold;
+  return p.priceCodes;
 }
+
+function getWalletBalance(w: Wallet | undefined, type: PaymentType): number {
+  if (!w) return 0;
+  if (type === "silver") return w.silver;
+  if (type === "gold")   return w.gold;
+  return w.codes;
+}
+
+function StarRow({ rating, count, size = 14 }: { rating: number | null; count: number; size?: number }) {
+  if (!rating && !count) return null;
+  const r = rating ?? 0;
+  return (
+    <div className="flex items-center gap-1">
+      {[1,2,3,4,5].map(i => (
+        <Star
+          key={i}
+          style={{ width: size, height: size }}
+          className={i <= Math.round(r) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}
+        />
+      ))}
+      <span className="text-[10px] text-muted-foreground ml-0.5">
+        {r > 0 ? r.toFixed(1) : ""} {count > 0 ? `(${count})` : ""}
+      </span>
+    </div>
+  );
+}
+
+// ─── Component ─────────────────────────────────────────────────────────────────
 
 const GUEST_USER_ID = "550e8400-e29b-41d4-a716-446655440000";
-
-// Declare global window property for TypeScript
-declare global {
-  interface Window {
-    __BALLOON_POINTS__: number;
-  }
-}
+declare global { interface Window { __BALLOON_POINTS__: number; } }
 
 export default function Pebalaash() {
-  const { toast } = useToast();
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const { toast }       = useToast();
+  const queryClient     = useQueryClient();
+
+  const [selectedProduct,    setSelectedProduct]    = useState<Product | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [titleClicks, setTitleClicks] = useState(0);
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [balloonPoints, setBalloonPoints] = useState(0);
-  const [searchQuery, setSearchQuery] = useState("");
-  
-  // Cart state
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [purchasedItems, setPurchasedItems] = useState<PurchasedItem[]>([]);
+  const [isSheetOpen,        setIsSheetOpen]        = useState(false);
+  const [isOrdersOpen,       setIsOrdersOpen]       = useState(false);
+  const [isCartOpen,         setIsCartOpen]         = useState(false);
+  const [isAdminOpen,        setIsAdminOpen]        = useState(false);
+  const [titleClicks,        setTitleClicks]        = useState(0);
+  const [isProcessing,       setIsProcessing]       = useState(false);
+  const [balloonPoints,      setBalloonPoints]      = useState(0);
+  const [searchQuery,        setSearchQuery]        = useState("");
+  const [paymentType,        setPaymentType]        = useState<PaymentType>("codes");
+
+  // Rating modal
+  const [ratingProduct, setRatingProduct] = useState<Product | null>(null);
+  const [ratingValue,   setRatingValue]   = useState(0);
+  const [ratingReview,  setRatingReview]  = useState("");
+
+  // Cart / history state
+  const [cartItems,       setCartItems]       = useState<CartItem[]>([]);
+  const [purchasedItems,  setPurchasedItems]  = useState<PurchasedItem[]>([]);
   const [failedPurchases, setFailedPurchases] = useState<FailedPurchase[]>([]);
 
-  // Listen for balloon points updates
   useEffect(() => {
-    // Initialize with current global points
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       setBalloonPoints(window.__BALLOON_POINTS__ || 0);
-      
-      const handlePointsUpdate = (e: any) => {
-        setBalloonPoints(e.detail.points);
-      };
-
-      window.addEventListener('balloon:points:update', handlePointsUpdate);
-      
-      return () => {
-        window.removeEventListener('balloon:points:update', handlePointsUpdate);
-      };
+      const handler = (e: any) => setBalloonPoints(e.detail.points);
+      window.addEventListener("balloon:points:update", handler);
+      return () => window.removeEventListener("balloon:points:update", handler);
     }
   }, []);
 
-  // Fetch categories
+  // ─── Queries ─────────────────────────────────────────────────────────────────
+
   const { data: categories = [] } = useQuery({
     queryKey: [api.categories.list.path],
     queryFn: async (): Promise<Category[]> => {
@@ -122,11 +175,10 @@ export default function Pebalaash() {
     },
   });
 
-  // Fetch products
   const { data: products = [], isLoading: isProductsLoading } = useQuery({
     queryKey: [api.products.list.path, selectedCategoryId],
     queryFn: async (): Promise<Product[]> => {
-      const url = selectedCategoryId 
+      const url = selectedCategoryId
         ? `${api.products.list.path}?categoryId=${selectedCategoryId}`
         : api.products.list.path;
       const res = await fetch(url, { credentials: "include" });
@@ -135,7 +187,6 @@ export default function Pebalaash() {
     },
   });
 
-  // Fetch wallet
   const { data: wallet, refetch: refetchWallet } = useQuery({
     queryKey: [api.wallet.get.path],
     queryFn: async (): Promise<Wallet> => {
@@ -143,177 +194,236 @@ export default function Pebalaash() {
       if (!res.ok) throw new Error("Failed to fetch wallet");
       return res.json();
     },
+    refetchInterval: 30_000,
   });
 
-  // Form handling
+  const { data: ordersData, isLoading: isOrdersLoading } = useQuery({
+    queryKey: ["/api/pebalaash/orders"],
+    queryFn: async (): Promise<{ orders: Order[]; total: number }> => {
+      const res = await fetch("/api/pebalaash/orders", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch orders");
+      return res.json();
+    },
+    enabled: isOrdersOpen,
+  });
+
+  // ─── Form ─────────────────────────────────────────────────────────────────────
+
   const form = useForm<PurchaseFormData>({
     resolver: zodResolver(purchaseSchema),
-    defaultValues: {
-      name: "",
-      phone: "",
-      address: "",
-      notes: "",
-    },
+    defaultValues: { name: "", phone: "", address: "", email: "", notes: "" },
   });
 
+  // ─── Derived checkout values ──────────────────────────────────────────────────
+
+  const requiredAmount = getProductPrice(selectedProduct, paymentType);
+  const currentBalance = getWalletBalance(wallet, paymentType);
+  const canAfford      = currentBalance >= requiredAmount;
+
+  // ─── Handlers ─────────────────────────────────────────────────────────────────
+
   const handleTitleClick = () => {
-    const newCount = titleClicks + 1;
-    setTitleClicks(newCount);
-    if (newCount === 7) {
-      setIsAdminOpen(true);
-      setTitleClicks(0);
-    }
+    const next = titleClicks + 1;
+    setTitleClicks(next);
+    if (next === 7) { setIsAdminOpen(true); setTitleClicks(0); }
     setTimeout(() => setTitleClicks(0), 2000);
   };
 
   const handleAddToCart = (product: Product) => {
-    setCartItems([...cartItems, { product, addedAt: new Date() }]);
-    toast({
-      title: "Added to cart",
-      description: `${product.name} added to cart.`,
-    });
+    setCartItems(prev => [...prev, { product, addedAt: new Date() }]);
+    toast({ title: "Added to cart", description: `${product.name} added to cart.` });
   };
 
-  const handleRemoveFromCart = (productId: number) => {
-    setCartItems(cartItems.filter((item: CartItem) => item.product.id !== productId));
-  };
+  const handleRemoveFromCart = (productId: number) =>
+    setCartItems(prev => prev.filter(i => i.product.id !== productId));
 
   const handleBuyClick = (product: Product) => {
     setSelectedProduct(product);
+    setPaymentType("codes");
     setIsSheetOpen(true);
     form.reset();
   };
 
   const onPurchaseSubmit = async (data: PurchaseFormData) => {
     if (!selectedProduct || !wallet) return;
-
     setIsProcessing(true);
     try {
-      // Check if they can afford it
-      if (wallet.codes < selectedProduct.priceCodes) {
-        setFailedPurchases([
-          ...failedPurchases,
-          {
-            productName: selectedProduct.name,
-            requiredCodes: selectedProduct.priceCodes,
-            availableCodes: wallet.codes,
-            attemptedAt: new Date(),
-          },
-        ]);
-        throw new Error("Insufficient codes balance");
+      if (!canAfford) {
+        setFailedPurchases(prev => [...prev, {
+          productName:    selectedProduct.name,
+          requiredCodes:  selectedProduct.priceCodes,
+          availableCodes: wallet.codes,
+          attemptedAt:    new Date(),
+        }]);
+        throw new Error(`Insufficient ${PAYMENT_LABELS[paymentType]}`);
       }
 
       const res = await fetch(api.checkout.purchase.path, {
-        method: "POST",
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productId: selectedProduct.id,
-          customerInfo: data,
-        }),
+        body: JSON.stringify({ productId: selectedProduct.id, customerInfo: data, paymentType }),
         credentials: "include",
       });
 
       if (!res.ok) {
-        const error = await res.json();
-        setFailedPurchases([
-          ...failedPurchases,
-          {
-            productName: selectedProduct.name,
-            requiredCodes: selectedProduct.priceCodes,
-            availableCodes: wallet.codes,
-            attemptedAt: new Date(),
-          },
-        ]);
-        throw new Error(error.message || "Purchase failed");
+        const errBody = await res.json().catch(() => ({}));
+        setFailedPurchases(prev => [...prev, {
+          productName:    selectedProduct.name,
+          requiredCodes:  selectedProduct.priceCodes,
+          availableCodes: wallet.codes,
+          attemptedAt:    new Date(),
+        }]);
+        throw new Error(errBody.message || "Purchase failed");
       }
 
-      // Add to purchased items
-      setPurchasedItems([
-        ...purchasedItems,
-        {
-          id: selectedProduct.id,
-          productName: selectedProduct.name,
-          priceCodes: selectedProduct.priceCodes,
-          customerName: data.name,
-          purchasedAt: new Date(),
-        },
-      ]);
-
-      // Remove from cart if exists
-      setCartItems(cartItems.filter((item: CartItem) => item.product.id !== selectedProduct.id));
-
+      const result = await res.json();
+      setPurchasedItems(prev => [...prev, {
+        id:           selectedProduct.id,
+        productName:  selectedProduct.name,
+        priceCodes:   selectedProduct.priceCodes,
+        customerName: data.name,
+        purchasedAt:  new Date(),
+      }]);
+      setCartItems(prev => prev.filter(i => i.product.id !== selectedProduct.id));
       setIsSheetOpen(false);
       form.reset();
       refetchWallet();
+      queryClient.invalidateQueries({ queryKey: ["/api/pebalaash/orders"] });
+      queryClient.invalidateQueries({ queryKey: [api.products.list.path, selectedCategoryId] });
 
       toast({
-        title: "Purchase Successful!",
-        description: `You bought ${selectedProduct.name} for ${selectedProduct.priceCodes} codes.`,
+        title:       "🎉 Purchase Successful!",
+        description: `You bought ${selectedProduct.name} for ${result.amountPaid} ${PAYMENT_LABELS[paymentType]}.`,
       });
+
+      // Prompt for rating after a short delay
+      setTimeout(() => {
+        setRatingProduct(selectedProduct);
+        setRatingValue(0);
+        setRatingReview("");
+      }, 1500);
     } catch (error) {
       toast({
-        title: "Purchase Failed",
+        title:       "Purchase Failed",
         description: error instanceof Error ? error.message : "Unknown error",
-        variant: "destructive",
+        variant:     "destructive",
       });
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const filteredProducts = products.filter((p: Product) => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+  const submitRating = async () => {
+    if (!ratingProduct || !ratingValue) return;
+    try {
+      await fetch(`/api/pebalaash/products/${ratingProduct.id}/ratings`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ rating: ratingValue, review: ratingReview }),
+        credentials: "include",
+      });
+      queryClient.invalidateQueries({ queryKey: [api.products.list.path, selectedCategoryId] });
+      toast({ title: "⭐ Thanks for your review!", description: "Your rating has been saved." });
+    } catch {
+      toast({ title: "Rating failed", variant: "destructive" });
+    } finally {
+      setRatingProduct(null);
+    }
+  };
+
+  const filteredProducts = products.filter((p: Product) =>
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // ─── Conversion calculator ────────────────────────────────────────────────────
+
+  const codesInput = wallet?.codes ?? 0;
+  const equivalentSilver = Math.floor(codesInput / CODES_PER_SILVER);
+  const equivalentGold   = Math.floor(codesInput / CODES_PER_GOLD);
+
+  // ─── Render ───────────────────────────────────────────────────────────────────
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Marquee */}
       <MarqueeSection />
 
-      {/* Navigation */}
+      {/* ── Nav / Assets Bar ──────────────────────────────────────────────────── */}
       <nav className="bg-card/80 border-b border-border sticky top-0 z-10 backdrop-blur brand-gradient">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
+          <div className="flex justify-between h-16 items-center gap-3">
+
+            {/* Logo */}
             <div className="flex-shrink-0 cursor-pointer select-none" onClick={handleTitleClick}>
               <h1 className="text-3xl font-display font-black tracking-tight gradient-text">
                 Pebalaash<span className="text-blue-500">.</span>
               </h1>
             </div>
 
-            {/* Search Bar */}
-            <div className="hidden lg:flex flex-1 max-w-md mx-8">
+            {/* Search */}
+            <div className="hidden lg:flex flex-1 max-w-md mx-4">
               <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Search products..." 
+                <Input
+                  placeholder="Search products..."
                   className="w-full pl-10 bg-background/50 border-border/50 focus:border-blue-500/50"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={e => setSearchQuery(e.target.value)}
                 />
               </div>
             </div>
-            
-            <div className="flex items-center gap-4">
-              {wallet && (
-                <div className="hidden md:flex items-center bg-gradient-to-r from-blue-500/20 to-purple-500/20 px-4 py-2 rounded-xl border border-blue-500/30 text-blue-300">
-                  <Coins className="w-4 h-4 mr-2 text-blue-400" />
-                  <span className="font-bold">{wallet.codes.toLocaleString()}</span>
-                  <span className="text-xs ml-2 opacity-70">CODES</span>
+
+            {/* Assets Bar */}
+            <div className="flex items-center gap-2">
+              {wallet ? (
+                <>
+                  <div className="hidden sm:flex items-center bg-gradient-to-r from-blue-500/20 to-blue-700/20 px-3 py-1.5 rounded-xl border border-blue-500/30 text-blue-300 gap-1.5">
+                    <span className="text-xs">🔵</span>
+                    <span className="font-bold text-sm">{wallet.codes.toLocaleString()}</span>
+                    <span className="text-[10px] opacity-60 uppercase tracking-wide">Codes</span>
+                  </div>
+                  <div className="hidden md:flex items-center bg-gradient-to-r from-slate-400/20 to-slate-600/20 px-3 py-1.5 rounded-xl border border-slate-400/30 text-slate-300 gap-1.5">
+                    <span className="text-xs">🥈</span>
+                    <span className="font-bold text-sm">{wallet.silver.toLocaleString()}</span>
+                    <span className="text-[10px] opacity-60 uppercase tracking-wide">Silver</span>
+                  </div>
+                  <div className="hidden md:flex items-center bg-gradient-to-r from-yellow-500/20 to-amber-600/20 px-3 py-1.5 rounded-xl border border-yellow-500/30 text-yellow-300 gap-1.5">
+                    <span className="text-xs">🥇</span>
+                    <span className="font-bold text-sm">{wallet.gold.toLocaleString()}</span>
+                    <span className="text-[10px] opacity-60 uppercase tracking-wide">Gold</span>
+                  </div>
+                </>
+              ) : (
+                <div className="hidden sm:flex items-center bg-muted px-3 py-1.5 rounded-xl border border-border text-muted-foreground gap-1.5 text-xs">
+                  <Loader2 className="w-3 h-3 animate-spin" />Syncing assets…
                 </div>
               )}
-              {/* Balloon Points Display */}
-              <div className="hidden md:flex items-center bg-gradient-to-r from-green-500/20 to-emerald-500/20 px-4 py-2 rounded-xl border border-green-500/30 text-green-300">
-                <Package className="w-4 h-4 mr-2 text-green-400" />
-                <span className="font-bold">{balloonPoints.toLocaleString()}</span>
-                <span className="text-xs ml-2 opacity-70">BALLOON</span>
+
+              {/* Balloon Points */}
+              <div className="hidden lg:flex items-center bg-gradient-to-r from-green-500/20 to-emerald-500/20 px-3 py-1.5 rounded-xl border border-green-500/30 text-green-300 gap-1.5">
+                <Package className="w-3.5 h-3.5 text-green-400" />
+                <span className="font-bold text-sm">{balloonPoints.toLocaleString()}</span>
+                <span className="text-[10px] opacity-60 uppercase tracking-wide">Balloon</span>
               </div>
-              <Button 
-                size="icon" 
+
+              {/* Orders History button */}
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setIsOrdersOpen(true)}
+                title="My Orders"
+                className="relative text-muted-foreground hover:text-foreground"
+              >
+                <History className="w-5 h-5" />
+              </Button>
+
+              {/* Cart button */}
+              <Button
+                size="icon"
                 variant="default"
                 onClick={() => setIsCartOpen(true)}
                 className="relative cta-gradient cta-gradient-hover"
-                >
+              >
                 <ShoppingCart className="w-5 h-5" />
                 {(cartItems.length + purchasedItems.length + failedPurchases.length) > 0 && (
                   <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
@@ -322,31 +432,37 @@ export default function Pebalaash() {
                 )}
               </Button>
             </div>
+
           </div>
         </div>
       </nav>
 
+      {/* ── Main ──────────────────────────────────────────────────────────────── */}
       <div className="flex-grow flex flex-col">
-        {/* Hero Section */}
+
+        {/* Hero */}
         <div className="bg-gradient-to-b from-blue-500/5 to-transparent border-b border-border/50 py-16 px-4">
           <div className="max-w-7xl mx-auto text-center space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-bold animate-pulse">
               <Zap className="w-4 h-4" />
-              <span>NEW SPRING COLLECTION 2024</span>
+              <span>PAY WITH CODES · SILVER · GOLD</span>
             </div>
             <h2 className="text-6xl font-display font-black gradient-text tracking-tighter">
               The Professional Store for <br /> Digital Assets.
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto font-medium">
-              Join thousands of businesses sourcing premium products on Pebalaash.
+              Use your earned codes, silver bars, or gold bars — your assets, your choice.
             </p>
           </div>
         </div>
 
         <div className="max-w-7xl mx-auto w-full flex flex-col lg:flex-row gap-8 px-4 sm:px-6 lg:px-8 py-12">
+
           {/* Sidebar */}
-          <aside className="lg:w-64 flex-shrink-0 space-y-8">
-            <div className="space-y-4">
+          <aside className="lg:w-64 flex-shrink-0 space-y-6">
+
+            {/* Categories */}
+            <div className="space-y-3">
               <div className="flex items-center gap-2 font-display font-bold text-lg text-foreground">
                 <Menu className="w-5 h-5 text-blue-500" />
                 <h3>Categories</h3>
@@ -356,22 +472,64 @@ export default function Pebalaash() {
                   variant={selectedCategoryId === null ? "default" : "ghost"}
                   onClick={() => setSelectedCategoryId(null)}
                   className="justify-start font-bold"
-                >
-                  All Products
-                </Button>
+                >All Products</Button>
                 {categories.map((cat: Category) => (
                   <Button
                     key={cat.id}
                     variant={selectedCategoryId === cat.id ? "default" : "ghost"}
                     onClick={() => setSelectedCategoryId(cat.id)}
                     className="justify-start font-bold"
-                  >
-                    {cat.name}
-                  </Button>
+                  >{cat.name}</Button>
                 ))}
               </div>
             </div>
 
+            {/* Asset Balances Recap */}
+            {wallet && (
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-slate-700/50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Your Assets</p>
+                  <button onClick={() => refetchWallet()} title="Refresh" className="text-slate-500 hover:text-slate-300 transition-colors">
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                {(["codes", "silver", "gold"] as PaymentType[]).map(type => (
+                  <div key={type} className="flex justify-between items-center">
+                    <span className="text-sm text-slate-300 flex items-center gap-1.5">
+                      {PAYMENT_EMOJI[type]} {PAYMENT_LABELS[type]}
+                    </span>
+                    <span className="font-bold text-sm text-white">
+                      {getWalletBalance(wallet, type).toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Conversion Calculator */}
+            {wallet && (
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-purple-900/40 to-blue-900/40 border border-purple-500/20 space-y-3">
+                <p className="text-xs font-bold uppercase tracking-widest text-purple-300 flex items-center gap-1.5">
+                  <Coins className="w-3.5 h-3.5" /> Asset Converter
+                </p>
+                <p className="text-[11px] text-slate-400">Your {wallet.codes.toLocaleString()} codes equal:</p>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">🥈 Silver Bars</span>
+                    <span className="font-bold text-slate-200">{equivalentSilver.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">🥇 Gold Bars</span>
+                    <span className="font-bold text-yellow-300">{equivalentGold.toLocaleString()}</span>
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-500 border-t border-slate-700 pt-2">
+                  100 codes = 1 silver · 10,000 codes = 1 gold
+                </p>
+              </div>
+            )}
+
+            {/* Promo widget */}
             <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20 space-y-4">
               <div className="flex items-center gap-2 font-bold text-blue-400">
                 <Clock className="w-4 h-4" />
@@ -382,9 +540,10 @@ export default function Pebalaash() {
               </p>
               <Button className="w-full cta-gradient text-xs font-black">CLAIM NOW</Button>
             </div>
+
           </aside>
 
-          {/* Main Grid */}
+          {/* Product Grid */}
           <div className="flex-grow">
             {isProductsLoading ? (
               <div className="flex justify-center py-20">
@@ -392,79 +551,112 @@ export default function Pebalaash() {
               </div>
             ) : filteredProducts.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredProducts.map((product: Product) => (
-                  <Card key={product.id} className="group overflow-hidden glass-card transition-all duration-300 flex flex-col h-full border-border/50 hover:border-blue-500/30">
-                    <div className="aspect-[4/3] relative overflow-hidden bg-black/30">
-                      <div className="absolute top-3 right-3 flex flex-col gap-2 z-10">
-                        {product.soldCount > 50 && (
-                          <div className="bg-orange-500 text-white text-[10px] font-black px-2 py-1 rounded flex items-center gap-1 shadow-lg">
-                            <Flame className="w-3 h-3" /> BESTSELLER
+                {filteredProducts.map((product: Product) => {
+                  const affordableCodes  = wallet && wallet.codes  >= product.priceCodes;
+                  const affordableSilver = wallet && wallet.silver >= product.priceSilver;
+                  const affordableGold   = wallet && wallet.gold   >= product.priceGold;
+                  const isAffordable     = affordableCodes || affordableSilver || affordableGold;
+
+                  return (
+                    <Card
+                      key={product.id}
+                      className={`group overflow-hidden glass-card transition-all duration-300 flex flex-col h-full border-border/50 hover:border-blue-500/30 ${isAffordable ? "ring-1 ring-green-500/20" : ""}`}
+                    >
+                      {/* Image */}
+                      <div className="aspect-[4/3] relative overflow-hidden bg-black/30">
+                        <div className="absolute top-3 right-3 flex flex-col gap-2 z-10">
+                          {product.soldCount > 50 && (
+                            <div className="bg-orange-500 text-white text-[10px] font-black px-2 py-1 rounded flex items-center gap-1 shadow-lg">
+                              <Flame className="w-3 h-3" /> BESTSELLER
+                            </div>
+                          )}
+                          {product.avgRating && product.avgRating >= 4.5 && (
+                            <div className="bg-yellow-500 text-black text-[10px] font-black px-2 py-1 rounded flex items-center gap-1 shadow-lg">
+                              <Star className="w-3 h-3 fill-current" /> {product.avgRating.toFixed(1)}
+                            </div>
+                          )}
+                          {!product.avgRating && (
+                            <div className="bg-blue-500 text-white text-[10px] font-black px-2 py-1 rounded flex items-center gap-1 shadow-lg">
+                              <Star className="w-3 h-3 fill-current" /> NEW
+                            </div>
+                          )}
+                        </div>
+                        {product.stock <= 5 && product.stock > 0 && (
+                          <div className="absolute bottom-3 left-3 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg z-10">
+                            ONLY {product.stock} LEFT
                           </div>
                         )}
-                        <div className="bg-blue-500 text-white text-[10px] font-black px-2 py-1 rounded flex items-center gap-1 shadow-lg">
-                          <Star className="w-3 h-3 fill-current" /> 4.9
-                        </div>
+                        {isAffordable && (
+                          <div className="absolute top-3 left-3 bg-green-500/90 text-white text-[10px] font-black px-2 py-1 rounded shadow-lg z-10 flex items-center gap-1">
+                            <BadgeCheck className="w-3 h-3" /> YOU CAN BUY
+                          </div>
+                        )}
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          loading="lazy"
+                          className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-700"
+                          onError={(e: any) => {
+                            (e.target as HTMLImageElement).src =
+                              `https://placehold.co/600x400/1e293b/94a3b8?text=${encodeURIComponent(product.name)}`;
+                          }}
+                        />
                       </div>
-                      
-                      {product.stock <= 5 && product.stock > 0 && (
-                        <div className="absolute bottom-3 left-3 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg z-10">
-                          ONLY {product.stock} LEFT
-                        </div>
-                      )}
-                      
-                      <img 
-                        src={product.imageUrl} 
-                        alt={product.name}
-                        loading="lazy"
-                        className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-700"
-                        onError={(e: any) => {
-                          (e.target as HTMLImageElement).src = `https://placehold.co/600x400/1e293b/94a3b8?text=${encodeURIComponent(product.name)}`;
-                        }}
-                      />
-                    </div>
 
-                    <CardContent className="p-5 flex-grow">
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-display font-bold text-lg text-foreground group-hover:text-blue-400 transition-colors">
+                      <CardContent className="p-5 flex-grow">
+                        <h3 className="font-display font-bold text-lg text-foreground group-hover:text-blue-400 transition-colors mb-1">
                           {product.name}
                         </h3>
-                      </div>
-                      <p className="text-muted-foreground text-xs line-clamp-2 mb-4 h-8 leading-relaxed">
-                        {product.description || "Premium high-end digital asset curated for professionals."}
-                      </p>
-                      
-                      <div className="flex items-center justify-between mt-auto">
-                        <div className="flex items-center text-blue-300 font-black text-lg">
-                          <Coins className="w-5 h-5 mr-1.5 text-blue-500" />
-                          {product.priceCodes.toLocaleString()}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                          {product.soldCount} Sold
-                        </div>
-                      </div>
-                    </CardContent>
+                        <p className="text-muted-foreground text-xs line-clamp-2 mb-2 h-8 leading-relaxed">
+                          {product.description || "Premium high-end digital asset curated for professionals."}
+                        </p>
 
-                    <CardFooter className="p-5 pt-0 gap-2">
-                      <Button 
-                        className="flex-1 enterprise-button bg-background hover:bg-muted font-bold text-xs" 
-                        size="sm"
-                        disabled={product.stock === 0}
-                        onClick={() => handleAddToCart(product)}
-                        variant="outline"
-                      >
-                        CART
-                      </Button>
-                      <Button 
-                        className="flex-1 enterprise-button cta-gradient cta-gradient-hover text-white border-0 font-black text-xs" 
-                        size="sm"
-                        disabled={product.stock === 0}
-                        onClick={() => handleBuyClick(product)}
-                      >
-                        BUY NOW
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))}
+                        {/* Star rating */}
+                        <div className="mb-3">
+                          <StarRow rating={product.avgRating} count={product.ratingCount} />
+                        </div>
+
+                        {/* Multi-currency pricing */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-xs text-slate-400">
+                            <span>🔵 Codes</span>
+                            <span className="font-bold text-blue-300">{product.priceCodes.toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs text-slate-400">
+                            <span>🥈 Silver</span>
+                            <span className="font-bold text-slate-300">{product.priceSilver.toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs text-slate-400">
+                            <span>🥇 Gold</span>
+                            <span className="font-bold text-yellow-300">{product.priceGold.toLocaleString()}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between mt-3">
+                          <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+                            {product.soldCount} Sold
+                          </span>
+                        </div>
+                      </CardContent>
+
+                      <CardFooter className="p-5 pt-0 gap-2">
+                        <Button
+                          className="flex-1 enterprise-button bg-background hover:bg-muted font-bold text-xs"
+                          size="sm"
+                          disabled={product.stock === 0}
+                          onClick={() => handleAddToCart(product)}
+                          variant="outline"
+                        >CART</Button>
+                        <Button
+                          className="flex-1 enterprise-button cta-gradient cta-gradient-hover text-white border-0 font-black text-xs"
+                          size="sm"
+                          disabled={product.stock === 0}
+                          onClick={() => handleBuyClick(product)}
+                        >BUY NOW</Button>
+                      </CardFooter>
+                    </Card>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-20 bg-card/30 rounded-3xl border-2 border-dashed border-border/50">
@@ -477,84 +669,132 @@ export default function Pebalaash() {
         </div>
       </div>
 
-      {/* Checkout Sheet */}
+      {/* ── Checkout Sheet ─────────────────────────────────────────────────────── */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent className="sm:max-w-md w-full overflow-y-auto bg-card border-l-2 border-blue-500/40">
           <SheetHeader className="mb-6">
             <SheetTitle className="font-display text-2xl gradient-text">Secure Checkout</SheetTitle>
-            <SheetDescription className="text-muted-foreground">Provide delivery information</SheetDescription>
+            <SheetDescription>Choose your payment method and fill in delivery info</SheetDescription>
           </SheetHeader>
 
           {selectedProduct && wallet && (
-            <div className="space-y-8">
-              {/* Product Summary */}
+            <div className="space-y-6">
+
+              {/* Product summary */}
               <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 p-4 rounded-xl border border-blue-500/30 flex gap-4 items-start">
-                <div className="h-16 w-16 rounded-md bg-black/30 border border-orange-500/30 overflow-hidden flex-shrink-0">
+                <div className="h-16 w-16 rounded-md bg-black/30 border border-blue-500/30 overflow-hidden flex-shrink-0">
                   <img src={selectedProduct.imageUrl} alt="" className="h-full w-full object-cover" />
                 </div>
                 <div>
                   <h4 className="font-semibold text-foreground">{selectedProduct.name}</h4>
-                  <div className="flex items-center text-blue-400 font-bold mt-1">
-                    <Coins className="w-4 h-4 mr-1" />
-                    {selectedProduct.priceCodes.toLocaleString()} Codes
+                  <div className="flex flex-col gap-0.5 mt-1 text-xs">
+                    <span className="text-blue-300">🔵 {selectedProduct.priceCodes.toLocaleString()} Codes</span>
+                    <span className="text-slate-300">🥈 {selectedProduct.priceSilver.toLocaleString()} Silver</span>
+                    <span className="text-yellow-300">🥇 {selectedProduct.priceGold.toLocaleString()} Gold</span>
                   </div>
                 </div>
               </div>
 
-              {/* Wallet Status */}
-              <div className={`p-4 rounded-xl border ${canAfford ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/30' : 'bg-gradient-to-r from-red-500/10 to-purple-500/10 border-red-500/30'}`}>
+              {/* Payment type selector */}
+              <div className="space-y-2">
+                <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Pay With</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(["codes", "silver", "gold"] as PaymentType[]).map(type => {
+                    const bal        = getWalletBalance(wallet, type);
+                    const price      = getProductPrice(selectedProduct, type);
+                    const canPay     = bal >= price;
+                    const isSelected = paymentType === type;
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setPaymentType(type)}
+                        className={`flex flex-col items-center p-3 rounded-xl border transition-all duration-200 text-xs font-bold
+                          ${isSelected
+                            ? "border-blue-500 bg-blue-500/20 text-blue-300 shadow-lg shadow-blue-500/10"
+                            : canPay
+                            ? "border-green-500/40 bg-green-500/5 text-green-300 hover:border-green-500/70"
+                            : "border-border/50 bg-muted/30 text-muted-foreground opacity-60"
+                          }`}
+                      >
+                        <span className="text-xl mb-1">{PAYMENT_EMOJI[type]}</span>
+                        <span className="uppercase tracking-wide">{type}</span>
+                        <span className={`mt-1 font-normal text-[10px] ${canPay ? "text-green-400" : "text-red-400"}`}>
+                          {canPay ? `✓ ${bal.toLocaleString()} avail.` : `✗ Need ${price - bal}`}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Balance & cost summary */}
+              <div className={`p-4 rounded-xl border ${canAfford
+                ? "bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/30"
+                : "bg-gradient-to-r from-red-500/10 to-purple-500/10 border-red-500/30"}`}
+              >
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-sm font-medium text-muted-foreground">Your Balance</span>
-                  <span className="font-bold text-blue-300">{wallet.codes.toLocaleString()} Codes</span>
+                  <span className="font-bold text-blue-300">{currentBalance.toLocaleString()} {PAYMENT_LABELS[paymentType]}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">Item Price</span>
-                  <span className="font-medium text-foreground">-{selectedProduct.priceCodes.toLocaleString()}</span>
+                  <span className="font-medium text-foreground">−{requiredAmount.toLocaleString()}</span>
                 </div>
-                <div className="my-2 border-t border-border/50"></div>
+                <div className="my-2 border-t border-border/50" />
                 {canAfford ? (
                   <div className="flex justify-between items-center font-bold text-green-400">
-                    <span>Remaining</span>
-                    <span>{(wallet.codes - selectedProduct.priceCodes).toLocaleString()} Codes</span>
+                    <span>Remaining after purchase</span>
+                    <span>{(currentBalance - requiredAmount).toLocaleString()} {PAYMENT_LABELS[paymentType]}</span>
                   </div>
                 ) : (
-                  <div className="text-red-400 font-bold text-sm">Insufficient balance</div>
+                  <div className="text-red-400 font-bold text-sm">
+                    ✗ Need {(requiredAmount - currentBalance).toLocaleString()} more {PAYMENT_LABELS[paymentType]}
+                  </div>
                 )}
               </div>
 
-              {/* Form */}
+              {/* Delivery form */}
               <form onSubmit={form.handleSubmit(onPurchaseSubmit)} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" {...form.register("name")} placeholder="John Doe" />
+                  <Input id="name" {...form.register("name")} placeholder="Your full name" />
                   {form.formState.errors.name && <p className="text-xs text-red-500">{form.formState.errors.name.message}</p>}
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone Number</Label>
-                  <Input id="phone" {...form.register("phone")} placeholder="+1 234 567 8900" />
+                  <Input id="phone" {...form.register("phone")} placeholder="+20 100 000 0000" />
                   {form.formState.errors.phone && <p className="text-xs text-red-500">{form.formState.errors.phone.message}</p>}
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="email">Email <span className="text-muted-foreground text-xs">(optional — for order confirmation)</span></Label>
+                  <Input id="email" type="email" {...form.register("email")} placeholder="you@email.com" />
+                  {form.formState.errors.email && <p className="text-xs text-red-500">{form.formState.errors.email.message}</p>}
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="address">Delivery Address</Label>
-                  <Textarea id="address" {...form.register("address")} placeholder="123 Main St, City, Country" className="min-h-24" />
+                  <Textarea id="address" {...form.register("address")} placeholder="Street, district, city, country" className="min-h-24" />
                   {form.formState.errors.address && <p className="text-xs text-red-500">{form.formState.errors.address.message}</p>}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="notes">Notes (Optional)</Label>
-                  <Textarea id="notes" {...form.register("notes")} placeholder="Any special requests..." className="min-h-20" />
+                  <Textarea id="notes" {...form.register("notes")} placeholder="Preferred delivery times, special requests…" className="min-h-20" />
                 </div>
 
-                <Button 
-                  type="submit" 
-                  className="w-full enterprise-button cta-gradient cta-gradient-hover text-white border-0 font-bold text-base" 
+                <Button
+                  type="submit"
+                  className="w-full enterprise-button cta-gradient cta-gradient-hover text-white border-0 font-bold text-base"
                   size="lg"
                   disabled={!canAfford || isProcessing}
                 >
-                  {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                  {canAfford ? "Confirm Purchase" : "Insufficient Codes"}
+                  {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {canAfford
+                    ? `Confirm — Pay ${requiredAmount.toLocaleString()} ${PAYMENT_LABELS[paymentType]}`
+                    : `Insufficient ${PAYMENT_LABELS[paymentType]}`}
                 </Button>
               </form>
             </div>
@@ -562,12 +802,98 @@ export default function Pebalaash() {
         </SheetContent>
       </Sheet>
 
-      {/* Cart Side Panel */}
+      {/* ── Order History Sheet ────────────────────────────────────────────────── */}
+      <Sheet open={isOrdersOpen} onOpenChange={setIsOrdersOpen}>
+        <SheetContent side="right" className="w-[420px] max-w-[95vw] overflow-y-auto bg-card border-l-2 border-blue-500/40">
+          <SheetHeader className="mb-6">
+            <SheetTitle className="font-display text-2xl gradient-text flex items-center gap-2">
+              <History className="w-6 h-6 text-blue-400" /> My Orders
+            </SheetTitle>
+            <SheetDescription>Your full purchase history</SheetDescription>
+          </SheetHeader>
+
+          {isOrdersLoading ? (
+            <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+          ) : !ordersData?.orders?.length ? (
+            <div className="text-center py-20 space-y-3">
+              <Package className="mx-auto h-12 w-12 text-muted-foreground opacity-20" />
+              <p className="text-muted-foreground font-medium">No orders yet.</p>
+              <p className="text-xs text-muted-foreground">Start shopping to see your order history here.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">{ordersData.total} total order{ordersData.total !== 1 ? "s" : ""}</p>
+              {ordersData.orders.map((order: Order) => (
+                <div key={order.id} className="p-4 rounded-xl border border-border/60 bg-card/60 space-y-2">
+                  <div className="flex justify-between items-start">
+                    <h4 className="font-bold text-sm text-foreground">{order.productName}</h4>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      order.status === "completed" ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-400"
+                    }`}>
+                      {order.status.toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>{PAYMENT_EMOJI[order.paymentType as PaymentType]} {order.amountPaid.toLocaleString()} {PAYMENT_LABELS[order.paymentType as PaymentType]}</span>
+                    <span>·</span>
+                    <span>{new Date(order.createdAt).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground/60 font-mono">{order.id}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* ── Rating Modal ───────────────────────────────────────────────────────── */}
+      {ratingProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-card border border-blue-500/40 rounded-2xl p-6 w-full max-w-sm shadow-2xl space-y-4">
+            <h3 className="font-display text-xl font-bold gradient-text">Rate Your Purchase ⭐</h3>
+            <p className="text-sm text-muted-foreground">How was <strong className="text-foreground">{ratingProduct.name}</strong>?</p>
+
+            {/* Star picker */}
+            <div className="flex gap-2 justify-center">
+              {[1,2,3,4,5].map(i => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setRatingValue(i)}
+                  className="transition-transform hover:scale-125"
+                >
+                  <Star
+                    className={`w-8 h-8 transition-colors ${i <= ratingValue ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/40 hover:text-yellow-300"}`}
+                  />
+                </button>
+              ))}
+            </div>
+
+            <Textarea
+              value={ratingReview}
+              onChange={e => setRatingReview(e.target.value)}
+              placeholder="Leave a quick review (optional)…"
+              className="min-h-20 text-sm"
+            />
+
+            <div className="flex gap-3">
+              <Button variant="ghost" className="flex-1" onClick={() => setRatingProduct(null)}>Skip</Button>
+              <Button
+                className="flex-1 cta-gradient text-white font-bold"
+                disabled={!ratingValue}
+                onClick={submitRating}
+              >Submit</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Cart / Dashboard Side Panel ────────────────────────────────────────── */}
       <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
         <SheetContent side="right" className="w-[400px] max-w-[90vw] p-0 bg-card border-l-2 border-blue-500/40">
           <SheetHeader className="p-4 border-b border-border bg-black/20">
             <SheetTitle className="font-display text-2xl gradient-text">Dashboard</SheetTitle>
-            <SheetDescription className="text-muted-foreground">Orders & Activity</SheetDescription>
+            <SheetDescription>Orders &amp; Activity</SheetDescription>
           </SheetHeader>
           <CartPanel
             cartItems={cartItems}
@@ -581,8 +907,8 @@ export default function Pebalaash() {
 
       {/* Admin Dashboard */}
       {isAdminOpen && <AdminDashboard onClose={() => setIsAdminOpen(false)} />}
-      
-      {/* Ice Overlay Animation */}
+
+      {/* Ice Overlay */}
       <IceOverlay />
     </div>
   );
