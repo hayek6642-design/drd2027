@@ -3196,6 +3196,26 @@ app.post('/api/watchdog/buy-dog', requireAuth, enforceFinancialSecurity, async (
   }
 });
 
+// POST /api/watchdog/debug-kill — DEBUG ONLY: Force dog to DEAD state for testing
+app.post('/api/watchdog/debug-kill', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user && req.user.id;
+    if (!userId) return res.status(401).json({ success: false, error: 'unauthorized' });
+    await query(
+      `INSERT INTO watchdog_state (user_id, dog_state, last_fed_at, is_frozen, updated_at)
+       VALUES ($1, 'DEAD', CURRENT_TIMESTAMP - INTERVAL '4 days', 0, CURRENT_TIMESTAMP)
+       ON CONFLICT (user_id) DO UPDATE SET
+         dog_state = 'DEAD',
+         last_fed_at = CURRENT_TIMESTAMP - INTERVAL '4 days',
+         updated_at = CURRENT_TIMESTAMP`,
+      [userId]
+    );
+    return res.json({ success: true, message: 'Dog killed for testing. Refresh the page.' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // =============================================================================
 // QARSAN API ENDPOINTS - Server-Side Financial Operations
 // CRITICAL: All operations MUST go through security middleware

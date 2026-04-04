@@ -36,31 +36,29 @@
             return;
         }
 
-        // 🦴 Check status before showing - but don't block if server is down
-        // Temporarily disabled status check to force watchdog appearance
-        /*
+        // 🦴 Check status before showing dog - show skeleton if dead
+        let initialDogState = 'idle';
         try {
-            const statusResp = await fetch('/api/watchdog/status', { timeout: 3000 });
+            const statusResp = await fetch('/api/watchdog/status', { credentials: 'include' });
             const status = await statusResp.json();
 
             if (status.success && status.dogState === 'DEAD') {
-                console.warn('[WatchDog] 💀 Guardian is DEAD. Extra Mode disabled.');
-                container.style.display = 'none';
+                console.warn('[WatchDog] 💀 Guardian is DEAD. Showing skeleton.');
                 window.__DOG_IS_DEAD__ = true;
                 localStorage.setItem('__DOG_IS_DEAD__', 'true');
-                return;
+                initialDogState = 'dead';
             } else {
                 window.__DOG_IS_DEAD__ = false;
                 localStorage.removeItem('__DOG_IS_DEAD__');
+                initialDogState = 'idle';
             }
         } catch(e) {
             console.warn('[WatchDog] Status check failed (server may be down):', e);
-            // Don't return here - continue with initialization even if server is down
+            // Continue with alive dog if server is down
         }
-        */
 
         try {
-            console.log('[WatchDog] 🛡️ FORCING 3D ACTIVATION - Loading core from /shared/watchdog-core/watchdog-core.js');
+            console.log('[WatchDog] 🛡️ Activating 3D Guardian (state: ' + initialDogState + ')');
             
             // 🛡️ Pre-clear container to ensure fresh mount
             container.innerHTML = ''; 
@@ -73,7 +71,7 @@
                 throw new Error('createWatchDog is not a function in ' + corePath);
             }
 
-            window.__GUARDIAN__ = createWatchDog(container, { initialState: 'idle' });
+            window.__GUARDIAN__ = createWatchDog(container, { initialState: initialDogState });
             console.log('[WatchDog] ✅ 3D Guardian successfully activated');
             
             container.style.pointerEvents = 'auto'; // Enable clicks
