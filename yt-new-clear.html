@@ -2149,7 +2149,28 @@
                                     } catch(_) {}
                                 };
                                 _sseSource.onerror = function() {
-                                    try { if (_sseSource.readyState === EventSource.CLOSED) { window.__sseSource = null; } } catch(_){}
+                                    try {
+                                        if (_sseSource.readyState === EventSource.CLOSED) {
+                                            window.__sseSource = null;
+                                            // [AUTO-RECONNECT] Exponential backoff: 2s → 4s → 8s … max 30s
+                                            var _delay = window.__sseRetryDelay__ || 2000;
+                                            window.__sseRetryDelay__ = Math.min(_delay * 2, 30000);
+                                            console.warn('[SSE] Disconnected — reconnecting in ' + _delay + 'ms');
+                                            var _savedMsg = _sseSource.onmessage;
+                                            var _savedErr = _sseSource.onerror;
+                                            setTimeout(function() {
+                                                try {
+                                                    if (!window.__sseSource) {
+                                                        var _r = new EventSource('/events', { withCredentials: true });
+                                                        window.__sseSource = _r;
+                                                        _r.onopen  = function() { window.__sseRetryDelay__ = 2000; }; // reset on success
+                                                        _r.onmessage = _savedMsg;
+                                                        _r.onerror   = _savedErr;
+                                                    }
+                                                } catch(_) {}
+                                            }, _delay);
+                                        }
+                                    } catch(_) {}
                                 };
                             }
                         } catch(_) {}

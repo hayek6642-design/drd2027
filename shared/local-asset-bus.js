@@ -475,7 +475,11 @@ const createAssetBus = () => {
   };
 
   // Start periodic sync - Rule: 30-60s
-  let _syncInterval = setInterval(() => bus.sync(), 15000); // [CROSS-DEVICE FIX] Reduced from 60s to 15s for faster cross-device sync
+  // [MIRROR FIX] Primary device syncs every 15s; mirrors skip this timer
+  // to avoid double-counting silver/gold bars. Only primary generates codes.
+  let _syncInterval = window.__MIRROR_MODE__
+    ? null
+    : setInterval(() => bus.sync(), 15000);
   
   window.__assetBusInstance = bus;
 
