@@ -359,7 +359,7 @@ app.get('/api/rewards/balance', async (req, res) => {
 app.get('/api/watchdog/status', requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { getWatchDogState, updateDogStateByTime } = await import('./shared/watch-dog-guardian.js');
+    const { getWatchDogState, updateDogStateByTime } = WatchDogGuardian;
     
     // Refresh state based on time
     const info = await updateDogStateByTime(userId);
