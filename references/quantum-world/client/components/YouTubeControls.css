@@ -1,0 +1,174 @@
+/* Sound Button Styling */
+#sound-button {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(247, 242, 242, 0.075);
+    color: rgba(247, 242, 242, 0.075);
+    border: none;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 20px;
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1002;
+    margin-top: 10px;
+    transition: all 0.3s ease;
+}
+
+/* Play/Pause Button Styles */
+#play-pause-button {
+    transition: all 300ms cubic-bezier(0.23, 1, 0.32, 1);
+    box-shadow: inset 0 0 5px 1px rgba(255, 255, 255, 0.8);
+    border-radius: 65px;
+    position: absolute;
+    color: rgba(0, 0, 0, 0.5);
+    font-size: 17px;
+    background: rgba(0, 0, 0, 0.5);
+    margin-left: -38.5px;
+    margin-top: -40px;
+    display: block;
+    height: 65px;
+    width: 65px;
+    left: 52%;
+    top: 103%;
+    cursor: pointer;
+}
+
+#play-pause-button.paused {
+    background: #ff0000;
+}
+
+/* Counter Container Style */
+#counter-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 5px;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 10px;
+    z-index: 1000;
+}
+
+/* Control Buttons and Toggle Button */
+.control-button, #toggle-button {
+    position: absolute;
+    background-color: rgba(247, 242, 242, 0.075);
+    color: white;
+    border: none;
+    padding: 5px 12px;
+    margin-top: 50px;
+    margin-bottom: 0px;
+    font-size: 16px;
+    font-family: 'Digital-7', 'Courier New', monospace;
+    cursor: pointer;
+    border-radius: 5px;
+    z-index: 1002;
+}
+
+#toggle-button {
+    bottom: 2px;
+    right: 5px;
+}
+
+#toggle-button:hover {
+    animation: toggleScale 0.5s 1 linear;
+}
+
+@keyframes toggleScale {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Progress Bar */
+#progress-bar {
+    width: 0;
+    height: 5px;
+    background-color: #00ff00;
+    margin-top: 10px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+}
+
+/* Code Display */
+#code-display {
+    margin-top: 10px;
+    font-size: 0.7em;
+    color: #00ff00;
+    font-family: 'Courier New';
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 10px;
+    border-radius: 5px;
+    width: 100%;
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    transition: background-color 0.5s, box-shadow 0.5s;
+    word-break: break-all;
+}
+
+/* Counter Styles */
+#counter {
+    position: relative;
+    display: inline-block;
+    font-size: 0.7em;
+    background: rgba(20, 20, 30, 0.95);
+    padding: 1px 2px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 10px rgba(0, 150, 255, 0.2);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    transform: translateZ(0);
+}
+
+#counter span {
+    position: relative;
+    display: inline-block;
+    margin: 0 1px;
+    color: #e0f4ff;
+    font-weight: 500;
+    text-shadow: 0 0 5px rgba(100, 200, 255, 0.4);
+    animation: digitPulse 1.6s ease-in-out infinite;
+    overflow: hidden;
+    padding: 2px 3px;
+    background: linear-gradient(45deg, 
+        rgba(50, 100, 150, 0.25) 0%, 
+        rgba(20, 40, 60, 0.25) 100%);
+    border-radius: 1px;
+    border: 0.5px solid rgba(100, 200, 255, 0.1);
+    transform-style: preserve-3d;
+    will-change: transform, text-shadow;
+}
+
+@keyframes digitPulse {
+    0%, 100% {
+        text-shadow: 0 0 15px rgba(100, 200, 255, 0.4),
+                    0 0 30px rgba(50, 150, 255, 0.2);
+        transform: scale(1);
+    }
+    50% {
+        text-shadow: 0 0 25px rgba(100, 220, 255, 0.8),
+                    0 0 45px rgba(50, 180, 255, 0.6),
+                    0 0 60px rgba(0, 150, 255, 0.3);
+        transform: scale(1.03);
+    }
+}

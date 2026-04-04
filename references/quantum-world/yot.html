@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- Mirrored from drd-2025.netlify.app/ by HTTrack Website Copier/3.x [XR&CO'2014], Mon, 14 Apr 2025 19:43:55 GMT -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Embed App</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@capacitor/core/dist/capacitor.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://unpkg.com/parse@6.1.1/dist/parse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.0.4/pako_deflate.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/whatwg-fetch@3.6.2/dist/fetch.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.8.3/modernizr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hijri-converter@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/javascript-obfuscator/dist/index.browser.js"></script>
+    <script src="node_modules/javascript-obfuscator/dist/index.browser.html"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <link href="https://www.dafontfree.net/embed/ZGlnaXRhbC03LW1vbm8mZGF0YS8yOC9kLzEyNzgzNC9EaWdpX1N0cmVhbS50dGY" rel="stylesheet">
+    <style>
+       /* Hide YouTube controls */
+       .ytp-chrome-bottom, .ytp-progress-bar-container {
+            display: none !important;
+        }
+
+        /* Theatre mode styles */
+        .theatre-mode {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            z-index: 1000;
+        }
+
+        .theatre-mode iframe {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Counter and subscription button in theatre mode */
+        .theatre-mode-active #counter-container {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1001; /* Ensure it is above the video */
+            font-size: 1.5em; /* Increase the size of the counter frame */
+            padding: 15px; /* Add padding to make the frame larger */
+            background-color: rgba(0, 0, 0, 0.5); /* Add background color for better visibility */
+            border-radius: 10px; /* Add border radius for rounded corners */
+        }
+
+        /* Overlay to prevent touch events */
+        .touch-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1001; /* Ensure it is above the video */
+            background: transparent; /* Make the overlay transparent */
+        }
+
+        #control-buttons {
+            display: flex; /* Use Flexbox layout for buttons */
+            justify-content: center; /* Center buttons horizontally */
+            align-items: center; /* Center buttons vertically */
+            margin-bottom: 10px; /* Add margin below the button container */
+        }
+
+        /* Subscribe Button Styles with Spark Effect */
+        #extra-code-bar {
+            margin-top: 10px;
+            font-size: 0.5em; /* Adjust font size as needed */
+            color: whitesmoke;
+            background-color: rgba(247, 242, 242, 0.123);
+            padding: 9px;
+            border-radius: 5px;
+            position: relative;
+            overflow: hidden;
+            transition: background-color 0.5s, box-shadow 0.5s;
+            word-break: break-all; /* Key for wrapping */
+            width: 100%;
+        }
+
+        #extra-code-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0) 0%,
+                rgba(255, 255, 255, 0.4) 50%,
+                rgba(255, 255, 255, 0) 100%
+            );
+            animation: spark 1.5s linear infinite;
+            transform: skewX(-20deg);
+        }
+
+        #extra-code-bar:hover {
+            transform: scale(1.1);
+        }
+
+        .extra-mode #extra-code-bar {
+            display: block;
+        }
+
+        .extra-mode #code-display {
+            display: none;
+        }
+
+       /* Sound button styles */
+        #sound-button {
+            position: absolute;
+            top: -10px; /* Distance from top */
+            left: 50%;
+            transform: translateX(-50%); /* Center horizontally */
+            background-color: rgba(247, 242, 242, 0.075);
+            color: rgba(247, 242, 242, 0.075);
+            border: none;
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 20px;
+            -webkit-backdrop-filter: blur(3px);
+            backdrop-filter: blur(3px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1002; /* Ensure it stays above other elements */
+            margin-top: 10px; /* Space between button and counter */
+            transition: all 0.3s ease;
+        }
+
+        /* Add to counter container to create space */
+        #counter-container {
+            padding-top: 30px; /* Make space for sound button */
+            position: relative; /* Needed for absolute positioning */
+        }
+
+        #sound-button:hover {
+            background-color: rgba(9, 10, 8, 0.8); /* Slightly transparent on hover */
+        }
+
+        /* Styles for the toggle button */
+        body {
+            font-family: 'Digital-7', 'Courier New', monospace; /* Use digital font */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+
+        .counter-container {
+            position: fixed; /* Make the container a positioning context */
+            text-align: center;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 600px; /* Adjust width as needed */
+        }
+
+        .video-container {
+            margin-bottom: 20px;
+        }
+
+        .token-bar {
+            background: rgba(247, 242, 242, 0.123);
+            padding: 9px;
+            text-align: center;
+            border-radius: 5px;
+            position: relative;
+            overflow: hidden;
+            transition: background-color 0.5s, box-shadow 0.5s;
+            word-break: break-all; /* Key for wrapping */
+            margin-top: 10px;
+            font-size: 0.8em; /* Adjust font size as needed */
+            color: whitesmoke;
+        }
+        
+        .barcode-container {
+            margin: 10px auto;
+            max-width: 300px;
+            z-index: 1003;
+            position: relative;
+        }
+
+        .counter-container {
+            border: 2px solid #333;
+            padding: 20px;
+            text-align: center;
+            max-width: 400px;
+            margin: 0 auto;
+            font-size: 24px;
+        }
+
+        #token-value {
+            font-family: monospace;
+            margin-bottom: 10px;
+            word-break: break-all;
+        }
+
+        /* Copy and Toggle Button Styles */
+        #extra-button, #toggle-button {
+            position: absolute;
+            background-color: rgba(247, 242, 242, 0.075);
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            margin-top: 50px;
+            margin-bottom: 0px;
+            font-size: 16px;
+            font-family: 'Digital-7', 'Courier New', monospace; /* Use digital font */
+            cursor: pointer;
+            border-radius: 5px;
+            z-index: 1002; /* Ensure they are above other elements */
+        }
+
+        #extra-button {
+            bottom: 2px; /* Align both buttons vertically */
+            left: 5px; /* Position the copy button at the bottom left */
+        }
+
+        #toggle-button {
+            bottom: 2px; /* Align both buttons vertically */
+            right: 5px; /* Position the toggle button at the bottom right */
+        }
+
+        #toggle-button:hover {
+            animation: a 0.5s 1 linear;
+        }
+
+        /* Define the animation */
+        @keyframes a {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+
+        #crypto-amount {
+            font-size: 0.4em;
+            color: white;
+            margin-bottom: -1px;
+            text-align: center;
+            z-index: 1003; /* Ensure it's on top */
+        }
+
+        /* Play/Pause button styles */
+        #play-pause-button {
+            transition: all 300ms cubic-bezier(0.23, 1, 0.32, 1);
+            box-shadow: inset 0 0 5px 1px rgba(255, 255, 255, 0.8);
+            border-radius: 65px;
+            position: absolute;
+            color: rgba(0, 0, 0, 0.5);
+            font-size: 17px;
+            background: rgba(0, 0, 0, 0.5); /* Default green color for playing state */
+            margin-left: -38.5px;
+            margin-top: -40px;
+            display: block;
+            height: 65px;
+            width: 65px;
+            left: 52%;
+            top: 103%;
+            cursor: pointer;
+        }
+
+        #play-pause-button.paused {
+            background: #ff0000; /* Red color for paused state */
+        }
+
+        /* Code display */
+        #code-display {
+            margin-top: 10px;
+            font-size: 0.7em; /* Adjust font size as needed */
+            color: #00ff00; /* Classic calculator green */
+            font-family: 'Courier New'; /* Use digital font */
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            width: 100%;
+            text-align: center;
+            align-items: center; /* Ensure vertical alignment */
+            justify-content: center; /* Added for horizontal alignment */
+            position: relative;
+            overflow: hidden;
+            transition: background-color 0.5s, box-shadow 0.5s;
+            word-break: break-all; /* Key for wrapping */
+        }
+
+        /* Counter Container Style */
+        #counter-container {
+            display: flex;
+            flex-direction: column; /* Stack elements vertically */
+            align-items: center; /* Ensure vertical alignment */
+            justify-content: center; /* Added for horizontal alignment */
+            gap: 12px; /* Space between items */
+            padding: 5px; /* Add some padding to the container */
+            position: fixed;
+            bottom: 20px; /* Position the container at the bottom */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.5); /* Add background color for better visibility */
+            border-radius: 10px; /* Add border radius for rounded corners */
+            
+        }
+
+        #watch-time {
+            white-space: nowrap; /* Prevent counter from wrapping */
+            text-align: center; /* Center the counter text */
+            
+        }
+
+        /* Spark beam effect */
+        #code-display::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0) 100%);
+            animation: spark 1s linear infinite;
+        }
+
+
+        #counter {
+            position: relative;
+            display: inline-block;
+            font-size: 0.7em; /* Reduced from 0.6em */
+            background: rgba(20, 20, 30, 0.95);
+            padding: 1px 2px; /* Reduced from 6px 10px */
+            border-radius: 12px; /* Slightly smaller radius */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 10px rgba(0, 150, 255, 0.2); /* Reduced shadow spread */
+            -webkit-backdrop-filter: blur(2px);
+            backdrop-filter: blur(2px);
+            transform: translateZ(0);
+        }
+
+        #counter span {
+            position: relative;
+            display: inline-block;
+            margin: 0 1px; /* Reduced from 0 3px */
+            color: #e0f4ff;
+            font-weight: 500; /* Slightly lighter weight */
+            text-shadow: 0 0 5px rgba(100, 200, 255, 0.4);
+            animation: digitPulse 1.6s ease-in-out infinite;
+            overflow: hidden;
+            padding: 2px 3px; /* Reduced from 4px 6px */
+            background: linear-gradient(45deg, 
+                rgba(50, 100, 150, 0.25) 0%, 
+                rgba(20, 40, 60, 0.25) 100%);
+            border-radius: 1px; /* Smaller radius */
+            border: 0.5px solid rgba(100, 200, 255, 0.1); /* Thinner border */
+            transform-style: preserve-3d;
+            will-change: transform, text-shadow;
+        }
+
+        @keyframes digitPulse {
+            0%, 100% {
+                text-shadow: 0 0 15px rgba(100, 200, 255, 0.4),
+                            0 0 30px rgba(50, 150, 255, 0.2);
+                transform: scale(1);
+            }
+            50% {
+                text-shadow: 0 0 25px rgba(100, 220, 255, 0.8),
+                            0 0 45px rgba(50, 180, 255, 0.6),
+                            0 0 60px rgba(0, 150, 255, 0.3);
+                transform: scale(1.03);
+            }
+        }
+
+        #counter span::before,
+        #counter span::after {
+            content: '';
+            position: absolute;
+            width: 150%;
+            height: 150%;
+            background: radial-gradient(circle at center, 
+                rgba(255, 255, 255, 0.8) 0%, 
+                rgba(255, 255, 255, 0) 70%);
+            opacity: 0;
+            animation: quantumSpark 1.2s linear infinite;
+            mix-blend-mode: screen;
+            pointer-events: none;
+        }
+
+        #counter span::before {
+            top: -25%;
+            left: -25%;
+            animation-delay: 0.3s;
+        }
+
+        #counter span::after {
+            top: 35%;
+            left: 35%;
+            animation-delay: 0.7s;
+        }
+
+        @keyframes quantumSpark {
+            0% {
+                opacity: 0;
+                transform: scale(0) translate(-50%, -50%);
+            }
+            20% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                transform: scale(2.5) translate(50%, 50%);
+            }
+        }
+
+        /* Modern Shine Effect */
+        #counter span::selection {
+            background: transparent;
+        }
+
+        #counter span .shine {
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg,
+                rgba(255, 255, 255, 0) 45%,
+                rgba(255, 255, 255, 0.3) 50%,
+                rgba(255, 255, 255, 0) 55%);
+            animation: shineSweep 4s linear infinite;
+        }
+
+        @keyframes shineSweep {
+            0% {
+                transform: translateX(-100%) rotate(25deg);
+            }
+            100% {
+                transform: translateX(100%) rotate(25deg);
+            }
+        }
+                
+
+
+        /* You might want to adjust the width of the #code-display */
+        #code-display {
+            width: 100%; /* Or a specific width like 250px */
+            min-width: 250px; /* Minimum width */
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent overlay */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1004; /* Ensure it's on top */
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .modal-buttons {
+            margin-top: 20px;
+        }
+
+        @keyframes spark {
+            0% {
+                left: -100%;
+            }
+            100% {
+                left: 100%;
+            }
+        }
+
+        /* Laser beam styles */
+        .laser-beam {
+            position: fixed;
+            bottom: 100px; /* Adjusted to cross over the code bar */
+            left: -100%;
+            width: 100%;
+            height: 1px;
+            background: repeating-linear-gradient(
+                90deg,
+                red 0,
+                red 10px,
+                transparent 50px,
+                transparent 50px
+            );
+            z-index: 1003; /* Ensure it is above other elements */
+            animation: laser 10s linear infinite; /* Move extremely fast */
+            box-shadow: 0 0 10px red, 0 0 20px red, 0 0 30px red, 0 0 40px red;
+        }
+
+        @keyframes laser {
+            0% {
+                left: -100%;
+            }
+            100% {
+                left: 100%;
+            }
+        }
+
+
+        /* Golden shiny effect for code display */
+        .silver {
+            background-color: rgb(252, 251, 245);
+            box-shadow: 0 0 10px rgb(180, 180, 179), 0 0 20px rgb(180, 180, 179), 0 0 30px rgb(180, 180, 179), 0 0 40px rgb(180, 180, 179);
+        }
+
+        .logo-container {
+            position: absolute;
+            top: 9px; /* Adjust as needed */
+            right: 30px; /* Adjust as needed */
+        }
+
+        .logo {
+            width: 100px; /* Adjust the size as needed */
+            height: auto; /* Maintain aspect ratio */
+        }
+
+         /* Progress bar styles */
+         #progress-bar {
+            width: 0;
+            height: 5px;
+            background-color: #00ff00;
+            margin-top: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }  
+        
+
+       /* Responsive design */
+        @media (max-width: 768px) {
+        .counter-box {
+            width: 100%;
+            padding: 10px;
+        }
+
+        #counter-container {
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            bottom: 10px;
+            font-size: 0.8em;
+        }
+
+        #watch-time {
+            font-size: 0.8em;
+            
+            
+        }
+
+
+        #play-pause-button {
+            width: 70px;
+            height: 70px;
+            margin-left: -20px;
+            margin-top: -30px;
+        }
+
+        .laser-beam {
+            bottom: 50px;
+            left: -100%;
+            animation-duration: 3ms;
+        }
+    }
+
+        .news-ticker {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: rgba(247, 242, 242, 0.075);
+            color: #fff;
+            padding: 5px 0;
+            font-size: 14px;
+            line-height: 1.6;
+            box-sizing: border-box;
+            z-index: 9999;
+            overflow: hidden;
+            box-shadow: 0 -5px 10px  rgba(247, 242, 242, 0.075);
+        }
+
+        .news-ticker-content {
+            display: inline-block;
+            white-space: nowrap;
+            animation: scroll 30s linear infinite;
+            padding-left: 100%; /* Add initial padding */
+        }
+
+       /* Default media query styles */
+        @keyframes scroll {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(0); }
+        }
+
+        .news-ticker-content {
+            animation: scroll 30s linear infinite;
+            padding-left: 100%; /* Adjust padding based on content length */
+        }
+
+        @media (max-width: 768px) {
+            @keyframes scroll {
+                0% { transform: translateX(-100%); }
+                100% { transform: translateX(0); }
+            }
+        .news-ticker-content {
+                animation: scroll 15s linear infinite;
+                padding-left: 100%;
+            }
+        }
+
+        .go-sparkle {
+            color: gold;
+            font-weight: bold;
+            background: linear-gradient(90deg, #ffd700, #fff8dc, #ffec8b, #ffd700);
+            color: transparent;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 2s infinite linear;
+            position: relative;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+       
+        #popup-overlay {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100vw; height: 100vh;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        }
+        #popup-frame {
+        position: relative;
+        width: 90%;
+        height: 90%;
+        background: #111;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 0 20px gold;
+        }
+        #popup-iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        }
+        #popup-close {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        background: crimson;
+        color: white;
+        border: none;
+        font-size: 20px;
+        padding: 5px 10px;
+        cursor: pointer;
+        border-radius: 50%;
+        z-index: 10000;
+        }
+
+        #like-button-container {
+        position: absolute;
+        bottom: 50px; /* فوق زر الصوت */
+        right: 80px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        z-index: 1000;
+        }
+
+        #custom-like-btn {
+        background: transparent;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        }
+
+        #like-count {
+        color: white;
+        font-size: 14px;
+        }
+
+    </style>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+</head>
+
+<body class="bg-light">
+    <div class="container text-center py-5">
+        <h1 class="display-4">My YouTube Channel</h1>
+        
+        <div class="touch-disabled"></div>
+        
+        <div id="video-container" class="my-4">
+            <div class="touch-overlay"></div>
+        </div>
+
+        <div id="video-container" class="video-container-relative">
+            
+</div>
+            <div class="touch-overlay"></div> <!-- Overlay to prevent touch events -->
+        </div>
+        <div id="like-button-container">
+    <button id="custom-like-btn">❤️</button>
+    <span id="like-count">0</span>
+  </div>
+        <div id="counter-container" class="bg-dark text-white p-3 rounded">
+            <div id="watch-time" class="h5"><span id="counter">000:00:00.000</span></div>
+            <div id="control-buttons" class="d-flex justify-content-center gap-2">
+                <div id="extra-code-bar" class="btn btn-danger"></div>
+                
+
+
+                <button id="sound-button" class="btn btn-secondary" title="Toggle Sound">🔊</button>
+            </div>
+            <button id="extra-button" class="btn btn-primary" title="Toggle Extra Content">Extra</button>
+            <button id="toggle-button" class="btn btn-warning">Afra7</button>
+            
+            <div id="code-display" class="mt-3 p-2 bg-secondary text-white rounded"></div>
+            <div id="progress-bar-container" class="mt-3">
+                <div id="sparkle-effect"></div>
+                <div id="progress-bar" class="progress-bar"></div>
+    
+            <div id="crypto-amount" class="h5"><span id="token-amount"></span></div>
+            </div>
+            
+            <button id="play-pause-button" class="btn btn-success" title="Play/Pause" aria-label="Play/Pause"></button>
+        </div>
+   
+
+    <div class="news-ticker">
+        <span class="news-ticker-content">
+            TIMUR NEWS: Breaking news and updates from around the world. | NEWS: Lorem ipsum dolor sit amet | SPORTS: Aliquam erat volutpat. Sed varius nulla non condimentum consequat | TIMUR CHANNEL ANNOUNCEMENT: Quisque malesuada magna ac dolor tincidunt, ac dictum risus sollicitudin. | WEATHER: Sed eget lacus vitae nulla laoreet ultricies. Nunc eu sapien in velit varius vulputate. | COMMUNITY: In hac habitasse platea dictumst. Donec non ornare enim. | SPECIAL PROMO: Sed nec arcu ipsum. Aliquam in pharetra est. TIMUR NEWS: ...
+        </span>
+    </div>
+
+            <div id="popup-overlay">
+        <div id="popup-frame">
+            <button id="popup-close">✖</button>
+            <iframe src="" id="popup-iframe"></iframe>
+        </div>
+        </div>
+
+    <div id="app"></div>
+        <script type="module" src="script.js"></script>
+    </div>
+
+    </body>
+    <script>
+        //my web_app js snippets from html
+var tag = document.createElement('script');
+tag.src = "https://www.youtube.com/iframe_api";
+var firstScriptTag = document.getElementsByTagName('script')[0];
+firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+let player;
+let watchTime = parseInt(localStorage.getItem('watchTime')) || 0;
+let timerInterval = null;
+let currentInterval = 10 * 60 * 60 * 1000; // Declare and initialize currentInterval
+let isFirstCodeAfterReload = true; // Track if it's the first code after reload
+const playPauseButton = document.getElementById('play-pause-button');
+const videoId = 'fUehe82E5yU';
+const videoContainer = document.getElementById('video-container');
+const channelId = 'UCZ5heNyv3s5dIw9mtjsAGsg';
+const codeDisplay = document.getElementById('code-display');
+const progressBar = document.getElementById('progress-bar');
+
+// Function to handle YouTube IFrame API ready event
+function onYouTubeIframeAPIReady() {
+    createPlayer(videoId);
+}
+
+// Function to handle player ready event
+function onPlayerReady(event) {
+    enableTheatreMode(event.target);
+    event.target.playVideo();
+    if (lastPlaybackTime > 0) {
+        event.target.seekTo(lastPlaybackTime);
+    }
+
+      // Move player-dependent logic here
+      if (player && player.getPlayerState() === YT.PlayerState.PLAYING) {
+        startCounter();
+    }
+
+    // Hide recommended videos on pause
+    player.getIframe().contentWindow.document.querySelector('video').addEventListener('pause', hideRecommendedVideos);
+}
+
+// Function to create the YouTube player
+document.addEventListener('DOMContentLoaded', () => {
+    // Load watch time from localStorage if available
+    if (localStorage.getItem('watchTime')) {
+        watchTime = parseInt(localStorage.getItem('watchTime'));
+    } else {
+        watchTime = 0; // Default to 0 if no saved time exists
+    }
+    
+
+    // Update the counter display with the retrieved watch time
+    updateCounterDisplay();
+    
+
+document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'hidden') {
+        // Pause the counter when the page is not visible
+        pauseCounter();
+    } else {
+        // Resume the counter when the page becomes visible again
+        startCounter();
+    }
+});
+
+// Generate a unique code for the user if not already generated
+const codeFromStorage = localStorage.getItem('uniqueCode');
+console.log('Code from storage:', codeFromStorage); // Check the retrieved code
+if (!codeFromStorage && !localStorage.getItem('uniqueCode')) {
+    generateCode();
+} else {
+    codeDisplay.textContent = codeFromStorage;
+}
+
+try {
+    generateCode();
+} catch (error) {
+    console.error('Error generating code:', error);
+}
+
+   
+
+document.querySelector('.touch-overlay')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+});
+
+    
+   
+    // Sound Button Functionality
+    const soundButton = document.getElementById('sound-button');
+    soundButton.addEventListener('click', () => {
+        if (player.isMuted()) {
+            player.unMute();
+            soundButton.textContent = '';
+        } else {
+            player.mute();
+            soundButton.textContent = '';
+        }
+    });
+
+    // Modified play/pause button functionality
+let pressTimer;
+const playPauseButton = document.getElementById('play-pause-button');
+
+playPauseButton.addEventListener('click', () => {
+    if (player.getPlayerState() === YT.PlayerState.PLAYING) {
+        player.pauseVideo();
+    } else {
+        player.playVideo();
+    }
+});
+
+// Long press functionality
+playPauseButton.addEventListener('mousedown', startTimer);
+playPauseButton.addEventListener('mouseup', cancelTimer);
+playPauseButton.addEventListener('mouseleave', cancelTimer);
+
+// Touch events for mobile
+playPauseButton.addEventListener('touchstart', startTimer);
+playPauseButton.addEventListener('touchend', cancelTimer);
+playPauseButton.addEventListener('touchcancel', cancelTimer);
+
+function startTimer(e) {
+    pressTimer = window.setTimeout(() => {
+        // Pause the counter before redirecting
+        stopCounter();
+        window.open(`https://www.youtube.com/channel/${channelId}?sub_confirmation=1`, '_blank');
+    }, 3000);
+}
+function cancelTimer() {
+    if (pressTimer) {
+        window.clearTimeout(pressTimer);
+        pressTimer = null;
+    }
+}
+
+
+    
+    // Prevent interaction with the video container
+    touchOverlay.addEventListener('click', (event) => {
+        event.stopPropagation();
+    });
+
+    // Check internet connection periodically
+    setInterval(checkInternetConnection, 5000);
+
+    // Lock screen orientation to portrait
+    lockScreenOrientation();
+});
+
+
+function createPlayer(videoId) {
+    if (typeof YT === 'undefined' || !YT.Player) {
+        console.error("YouTube Player API not loaded yet.");
+        return; // Exit early if YT is not defined
+    }
+    player = new YT.Player('video-container', {
+        height: '450',
+        width: '800',
+        videoId: videoId,
+        playerVars: {
+            controls: 0, // Hide controls
+            disablekb: 1, // Disable keyboard controls
+            autoplay: 1, // Auto-play the video
+            modestbranding: 1, // Hide YouTube logo
+            rel: 0// Prevent related videos from appearing at the end
+        },
+        events: {
+            'onReady': onPlayerReady,
+            'onStateChange': onPlayerStateChange,
+            'onError': onPlayerError // Add error event listener
+        }
+    });
+}
+
+function onPlayerError(event) {
+    console.error('Error with the player:', event.data);
+    switchToNextSection();
+}
+
+
+ // Toggle Button Functionality
+const toggleButton = document.getElementById('toggle-button');
+let currentVideoIndex = 0;
+const videoIds = [
+    'PLD60YBjiIjQPryp_T2IdNm9fukceO8AtN', // Home (Playlist ID)
+    'SJUH0qthtCA', // Nour (Single Video ID)
+    'fUehe82E5yU', 'Mw-lmUzkiY0', // Afra7 (Single Video ID)
+];
+const videoNames = ['Home', 'Nour', 'Afra7'];
+
+toggleButton.addEventListener('click', () => {
+    const currentTime = player.getCurrentTime();
+    const nextVideoIndex = (currentVideoIndex + 1) % videoIds.length;
+
+    // Save playback time and index for the current video/playlist
+    localStorage.setItem(videoIds[currentVideoIndex], JSON.stringify({
+        time: currentTime,
+        index: player.getPlaylistIndex ? player.getPlaylistIndex() : 0
+    }));
+
+    currentVideoIndex = nextVideoIndex;
+
+    // Load the new video/playlist; always start from the saved time or 0 if none saved
+    let startSeconds = 0;
+    let startIndex = 0;
+    if (currentVideoIndex !== 2) {
+        const savedData = JSON.parse(localStorage.getItem(videoIds[currentVideoIndex])) || {};
+        startSeconds = savedData.time || 0;
+        startIndex = savedData.index || 0;
+    }
+
+    // Load the playlist for Home, or the single video for Nour and Afra7
+    if (currentVideoIndex === 1 || currentVideoIndex === 2) { // Nour or Afra7 (Single Video)
+        player.loadVideoById({
+            videoId: videoIds[currentVideoIndex],
+            startSeconds: startSeconds
+        });
+    } else { // Home (Playlist)
+        player.loadPlaylist({
+            listType: 'playlist',
+            list: videoIds[currentVideoIndex], // Use the playlist ID directly
+            index: startIndex, // Continue from the last saved index
+            startSeconds: startSeconds // Continue from the last saved time
+        });
+    }
+
+    // Update button text to show the next video's name
+    toggleButton.textContent = videoNames[currentVideoIndex];
+});
+
+// Pause counter when leaving the page
+window.addEventListener('beforeunload', () => {
+    stopCounter();
+});
+
+function onPlayerStateChange(event) {
+    if (event.data === YT.PlayerState.PLAYING) {
+        if (!timerInterval) {
+            let startTime = Date.now() - watchTime;
+            timerInterval = setInterval(() => {
+                watchTime = Date.now() - startTime;
+                localStorage.setItem('watchTime', watchTime);
+                updateCounterDisplay();
+
+                const currentTime = player.getCurrentTime();
+                localStorage.setItem('lastPlaybackTime', currentTime);
+
+                // Check if 5 minutes have passed
+                if (watchTime % (5 * 60 * 1000) < 10) {
+                    console.log("5 minutes have passed, generating new code");
+                    const newCode = generateCode();
+                    localStorage.setItem('uniqueCode', newCode);
+                    codeDisplay.textContent = newCode;
+                    progressBar.style.width = '0%';
+                }
+
+                const progress = (watchTime % (5 * 60 * 1000)) / (5 * 60 * 1000) * 100;
+                progressBar.style.width = `${progress}%`;
+            }, 10);
+        }
+    } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.BUFFERING) {
+        stopCounter();
+    } else if (event.data === YT.PlayerState.ENDED) {
+        stopCounter();
+        
+    
+        // Check if the last video in the playlist has ended
+        if (videoIds[currentVideoIndex] === 'PLD60YBjiIjQPryp_T2IdNm9fukceO8AtN') { // Home (Playlist)
+            // Retrieve the saved playback state for the Home playlist
+            const savedData = JSON.parse(localStorage.getItem(videoIds[currentVideoIndex])) || {};
+            const startSeconds = savedData.time || 0; // Last saved playback time
+            const startIndex = savedData.index || 0; // Last saved playlist index
+
+            // Loop the Home playlist from the last saved state
+            player.loadPlaylist({
+                listType: 'playlist',
+                list: videoIds[currentVideoIndex], // Use the playlist ID directly
+                index: startIndex, // Continue from the last saved index
+                startSeconds: startSeconds // Continue from the last saved time
+            });
+        } else if (videoIds[currentVideoIndex] === 'fUehe82E5yU') { // Afra7 (Single Video)
+            // Loop the Afra7 video
+            player.loadVideoById({
+                videoId: videoIds[currentVideoIndex],
+                startSeconds: 0 // Start from the beginning
+            });
+        } else {
+            // Move to the next video in the playlist
+            player.nextVideo();
+        }
+    }
+}
+function switchToNextSection() {
+    // Define your sections and their corresponding video IDs
+    const sections = [
+        { id: 'Home', videoId: 'PLD60YBjiIjQPryp_T2IdNm9fukceO8AtN' },
+        { id: 'Nour', videoId: 'SJUH0qthtCA' },
+        { id: 'Afra7', videoId: 'fUehe82E5yU' }
+        // Add more sections as needed
+    ];
+    // Find the current section index
+    const currentSectionIndex = sections.findIndex(section => section.id === 'Nour');
+
+    if (currentSectionIndex > -1) {
+        // If not the first section, load the previous section
+        player.loadVideoById({
+            videoId: sections[currentSectionIndex - 1].videoId,
+            startSeconds: 0
+        });
+    } else {
+        // If it's the first section, load the next one
+        player.loadVideoById({
+            videoId: sections[currentSectionIndex + 1].videoId,
+            startSeconds: 0
+        });
+    }
+}
+
+
+    // Prevent interaction with the video container
+    const touchOverlay = document.querySelector('.touch-overlay');
+    touchOverlay.addEventListener('click', (event) => {
+        event.stopPropagation();
+    });
+
+    // Check internet connection periodically
+    setInterval(checkInternetConnection, 5000);
+
+    
+// Function to convert time in milliseconds to hours, minutes, and seconds
+function formatTime(milliseconds) {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const decisecondsPart = Math.floor((milliseconds % 1000) / 10);
+    const seconds = totalSeconds % 60;
+    const minutes = Math.floor(totalSeconds / 60) % 60;
+    const hours = Math.floor(totalSeconds / 3600);
+    const formattedDeciseconds = String(decisecondsPart).padStart(2, '0');
+    const formattedSeconds = String(seconds).padStart(2, '0');
+    const formattedMinutes = String(minutes).padStart(2, '0');
+    const formattedHours = String(hours).padStart(4, '0');
+
+    return `${formattedHours}:${formattedMinutes}:${formattedSeconds}.${formattedDeciseconds}`;
+}
+
+function generateCode() {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+
+    if (isFirstCodeAfterReload) {
+        code = 'FAKE-';
+        for (let i = 0; i < 18; i++) {
+            code += characters.charAt(Math.floor(Math.random() * characters.length));
+            if ((i + 4 + 1) % 4 === 0 && i < 17) code += '-';
+        }
+        isFirstCodeAfterReload = false;
+    } else {
+        for (let i = 0; i < 22; i++) {
+            code += characters.charAt(Math.floor(Math.random() * characters.length));
+            if ((i + 1) % 4 === 0 && i < 21) code += '-';
+        }
+    }
+
+    currentCode = code; // Store original version
+    localStorage.setItem('uniqueCode', currentCode);
+    updateCodeDisplay(currentCode);
+    return currentCode;
+}
+
+// Helper: update the code in the DOM
+function updateCodeDisplay(code) {
+    if (codeDisplay) {
+        codeDisplay.textContent = code;
+    }
+}
+
+
+
+   
+// Function to start the counter
+function startCounter() {
+    if (!timerInterval) {
+        let startTime = Date.now() - watchTime;
+        timerInterval = setInterval(() => {
+            watchTime = Date.now() - startTime;
+            localStorage.setItem('watchTime', watchTime);
+            updateCounterDisplay();
+            updateProgressBar();
+
+            const currentTime = player.getCurrentTime();
+            localStorage.setItem('lastPlaybackTime', currentTime);
+
+            const nextCodeGenerationTime = parseInt(localStorage.getItem('nextCodeGenerationTime'));
+            const progress = calculateProgress(watchTime, nextCodeGenerationTime);
+            document.getElementById('progress-text').textContent = `${progress.toFixed(2)}%`;
+
+            console.log('watchTime:', watchTime);
+            console.log('nextCodeGenerationTime:', nextCodeGenerationTime);
+            console.log('progress:', progress);
+
+            if (progress === 100) {
+                generateCode();
+                resetProgress();
+            }
+
+            if (watchTime >= 9999 * 60 * 60 * 1000) {
+                watchTime = 0;
+                localStorage.setItem('watchTime', watchTime);
+                updateCounterDisplay();
+            }
+        }, 10);
+    }
+}
+
+function stopCounter() {
+    clearInterval(timerInterval);
+    timerInterval = null;
+    // Optional: Reset watchTime if needed
+    // watchTime = 0;
+}
+
+
+// Function to reset the counter
+function resetCounter() {
+    watchTime = 0;
+    localStorage.setItem('watchTime', watchTime);
+    updateCounterDisplay();
+    clearInterval(timerInterval);
+    timerInterval = null;
+}
+
+
+
+// Function to reset progress and start over
+function resetProgress() {
+    localStorage.setItem('nextCodeGenerationTime', Date.now() + currentInterval);
+    updateProgressBar();
+    console.log('Progress reset. New nextCodeGenerationTime:', localStorage.getItem('nextCodeGenerationTime'));
+}
+
+// Ensure initial value of nextCodeGenerationTime
+if (!localStorage.getItem('nextCodeGenerationTime')) {
+    localStorage.setItem('nextCodeGenerationTime', Date.now() + currentInterval);
+    console.log('Initialized nextCodeGenerationTime:', localStorage.getItem('nextCodeGenerationTime'));
+}
+
+// Verify codeDisplay element
+console.log('codeDisplay element:', document.getElementById('code-display'));
+
+// Function to update the counter display
+function updateCounterDisplay() {
+    const counterElement = document.getElementById('counter');
+    if (counterElement) {
+        const time = formatTime(watchTime);
+        const digits = time.split('').map(digit => `
+            <span>
+                ${digit}
+                <span class="shine"></span>
+            </span>
+        `).join('');
+        counterElement.innerHTML = digits;
+    } else {
+        console.error("Counter element not found!"); // Handle the case where element isn't there
+    }
+}
+// Function to safely set an item in localStorage
+function safeSetItem(key, value) {
+    try {
+        localStorage.setItem(key, value);
+    } catch (error) {
+        if (isQuotaExceededError(error)) {
+            console.warn("LocalStorage is full. Cleaning up old data...");
+            cleanupOldData();
+            try {
+                localStorage.setItem(key, value);
+            } catch (retryError) {
+                console.error("Failed to save to localStorage after cleanup:", retryError);
+            }
+        } else {
+            console.error("Failed to save to localStorage:", error);
+        }
+    }
+}
+
+// Function to check if the error is due to exceeding localStorage quota
+function isQuotaExceededError(error) {
+    let quotaExceeded = false;
+    if (error) {
+        if (error.code) {
+            switch (error.code) {
+                case 22:
+                    quotaExceeded = true;
+                    break;
+                case 1014:
+                    if (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+                        quotaExceeded = true;
+                    }
+                    break;
+                default:
+                    break;
+            }
+        } else if (error.number === -2147024882) {
+            quotaExceeded = true;
+        }
+    }
+    return quotaExceeded;
+}
+
+// Function to clean up old data in localStorage
+function cleanupOldData() {
+    const oneMonthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        try {
+            const item = JSON.parse(localStorage.getItem(key));
+            if (item.timestamp && item.timestamp < oneMonthAgo) {
+                localStorage.removeItem(key);
+                console.log(`Removed old item: ${key}`);
+            }
+        } catch (error) {
+            console.warn(`Skipping invalid item: ${key}`);
+        }
+    }
+}
+
+// Call this function periodically or when you need to clean up old data
+    setInterval(cleanupOldData, 86400000); // Run every 24 hours
+// Function to calculate progress percentage
+function calculateProgress(currentTime, nextCodeGenerationTime) {
+    const totalTime = nextCodeGenerationTime - Date.now();
+    const progress = (currentTime >= totalTime) ? 100 : (currentTime / totalTime) * 100;
+    return Math.min(progress, 100); // Ensure progress does not exceed 100%
+}
+
+
+
+
+
+// Function to handle screen orientation changes
+function handleOrientationChange() {
+    const counterContainer = document.getElementById('counter-container');
+
+    function updateOrientation() {
+        if (screen.orientation.type.startsWith('landscape')) {
+            // Hide the counter container in fullscreen mode
+            counterContainer.style.display = 'none';
+            enableTheatreMode(player);
+        } else {
+            // Show the counter container in normal mode
+            counterContainer.style.display = 'flex';
+            disableTheatreMode(player);
+        }
+    }
+
+    // Listen for orientation changes
+    screen.orientation.addEventListener('change', updateOrientation);
+
+    // Initial check
+    updateOrientation();
+}
+
+// Call the function to handle orientation changes
+handleOrientationChange();
+
+
+
+
+
+// Function to enable theatre mode
+function enableTheatreMode(player) {
+    const iframe = player.getIframe();
+    iframe.classList.add('theatre-mode');
+    document.body.classList.add('theatre-mode-active');
+}
+
+// Function to disable theatre mode
+function disableTheatreMode(player) {
+    const iframe = player.getIframe();
+    iframe.classList.remove('theatre-mode');
+    document.body.classList.remove('theatre-mode-active');
+}
+
+// Function to stop the counter
+function stopCounter() {
+    clearInterval(timerInterval);
+    timerInterval = null;
+}
+
+// Function to handle internet connection check
+function checkInternetConnection() {
+    // Implement your logic to check internet connection here
+}
+
+// Function to pause the counter
+
+window.addEventListener('online', function() {
+    // The browser is back online, you can restart the counter or any other logic here
+    console.log('Browser is online');
+});
+
+window.addEventListener('offline', function() {
+    // The browser is offline, pause the counter and show a message
+    pauseCounter();
+});
+
+function pauseCounter() {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+    // Store remaining time if needed
+    localStorage.setItem('pausedTime', Date.now() - startTime);
+  }
+}
+
+
+
+var tag = document.createElement('script');
+        (function () {
+            function refreshCSS() {
+                var sheets = [].slice.call(document.getElementsByTagName("link"));
+                var head = document.getElementsByTagName("head")[0];
+                for (var i = 0; i < sheets.length; ++i) {
+                    var elem = sheets[i];
+                    var parent = elem.parentElement || head;
+                    parent.removeChild(elem);
+                    var rel = elem.rel;
+                    if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
+                        var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
+                        elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
+                    }
+                    parent.appendChild(elem);
+                }
+            }
+            var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
+            var address = protocol + window.location.host + window.location.pathname + '/ws';
+            var socket = new WebSocket(address);
+            socket.onmessage = function (msg) {
+                if (msg.data == 'reload') window.location.reload();
+                else if (msg.data == 'refreshcss') refreshCSS();
+            };
+            if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
+                console.log('Live reload enabled.');
+                sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
+            }
+        })();
+
+    console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
+
+    
+// Function to hide recommended videos
+function hideRecommendedVideos() {
+    try {
+        if (player && typeof player.getIframe === 'function') {
+            const iframe = player.getIframe();
+            if (iframe && iframe.contentWindow && iframe.contentWindow.document) {
+                const video = iframe.contentWindow.document.querySelector('video');
+                if (video) video.style.display = 'none'; // Hide video element
+            }
+        }
+    } catch (e) {
+        // Ignore errors if iframe is not ready
+    }
+}
+
+
+            
+
+
+        
+window.addEventListener('scroll', () => {
+    window.scrollTo(0, 0);
+});
+
+// Attach hideRecommendedVideos to video pause event (guarded)
+try {
+    if (player && typeof player.getIframe === 'function') {
+        const iframe = player.getIframe();
+        if (iframe && iframe.contentWindow && iframe.contentWindow.document) {
+            const video = iframe.contentWindow.document.querySelector('video');
+            if (video) video.addEventListener('pause', hideRecommendedVideos);
+        }
+    }
+} catch (e) {
+    // Ignore errors if iframe is not ready
+}
+
+        
+
+
+
+
+    </script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const extraBtn = document.getElementById('extra-button');
+  const popupOverlay = document.getElementById('popup-overlay');
+  const popupIframe = document.getElementById('popup-iframe');
+  const popupClose = document.getElementById('popup-close');
+  let pressTimer;
+
+  extraBtn.addEventListener('mousedown', startLongPress);
+  extraBtn.addEventListener('touchstart', startLongPress);
+  extraBtn.addEventListener('mouseup', cancelLongPress);
+  extraBtn.addEventListener('mouseleave', cancelLongPress);
+  extraBtn.addEventListener('touchend', cancelLongPress);
+
+  function startLongPress() {
+    pressTimer = setTimeout(() => {
+      popupIframe.src = 'pebalaash.html'; // match your file name
+      popupOverlay.style.display = 'flex';
+    }, 2000); // 2-second long press
+  }
+
+  function cancelLongPress() {
+    clearTimeout(pressTimer);
+  }
+
+  popupClose.addEventListener('click', () => {
+    popupOverlay.style.display = 'none';
+    popupIframe.src = 'pebalaash.html'; // unload page
+  });
+});
+
+ const firebaseConfig = {  apiKey: "AIzaSyCflQWbI2nk6mfRUhqMsnOVL4wZX8DWEbM",
+  authDomain: "d-connect-2025.firebaseapp.com",
+  projectId: "d-connect-2025",
+  databaseURL: "https://d-connect-2025-default-rtdb.firebaseio.com/",
+  storageBucket: "d-connect-2025.firebasestorage.app",
+  messagingSenderId: "190246442192",
+  appId: "1:190246442192:web:78b3d788f35337b1a5fad5"
+};
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  let likeCount = 0;
+document.getElementById('custom-like-btn').addEventListener('click', () => {
+  likeCount++;
+  document.getElementById('like-count').textContent = likeCount;
+});
+
+  
+</script>
+
+</body>
+
+<!-- Mirrored from drd-2025.netlify.app/ by HTTrack Website Copier/3.x [XR&CO'2014], Mon, 14 Apr 2025 19:44:22 GMT -->
+</html>
+
