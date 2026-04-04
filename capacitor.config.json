@@ -16,20 +16,28 @@
     }
   },
   "server": {
+    "url": "https://drd2027.onrender.com",
     "cleartext": true,
     "allowNavigation": [
       "localhost",
       "127.0.0.1",
-      "https://*.codebank.app",
-      "https://*.googleapis.com",
-      "https://*.youtube.com"
+      "drd2027.onrender.com",
+      "*.onrender.com",
+      "*.codebank.app",
+      "*.googleapis.com",
+      "*.youtube.com",
+      "*.google.com",
+      "*.gstatic.com"
     ]
   },
   "android": {
     "allowMixedContent": true,
-    "webContentsDebuggingEnabled": true
+    "webContentsDebuggingEnabled": false,
+    "backgroundColor": "#000000",
+    "appendUserAgent": "CodeBank-Android"
   },
   "ios": {
-    "contentInset": "always"
+    "contentInset": "always",
+    "appendUserAgent": "CodeBank-iOS"
   }
 }
