@@ -3369,6 +3369,33 @@ document.addEventListener('DOMContentLoaded', async function(){
 
     <!-- Todo Side Panel -->
     <script src="/yt-todo-panel/todo-panel.js"></script>
+
+    <!-- Fix: Resume YT player when phone screen unlocks (visibilitychange) -->
+    <script>
+    (function() {
+      var _wasPlayingBeforeLock = false;
+      document.addEventListener('visibilitychange', function() {
+        try {
+          if (!window.player || typeof window.player.getPlayerState !== 'function') return;
+          if (document.hidden) {
+            // Screen locked — remember if it was playing
+            _wasPlayingBeforeLock = (window.player.getPlayerState() === 1);
+          } else {
+            // Screen unlocked — resume if it was playing
+            if (_wasPlayingBeforeLock) {
+              setTimeout(function() {
+                try {
+                  if (window.player && window.player.getPlayerState() !== 1) {
+                    window.player.playVideo();
+                  }
+                } catch(e) {}
+              }, 300);
+            }
+          }
+        } catch(e) {}
+      });
+    })();
+    </script>
 </body>
 
 </html>
