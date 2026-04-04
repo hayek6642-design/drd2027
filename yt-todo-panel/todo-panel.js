@@ -69,7 +69,8 @@
       padding: 14px 8px;
       cursor: pointer;
       z-index: 1500000;
-      display: flex; flex-direction: column; align-items: center; gap: 5px;
+      display: none !important; /* Hidden: tasks now live inside the Prayer/Tasks popup */
+      flex-direction: column; align-items: center; gap: 5px;
       box-shadow: -4px 0 20px rgba(0,0,0,0.5);
       transition: transform 0.2s, background 0.2s;
       user-select: none;
@@ -828,5 +829,12 @@
   /* ─── Init ─────────────────────────────────────────── */
   renderList();
   updateBadge();
+
+  // Expose global API so the Prayer+Tasks popup can open this panel
+  window.DRDTodoPanel = {
+    open:    openPanel,
+    close:   closePanel,
+    refresh: renderList,
+  };
 
 })();

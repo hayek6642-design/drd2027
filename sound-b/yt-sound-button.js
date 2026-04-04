@@ -1,4 +1,4 @@
-// Sound Button Logic — updated: prayer times on long-press, hover shows date/time
+// Sound Button Logic — v2: touch fix + prayer/tasks tabs on long-press
 
 document.addEventListener('DOMContentLoaded', () => {
   const soundButton = document.getElementById('sound-button');
@@ -7,19 +7,27 @@ document.addEventListener('DOMContentLoaded', () => {
   let isLongPress = false;
   let timeUpdateInterval;
 
+  if (!soundButton) return;
+
   /* ── hover popup (date/time) ─────────────────────────────── */
   let enterX = 0, hasShown = false;
   soundButton.addEventListener('mouseenter', (e) => { enterX = e.clientX; hasShown = false; });
   soundButton.addEventListener('mousemove',  (e) => {
     if (!hasShown && e.clientX > enterX + 10) {
       updatePopupContent();
-      soundPopup.style.display = 'block';
+      if (soundPopup) {
+        try {
+          const cc = document.getElementById('counter-container');
+          if (cc) soundPopup.style.width = Math.round(cc.offsetWidth) + 'px';
+        } catch(_) {}
+        soundPopup.style.display = 'block';
+      }
       timeUpdateInterval = setInterval(updatePopupContent, 1000);
       hasShown = true;
     }
   });
   soundButton.addEventListener('mouseleave', () => {
-    soundPopup.style.display = 'none';
+    if (soundPopup) soundPopup.style.display = 'none';
     clearInterval(timeUpdateInterval);
     hasShown = false;
   });
@@ -41,9 +49,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const now = new Date();
     const prefs = JSON.parse(localStorage.getItem('userPrefs') || '{}');
     const tz = getTimeZoneFromCountry(prefs.country || '');
-    document.getElementById('current-time').textContent = now.toLocaleTimeString('en-US',{hour12:true,hour:'2-digit',minute:'2-digit'});
-    document.getElementById('gregorian-date').textContent = now.toLocaleDateString('en-US',{timeZone:tz,year:'numeric',month:'short',day:'numeric'});
-    document.getElementById('hijri-date').textContent = getHijriDate(now);
+    const timeEl = document.getElementById('current-time');
+    const gregEl = document.getElementById('gregorian-date');
+    const hijriEl = document.getElementById('hijri-date');
+    if (timeEl) timeEl.textContent = now.toLocaleTimeString('en-US',{hour12:true,hour:'2-digit',minute:'2-digit'});
+    if (gregEl) gregEl.textContent = now.toLocaleDateString('en-US',{timeZone:tz,year:'numeric',month:'short',day:'numeric'});
+    if (hijriEl) hijriEl.textContent = getHijriDate(now);
   }
 
   function getHijriDate(date) {
@@ -60,13 +71,18 @@ document.addEventListener('DOMContentLoaded', () => {
     return `${hD} ${names[hM]} ${hYear}`;
   }
 
-  /* ── normal click (mute/unmute) ──────────────────────────── */
-  soundButton.addEventListener('click', (e) => {
-    if (isLongPress) { isLongPress = false; return; }
+  /* ── normal click / tap (mute/unmute) ────────────────────── */
+  function doToggleMute() {
     if (!window.player || typeof player.isMuted !== 'function') return;
-    try { if (window.audioCtx && audioCtx.state==='suspended') audioCtx.resume(); } catch(_){}
+    try { if (window.audioCtx && audioCtx.state==='suspended') audioCtx.resume(); } catch(_) {}
     if (player.isMuted()) { player.unMute?.(); soundButton.innerHTML = getSoundIcon(false); }
     else                  { player.mute?.();   soundButton.innerHTML = getSoundIcon(true);  }
+  }
+
+  // Desktop click
+  soundButton.addEventListener('click', (e) => {
+    if (isLongPress) { isLongPress = false; return; }
+    doToggleMute();
   });
 
   function getSoundIcon(muted) {
@@ -75,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
       : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.536 14.01A8.47 8.47 0 0 0 14.026 8a8.47 8.47 0 0 0-2.49-6.01l-.708.707A7.48 7.48 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303l.708.707z"/><path d="M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.48 5.48 0 0 1 11.025 8a5.48 5.48 0 0 1-1.611 3.889l.707.707z"/><path d="M8.707 11.182A4.49 4.49 0 0 0 10.025 8a4.49 4.49 0 0 0-1.318-3.182L8 5.525A3.49 3.49 0 0 1 9.025 8 3.49 3.49 0 0 1 8 10.475l.707.707zM6.717 3.55A.5.5 0 0 1 7.025 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.525a.5.5 0 0 1-.5-.5V6a.5.5 0 0 1 .5-.5h2.3l2.388-1.89a.5.5 0 0 1 .504-.06z"/></svg>`;
   }
 
-  /* ── long press → prayer times popup ────────────────────── */
+  /* ── long press → prayer times + tasks popup ──────────────── */
   function startLongPressTimer() {
     isLongPress = false;
     longPressTimer = setTimeout(() => {
@@ -87,18 +103,30 @@ document.addEventListener('DOMContentLoaded', () => {
     clearTimeout(longPressTimer);
     longPressTimer = null;
   }
+
   soundButton.addEventListener('mousedown',  startLongPressTimer);
   soundButton.addEventListener('mouseup',    cancelLongPressTimer);
   soundButton.addEventListener('mouseleave', cancelLongPressTimer);
-  soundButton.addEventListener('touchstart', (e)=>{ e.preventDefault(); startLongPressTimer(); }, {passive:false});
-  soundButton.addEventListener('touchend',   (e)=>{ e.preventDefault(); cancelLongPressTimer(); });
+
+  // ✅ FIX: touchend now handles mute/unmute for short taps on mobile
+  soundButton.addEventListener('touchstart', (e) => { e.preventDefault(); startLongPressTimer(); }, {passive:false});
+  soundButton.addEventListener('touchend',   (e) => {
+    e.preventDefault();
+    const wasLong = isLongPress;
+    cancelLongPressTimer();
+    if (!wasLong) {
+      // Short tap → toggle mute/unmute
+      doToggleMute();
+    }
+  });
   soundButton.addEventListener('touchcancel', cancelLongPressTimer);
 
-  /* ── Prayer Times Popup ───────────────────────────────────── */
+  /* ── Prayer + Tasks Popup (tabbed) ─────────────────────────── */
   injectPrayerPopupDOM();
 
   function injectPrayerPopupDOM() {
     if (document.getElementById('prayer-popup-overlay')) return;
+
     const style = document.createElement('style');
     style.textContent = `
       #prayer-popup-overlay {
@@ -119,8 +147,12 @@ document.addEventListener('DOMContentLoaded', () => {
         background: linear-gradient(145deg, rgba(15,20,35,0.97), rgba(25,35,60,0.97));
         border: 1px solid rgba(255,255,255,0.1);
         border-radius: 20px;
-        padding: 22px 24px 18px;
+        padding: 0 0 18px;
         width: min(400px, 92vw);
+        max-height: 88vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
         box-shadow: 0 24px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.08);
         font-family: 'Segoe UI', system-ui, sans-serif;
         color: #fff;
@@ -139,18 +171,50 @@ document.addEventListener('DOMContentLoaded', () => {
         font-size: 14px;
         display: flex; align-items: center; justify-content: center;
         transition: all 0.2s;
+        z-index: 2;
       }
       #prayer-popup-close:hover { background: rgba(255,100,100,0.3); color: #fff; }
+
+      /* ── Tabs ── */
+      #pp-tab-bar {
+        display: flex;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        padding: 14px 20px 0;
+        gap: 4px;
+        flex-shrink: 0;
+      }
+      .pp-tab-btn {
+        background: none;
+        border: none;
+        color: #778;
+        font-size: 0.82em;
+        font-weight: 600;
+        padding: 8px 16px;
+        border-radius: 10px 10px 0 0;
+        cursor: pointer;
+        transition: all 0.2s;
+        letter-spacing: 0.3px;
+      }
+      .pp-tab-btn:hover { color: #aaccff; background: rgba(255,255,255,0.05); }
+      .pp-tab-btn.pp-tab-active {
+        color: #fff;
+        background: rgba(100,150,255,0.15);
+        border-bottom: 2px solid #6699ff;
+      }
+
+      /* ── Prayer panel ── */
+      #pp-prayer-panel {
+        padding: 16px 24px 0;
+        overflow-y: auto;
+        flex: 1;
+      }
       .pp-location {
         font-size: 0.75em;
         color: #88aaff;
         margin-bottom: 4px;
         display: flex; align-items: center; gap: 5px;
       }
-      .pp-hijri {
-        font-size: 0.72em; color: #aaa;
-        margin-bottom: 14px;
-      }
+      .pp-hijri { font-size: 0.72em; color: #aaa; margin-bottom: 14px; }
       .pp-next-prayer {
         background: linear-gradient(90deg, rgba(255,200,50,0.15), rgba(255,150,50,0.1));
         border: 1px solid rgba(255,200,50,0.25);
@@ -185,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
         background: rgba(100,220,100,0.2); color: #7dffb3;
         border: 1px solid rgba(100,220,100,0.3);
       }
-      .pp-footer { margin-top: 14px; text-align: center; font-size: 0.68em; color: #555; }
+      .pp-footer { margin-top: 14px; text-align: center; font-size: 0.68em; color: #555; padding-bottom: 4px; }
       .pp-loading { text-align: center; padding: 30px 0; color: #888; font-size: 0.9em; }
       .pp-error   { text-align: center; padding: 20px; color: #ff8888; font-size: 0.85em; }
       .pp-date-row { display: flex; justify-content: space-between; margin-bottom: 14px; }
@@ -195,6 +259,48 @@ document.addEventListener('DOMContentLoaded', () => {
         padding: 4px 10px; border-radius: 20px;
       }
       .pp-method-note { color: #666; font-size: 0.65em; margin-top: 4px; }
+
+      /* ── Tasks panel ── */
+      #pp-tasks-panel {
+        padding: 16px 20px 0;
+        overflow-y: auto;
+        flex: 1;
+        display: none;
+      }
+      #pp-tasks-panel.pp-tab-visible { display: flex; flex-direction: column; }
+      .ppt-empty { text-align: center; padding: 30px 0; color: #666; font-size: 0.9em; }
+      .ppt-list { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+      .ppt-card {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 12px;
+        padding: 11px 14px;
+        display: flex; align-items: flex-start; gap: 10px;
+        transition: background 0.15s;
+      }
+      .ppt-card.ppt-done { opacity: 0.4; }
+      .ppt-card.ppt-overdue { border-color: rgba(255,80,80,0.3); }
+      .ppt-icon { font-size: 1.2em; flex-shrink: 0; margin-top: 1px; }
+      .ppt-info { flex: 1; min-width: 0; }
+      .ppt-title { font-size: 0.88em; font-weight: 600; color: #eee; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .ppt-title.ppt-done-text { text-decoration: line-through; color: #666; }
+      .ppt-meta { font-size: 0.7em; color: #778; margin-top: 3px; }
+      .ppt-meta.ppt-overdue-text { color: #ff7777; }
+      .ppt-open-btn {
+        margin-top: 14px;
+        width: 100%;
+        background: linear-gradient(135deg,#1a1f3a,#0f1525);
+        border: 1px solid rgba(100,150,255,0.3);
+        color: #88aaff;
+        padding: 10px;
+        border-radius: 10px;
+        font-size: 0.82em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        flex-shrink: 0;
+      }
+      .ppt-open-btn:hover { background: rgba(100,150,255,0.15); color: #aaccff; }
     `;
     document.head.appendChild(style);
 
@@ -203,35 +309,153 @@ document.addEventListener('DOMContentLoaded', () => {
     overlay.innerHTML = `
       <div id="prayer-popup-card">
         <button id="prayer-popup-close" aria-label="Close">✕</button>
-        <div class="pp-location" id="pp-location">📍 Detecting location...</div>
-        <div class="pp-date-row">
-          <span class="pp-date-chip" id="pp-greg-date"></span>
-          <span class="pp-date-chip" id="pp-hijri-date"></span>
+
+        <!-- Tab Bar -->
+        <div id="pp-tab-bar">
+          <button class="pp-tab-btn pp-tab-active" data-tab="prayer">🕌 Prayer Times</button>
+          <button class="pp-tab-btn" data-tab="tasks">✅ Tasks</button>
         </div>
-        <div class="pp-next-prayer" id="pp-next-prayer" style="display:none">
-          <div>
-            <div class="pp-next-label">Next Prayer</div>
-            <div class="pp-next-name" id="pp-next-name">—</div>
+
+        <!-- Prayer Times Tab -->
+        <div id="pp-prayer-panel">
+          <div class="pp-location" id="pp-location">📍 Detecting location...</div>
+          <div class="pp-date-row">
+            <span class="pp-date-chip" id="pp-greg-date"></span>
+            <span class="pp-date-chip" id="pp-hijri-date"></span>
           </div>
-          <div class="pp-next-countdown" id="pp-next-countdown">—</div>
+          <div class="pp-next-prayer" id="pp-next-prayer" style="display:none">
+            <div>
+              <div class="pp-next-label">Next Prayer</div>
+              <div class="pp-next-name" id="pp-next-name">—</div>
+            </div>
+            <div class="pp-next-countdown" id="pp-next-countdown">—</div>
+          </div>
+          <div id="pp-body" class="pp-loading">
+            <div style="font-size:1.8em;margin-bottom:8px">🌙</div>
+            Loading prayer times...
+          </div>
+          <div class="pp-footer">Powered by AlAdhan API · Local prayer times</div>
         </div>
-        <div id="pp-body" class="pp-loading">
-          <div style="font-size:1.8em;margin-bottom:8px">🌙</div>
-          Loading prayer times...
+
+        <!-- Tasks Tab -->
+        <div id="pp-tasks-panel">
+          <div id="pp-tasks-body"></div>
+          <button class="ppt-open-btn" id="ppt-open-full">📋 Open Full Task Panel</button>
         </div>
-        <div class="pp-footer">Powered by AlAdhan API · Local prayer times</div>
       </div>
     `;
     document.body.appendChild(overlay);
 
     document.getElementById('prayer-popup-close').addEventListener('click', closePrayerPopup);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closePrayerPopup(); });
+
+    // Tab switching
+    overlay.querySelectorAll('.pp-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        overlay.querySelectorAll('.pp-tab-btn').forEach(b => b.classList.remove('pp-tab-active'));
+        btn.classList.add('pp-tab-active');
+        const tab = btn.dataset.tab;
+        document.getElementById('pp-prayer-panel').style.display  = tab === 'prayer' ? '' : 'none';
+        const tasksPanel = document.getElementById('pp-tasks-panel');
+        if (tab === 'tasks') {
+          tasksPanel.classList.add('pp-tab-visible');
+          renderTasksInPopup();
+        } else {
+          tasksPanel.classList.remove('pp-tab-visible');
+        }
+      });
+    });
+
+    // Open full panel button
+    document.getElementById('ppt-open-full').addEventListener('click', () => {
+      closePrayerPopup();
+      setTimeout(() => {
+        if (window.DRDTodoPanel && typeof window.DRDTodoPanel.open === 'function') {
+          window.DRDTodoPanel.open();
+        }
+      }, 200);
+    });
+  }
+
+  /* ── Render tasks inside popup ──────────────────────────────── */
+  function renderTasksInPopup() {
+    const container = document.getElementById('pp-tasks-body');
+    if (!container) return;
+
+    let tasks = [];
+    try { tasks = JSON.parse(localStorage.getItem('drd_todo_tasks') || '[]'); } catch(_) {}
+
+    if (!tasks.length) {
+      container.innerHTML = '<div class="ppt-empty">🗒️ No tasks yet.<br><small>Open the full panel to add some.</small></div>';
+      return;
+    }
+
+    const TYPE_META = {
+      note:     { icon:'📝', label:'Note'     },
+      task:     { icon:'✅', label:'Task'     },
+      schedule: { icon:'📅', label:'Schedule' },
+      reminder: { icon:'⏰', label:'Reminder' },
+    };
+
+    function isOverdue(iso) { return iso && new Date(iso) < new Date(); }
+    function formatDue(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      const now = new Date();
+      const diff = Math.round((d - now) / 864e5);
+      const tStr = d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});
+      if (diff >= 0 && diff < 1) return 'Today ' + tStr;
+      if (diff >= 1 && diff < 2) return 'Tomorrow ' + tStr;
+      if (diff < 0) return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' (overdue)';
+      return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' + tStr;
+    }
+
+    // Sort: undone first, then overdue, then by due date
+    const sorted = [...tasks].sort((a,b) => {
+      if (a.done !== b.done) return a.done ? 1 : -1;
+      if (!a.due && !b.due) return 0;
+      if (!a.due) return 1;
+      if (!b.due) return -1;
+      return new Date(a.due) - new Date(b.due);
+    });
+
+    let html = '<div class="ppt-list">';
+    sorted.slice(0, 20).forEach(t => {
+      const meta = TYPE_META[t.type] || TYPE_META.task;
+      const overdue = !t.done && isOverdue(t.due);
+      const dueStr  = formatDue(t.due);
+      const titleCls = t.done ? 'ppt-done-text' : '';
+      const metaCls  = overdue ? 'ppt-overdue-text' : '';
+      const cardCls  = t.done ? 'ppt-done' : (overdue ? 'ppt-overdue' : '');
+      html += `
+        <div class="ppt-card ${cardCls}">
+          <span class="ppt-icon">${meta.icon}</span>
+          <div class="ppt-info">
+            <div class="ppt-title ${titleCls}">${t.title.replace(/</g,'&lt;')}</div>
+            ${dueStr ? `<div class="ppt-meta ${metaCls}">${dueStr}</div>` : ''}
+          </div>
+        </div>`;
+    });
+    if (tasks.length > 20) {
+      html += `<div style="text-align:center;color:#555;font-size:0.72em;padding:6px 0">+${tasks.length-20} more in full panel</div>`;
+    }
+    html += '</div>';
+    container.innerHTML = html;
   }
 
   function closePrayerPopup() {
     const o = document.getElementById('prayer-popup-overlay');
     if (o) { o.classList.remove('open'); o.style.display = 'none'; }
     clearInterval(window._prayerCountdownTimer);
+    // Reset to prayer tab
+    const btns = document.querySelectorAll('.pp-tab-btn');
+    btns.forEach(b => b.classList.remove('pp-tab-active'));
+    const prayerBtn = document.querySelector('.pp-tab-btn[data-tab="prayer"]');
+    if (prayerBtn) prayerBtn.classList.add('pp-tab-active');
+    const prayerPanel = document.getElementById('pp-prayer-panel');
+    const tasksPanel  = document.getElementById('pp-tasks-panel');
+    if (prayerPanel) prayerPanel.style.display = '';
+    if (tasksPanel)  tasksPanel.classList.remove('pp-tab-visible');
   }
 
   async function openPrayerTimesPopup() {
@@ -240,13 +464,11 @@ document.addEventListener('DOMContentLoaded', () => {
     overlay.style.display = 'flex';
     overlay.classList.add('open');
 
-    // Dates
     const now = new Date();
     document.getElementById('pp-greg-date').textContent =
       now.toLocaleDateString('en-US', {weekday:'short', year:'numeric', month:'long', day:'numeric'});
     document.getElementById('pp-hijri-date').textContent = getHijriDate(now);
 
-    // Check cache
     const cacheKey = 'drd_prayer_cache';
     const cached   = JSON.parse(localStorage.getItem(cacheKey) || 'null');
     if (cached && cached.date === now.toDateString()) {
@@ -254,7 +476,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Fetch location
     try {
       const geoRes  = await fetch('https://ipapi.co/json/');
       const geo     = await geoRes.json();
@@ -266,7 +487,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       document.getElementById('pp-location').textContent = `📍 ${city}, ${country}`;
 
-      // Use coordinates if available (more accurate)
       let apiUrl;
       if (lat && lon) {
         apiUrl = `https://api.aladhan.com/v1/timings/${Math.floor(Date.now()/1000)}?latitude=${lat}&longitude=${lon}&method=2`;
@@ -309,7 +529,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const nextName   = document.getElementById('pp-next-name');
     const nextCount  = document.getElementById('pp-next-countdown');
 
-    // Find current and next prayer
     let currentIdx = -1, nextIdx = -1;
     for (let i = 0; i < PRAYER_ORDER.length; i++) {
       const mins = prayerMinutes(timings[PRAYER_ORDER[i]]);
@@ -320,12 +539,11 @@ document.addEventListener('DOMContentLoaded', () => {
     nextEl.style.display = 'flex';
     nextName.textContent = PRAYER_ORDER[nextIdx];
 
-    // Countdown
     function updateCountdown() {
-      const now2    = new Date();
-      const nMins2  = now2.getHours()*60 + now2.getMinutes();
-      const next    = prayerMinutes(timings[PRAYER_ORDER[nextIdx]]);
-      let diff      = next - nMins2;
+      const now2   = new Date();
+      const nMins2 = now2.getHours()*60 + now2.getMinutes();
+      const next   = prayerMinutes(timings[PRAYER_ORDER[nextIdx]]);
+      let diff     = next - nMins2;
       if (diff < 0) diff += 24*60;
       const hh = Math.floor(diff/60);
       const mm = diff % 60;
@@ -335,19 +553,16 @@ document.addEventListener('DOMContentLoaded', () => {
     clearInterval(window._prayerCountdownTimer);
     window._prayerCountdownTimer = setInterval(updateCountdown, 30000);
 
-    // Render list
     let html = '<div class="pp-prayer-list">';
     PRAYER_ORDER.forEach((name, i) => {
       const meta = PRAYER_META[name];
       const time = timings[name];
-      const mins = prayerMinutes(time);
       const passed  = i < currentIdx;
       const current = i === currentIdx;
       const isNext  = i === nextIdx;
       const cls     = current ? 'pp-current' : (passed ? 'pp-passed' : '');
       const badge   = current ? '<span class="pp-prayer-badge">Now</span>' :
                       isNext  ? '<span class="pp-prayer-badge" style="background:rgba(100,150,255,0.2);color:#aaccff;border-color:rgba(100,150,255,0.3)">Next</span>' : '';
-      // Format time 12h
       const [hh,mm] = time.split(':');
       const h = parseInt(hh), ampm = h >= 12 ? 'PM' : 'AM';
       const h12 = h % 12 || 12;
@@ -364,7 +579,7 @@ document.addEventListener('DOMContentLoaded', () => {
     body.innerHTML = html;
   }
 
-  /* ── popup close handler (popup-overlay = azan-clock legacy) */
+  /* ── legacy popup close handlers ───────────────────────────── */
   const legacyClose = document.getElementById('popup-close');
   if (legacyClose) {
     legacyClose.addEventListener('click', function() {
