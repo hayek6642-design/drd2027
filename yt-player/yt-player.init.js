@@ -107,7 +107,7 @@
                 width: '100%',
                 host: 'https://www.youtube.com',
                 playerVars: {
-                    controls: 1,
+                    controls: 0,
                     disablekb: 0,
                     autoplay: 1,
                     mute: 0,

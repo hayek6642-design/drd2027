@@ -195,6 +195,129 @@ document.addEventListener('DOMContentLoaded', () => {
         padding: 4px 10px; border-radius: 20px;
       }
       .pp-method-note { color: #666; font-size: 0.65em; margin-top: 4px; }
+
+      .pp-tabs {
+          display: flex; gap: 4px; margin-bottom: 14px;
+      }
+      .pp-tab {
+          flex: 1; padding: 8px 4px;
+          background: transparent;
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 8px;
+          color: #777; font-size: 0.82em; font-weight: 600;
+          cursor: pointer; transition: all 0.2s;
+          text-align: center; font-family: inherit;
+      }
+      .pp-tab.active {
+          background: rgba(100,140,255,0.15);
+          border-color: rgba(100,140,255,0.3);
+          color: #88aaff;
+      }
+      .pp-tab:hover:not(.active) { color: #aaa; background: rgba(255,255,255,0.04); }
+      #pp-prayers-panel, #pp-tasks-panel { display: none; }
+      #pp-prayers-panel.active, #pp-tasks-panel.active { display: block; }
+
+      /* Tasks within prayer popup */
+      .ppt-add-btn {
+          width: 100%; padding: 8px;
+          background: linear-gradient(90deg,#1e3a6e,#162d57);
+          border: 1px solid rgba(80,140,255,0.25);
+          border-radius: 8px; color: #6ea8ff;
+          font-size: 0.82em; font-weight: 600;
+          cursor: pointer; margin-bottom: 10px;
+          font-family: inherit;
+      }
+      .ppt-add-btn:hover { background: linear-gradient(90deg,#243f78,#1a3460); color: #88bbff; }
+      .ppt-task-list { max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+      .ppt-task-list::-webkit-scrollbar { width: 4px; }
+      .ppt-task-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+      .ppt-task-card {
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.07);
+          border-radius: 8px; padding: 8px 10px;
+          display: flex; align-items: flex-start; gap: 8px;
+          transition: background 0.2s;
+      }
+      .ppt-task-card:hover { background: rgba(255,255,255,0.07); }
+      .ppt-task-card.done { opacity: 0.45; }
+      .ppt-task-check {
+          width: 18px; height: 18px; flex-shrink: 0;
+          border: 2px solid rgba(255,255,255,0.2);
+          border-radius: 50%; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 0.7em; color: transparent; transition: all 0.2s;
+          margin-top: 1px; background: transparent;
+      }
+      .ppt-task-card.done .ppt-task-check {
+          background: rgba(80,200,120,0.3);
+          border-color: rgba(80,200,120,0.6);
+          color: #55ee88;
+      }
+      .ppt-task-body { flex: 1; min-width: 0; }
+      .ppt-task-title { font-size: 0.82em; font-weight: 600; color: #ddd; }
+      .ppt-task-card.done .ppt-task-title { text-decoration: line-through; color: #666; }
+      .ppt-task-meta { font-size: 0.68em; color: #88aacc; margin-top: 2px; }
+      .ppt-task-del {
+          background: none; border: none; color: #555;
+          cursor: pointer; font-size: 0.75em; padding: 2px 6px;
+          border-radius: 4px; transition: all 0.15s;
+      }
+      .ppt-task-del:hover { background: rgba(255,60,60,0.2); color: #ff8888; }
+      .ppt-empty { text-align: center; padding: 20px; color: #555; font-size: 0.82em; }
+
+      /* Inline add form */
+      .ppt-add-form { display: none; margin-bottom: 10px; }
+      .ppt-add-form.open { display: block; }
+      .ppt-add-input {
+          width: 100%; box-sizing: border-box;
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 8px; padding: 8px 10px;
+          color: #fff; font-size: 0.82em;
+          font-family: inherit; outline: none;
+          margin-bottom: 6px;
+      }
+      .ppt-add-input:focus { border-color: rgba(100,150,255,0.4); }
+      .ppt-add-row { display: flex; gap: 6px; }
+      .ppt-add-row input, .ppt-add-row select {
+          flex: 1; background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 6px; padding: 6px 8px;
+          color: #fff; font-size: 0.78em; font-family: inherit; outline: none;
+      }
+      .ppt-add-row select option { background: #1a2035; }
+      .ppt-add-actions { display: flex; gap: 6px; margin-top: 8px; }
+      .ppt-save-btn {
+          flex: 1; padding: 7px;
+          background: linear-gradient(90deg,#2244aa,#1a357a);
+          border: 1px solid rgba(80,140,255,0.3);
+          border-radius: 6px; color: #88aaff;
+          font-size: 0.8em; font-weight: 600;
+          cursor: pointer; font-family: inherit;
+      }
+      .ppt-cancel-btn {
+          padding: 7px 14px;
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 6px; color: #888;
+          font-size: 0.8em; cursor: pointer; font-family: inherit;
+      }
+      .ppt-filter-tabs {
+          display: flex; gap: 3px; margin-bottom: 8px;
+      }
+      .ppt-filter-tab {
+          flex: 1; padding: 4px; background: transparent;
+          border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 5px; color: #666;
+          font-size: 0.68em; font-weight: 600;
+          cursor: pointer; text-align: center;
+          font-family: inherit; transition: all 0.2s;
+      }
+      .ppt-filter-tab.active {
+          background: rgba(100,140,255,0.12);
+          border-color: rgba(100,140,255,0.25);
+          color: #88aaff;
+      }
     `;
     document.head.appendChild(style);
 
@@ -208,21 +331,204 @@ document.addEventListener('DOMContentLoaded', () => {
           <span class="pp-date-chip" id="pp-greg-date"></span>
           <span class="pp-date-chip" id="pp-hijri-date"></span>
         </div>
-        <div class="pp-next-prayer" id="pp-next-prayer" style="display:none">
-          <div>
-            <div class="pp-next-label">Next Prayer</div>
-            <div class="pp-next-name" id="pp-next-name">—</div>
-          </div>
-          <div class="pp-next-countdown" id="pp-next-countdown">—</div>
+        <div class="pp-tabs">
+          <button class="pp-tab active" data-tab="prayers">🕌 Prayers</button>
+          <button class="pp-tab" data-tab="tasks">📋 Tasks</button>
         </div>
-        <div id="pp-body" class="pp-loading">
-          <div style="font-size:1.8em;margin-bottom:8px">🌙</div>
-          Loading prayer times...
+        <div id="pp-prayers-panel" class="active">
+          <div class="pp-next-prayer" id="pp-next-prayer" style="display:none">
+            <div>
+              <div class="pp-next-label">Next Prayer</div>
+              <div class="pp-next-name" id="pp-next-name">—</div>
+            </div>
+            <div class="pp-next-countdown" id="pp-next-countdown">—</div>
+          </div>
+          <div id="pp-body" class="pp-loading">
+            <div style="font-size:1.8em;margin-bottom:8px">🌙</div>
+            Loading prayer times...
+          </div>
+        </div>
+        <div id="pp-tasks-panel">
+          <button class="ppt-add-btn" id="ppt-add-btn">＋ Add Task</button>
+          <div class="ppt-add-form" id="ppt-add-form">
+            <input class="ppt-add-input" id="ppt-title-input" type="text" placeholder="What needs to be done?" maxlength="100">
+            <div class="ppt-add-row">
+              <input id="ppt-due-input" type="datetime-local">
+              <select id="ppt-cat-select">
+                <option value="other">Other</option>
+                <option value="work">💼 Work</option>
+                <option value="personal">🏠 Personal</option>
+                <option value="prayer">🕌 Prayer</option>
+                <option value="health">❤️ Health</option>
+              </select>
+            </div>
+            <div class="ppt-add-actions">
+              <button class="ppt-cancel-btn" id="ppt-cancel-btn">Cancel</button>
+              <button class="ppt-save-btn" id="ppt-save-btn">Save</button>
+            </div>
+          </div>
+          <div class="ppt-filter-tabs">
+            <button class="ppt-filter-tab active" data-filter="all">All</button>
+            <button class="ppt-filter-tab" data-filter="today">Today</button>
+            <button class="ppt-filter-tab" data-filter="done">Done</button>
+          </div>
+          <div class="ppt-task-list" id="ppt-task-list"></div>
         </div>
         <div class="pp-footer">Powered by AlAdhan API · Local prayer times</div>
       </div>
     `;
     document.body.appendChild(overlay);
+
+    // Tab switching
+    document.querySelectorAll('.pp-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.pp-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const target = tab.dataset.tab;
+            document.getElementById('pp-prayers-panel').classList.toggle('active', target === 'prayers');
+            document.getElementById('pp-tasks-panel').classList.toggle('active', target === 'tasks');
+            if (target === 'tasks') renderPPTasks();
+        });
+    });
+
+    // ═══ INTEGRATED TASKS SYSTEM ═══
+    const PPT_STORE = 'drd_todo_tasks';
+    function pptLoadTasks() { try { return JSON.parse(localStorage.getItem(PPT_STORE) || '[]'); } catch(e) { return []; } }
+    function pptSaveTasks(t) { localStorage.setItem(PPT_STORE, JSON.stringify(t)); }
+    function pptUid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+    function pptEsc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    let pptFilter = 'all';
+
+    function pptFormatDue(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const due = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const diff = Math.round((due - today) / 864e5);
+        const tStr = d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit', hour12:true});
+        if (diff === 0) return 'Today ' + tStr;
+        if (diff === 1) return 'Tomorrow ' + tStr;
+        if (diff < 0) return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' + tStr + ' (overdue)';
+        return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' + tStr;
+    }
+
+    function renderPPTasks() {
+        const list = document.getElementById('ppt-task-list');
+        if (!list) return;
+        let tasks = pptLoadTasks();
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const tom = new Date(today); tom.setDate(tom.getDate() + 1);
+
+        if (pptFilter === 'all') tasks = tasks.filter(t => !t.done);
+        else if (pptFilter === 'today') tasks = tasks.filter(t => {
+            if (t.done) return false;
+            if (!t.due) return false;
+            const d = new Date(t.due);
+            return d >= today && d < tom;
+        });
+        else if (pptFilter === 'done') tasks = tasks.filter(t => t.done);
+
+        tasks.sort((a, b) => {
+            if (a.due && b.due) return new Date(a.due) - new Date(b.due);
+            if (a.due) return -1; if (b.due) return 1;
+            return new Date(b.created) - new Date(a.created);
+        });
+
+        if (!tasks.length) {
+            list.innerHTML = '<div class="ppt-empty">📭 No tasks here</div>';
+            return;
+        }
+
+        list.innerHTML = tasks.map(t => {
+            const ov = t.due && new Date(t.due) < now && !t.done;
+            const dueStr = pptFormatDue(t.due);
+            return '<div class="ppt-task-card ' + (t.done ? 'done' : '') + '" data-id="' + t.id + '">' +
+                '<div class="ppt-task-check" data-id="' + t.id + '">' + (t.done ? '✓' : '') + '</div>' +
+                '<div class="ppt-task-body">' +
+                    '<div class="ppt-task-title">' + pptEsc(t.title) + '</div>' +
+                    (dueStr ? '<div class="ppt-task-meta" style="' + (ov ? 'color:#ff7788' : '') + '">🕐 ' + pptEsc(dueStr) + '</div>' : '') +
+                '</div>' +
+                '<button class="ppt-task-del" data-id="' + t.id + '">✕</button>' +
+            '</div>';
+        }).join('');
+
+        // Bind events
+        list.querySelectorAll('.ppt-task-check').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const tasks = pptLoadTasks();
+                const t = tasks.find(x => x.id === el.dataset.id);
+                if (t) { t.done = !t.done; pptSaveTasks(tasks); renderPPTasks(); updateTodoBadge(); }
+            });
+        });
+        list.querySelectorAll('.ppt-task-del').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                let tasks = pptLoadTasks();
+                tasks = tasks.filter(x => x.id !== el.dataset.id);
+                pptSaveTasks(tasks); renderPPTasks(); updateTodoBadge();
+            });
+        });
+    }
+
+    // Filter tabs
+    document.querySelectorAll('.ppt-filter-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.ppt-filter-tab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            pptFilter = btn.dataset.filter;
+            renderPPTasks();
+        });
+    });
+
+    // Add task form
+    document.getElementById('ppt-add-btn').addEventListener('click', () => {
+        const form = document.getElementById('ppt-add-form');
+        form.classList.toggle('open');
+        if (form.classList.contains('open')) document.getElementById('ppt-title-input').focus();
+    });
+    document.getElementById('ppt-cancel-btn').addEventListener('click', () => {
+        document.getElementById('ppt-add-form').classList.remove('open');
+        document.getElementById('ppt-title-input').value = '';
+        document.getElementById('ppt-due-input').value = '';
+    });
+    document.getElementById('ppt-save-btn').addEventListener('click', () => {
+        const title = document.getElementById('ppt-title-input').value.trim();
+        if (!title) { document.getElementById('ppt-title-input').style.borderColor = '#ff5566'; setTimeout(() => document.getElementById('ppt-title-input').style.borderColor = '', 1500); return; }
+        const dueVal = document.getElementById('ppt-due-input').value;
+        const due = dueVal ? new Date(dueVal).toISOString() : null;
+        const cat = document.getElementById('ppt-cat-select').value;
+        const tasks = pptLoadTasks();
+        tasks.unshift({ id: pptUid(), title: title, desc: '', type: 'task', due: due, cat: cat, alarm: false, done: false, created: new Date().toISOString() });
+        pptSaveTasks(tasks);
+        document.getElementById('ppt-title-input').value = '';
+        document.getElementById('ppt-due-input').value = '';
+        document.getElementById('ppt-add-form').classList.remove('open');
+        renderPPTasks();
+        updateTodoBadge();
+    });
+    // Enter key to save
+    document.getElementById('ppt-title-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('ppt-save-btn').click();
+    });
+
+    // Update todo tab badge
+    function updateTodoBadge() {
+        const tasks = pptLoadTasks();
+        const pending = tasks.filter(t => !t.done).length;
+        const tabBtn = document.querySelector('.pp-tab[data-tab="tasks"]');
+        if (tabBtn) tabBtn.textContent = '📋 Tasks' + (pending > 0 ? ' (' + pending + ')' : '');
+        // Also update standalone badge if it exists
+        const standaloneBadge = document.getElementById('todo-tab-badge');
+        if (standaloneBadge) {
+            standaloneBadge.style.display = pending > 0 ? 'block' : 'none';
+            standaloneBadge.textContent = pending > 99 ? '99+' : pending;
+        }
+    }
+    updateTodoBadge();
 
     document.getElementById('prayer-popup-close').addEventListener('click', closePrayerPopup);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closePrayerPopup(); });

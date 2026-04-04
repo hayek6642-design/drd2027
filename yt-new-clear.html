@@ -1851,14 +1851,58 @@
         #toast-container{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:100000;display:flex;flex-direction:column;gap:6px}
         #toast-container .toast{background:rgba(0,0,0,0.75);color:#fff;padding:8px 12px;border-radius:8px;font-size:13px;animation:toast-fade 2s ease}
         @keyframes toast-fade{0%{opacity:0;transform:translateY(10px)}10%{opacity:1;transform:translateY(0)}80%{opacity:1}100%{opacity:0}}
-    </style>
+    
+/* ═══ HIDE YT UI UNTIL PLAYER READY ═══ */
+body.yt-not-ready .display-4,
+body.yt-not-ready .video-wrapper,
+body.yt-not-ready #counter-container,
+body.yt-not-ready .news-ticker,
+body.yt-not-ready #sound-popup {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+body.yt-not-ready::before {
+    content: '🎵';
+    position: fixed;
+    inset: 0;
+    background: #0d1117;
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4rem;
+    animation: ytLoadPulse 1.5s ease-in-out infinite;
+}
+@keyframes ytLoadPulse {
+    0%, 100% { opacity: 0.3; transform: scale(0.9); }
+    50% { opacity: 1; transform: scale(1.1); }
+}
+body:not(.yt-not-ready) .display-4,
+body:not(.yt-not-ready) .video-wrapper,
+body:not(.yt-not-ready) #counter-container,
+body:not(.yt-not-ready) .news-ticker {
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+</style>
 
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
 </head>
 
-<body class="bg-light">
+<body class="bg-light yt-not-ready">
+<script>
+// Remove loading state when YT player is ready or after timeout
+window.addEventListener('yt:ready', function() {
+    document.body.classList.remove('yt-not-ready');
+}, { once: true });
+// Fallback: show UI after 8 seconds even if player fails to load
+setTimeout(function() {
+    document.body.classList.remove('yt-not-ready');
+}, 8000);
+</script>
+
 <!-- ==========================================
      SINGLE SESSION OVERLAYS (WhatsApp-like)
      ========================================== -->
@@ -3319,7 +3363,6 @@ document.addEventListener('DOMContentLoaded', async function(){
 
 
     <!-- Todo Side Panel -->
-    <script src="/yt-todo-panel/todo-panel.js"></script>
 </body>
 
 </html>
