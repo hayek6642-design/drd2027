@@ -1,4 +1,6 @@
 import 'dotenv/config';
+// WebAuthn (biometric auth) — lazy imported per-request to avoid startup crash if not installed yet
+// import { generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse } from '@simplewebauthn/server';
 import path from 'path';
 import fs from 'fs-extra';
 import { fileURLToPath } from 'url';
@@ -80,7 +82,6 @@ import { query, pool } from './api/config/db.js';
 import { watchdog } from './services/watchdog/watchdog.js';
 import watchdogRoutes from './routes/watchdog.js';
 import battaloodaRouter from './api/routes/battalooda.js';
-import shotsRouter from './api/modules/shots.js';
 
 import { 
   getAllCountries, 
@@ -263,9 +264,6 @@ app.use('/api/battalooda', battaloodaRouter);
 
 // Register Sync routes
 app.use('/api/codes', syncRouter);
-
-// Register Shots! routes
-app.use('/api/shots', shotsRouter);
 
 // AUTH REMOVED — CLEAN RESET
 
@@ -1576,6 +1574,8 @@ app.get('/api/auth/me', requireAuth, (req, res) => {
   try {
     return res.json({ 
       success: true,
+      ok: true,
+      authenticated: true,
       user: { 
         id: req.user.id, 
         email: req.user.email,
@@ -1584,9 +1584,237 @@ app.get('/api/auth/me', requireAuth, (req, res) => {
       } 
     });
   } catch (_) {
-    return res.json({ success: false, user: null });
+    return res.json({ success: false, ok: false, authenticated: false, user: null });
   }
 });
+
+// ─────────────────────────────────────────────────────────────────────
+// 🔐 WebAuthn Biometric Auth Endpoints
+// Uses @simplewebauthn/server — npm install @simplewebauthn/server
+// ─────────────────────────────────────────────────────────────────────
+
+// Helper: lazy-load SimpleWebAuthn (in case not yet installed)
+async function getSimpleWebAuthn() {
+  try {
+    return await import('@simplewebauthn/server');
+  } catch(e) {
+    console.error('[WebAuthn] @simplewebauthn/server not installed. Run: npm install @simplewebauthn/server');
+    return null;
+  }
+}
+
+// WebAuthn: Start Registration (attach biometric credential to account)
+app.post('/api/auth/webauthn/register/start', requireAuth, async (req, res) => {
+  const swAuthn = await getSimpleWebAuthn();
+  if (!swAuthn) return res.status(503).json({ ok: false, error: 'Biometric module not available' });
+
+  try {
+    const userId  = req.user.id;
+    const email   = req.user.email;
+    const rpID    = req.hostname === 'localhost' ? 'localhost' : req.hostname;
+    const origin  = req.hostname === 'localhost' ? 'http://localhost' : `https://${req.hostname}`;
+
+    // Get existing credentials to exclude
+    let excludeCredentials = [];
+    try {
+      const existing = await query('SELECT credential_id FROM webauthn_credentials WHERE user_id = $1', [userId]);
+      excludeCredentials = (existing.rows || []).map(c => ({ id: c.credential_id, type: 'public-key' }));
+    } catch(_) {}
+
+    const options = await swAuthn.generateRegistrationOptions({
+      rpName: 'DRD2027',
+      rpID,
+      userID: new TextEncoder().encode(userId),
+      userName: email,
+      userDisplayName: email,
+      attestationType: 'none',
+      excludeCredentials,
+      authenticatorSelection: {
+        authenticatorAttachment: 'platform',
+        userVerification: 'required',
+        residentKey: 'preferred',
+      },
+      supportedAlgorithmIDs: [-7, -257],
+    });
+
+    // Store challenge for verification step
+    devSessions.set(`wac_reg_${userId}`, { challenge: options.challenge });
+    return res.json({ ok: true, options });
+  } catch(err) {
+    console.error('[WebAuthn register/start]', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// WebAuthn: Finish Registration
+app.post('/api/auth/webauthn/register/finish', requireAuth, async (req, res) => {
+  const swAuthn = await getSimpleWebAuthn();
+  if (!swAuthn) return res.status(503).json({ ok: false, error: 'Biometric module not available' });
+
+  try {
+    const userId     = req.user.id;
+    const credential = req.body.credential;
+    const rpID       = req.hostname === 'localhost' ? 'localhost' : req.hostname;
+    const origin     = req.hostname === 'localhost' ? 'http://localhost' : `https://${req.hostname}`;
+
+    const pending = devSessions.get(`wac_reg_${userId}`);
+    if (!pending) return res.status(400).json({ ok: false, error: 'No pending registration challenge' });
+    devSessions.delete(`wac_reg_${userId}`);
+
+    const verification = await swAuthn.verifyRegistrationResponse({
+      response: credential,
+      expectedChallenge: pending.challenge,
+      expectedOrigin: origin,
+      expectedRPID: rpID,
+      requireUserVerification: true,
+    });
+
+    if (!verification.verified || !verification.registrationInfo) {
+      return res.status(400).json({ ok: false, error: 'Biometric verification failed' });
+    }
+
+    const { credential: credInfo } = verification.registrationInfo;
+    const credId  = Buffer.from(credInfo.id).toString('base64url');
+    const pubKey  = Buffer.from(credInfo.publicKey).toString('base64url');
+    const counter = credInfo.counter || 0;
+
+    await query(
+      `INSERT INTO webauthn_credentials (user_id, credential_id, public_key, counter) VALUES ($1, $2, $3, $4)
+       ON CONFLICT (credential_id) DO UPDATE SET public_key=$3, counter=$4`,
+      [userId, credId, pubKey, counter]
+    );
+
+    return res.json({ ok: true, message: 'Biometric login enabled!' });
+  } catch(err) {
+    console.error('[WebAuthn register/finish]', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// WebAuthn: Start Authentication
+app.post('/api/auth/webauthn/auth/start', async (req, res) => {
+  const swAuthn = await getSimpleWebAuthn();
+  if (!swAuthn) return res.status(503).json({ ok: false, error: 'Biometric module not available' });
+
+  try {
+    const rpID = req.hostname === 'localhost' ? 'localhost' : req.hostname;
+    const { email } = req.body;
+
+    let allowCredentials = [];
+    if (email) {
+      try {
+        const userRes = await query('SELECT id FROM users WHERE email = $1', [email]);
+        if (userRes.rows && userRes.rows.length > 0) {
+          const credsRes = await query('SELECT credential_id FROM webauthn_credentials WHERE user_id = $1', [userRes.rows[0].id]);
+          allowCredentials = (credsRes.rows || []).map(c => ({ id: c.credential_id, type: 'public-key' }));
+        }
+      } catch(_) {}
+    }
+
+    const options = await swAuthn.generateAuthenticationOptions({
+      rpID,
+      userVerification: 'required',
+      allowCredentials,
+      timeout: 60000,
+    });
+
+    // Store challenge
+    devSessions.set(`wac_auth_${options.challenge}`, { challenge: options.challenge, email: email || '' });
+    return res.json({ ok: true, options });
+  } catch(err) {
+    console.error('[WebAuthn auth/start]', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// WebAuthn: Finish Authentication (creates a new session)
+app.post('/api/auth/webauthn/auth/finish', async (req, res) => {
+  const swAuthn = await getSimpleWebAuthn();
+  if (!swAuthn) return res.status(503).json({ ok: false, error: 'Biometric module not available' });
+
+  try {
+    const { credential, challenge } = req.body;
+    const rpID   = req.hostname === 'localhost' ? 'localhost' : req.hostname;
+    const origin = req.hostname === 'localhost' ? 'http://localhost' : `https://${req.hostname}`;
+
+    const pending = devSessions.get(`wac_auth_${challenge}`);
+    if (!pending) return res.status(400).json({ ok: false, error: 'Challenge expired or not found' });
+    devSessions.delete(`wac_auth_${challenge}`);
+
+    // Fetch stored credential from DB
+    const credRes = await query('SELECT * FROM webauthn_credentials WHERE credential_id = $1', [credential.id]);
+    if (!credRes.rows || credRes.rows.length === 0) {
+      return res.status(400).json({ ok: false, error: 'Biometric credential not registered on this account' });
+    }
+    const stored = credRes.rows[0];
+
+    const verification = await swAuthn.verifyAuthenticationResponse({
+      response: credential,
+      expectedChallenge: pending.challenge,
+      expectedOrigin: origin,
+      expectedRPID: rpID,
+      credential: {
+        id: stored.credential_id,
+        publicKey: Buffer.from(stored.public_key, 'base64url'),
+        counter: stored.counter,
+        transports: stored.transports ? JSON.parse(stored.transports) : [],
+      },
+      requireUserVerification: true,
+    });
+
+    if (!verification.verified) {
+      return res.status(400).json({ ok: false, error: 'Biometric signature verification failed' });
+    }
+
+    // Update counter to prevent replay attacks
+    await query('UPDATE webauthn_credentials SET counter = $1 WHERE credential_id = $2',
+      [verification.authenticationInfo.newCounter, stored.credential_id]);
+
+    // Fetch user and create session
+    const userRes = await query('SELECT email, user_type FROM users WHERE id = $1', [stored.user_id]);
+    if (!userRes.rows || userRes.rows.length === 0) {
+      return res.status(400).json({ ok: false, error: 'User not found' });
+    }
+    const user = userRes.rows[0];
+    const newSessionId = crypto.randomUUID();
+
+    devSessions.set(newSessionId, {
+      userId: stored.user_id,
+      email:  user.email,
+      role:   user.user_type || 'user',
+      sessionId: newSessionId,
+    });
+
+    try {
+      await query(
+        `INSERT INTO auth_sessions (token, user_id, expires_at) VALUES ($1, $2, datetime('now', '+7 days'))
+         ON CONFLICT (token) DO NOTHING`,
+        [newSessionId, stored.user_id]
+      );
+    } catch(_) {}
+
+    res.cookie('session_token', newSessionId, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/',
+    });
+
+    return res.json({
+      ok: true,
+      success: true,
+      authenticated: true,
+      sessionId: newSessionId,
+      user: { id: stored.user_id, email: user.email, role: user.user_type || 'user' },
+    });
+  } catch(err) {
+    console.error('[WebAuthn auth/finish]', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────
 
 // Alias: session info — with DB fallback for cross-device / server-restart recovery
 app.get('/api/me', async (req, res) => {
@@ -5249,6 +5477,15 @@ async function applyNeonCompressionDDL(){
       token_hash TEXT,
       user_id TEXT NOT NULL,
       expires_at DATETIME NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS webauthn_credentials (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      credential_id TEXT NOT NULL UNIQUE,
+      public_key TEXT NOT NULL,
+      counter INTEGER DEFAULT 0,
+      transports TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`,
     `CREATE TABLE IF NOT EXISTS event_offsets (

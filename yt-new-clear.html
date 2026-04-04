@@ -3369,6 +3369,27 @@ document.addEventListener('DOMContentLoaded', async function(){
 
     <!-- Todo Side Panel -->
     <script src="/yt-todo-panel/todo-panel.js"></script>
+
+    <!-- Fix: Resume YT display when phone screen is unlocked (power button press) -->
+    <script>
+    (function() {
+      var _ytWasPlaying = false;
+      document.addEventListener('visibilitychange', function() {
+        if (!window.player) return;
+        try {
+          if (document.visibilityState === 'hidden') {
+            // Track whether YT was playing when screen locked
+            _ytWasPlaying = (typeof player.getPlayerState === 'function' && player.getPlayerState() === 1);
+          } else if (document.visibilityState === 'visible' && _ytWasPlaying) {
+            // Screen unlocked → resume playback
+            setTimeout(function() {
+              try { if (window.player && typeof player.playVideo === 'function') player.playVideo(); } catch(_) {}
+            }, 300);
+          }
+        } catch(_) {}
+      });
+    })();
+    </script>
 </body>
 
 </html>

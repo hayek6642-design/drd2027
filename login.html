@@ -219,6 +219,8 @@
     font-size: 14px;
   }
 </style>
+  <!-- WebAuthn browser library for biometric auth -->
+  <script src="https://unpkg.com/@simplewebauthn/browser@13/dist/bundle/index.umd.min.js"></script>
 </head>
 <body>
 <!-- Single-Session Kickout Banner -->
@@ -327,6 +329,25 @@
     </div>
     
     <button onclick="handleLogin()">Login</button>
+
+    <!-- Biometric login button (shown if credential is registered on this device) -->
+    <div id="biometric-divider" style="display:none;text-align:center;margin:14px 0 6px;color:#888;font-size:0.82em">— or —</div>
+    <button id="biometric-btn" onclick="biometricLogin()" style="display:none;width:100%;padding:12px;background:rgba(100,150,255,0.1);border:1px solid rgba(100,150,255,0.3);color:#88aaff;border-radius:8px;cursor:pointer;font-size:0.9em;margin-top:0;font-family:inherit">
+      🔐 Sign in with Biometrics
+    </button>
+  </div>
+
+  <!-- Biometric setup modal (shown after first login) -->
+  <div id="biometric-setup-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:linear-gradient(145deg,#1a1f3a,#0f1525);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:28px 24px;width:min(340px,88vw);text-align:center;color:#fff;font-family:'Segoe UI',system-ui,sans-serif;box-shadow:0 20px 60px rgba(0,0,0,0.8)">
+      <div style="font-size:2.8em;margin-bottom:12px">🔐</div>
+      <h3 style="margin:0 0 8px;font-size:1.1em;font-weight:700">Enable Biometric Login?</h3>
+      <p style="color:#aaa;font-size:0.82em;margin:0 0 22px;line-height:1.6">Use your <strong style="color:#ccc">fingerprint, face, or device PIN</strong> to sign in instantly — no password needed next time.</p>
+      <div style="display:flex;gap:10px">
+        <button id="biometric-skip-btn" style="flex:1;padding:11px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#aaa;border-radius:10px;cursor:pointer;font-size:0.85em;font-family:inherit">Not Now</button>
+        <button id="biometric-enable-btn" style="flex:1;padding:11px;background:linear-gradient(135deg,#4466cc,#2244aa);border:none;color:#fff;border-radius:10px;cursor:pointer;font-size:0.85em;font-weight:700;font-family:inherit">Enable ✓</button>
+      </div>
+    </div>
   </div>
 
   <pre id="output"></pre>
@@ -355,7 +376,7 @@ console.log('🔥 Window origin:', window.location.origin);
       fetch('/api/auth/me', { credentials: 'include' })
         .then(function(r) { return r.json(); })
         .then(function(data) {
-          if (data.authenticated || data.ok) {
+          if (data.authenticated || data.ok || data.success) {
             window.location.href = "/yt-new-clear.html";
           } else {
             // Server says NO — nuke stale client state
@@ -806,7 +827,17 @@ async function handleLogin() {
         });
       }
       
-      setTimeout(() => {
+      // ── Offer biometric setup if not yet configured ──
+      setTimeout(async () => {
+        try {
+          const alreadySetup = localStorage.getItem('drd_webauthn_credential_id');
+          const biometricsSupported = window.PublicKeyCredential &&
+            await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(() => false);
+          if (!alreadySetup && biometricsSupported) {
+            showBiometricSetupModal(data.sessionId, email);
+            return; // showBiometricSetupModal will redirect after
+          }
+        } catch(_) {}
         window.location.href = '/yt-new-clear.html';
       }, 1500);
     } else {
@@ -816,6 +847,145 @@ async function handleLogin() {
     showStatus('Network error. Please try again.', 'error');
   }
 }
+
+
+// ── Biometric Auth (WebAuthn) ─────────────────────────────────────
+
+// On page load: show biometric button if credential already registered on this device
+(async function initBiometricUI() {
+  try {
+    if (!window.PublicKeyCredential) return;
+    const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    if (!available) return;
+    const credId = localStorage.getItem('drd_webauthn_credential_id');
+    if (credId) {
+      const div = document.getElementById('biometric-divider');
+      const btn = document.getElementById('biometric-btn');
+      if (div) div.style.display = 'block';
+      if (btn) btn.style.display = 'block';
+    }
+  } catch(_) {}
+})();
+
+async function biometricLogin() {
+  try {
+    const email = localStorage.getItem('drd_webauthn_email') ||
+                  (document.getElementById('loginEmail') || {}).value?.trim() || '';
+    const btn = document.getElementById('biometric-btn');
+    if (btn) { btn.textContent = '🔐 Verifying...'; btn.disabled = true; }
+
+    // 1. Get challenge from server
+    const startRes = await fetch('/api/auth/webauthn/auth/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email }),
+    });
+    const startData = await startRes.json();
+    if (!startData.ok) {
+      showStatus(startData.error || 'Could not start biometric auth', 'error');
+      if (btn) { btn.textContent = '🔐 Sign in with Biometrics'; btn.disabled = false; }
+      return;
+    }
+
+    // 2. Browser biometric prompt (fingerprint / face / PIN)
+    const credential = await SimpleWebAuthnBrowser.startAuthentication({ optionsJSON: startData.options });
+
+    // 3. Send assertion to server for verification
+    const finishRes = await fetch('/api/auth/webauthn/auth/finish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ credential, challenge: startData.options.challenge }),
+    });
+    const result = await finishRes.json();
+
+    if (result.ok) {
+      localStorage.setItem('session_token', result.sessionId);
+      if (result.user) localStorage.setItem('user_data', JSON.stringify(result.user));
+      localStorage.setItem('session_active', 'true');
+      showStatus('✓ Biometric login successful!', 'success');
+      setTimeout(() => { window.location.href = '/yt-new-clear.html'; }, 800);
+    } else {
+      showStatus(result.error || 'Biometric verification failed', 'error');
+      if (btn) { btn.textContent = '🔐 Sign in with Biometrics'; btn.disabled = false; }
+    }
+  } catch(err) {
+    if (btn) { btn.textContent = '🔐 Sign in with Biometrics'; btn.disabled = false; }
+    if (err && err.name === 'NotAllowedError') {
+      showStatus('Biometric cancelled. Sign in with password instead.', 'error');
+    } else {
+      showStatus('Biometric error: ' + (err ? err.message : 'unknown'), 'error');
+    }
+    const btn2 = document.getElementById('biometric-btn');
+    if (btn2) { btn2.textContent = '🔐 Sign in with Biometrics'; btn2.disabled = false; }
+  }
+}
+
+async function enableBiometricLogin(sessionId, userEmail) {
+  try {
+    if (!window.PublicKeyCredential) return false;
+    const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    if (!available) { showStatus('Biometrics not available on this device.', 'error'); return false; }
+
+    // 1. Start WebAuthn registration
+    const startRes = await fetch('/api/auth/webauthn/register/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
+    const startData = await startRes.json();
+    if (!startData.ok) { showStatus(startData.error || 'Could not start biometric setup', 'error'); return false; }
+
+    // 2. Browser biometric registration prompt
+    const credential = await SimpleWebAuthnBrowser.startRegistration({ optionsJSON: startData.options });
+
+    // 3. Verify & save on server
+    const finishRes = await fetch('/api/auth/webauthn/register/finish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ credential }),
+    });
+    const result = await finishRes.json();
+
+    if (result.ok) {
+      localStorage.setItem('drd_webauthn_credential_id', credential.id);
+      if (userEmail) localStorage.setItem('drd_webauthn_email', userEmail);
+      return true;
+    } else {
+      showStatus(result.error || 'Failed to enable biometrics', 'error');
+      return false;
+    }
+  } catch(err) {
+    if (err && err.name !== 'NotAllowedError') {
+      console.warn('[Biometric setup error]', err.message);
+    }
+    return false;
+  }
+}
+
+function showBiometricSetupModal(sessionId, userEmail) {
+  const modal = document.getElementById('biometric-setup-modal');
+  if (!modal) { window.location.href = '/yt-new-clear.html'; return; }
+  modal.style.display = 'flex';
+
+  document.getElementById('biometric-skip-btn').onclick = () => {
+    modal.style.display = 'none';
+    localStorage.setItem('drd_webauthn_skipped', '1');
+    window.location.href = '/yt-new-clear.html';
+  };
+
+  document.getElementById('biometric-enable-btn').onclick = async () => {
+    const enableBtn = document.getElementById('biometric-enable-btn');
+    enableBtn.textContent = 'Setting up...';
+    enableBtn.disabled = true;
+    await enableBiometricLogin(sessionId, userEmail);
+    modal.style.display = 'none';
+    window.location.href = '/yt-new-clear.html';
+  };
+}
+
 </script>
 </body>
 </html>
