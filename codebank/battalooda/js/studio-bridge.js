@@ -155,20 +155,20 @@ class StudioBridge {
         this.sendToReact('security-result', { verified: result });
       });
     } else {
-      fetch('./security/security-engine.js')
-        .then(() => {
-          if (window.SecurityEngine && typeof window.SecurityEngine.verify === 'function') {
-            return window.SecurityEngine.verify(data);
+      const script = document.createElement('script');
+      script.src = './security/security-engine.js';
+      script.onload = () => {
+          if (window.SecurityEngine?.verify) {
+              window.SecurityEngine.verify(data).then(result => {
+                  this.sendToReact('security-result', { verified: result });
+              });
           }
-          return false;
-        })
-        .then(result => {
-          this.sendToReact('security-result', { verified: result });
-        })
-        .catch(err => {
-          console.error('[Bridge] Security verification failed:', err);
-          this.sendToReact('security-result', { verified: false, error: 'Security module unavailable' });
-        });
+      };
+      script.onerror = () => {
+          console.warn('Security engine not available');
+          this.sendToReact('security-result', { verified: false, error: 'engine-unavailable' });
+      };
+      document.head.appendChild(script);
     }
   }
 

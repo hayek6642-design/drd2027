@@ -399,7 +399,8 @@ class SocialFeatures {
     setupRealTimeUpdates() {
         // Setup WebSocket connection for real-time updates
         if (window.WebSocket) {
-            const ws = new WebSocket('ws://localhost:3000/battalooda');
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const ws = new WebSocket(`${protocol}//${location.host}/battalooda`);
             
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);

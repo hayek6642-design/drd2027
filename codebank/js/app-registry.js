@@ -3,30 +3,6 @@
  * DIAGNOSTIC VERSION - With path fallbacks and error handling
  */
 
-// Helper to detect correct path (for diagnostic purposes)
-const pathVariants = {
-    safecode: [
-        './safecode/index.html',      // lowercase
-        './SafeCode/index.html',      // camelCase
-        './safe-code/index.html',     // hyphenated
-        './safe_code/index.html',     // underscore
-        '/safecode/index.html',       // absolute root
-        '/codebank/safecode/index.html' // full path
-    ],
-    pebalaash: [
-        './pebalaash/index.html',
-        './Pebalaash/index.html',
-        './pebalaash.html',           // flat file
-        '/pebalaash/index.html'
-    ],
-    farragna: [
-        './farragna/index.html',
-        './Farragna/index.html',
-        './farragna.html',
-        '/farragna/index.html'
-    ]
-};
-
 export const AppRegistry = {
     core: [
         {
@@ -68,7 +44,7 @@ export const AppRegistry = {
         {
             id: 'farragna',
             name: 'Farragna',
-            category: 'finance',
+            category: 'media',
             icon: 'fa-chart-line',
             color: '#ec4899',
             url: './farragna.html',
@@ -79,9 +55,10 @@ export const AppRegistry = {
         {
             id: 'oneworld',
             name: 'OneWorld',
+            category: 'media',
             icon: 'fa-globe',
-            color: 'media',
-            url: './oneworld.html',
+            color: '#8b5cf6',
+            url: './oneworld/index.html',
             status: 'online',
             description: 'Global content hub',
             badge: null
@@ -89,28 +66,31 @@ export const AppRegistry = {
         {
             id: 'nostaglia',
             name: 'Nostaglia',
+            category: 'media',
             icon: 'fa-compact-disc',
-            color: 'media',
+            color: '#8b5cf6',
             url: './nostaglia.html',
-            status: 'online',
+            status: 'maintenance',
             description: 'Retro music collection',
             badge: null
         },
         {
             id: 'setta',
             name: 'Setta X Tes3a',
+            category: 'media',
             icon: 'fa-camera',
-            color: 'media',
+            color: '#8b5cf6',
             url: './setta.html',
-            status: 'busy',
+            status: 'maintenance',
             description: 'Photo & video gallery',
             badge: 'Beta'
         },
         {
             id: 'shots',
             name: 'Shots!',
+            category: 'media',
             icon: 'fa-image',
-            color: 'media',
+            color: '#8b5cf6',
             url: './shots.html',
             status: 'online',
             description: 'Screenshot manager',
@@ -121,7 +101,7 @@ export const AppRegistry = {
         {
             id: 'eb3at',
             name: 'Eb3at',
-            category: 'tools',
+            category: 'finance',
             icon: 'fa-paper-plane',
             color: '#3b82f6',
             url: './eb3at.html',
@@ -132,7 +112,7 @@ export const AppRegistry = {
         {
             id: 'pebalaash',
             name: 'Pebalaash',
-            category: 'games',
+            category: 'finance',
             icon: 'fa-gamepad',
             color: '#f59e0b',
             url: './pebalaash.html',
@@ -144,8 +124,8 @@ export const AppRegistry = {
             id: 'qarsan',
             name: 'Qarsan',
             icon: 'fa-shield-alt',
-            color: 'finance',
-            url: './qarsan.html',
+            color: '#3b82f6',
+            url: './qarsan/index.html',
             status: 'online',
             description: 'Security & protection',
             badge: null
@@ -155,8 +135,9 @@ export const AppRegistry = {
         {
             id: 'games',
             name: 'Games Centre',
+            category: 'games',
             icon: 'fa-gamepad',
-            color: 'games',
+            color: '#f59e0b',
             url: './Games-Centre.html',
             status: 'online',
             description: 'Gaming hub',
@@ -165,8 +146,9 @@ export const AppRegistry = {
         {
             id: 'piston',
             name: 'Piston',
+            category: 'games',
             icon: 'fa-cog',
-            color: 'games',
+            color: '#f59e0b',
             url: './piston.html',
             status: 'offline',
             description: 'Game engine',
@@ -177,8 +159,9 @@ export const AppRegistry = {
         {
             id: 'corsa',
             name: 'CoRsA',
+            category: 'tools',
             icon: 'fa-brain',
-            color: 'ai',
+            color: '#7c3aed',
             url: './corsa.html',
             status: 'online',
             description: 'AI Assistant',
@@ -210,13 +193,10 @@ export const AppRegistry = {
 };
 
 export const DockConfig = [
-    { id: 'safecode', name: 'Safe Assets', icon: 'fa-shield-halved', color: 'finance' },
-    { id: 'samma3ny', name: 'Samma3ny', icon: 'fa-music', color: 'media' },
-    { id: 'eb3at', name: 'Eb3at', icon: 'fa-paper-plane', color: 'finance' },
-    { id: 'games', name: 'Games', icon: 'fa-gamepad', color: 'games' },
-    { id: 'corsa', name: 'CoRsA', icon: 'fa-brain', color: 'tools' },
-    { id: 'aihub', name: 'AI Hub', icon: 'fa-robot', color: 'tools' }
+    { id: 'safecode', name: 'Safe Assets', icon: 'fa-shield-halved', color: '#3b82f6' },
+    { id: 'samma3ny', name: 'Samma3ny', icon: 'fa-music', color: '#8b5cf6' },
+    { id: 'eb3at', name: 'Eb3at', icon: 'fa-paper-plane', color: '#3b82f6' },
+    { id: 'games', name: 'Games', icon: 'fa-gamepad', color: '#f59e0b' },
+    { id: 'corsa', name: 'CoRsA', icon: 'fa-brain', color: '#06b6d4' },
+    { id: 'aihub', name: 'AI Hub', icon: 'fa-robot', color: '#06b6d4' }
 ];
-
-// Export path variants for diagnostic use
-export { pathVariants };
