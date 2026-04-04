@@ -56,7 +56,8 @@
       });
      </script>
 
-     <!-- External Libraries -->
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- External Libraries -->
      <script src="https://cdn.jsdelivr.net/npm/@capacitor/core/dist/capacitor.js"></script>
      <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -1855,6 +1856,51 @@
 </head>
 
 <body class="bg-light">
+<!-- ==========================================
+     SINGLE SESSION OVERLAYS (WhatsApp-like)
+     ========================================== -->
+
+<!-- Conflict Overlay: shown when another device is already active -->
+<div id="session-conflict-overlay" style="display:none;position:fixed;inset:0;background:rgba(13,17,23,0.98);z-index:99999998;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:-apple-system,BlinkMacSystemFont,sans-serif;text-align:center;padding:20px;">
+  <div style="max-width:380px;width:100%;">
+    <div style="font-size:52px;margin-bottom:16px;">📱🔒</div>
+    <h2 style="color:#ff6b6b;margin:0 0 10px;font-size:20px;">DR.D is already open</h2>
+    <p id="conflict-device-label" style="color:#8b949e;margin:0 0 28px;font-size:14px;line-height:1.5;">Your account is currently active on another device.</p>
+
+    <button id="session-takeover-btn" onclick="window.__sessionMgr && window.__sessionMgr.takeOver()" style="width:100%;padding:15px;background:#238636;border:none;border-radius:10px;color:white;font-size:15px;font-weight:bold;cursor:pointer;margin-bottom:12px;transition:opacity .2s;">
+      ⚡ Switch to This Device
+    </button>
+
+    <button id="session-qr-btn" onclick="window.__sessionMgr && window.__sessionMgr.startQRLink()" style="width:100%;padding:14px;background:transparent;border:1.5px solid #30363d;border-radius:10px;color:#58a6ff;font-size:14px;cursor:pointer;margin-bottom:28px;">
+      📷 Open via QR Code (scan from your phone)
+    </button>
+
+    <!-- QR Display Section -->
+    <div id="session-qr-section" style="display:none;">
+      <p style="color:#8b949e;font-size:13px;margin-bottom:14px;">Open your phone camera and scan this code:</p>
+      <div id="session-qr-canvas" style="background:white;padding:14px;border-radius:12px;display:inline-block;margin-bottom:12px;"></div>
+      <p id="session-qr-status" style="color:#58a6ff;font-size:13px;margin:8px 0;">Waiting for scan...</p>
+      <p style="color:#444;font-size:11px;">Expires in 5 minutes</p>
+    </div>
+  </div>
+</div>
+
+<!-- Kicked Overlay: shown when this device is taken over by another -->
+<div id="session-kicked-overlay" style="display:none;position:fixed;inset:0;background:rgba(13,17,23,0.99);z-index:99999999;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:-apple-system,BlinkMacSystemFont,sans-serif;text-align:center;padding:20px;">
+  <div style="max-width:360px;width:100%;">
+    <div style="font-size:52px;margin-bottom:16px;">👋</div>
+    <h2 style="color:#ff9500;margin:0 0 10px;font-size:20px;">Session Transferred</h2>
+    <p id="kicked-msg" style="color:#8b949e;margin:0 0 28px;font-size:14px;line-height:1.5;">Your session was transferred to another device.</p>
+    <button onclick="window.location.reload()" style="width:100%;padding:15px;background:#238636;border:none;border-radius:10px;color:white;font-size:15px;font-weight:bold;cursor:pointer;margin-bottom:12px;">
+      🔄 Use DR.D on This Device
+    </button>
+    <button onclick="window.location.href='/login.html'" style="width:100%;padding:14px;background:transparent;border:1.5px solid #30363d;border-radius:10px;color:#8b949e;font-size:13px;cursor:pointer;">
+      Log Out
+    </button>
+  </div>
+</div>
+
+
     <!--  Loading Overlay (Initially Hidden, Activated by Script) -->
     <div id="loading-overlay">
         <div class="loading-text">جارِ التهيئة</div>
@@ -2090,6 +2136,8 @@
                                 _sseSource.onmessage = async function(evnt) {
                                     try {
                                         var d = JSON.parse(evnt.data);
+                // [SINGLE-SESSION] Handle session conflict events
+                try { if (window.__sessionMgr) window.__sessionMgr.handleSSEMessage(d); } catch(_) {}
                                         if (d && (d.type === 'CODES_RECEIVED' || d.type === 'ASSET_UPDATE')) {
                                             console.log('[SSE] Cross-device sync:', d.type, '— re-fetching codes');
                                             await fetchSqliteCodesFirst();
@@ -2831,6 +2879,189 @@ document.addEventListener('DOMContentLoaded', async function(){
       });
     })();
     </script>
+
+<script>
+// ================================================================
+// SINGLE ACTIVE SESSION MANAGER (WhatsApp-like) — drd2027
+// ================================================================
+(function() {
+  'use strict';
+  var _heartbeatTimer = null;
+  var _qrPollTimer = null;
+  var _currentQrToken = null;
+
+  function showEl(id, flex) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = flex ? 'flex' : 'block';
+  }
+  function hideEl(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  }
+  function setText(id, txt) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = txt;
+  }
+
+  // ---- Heartbeat (keep active session alive) ----
+  function startHeartbeat() {
+    if (_heartbeatTimer) return;
+    _heartbeatTimer = setInterval(function() {
+      try {
+        fetch('/api/session/heartbeat', { method: 'POST', credentials: 'include' }).catch(function(){});
+      } catch(_) {}
+    }, 30000);
+    console.log('[SESSION] Heartbeat started.');
+  }
+  function stopHeartbeat() {
+    if (_heartbeatTimer) { clearInterval(_heartbeatTimer); _heartbeatTimer = null; }
+  }
+
+  // ---- Conflict UI ----
+  function showConflict(activeDevice) {
+    setText('conflict-device-label', 'Your account is currently active on: ' + (activeDevice || 'another device'));
+    showEl('session-conflict-overlay', true);
+  }
+  function hideConflict() { hideEl('session-conflict-overlay'); }
+
+  function showKicked(msg) {
+    setText('kicked-msg', msg || 'Your session was transferred to another device.');
+    showEl('session-kicked-overlay', true);
+  }
+
+  // ---- Register device ----
+  async function registerDevice() {
+    try {
+      var res = await fetch('/api/session/register-device', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      var data = await res.json();
+      if (data.status === 'conflict') {
+        showConflict(data.activeDevice);
+        return false;
+      }
+      startHeartbeat();
+      return true;
+    } catch(e) {
+      console.warn('[SESSION] register-device error:', e);
+      return true; // Allow access on network error
+    }
+  }
+
+  // ---- Take over ----
+  async function takeOver() {
+    try {
+      var btn = document.getElementById('session-takeover-btn');
+      if (btn) { btn.textContent = 'Switching...'; btn.style.opacity = '0.6'; btn.disabled = true; }
+      await fetch('/api/session/takeover', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      hideConflict();
+      startHeartbeat();
+      // Re-fetch codes for this device
+      try { if (typeof fetchSqliteCodesFirst === 'function') fetchSqliteCodesFirst(); } catch(_) {}
+    } catch(e) {
+      var btn = document.getElementById('session-takeover-btn');
+      if (btn) { btn.textContent = '⚡ Switch to This Device'; btn.style.opacity = '1'; btn.disabled = false; }
+    }
+  }
+
+  // ---- QR Link ----
+  async function startQRLink() {
+    try {
+      var qrSection = document.getElementById('session-qr-section');
+      var qrCanvas = document.getElementById('session-qr-canvas');
+      var qrStatus = document.getElementById('session-qr-status');
+
+      if (qrSection) qrSection.style.display = 'block';
+      if (qrCanvas) qrCanvas.innerHTML = '<p style="color:#666;font-size:13px">Generating QR...</p>';
+
+      var res = await fetch('/api/session/qr/generate', { credentials: 'include' });
+      var data = await res.json();
+      if (!data || !data.qrUrl) throw new Error('No QR URL returned');
+
+      _currentQrToken = data.token;
+
+      // Render QR
+      if (qrCanvas) {
+        qrCanvas.innerHTML = '';
+        try {
+          new QRCode(qrCanvas, {
+            text: data.qrUrl, width: 200, height: 200,
+            colorDark: '#000000', colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.H
+          });
+        } catch(_) {
+          // Fallback: clickable link
+          qrCanvas.innerHTML = '<a href="' + data.qrUrl + '" target="_blank" style="color:#58a6ff;font-size:11px;word-break:break-all">Tap to open link</a>';
+        }
+      }
+      if (qrStatus) qrStatus.textContent = 'Scan with your phone camera...';
+
+      // Poll for approval
+      if (_qrPollTimer) clearInterval(_qrPollTimer);
+      _qrPollTimer = setInterval(async function() {
+        try {
+          var sr = await fetch('/api/session/qr/status/' + _currentQrToken, { credentials: 'include' });
+          var sd = await sr.json();
+          if (sd.status === 'approved') {
+            clearInterval(_qrPollTimer);
+            if (qrStatus) qrStatus.textContent = '✅ Linked! Connecting...';
+            setTimeout(function() {
+              hideConflict();
+              startHeartbeat();
+              try { if (typeof fetchSqliteCodesFirst === 'function') fetchSqliteCodesFirst(); } catch(_) {}
+            }, 1000);
+          } else if (sd.status === 'expired') {
+            clearInterval(_qrPollTimer);
+            if (qrStatus) qrStatus.textContent = '⏰ QR expired. Click the button again to retry.';
+          }
+        } catch(_) {}
+      }, 2000);
+
+    } catch(e) {
+      var qrStatus = document.getElementById('session-qr-status');
+      if (qrStatus) qrStatus.textContent = '❌ Failed to generate QR. Please try again.';
+      console.error('[SESSION] QR error:', e);
+    }
+  }
+
+  // ---- SSE takeover handler (called from SSE message handler) ----
+  function handleSSEMessage(d) {
+    if (!d) return;
+    if (d.type === 'SESSION_TAKEN_OVER') {
+      stopHeartbeat();
+      showKicked(d.message || 'Your session was transferred to another device.');
+    }
+    if (d.type === 'QR_APPROVED') {
+      if (_qrPollTimer) { clearInterval(_qrPollTimer); _qrPollTimer = null; }
+      hideConflict();
+      startHeartbeat();
+      try { if (typeof fetchSqliteCodesFirst === 'function') fetchSqliteCodesFirst(); } catch(_) {}
+    }
+  }
+
+  // ---- Expose globally ----
+  window.__sessionMgr = {
+    registerDevice: registerDevice,
+    takeOver: takeOver,
+    startQRLink: startQRLink,
+    handleSSEMessage: handleSSEMessage,
+    showKicked: showKicked
+  };
+
+  // ---- Run on auth:ready ----
+  window.addEventListener('auth:ready', function(e) {
+    try {
+      if (!(e && e.detail && e.detail.authenticated === true)) return;
+      registerDevice();
+    } catch(_) {}
+  });
+
+})();
+</script>
 </body>
 
 </html>

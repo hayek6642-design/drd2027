@@ -384,6 +384,66 @@ function readSessionFromCookie(req) {
     return null;
   }
 }
+// ======================================================
+// SINGLE ACTIVE SESSION SYSTEM (WhatsApp-like)
+// ======================================================
+async function ensureSingleSessionTables() {
+  try {
+    await query(`CREATE TABLE IF NOT EXISTS active_device_sessions (
+      user_id TEXT PRIMARY KEY,
+      session_token TEXT NOT NULL,
+      device_label TEXT,
+      connected_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_seen_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await query(`CREATE TABLE IF NOT EXISTS qr_link_tokens (
+      token TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      expires_at DATETIME NOT NULL,
+      used INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    console.log('[SESSION] Single-session tables ready.');
+  } catch(e) {
+    console.error('[SESSION] DDL error:', e.message);
+  }
+}
+
+function getDeviceLabel(req) {
+  try {
+    const ua = req.headers['user-agent'] || '';
+    if (/iPad/.test(ua)) return 'iPad (Safari)';
+    if (/iPhone|iPod/.test(ua)) return 'iPhone (Safari)';
+    if (/Android/.test(ua)) return /Mobile/.test(ua) ? 'Android Phone' : 'Android Tablet';
+    if (/Windows/.test(ua)) {
+      if (/Edg/.test(ua)) return 'Windows (Edge)';
+      if (/Firefox/.test(ua)) return 'Windows (Firefox)';
+      if (/Chrome/.test(ua)) return 'Windows (Chrome)';
+      return 'Windows Browser';
+    }
+    if (/Macintosh/.test(ua)) {
+      if (/Firefox/.test(ua)) return 'Mac (Firefox)';
+      if (/Chrome/.test(ua)) return 'Mac (Chrome)';
+      return 'Mac (Safari)';
+    }
+    if (/Linux/.test(ua)) return 'Linux Browser';
+    return 'Unknown Device';
+  } catch(_) { return 'Unknown Device'; }
+}
+
+function __sseEmitToSession(userId, sessionToken, payload) {
+  try {
+    const set = __sseClients.get(String(userId));
+    if (!set) return;
+    const data = `data: ${JSON.stringify(payload)}\n\n`;
+    for (const res of set) {
+      if (res.__sessionToken && res.__sessionToken === sessionToken) {
+        try { res.write(data); } catch(_) {}
+      }
+    }
+  } catch(_) {}
+}
+
 
 const JWT_SECRET = 'secret-demo';
 function signJwt(userId, email) { return jwt.sign({ userId, email }, JWT_SECRET, { expiresIn: '7d' }) }
@@ -521,6 +581,7 @@ app.get('/events', async (req, res) => {
     res.write(`event: hello\n` + `data: {"ok":true}\n\n`);
     const uid = String(s.userId);
     if (!__sseClients.has(uid)) __sseClients.set(uid, new Set());
+    res.__sessionToken = (req.cookies && req.cookies.session_token) || null; // [SINGLE-SESSION] tag for targeted SSE
     __sseClients.get(uid).add(res);
     const keep = setInterval(() => { try { res.write(':\n\n') } catch(err){ console.error('[SSE] Keep-alive error:', err) } }, 15000);
     req.on('close', () => { try { clearInterval(keep); __sseClients.get(uid)?.delete(res) } catch(err){ console.error('[SSE] Close cleanup error:', err) } });
@@ -688,6 +749,220 @@ policyEngine.register('storePurchase', new StorePolicy(transactionManager))
 policyEngine.register('creatorIncentive', new CreatorIncentivePolicy(transactionManager))
 
 // DEV auth endpoints (must precede any /api catch-all)
+// ======================================================
+// SINGLE ACTIVE SESSION ROUTES (WhatsApp-like)
+// ======================================================
+
+// Register this device as the active session (or detect conflict)
+app.post('/api/session/register-device', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const sessionToken = (req.cookies && req.cookies.session_token) || null;
+    const deviceLabel = getDeviceLabel(req);
+    if (!sessionToken) return res.json({ status: 'conflict' });
+
+    const existing = await query(
+      'SELECT session_token, device_label, last_seen_at FROM active_device_sessions WHERE user_id = $1',
+      [userId]
+    );
+
+    if (existing.rows.length > 0) {
+      const activeToken = existing.rows[0].session_token;
+      // Auto-takeover stale sessions (no heartbeat for 5+ minutes)
+      const staleMs = Date.now() - new Date(existing.rows[0].last_seen_at).getTime();
+      if (staleMs > 5 * 60 * 1000) {
+        await query(
+          "INSERT INTO active_device_sessions (user_id, session_token, device_label, last_seen_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO UPDATE SET session_token = $2, device_label = $3, last_seen_at = CURRENT_TIMESTAMP",
+          [userId, sessionToken, deviceLabel]
+        );
+        return res.json({ status: 'ok', auto_takeover: true });
+      }
+      // Conflict: different session token already active
+      if (activeToken !== sessionToken) {
+        return res.json({
+          status: 'conflict',
+          activeDevice: existing.rows[0].device_label || 'another device',
+          currentDevice: deviceLabel
+        });
+      }
+    }
+
+    // Register/refresh this device as active
+    await query(
+      "INSERT INTO active_device_sessions (user_id, session_token, device_label, last_seen_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO UPDATE SET session_token = $2, device_label = $3, last_seen_at = CURRENT_TIMESTAMP",
+      [userId, sessionToken, deviceLabel]
+    );
+    return res.json({ status: 'ok' });
+  } catch(e) {
+    console.error('[SESSION] register-device error:', e.message);
+    return res.status(500).json({ status: 'error', error: e.message });
+  }
+});
+
+// Heartbeat — keeps the active session alive
+app.post('/api/session/heartbeat', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const sessionToken = (req.cookies && req.cookies.session_token) || null;
+    await query(
+      'UPDATE active_device_sessions SET last_seen_at = CURRENT_TIMESTAMP WHERE user_id = $1 AND session_token = $2',
+      [userId, sessionToken]
+    );
+    return res.json({ status: 'ok' });
+  } catch(e) {
+    return res.status(500).json({ status: 'error' });
+  }
+});
+
+// Take over — kick old device via SSE, become the active device
+app.post('/api/session/takeover', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const sessionToken = (req.cookies && req.cookies.session_token) || null;
+    const deviceLabel = getDeviceLabel(req);
+
+    const existing = await query(
+      'SELECT session_token, device_label FROM active_device_sessions WHERE user_id = $1',
+      [userId]
+    );
+
+    if (existing.rows.length > 0) {
+      const oldToken = existing.rows[0].session_token;
+      const oldDevice = existing.rows[0].device_label || 'another device';
+      if (oldToken !== sessionToken) {
+        __sseEmitToSession(String(userId), oldToken, {
+          type: 'SESSION_TAKEN_OVER',
+          message: `Your DR.D session was transferred to ${deviceLabel}. This device has been logged out.`,
+          newDevice: deviceLabel
+        });
+      }
+    }
+
+    await query(
+      "INSERT INTO active_device_sessions (user_id, session_token, device_label, last_seen_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO UPDATE SET session_token = $2, device_label = $3, last_seen_at = CURRENT_TIMESTAMP",
+      [userId, sessionToken, deviceLabel]
+    );
+    return res.json({ status: 'ok' });
+  } catch(e) {
+    console.error('[SESSION] takeover error:', e.message);
+    return res.status(500).json({ status: 'error', error: e.message });
+  }
+});
+
+// QR Generate — generates a one-time link token for this device
+app.get('/api/session/qr/generate', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const token = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+    await query(
+      'INSERT INTO qr_link_tokens (token, user_id, expires_at) VALUES ($1, $2, $3)',
+      [token, userId, expiresAt]
+    );
+
+    const protocol = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    const qrUrl = `${protocol}://${host}/api/session/qr/approve?t=${token}`;
+
+    return res.json({ status: 'ok', token, qrUrl, expiresAt });
+  } catch(e) {
+    console.error('[QR] generate error:', e.message);
+    return res.status(500).json({ status: 'error', error: e.message });
+  }
+});
+
+// QR Approve — phone opens this URL to grant access to the waiting device
+app.get('/api/session/qr/approve', async (req, res) => {
+  try {
+    const { t: token } = req.query;
+    if (!token) return res.redirect('/login.html');
+
+    const row = await query(
+      'SELECT user_id, expires_at, used FROM qr_link_tokens WHERE token = $1',
+      [token]
+    );
+
+    const HTML = (icon, title, color, msg, link) => `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DR.D QR Link</title>
+<style>body{margin:0;padding:40px 20px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0d1117;color:white;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh}
+.icon{font-size:64px;margin-bottom:16px}.title{color:${color};font-size:22px;font-weight:bold;margin-bottom:12px}
+.msg{color:#8b949e;font-size:15px;margin-bottom:24px;max-width:320px}
+a{color:#58a6ff;text-decoration:none;font-size:14px}</style></head>
+<body><div class="icon">${icon}</div><div class="title">${title}</div><div class="msg">${msg}</div>${link}</body></html>`;
+
+    if (!row.rows.length)
+      return res.send(HTML('❌','Invalid QR Code','#ff6b6b','This QR code is not valid.','<a href="/">Go Home</a>'));
+    if (row.rows[0].used)
+      return res.send(HTML('🔁','Already Used','#ff9500','This QR code has already been used.','<a href="/">Go Home</a>'));
+    if (new Date() > new Date(row.rows[0].expires_at))
+      return res.send(HTML('⏰','QR Expired','#ff9500','This QR code has expired. Please generate a new one.','<a href="/">Go Home</a>'));
+
+    const userId = row.rows[0].user_id;
+
+    // Verify scanner is logged in as the SAME user
+    const scannerToken = (req.cookies && req.cookies.session_token) || null;
+    if (!scannerToken) return res.redirect(`/login.html?redirect=/api/session/qr/approve?t=${token}`);
+
+    let scannerUserId = null;
+    const scannerSess = devSessions.get(scannerToken);
+    if (scannerSess) { scannerUserId = scannerSess.userId; }
+    else {
+      const dbSess = await query('SELECT user_id FROM auth_sessions WHERE token = $1', [scannerToken]);
+      if (dbSess.rows.length) scannerUserId = dbSess.rows[0].user_id;
+    }
+
+    if (!scannerUserId || String(scannerUserId) !== String(userId)) {
+      return res.send(HTML('⚠️','Account Mismatch','#ff6b6b',
+        'This QR code is for a different account. Please log in with the correct account first.',
+        '<a href="/login.html">Go to Login</a>'));
+    }
+
+    // Mark QR as used
+    await query('UPDATE qr_link_tokens SET used = 1 WHERE token = $1', [token]);
+
+    // Notify the waiting (desktop) device via SSE
+    __sseEmit(String(userId), { type: 'QR_APPROVED', token, message: 'Device linked! Access granted.' });
+
+    // Update active session to scanner (phone becomes primary)
+    const deviceLabel = getDeviceLabel(req);
+    await query(
+      "INSERT INTO active_device_sessions (user_id, session_token, device_label, last_seen_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO UPDATE SET session_token = $2, device_label = $3, last_seen_at = CURRENT_TIMESTAMP",
+      [userId, scannerToken, deviceLabel]
+    );
+
+    return res.send(HTML('✅','Device Linked!','#00ff88',
+      'The other device now has access. You can close this page.',
+      ''));
+  } catch(e) {
+    console.error('[QR] approve error:', e.message);
+    return res.status(500).send('Internal error');
+  }
+});
+
+// QR Status — polling endpoint for the waiting device
+app.get('/api/session/qr/status/:token', requireAuth, async (req, res) => {
+  try {
+    const { token } = req.params;
+    const userId = String(req.user.id);
+
+    const row = await query(
+      'SELECT user_id, expires_at, used FROM qr_link_tokens WHERE token = $1',
+      [token]
+    );
+
+    if (!row.rows.length) return res.json({ status: 'invalid' });
+    if (String(row.rows[0].user_id) !== userId) return res.status(403).json({ status: 'forbidden' });
+    if (new Date() > new Date(row.rows[0].expires_at)) return res.json({ status: 'expired' });
+    if (row.rows[0].used) return res.json({ status: 'approved' });
+
+    return res.json({ status: 'pending' });
+  } catch(e) {
+    return res.status(500).json({ status: 'error' });
+  }
+});
+
 app.post('/api/auth/dev-login', (req, res) => {
   try {
     const sessionId = (crypto && typeof crypto.randomUUID === 'function')
@@ -4276,6 +4551,7 @@ server.once('listening', async () => {
   // Apply DDL and start event processor
   try {
     await applyNeonCompressionDDL();
+    await ensureSingleSessionTables(); // [SINGLE-SESSION]
     
   // Enable WAL mode for SQLite ONLY if not using Turso
   if (process.env.TURSO_URL || process.env.TURSO_DATABASE_URL) {
