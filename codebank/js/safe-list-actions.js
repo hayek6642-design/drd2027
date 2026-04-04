@@ -121,13 +121,56 @@
             try {
                 // Check if fallback already exists
                 if (container.querySelector('.fallback-dog')) return;
-                
-                // Fallback: try to create a simple 2D dog icon if 3D fails
+
+                const isDead = (initialDogState === 'dead');
                 const fallbackDog = document.createElement('div');
                 fallbackDog.className = 'fallback-dog';
-                fallbackDog.innerHTML = '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 80px; filter: drop-shadow(0 0 10px #B043FF);">🐕</div>';
+                fallbackDog.id = 'fallback-dog-2d';
+
+                if (isDead) {
+                    // Dead state: show skeleton/skull
+                    fallbackDog.innerHTML = `
+                        <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
+                            <div style="font-size:80px;filter:drop-shadow(0 0 10px #FF4444);animation:pulse-dead 1.5s ease-in-out infinite;">💀</div>
+                            <div style="color:#FF4444;font-size:13px;font-weight:bold;text-align:center;text-shadow:0 0 8px #FF4444;">Guardian is Dead</div>
+                            <div style="color:#888;font-size:11px;text-align:center;">Buy a new dog from Pebalaash<br>to revive (1000 codes)</div>
+                        </div>`;
+                    fallbackDog.style.cursor = 'not-allowed';
+                    fallbackDog.title = 'Guardian is dead — cannot feed';
+                    console.log('[WatchDog] 💀 Fallback: showing DEAD skeleton dog');
+                } else {
+                    // Alive state: show live dog, make clickable for feeding
+                    fallbackDog.innerHTML = `
+                        <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
+                            <div style="font-size:80px;filter:drop-shadow(0 0 10px #B043FF);animation:pulse-live 2s ease-in-out infinite;">🐕</div>
+                            <div style="color:#B043FF;font-size:13px;font-weight:bold;text-align:center;text-shadow:0 0 8px #B043FF;">Click to Feed (10 codes)</div>
+                        </div>`;
+                    fallbackDog.style.cursor = 'pointer';
+                    fallbackDog.title = 'Click to feed 10 codes!';
+                    fallbackDog.onclick = async () => {
+                        const count = window.__SAFE_SELECTED_CODES__?.size ?? 0;
+                        if (count < 10) {
+                            showFeedPopup(`Need 10 codes to feed! (You have ${count} selected)`);
+                            return;
+                        }
+                        showFeedConfirmation(Array.from(window.__SAFE_SELECTED_CODES__).slice(0, 10));
+                    };
+                    console.log('[WatchDog] 🐕 Fallback: showing ALIVE 2D dog (clickable)');
+                }
+
+                // Inject CSS animations if not already present
+                if (!document.getElementById('fallback-dog-style')) {
+                    const style = document.createElement('style');
+                    style.id = 'fallback-dog-style';
+                    style.textContent = `
+                        @keyframes pulse-live { 0%,100%{transform:scale(1);} 50%{transform:scale(1.08);} }
+                        @keyframes pulse-dead { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+                    `;
+                    document.head.appendChild(style);
+                }
+
                 container.appendChild(fallbackDog);
-                console.log('[WatchDog] Fallback 2D dog created');
+                console.log('[WatchDog] Fallback 2D dog created (state: ' + initialDogState + ')');
             } catch (fallbackErr) {
                 console.error('[WatchDog] Fallback also failed:', fallbackErr);
             }
