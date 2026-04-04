@@ -76,8 +76,7 @@
         "@capacitor/share": "^6.0.0",
         "@capacitor/clipboard": "^6.0.0",
         "@capacitor/device": "^6.0.0",
-        "@simplewebauthn/server": "^10.0.0",
-        "@capacitor-community/biometric-auth": "^5.0.0"
+        "@simplewebauthn/server": "^10.0.0"
     },
     "devDependencies": {
         "pm2": "^6.0.14",
