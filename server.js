@@ -82,6 +82,7 @@ import watchdogRoutes from './routes/watchdog.js';
 import battaloodaRouter from './api/routes/battalooda.js';
 import shotsRouter from './api/modules/shots.js';
 import biometricRouter from './api/modules/biometric.js';
+import gambleRouter from './api/modules/gamble.js';
 
 import { 
   getAllCountries, 
@@ -268,6 +269,7 @@ app.use('/api/codes', syncRouter);
 // Register Shots! routes
 app.use('/api/shots', shotsRouter);
 app.use('/api/auth', biometricRouter);
+app.use('/api/gamble', gambleRouter);
 
 // AUTH REMOVED — CLEAN RESET
 
