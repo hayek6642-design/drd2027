@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dominos</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#1a1a2e;color:#fff;font-family:Arial,sans-serif;padding:10px;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+h1{margin-bottom:8px;font-size:1.4rem}
+#game-status{font-size:1rem;margin-bottom:6px;color:#f39c12;min-height:1.4rem}
+#score-row{font-size:.95rem;margin-bottom:8px}
+.area{width:100%;max-width:640px;margin-bottom:8px}
+.area-label{font-size:.75rem;opacity:.6;margin-bottom:3px}
+.tiles{display:flex;flex-wrap:wrap;gap:4px;min-height:44px;border:1px solid #333;border-radius:6px;padding:6px;background:rgba(255,255,255,.03)}
+#board{background:rgba(255,255,255,.05)}
+.domino{display:inline-flex;align-items:center;background:#fff;color:#000;border:2px solid #333;border-radius:4px;padding:3px 6px;cursor:pointer;font-weight:bold;font-size:.9rem;gap:4px;transition:.15s}
+.domino:hover{background:#fffde7;transform:translateY(-2px)}
+.sep{width:1px;height:20px;background:#999}
+.domino.back{background:#c0392b;width:44px;height:28px;border-radius:4px;cursor:default}
+.domino.back span{display:none}
+</style>
+</head>
+<body>
+<h1>🁣 Dominos</h1>
+<div id="game-status">Loading…</div>
+<div id="score-row">Score: <span id="score">0</span></div>
+<div class="area">
+  <div class="area-label">Computer's tiles</div>
+  <div class="tiles" id="computer-hand"></div>
+</div>
+<div class="area">
+  <div class="area-label">Board</div>
+  <div class="tiles" id="board"></div>
+</div>
+<div class="area">
+  <div class="area-label">Your tiles — click a tile to play it</div>
+  <div class="tiles" id="domino-container">
+    <div id="player-hand" style="display:contents"></div>
+  </div>
+</div>
+<script src="../../../js/dominos.js"></script>
+</body>
+</html>

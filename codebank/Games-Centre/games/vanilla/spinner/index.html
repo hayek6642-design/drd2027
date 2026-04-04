@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prize Spinner</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;color:#fff;font-family:Arial,sans-serif;padding:20px}
+h1{margin-bottom:20px;font-size:1.6rem}
+.wheel-wrap{position:relative;margin-bottom:20px}
+#spinner-wheel{
+  width:280px;height:280px;border-radius:50%;
+  background:conic-gradient(
+    #e74c3c 0deg 60deg,
+    #f39c12 60deg 120deg,
+    #2ecc71 120deg 180deg,
+    #3498db 180deg 240deg,
+    #9b59b6 240deg 300deg,
+    #1abc9c 300deg 360deg
+  );
+  border:6px solid #fff;box-shadow:0 0 30px rgba(255,255,255,.2);
+  display:flex;align-items:center;justify-content:center}
+.wheel-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:40px;height:40px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;z-index:1}
+.pointer{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:2rem;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
+#spin-btn{padding:14px 40px;font-size:1.2rem;background:linear-gradient(135deg,#f39c12,#e67e22);color:#fff;border:none;border-radius:30px;cursor:pointer;font-weight:bold;box-shadow:0 4px 15px rgba(243,156,18,.4);transition:.2s}
+#spin-btn:hover:not(:disabled){transform:scale(1.05)}
+#spin-btn:disabled{opacity:.5;cursor:not-allowed}
+#result{margin-top:16px;font-size:1.4rem;font-weight:bold;color:#f39c12;min-height:2rem;text-align:center}
+.prizes{margin-top:12px;font-size:.8rem;opacity:.6;text-align:center;line-height:1.8}
+.prize-row{display:flex;gap:16px;justify-content:center}
+.prize-item{display:flex;align-items:center;gap:4px}
+.dot{width:12px;height:12px;border-radius:50%}
+</style>
+</head>
+<body>
+<h1>🎰 Prize Spinner</h1>
+<div class="wheel-wrap">
+  <div class="pointer">▼</div>
+  <div id="spinner-wheel">
+    <div class="wheel-center">🎯</div>
+  </div>
+</div>
+<button id="spin-btn">SPIN!</button>
+<div id="result"></div>
+<div class="prizes">
+  🔴 50 Codes &nbsp; 🟠 10 Silver &nbsp; 🟢 100 Codes<br>
+  🔵 1 Gold &nbsp; 🟣 150 Codes &nbsp; 🩵 5 Silver
+</div>
+<script src="../../../js/spinner.js"></script>
+</body>
+</html>

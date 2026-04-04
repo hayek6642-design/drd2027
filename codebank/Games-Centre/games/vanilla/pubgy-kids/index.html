@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pubgy Kids</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#1a2e1a;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;color:#fff;font-family:Arial,sans-serif}
+h1{margin-bottom:8px;font-size:1.4rem;color:#f39c12}
+#hud{display:flex;gap:16px;margin-bottom:6px;font-size:.95rem}
+.hud-item{color:#f39c12}
+canvas{border:2px solid #333;border-radius:4px;background:#2a4a2a}
+#msg{margin-top:8px;font-size:1rem;min-height:1.4rem;text-align:center;color:#2ecc71}
+.hint{font-size:.75rem;opacity:.5;margin-top:4px}
+</style>
+</head>
+<body>
+<h1>🎮 Pubgy Kids</h1>
+<div id="hud">
+  <span class="hud-item">HP: <strong id="hp">100</strong></span>
+  <span class="hud-item">Ammo: <strong id="ammo">30</strong></span>
+  <span class="hud-item">Kills: <strong id="kills">0</strong></span>
+  <span class="hud-item">Zone: <strong id="zone">Safe</strong></span>
+</div>
+<canvas id="c" width="400" height="400"></canvas>
+<div id="msg">WASD/Arrows to move · Space to shoot · Survive the zone!</div>
+<div class="hint">Mobile: tap to move, double-tap to shoot</div>
+<script>
+const C=document.getElementById('c'),ctx=C.getContext('2d');
+const W=400,H=400;
+let player,enemies,bullets,eBullets,particles,hp,ammo,kills,running=false,raf,keys={};
+let zoneCX=W/2,zoneCY=H/2,zoneR=180,targetZoneR=180,shootCooldown=0;
+function init(){
+  player={x:W/2,y:H/2,r:12,angle:0,reloadT:0};
+  enemies=[];bullets=[];eBullets=[];particles=[];
+  hp=100;ammo=30;kills=0;
+  document.getElementById('hp').textContent=100;
+  document.getElementById('ammo').textContent=30;
+  document.getElementById('kills').textContent=0;
+  document.getElementById('zone').textContent='Safe';
+  shootCooldown=0;
+  // Spawn enemies
+  for(let i=0;i<5;i++)spawnEnemy();
+  if(!running){running=true;raf=requestAnimationFrame(tick);}
+  document.getElementById('msg').textContent='';
+}
+function spawnEnemy(){
+  const angle=Math.random()*Math.PI*2;
+  const dist=80+Math.random()*100;
+  enemies.push({x:W/2+Math.cos(angle)*dist,y:H/2+Math.sin(angle)*dist,r:10,hp:3,cd:0,angle:0});
+}
+let spawnT=0,zoneT=0,shrinkInterval=null;
+function tick(){
+  if(!running)return;raf=requestAnimationFrame(tick);
+  // Player move
+  let vx=0,vy=0;
+  if(keys.ArrowLeft||keys.a)vx-=3;
+  if(keys.ArrowRight||keys.d)vx+=3;
+  if(keys.ArrowUp||keys.w)vy-=3;
+  if(keys.ArrowDown||keys.s)vy+=3;
+  player.x=Math.max(player.r,Math.min(W-player.r,player.x+vx));
+  player.y=Math.max(player.r,Math.min(H-player.r,player.y+vy));
+  if(vx||vy)player.angle=Math.atan2(vy,vx);
+  // Shoot
+  if(shootCooldown>0)shootCooldown--;
+  if(keys[' ']&&shootCooldown===0&&ammo>0){
+    bullets.push({x:player.x,y:player.y,vx:Math.cos(player.angle)*8,vy:Math.sin(player.angle)*8,life:50});
+    ammo--;document.getElementById('ammo').textContent=ammo;shootCooldown=12;
+  }
+  // Reload
+  if(ammo===0&&player.reloadT<60){player.reloadT++;if(player.reloadT>=60){ammo=30;document.getElementById('ammo').textContent=30;player.reloadT=0;}}
+  // Zone shrink
+  zoneT++;
+  if(zoneT%600===0)targetZoneR=Math.max(40,targetZoneR-20);
+  if(zoneR>targetZoneR)zoneR-=0.05;
+  const inZone=Math.hypot(player.x-zoneCX,player.y-zoneCY)<zoneR;
+  document.getElementById('zone').textContent=inZone?'Safe':'DANGER';
+  if(!inZone){hp-=0.1;document.getElementById('hp').textContent=Math.max(0,Math.floor(hp));}
+  // Spawn
+  spawnT++;if(spawnT>180){spawnT=0;if(enemies.length<8)spawnEnemy();}
+  // Enemy AI
+  enemies.forEach(e=>{
+    const dx=player.x-e.x,dy=player.y-e.y;
+    const dist=Math.hypot(dx,dy);
+    e.angle=Math.atan2(dy,dx);
+    e.x+=Math.cos(e.angle)*1.2;e.y+=Math.sin(e.angle)*1.2;
+    e.cd++;
+    if(e.cd>120&&dist<200){e.cd=0;eBullets.push({x:e.x,y:e.y,vx:Math.cos(e.angle)*5,vy:Math.sin(e.angle)*5,life:60});}
+  });
+  // Move bullets
+  bullets.forEach(b=>{b.x+=b.vx;b.y+=b.vy;b.life--;});bullets=bullets.filter(b=>b.life>0);
+  eBullets.forEach(b=>{b.x+=b.vx;b.y+=b.vy;b.life--;});eBullets=eBullets.filter(b=>b.life>0);
+  // Bullet hits
+  bullets.forEach(b=>{enemies.forEach(e=>{if(Math.hypot(b.x-e.x,b.y-e.y)<e.r+4){e.hp--;b.life=0;if(e.hp<=0){kills++;document.getElementById('kills').textContent=kills;for(let i=0;i<8;i++)particles.push({x:e.x,y:e.y,vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*5,life:20,color:'#e74c3c'});}}});});
+  enemies=enemies.filter(e=>e.hp>0);
+  eBullets.forEach(b=>{if(Math.hypot(b.x-player.x,b.y-player.y)<player.r+4){hp-=15;b.life=0;document.getElementById('hp').textContent=Math.max(0,Math.floor(hp));}});
+  // Particles
+  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life--;});particles=particles.filter(p=>p.life>0);
+  // Death
+  if(hp<=0){gameOver();return;}
+  draw();
+}
+function gameOver(){
+  running=false;cancelAnimationFrame(raf);
+  document.getElementById('msg').textContent='You were eliminated! '+kills+' kills. Tap/press to retry.';
+  ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#e74c3c';ctx.font='bold 26px Arial';ctx.textAlign='center';ctx.fillText('ELIMINATED',W/2,H/2-20);
+  ctx.fillStyle='#fff';ctx.font='18px Arial';ctx.fillText('Kills: '+kills,W/2,H/2+20);
+}
+function draw(){
+  ctx.fillStyle='#2a4a2a';ctx.fillRect(0,0,W,H);
+  // Zone circle
+  ctx.strokeStyle='rgba(52,152,219,.5)';ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(zoneCX,zoneCY,zoneR,0,Math.PI*2);ctx.stroke();
+  // Zone danger overlay
+  ctx.save();ctx.globalAlpha=.1;ctx.fillStyle='#e74c3c';
+  ctx.fillRect(0,0,W,H);ctx.globalCompositeOperation='destination-out';
+  ctx.beginPath();ctx.arc(zoneCX,zoneCY,zoneR,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+  // Trees (decorative)
+  [[50,50],[350,80],[80,330],[300,350],[180,120],[220,280]].forEach(([x,y])=>{
+    ctx.fillStyle='#1a3a1a';ctx.beginPath();ctx.arc(x,y,15,0,Math.PI*2);ctx.fill();
+  });
+  // Enemy bullets
+  eBullets.forEach(b=>{ctx.fillStyle='#e74c3c';ctx.beginPath();ctx.arc(b.x,b.y,3,0,Math.PI*2);ctx.fill();});
+  // Player bullets
+  bullets.forEach(b=>{ctx.fillStyle='#f1c40f';ctx.beginPath();ctx.arc(b.x,b.y,3,0,Math.PI*2);ctx.fill();});
+  // Enemies
+  enemies.forEach(e=>{
+    ctx.fillStyle='#e74c3c';ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(e.x+Math.cos(e.angle)*6,e.y+Math.sin(e.angle)*6,3,0,Math.PI*2);ctx.fill();
+    // HP bar
+    ctx.fillStyle='#333';ctx.fillRect(e.x-10,e.y-16,20,4);
+    ctx.fillStyle='#2ecc71';ctx.fillRect(e.x-10,e.y-16,20*(e.hp/3),4);
+  });
+  // Particles
+  particles.forEach(p=>{ctx.fillStyle=p.color;ctx.globalAlpha=p.life/20;ctx.fillRect(p.x,p.y,4,4);});ctx.globalAlpha=1;
+  // Player
+  ctx.save();ctx.translate(player.x,player.y);ctx.rotate(player.angle);
+  ctx.fillStyle='#3498db';ctx.beginPath();ctx.arc(0,0,player.r,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#5dade2';ctx.fillRect(0,-3,16,6);// gun
+  ctx.restore();
+  // HP bar
+  ctx.fillStyle='#333';ctx.fillRect(10,H-20,180,10);
+  ctx.fillStyle=hp>40?'#2ecc71':'#e74c3c';ctx.fillRect(10,H-20,180*(hp/100),10);
+}
+document.addEventListener('keydown',e=>{keys[e.key]=true;if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key))e.preventDefault();if(!running)init();});
+document.addEventListener('keyup',e=>{keys[e.key]=false;});
+let lastTap=0;
+C.addEventListener('touchstart',e=>{
+  e.preventDefault();const r=C.getBoundingClientRect();
+  const x=e.touches[0].clientX-r.left,y=e.touches[0].clientY-r.top;
+  const now=Date.now();if(now-lastTap<300){keys[' ']=true;setTimeout(()=>keys[' ']=false,100);}
+  lastTap=now;
+  const dx=x-player.x,dy=y-player.y;
+  if(Math.abs(dx)>Math.abs(dy)){dx>0?keys.d=true:keys.a=true;}else{dy>0?keys.s=true:keys.w=true;}
+  if(!running)init();
+},{passive:false});
+C.addEventListener('touchend',()=>{keys.a=keys.d=keys.w=keys.s=false;},{passive:true});
+draw();
+</script>
+</body>
+</html>

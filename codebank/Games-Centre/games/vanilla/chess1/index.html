@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chess</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;color:#fff;font-family:Arial,sans-serif;padding:10px}
+h1{margin-bottom:8px;font-size:1.4rem}
+#status{margin-bottom:8px;font-size:.95rem;color:#f39c12;min-height:1.3rem;text-align:center}
+#board{display:grid;grid-template-columns:repeat(8,52px);grid-template-rows:repeat(8,52px);border:2px solid #c9aa71;user-select:none}
+.sq{width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-size:2rem;cursor:pointer;transition:background .1s}
+.sq.light{background:#f0d9b5}
+.sq.dark{background:#b58863}
+.sq.selected{background:#f6f669!important}
+.sq.hint{background:#cdd16f!important}
+.sq.last{background:#aaa23a!important}
+#controls{display:flex;gap:10px;margin-top:10px}
+.btn{padding:8px 18px;border:none;border-radius:5px;cursor:pointer;font-size:.9rem;font-weight:bold}
+#newGame{background:#2ea043;color:#fff}
+</style>
+</head>
+<body>
+<h1>♟ Chess</h1>
+<div id="status">White to move</div>
+<div id="board"></div>
+<div id="controls"><button class="btn" id="newGame">New Game</button></div>
+<script>
+const PIECES={
+  'K':'♔','Q':'♕','R':'♖','B':'♗','N':'♘','P':'♙',
+  'k':'♚','q':'♛','r':'♜','b':'♝','n':'♞','p':'♟'
+};
+const initPos=[
+  'r','n','b','q','k','b','n','r',
+  'p','p','p','p','p','p','p','p',
+  '','','','','','','','',
+  '','','','','','','','',
+  '','','','','','','','',
+  '','','','','','','','',
+  'P','P','P','P','P','P','P','P',
+  'R','N','B','Q','K','B','N','R'
+];
+let board=[...initPos],sel=null,turn='w',lastMove=[-1,-1];
+const el=document.getElementById('board');
+function isWhite(p){return p===p.toUpperCase()&&p!=='';}
+function isBlack(p){return p===p.toLowerCase()&&p!=='';}
+function render(){
+  el.innerHTML='';
+  for(let i=0;i<64;i++){
+    const sq=document.createElement('div');
+    const r=Math.floor(i/8),c=i%8;
+    sq.className='sq '+(((r+c)%2===0)?'light':'dark');
+    if(sel===i)sq.classList.add('selected');
+    if(lastMove.includes(i))sq.classList.add('last');
+    const p=board[i];
+    if(p)sq.textContent=PIECES[p]||p;
+    sq.addEventListener('click',()=>onClick(i));
+    el.appendChild(sq);
+  }
+}
+function getColor(p){if(!p)return null;return isWhite(p)?'w':'b';}
+function getMoves(pos){
+  const p=board[pos];if(!p)return[];
+  const moves=[];const r=Math.floor(pos/8),c=pos%8;
+  const own=getColor(p),opp=own==='w'?'b':'w';
+  const add=(nr,nc)=>{
+    if(nr<0||nr>7||nc<0||nc>7)return false;
+    const t=nr*8+nc;
+    if(getColor(board[t])===own)return false;
+    moves.push(t);
+    return getColor(board[t])!==opp;
+  };
+  const slide=(dr,dc)=>{let nr=r+dr,nc=c+dc;while(nr>=0&&nr<=7&&nc>=0&&nc<=7){if(!add(nr,nc))break;nr+=dr;nc+=dc;}};
+  const pu=p.toUpperCase();
+  if(pu==='P'){
+    const d=own==='w'?-1:1;const start=own==='w'?6:1;
+    if(r+d>=0&&r+d<=7&&!board[(r+d)*8+c]){moves.push((r+d)*8+c);if(r===start&&!board[(r+2*d)*8+c])moves.push((r+2*d)*8+c);}
+    [-1,1].forEach(dc=>{if(c+dc>=0&&c+dc<=7&&getColor(board[(r+d)*8+c+dc])===opp)moves.push((r+d)*8+c+dc);});
+  } else if(pu==='N'){[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]].forEach(([dr,dc])=>add(r+dr,c+dc));}
+  else if(pu==='B'){[[-1,-1],[-1,1],[1,-1],[1,1]].forEach(([dr,dc])=>slide(dr,dc));}
+  else if(pu==='R'){[[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr,dc])=>slide(dr,dc));}
+  else if(pu==='Q'){[[-1,-1],[-1,1],[1,-1],[1,1],[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr,dc])=>slide(dr,dc));}
+  else if(pu==='K'){[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]].forEach(([dr,dc])=>add(r+dr,c+dc));}
+  return moves;
+}
+function onClick(idx){
+  if(sel===null){
+    if(!board[idx]||getColor(board[idx])!==turn)return;
+    sel=idx;
+    const mvs=getMoves(idx);
+    document.querySelectorAll('.sq').forEach((sq,i)=>{if(mvs.includes(i))sq.classList.add('hint');});
+    render();
+    document.querySelectorAll('.sq').forEach((sq,i)=>{if(mvs.includes(i))sq.classList.add('hint');if(sel===i)sq.classList.add('selected');});
+    return;
+  }
+  const mvs=getMoves(sel);
+  if(mvs.includes(idx)){
+    const p=board[sel];
+    // Pawn promotion
+    if(p.toUpperCase()==='P'&&(idx<8||idx>=56))board[idx]=turn==='w'?'Q':'q';
+    else board[idx]=p;
+    board[sel]='';
+    lastMove=[sel,idx];
+    // Check if king captured
+    const wk=board.indexOf('K'),bk=board.indexOf('k');
+    if(wk===-1){document.getElementById('status').textContent='Black wins! 🎉';sel=null;render();return;}
+    if(bk===-1){document.getElementById('status').textContent='White wins! 🎉';sel=null;render();return;}
+    turn=turn==='w'?'b':'w';
+    document.getElementById('status').textContent=(turn==='w'?'White':'Black')+' to move';
+    sel=null;render();
+    if(turn==='b')setTimeout(aiMove,300);
+  } else {
+    sel=null;render();
+    if(board[idx]&&getColor(board[idx])===turn){onClick(idx);}
+  }
+}
+function aiMove(){
+  // Simple AI: random legal move
+  const pieces=[];
+  for(let i=0;i<64;i++)if(getColor(board[i])==='b')pieces.push(i);
+  let moves=[];
+  pieces.forEach(p=>{getMoves(p).forEach(m=>moves.push([p,m]));});
+  // Prioritize captures
+  const caps=moves.filter(([f,t])=>board[t]!=='');
+  const move=(caps.length?caps:moves)[Math.floor(Math.random()*(caps.length?caps.length:moves.length))];
+  if(!move)return;
+  const [from,to]=move;
+  board[to]=board[from];board[from]='';lastMove=[from,to];
+  const wk=board.indexOf('K');
+  if(wk===-1){document.getElementById('status').textContent='Black wins! 🎉';render();return;}
+  turn='w';document.getElementById('status').textContent='White to move';render();
+}
+document.getElementById('newGame').addEventListener('click',()=>{board=[...initPos];sel=null;turn='w';lastMove=[-1,-1];document.getElementById('status').textContent='White to move';render();});
+render();
+</script>
+</body>
+</html>

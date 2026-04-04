@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solitaire</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#076324;color:#fff;font-family:Arial,sans-serif;padding:10px;min-height:100vh}
+h1{text-align:center;margin-bottom:10px;font-size:1.4rem}
+#controls{text-align:center;margin-bottom:12px}
+#new-game{padding:8px 22px;background:#c0392b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.95rem;font-weight:bold}
+#new-game:hover{background:#e74c3c}
+.area-label{font-size:.75rem;opacity:.7;text-align:center;margin-bottom:4px}
+#foundation{display:flex;gap:8px;justify-content:center;margin-bottom:12px;flex-wrap:wrap}
+#deck{width:60px;height:82px;border:2px dashed rgba(255,255,255,.4);border-radius:6px;cursor:pointer;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem}
+#tableau{display:flex;gap:6px;justify-content:center;flex-wrap:nowrap;overflow-x:auto}
+.foundation-pile{width:60px;min-height:82px;border:2px dashed rgba(255,255,255,.35);border-radius:6px;position:relative}
+.tableau-pile{width:60px;min-height:82px;position:relative;flex-shrink:0}
+.card{width:58px;height:82px;border:1px solid #666;border-radius:5px;background:#fff;color:#c0392b;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:.85rem;cursor:pointer;position:absolute;user-select:none}
+.card[data-suit="♠"],.card[data-suit="♣"]{color:#111}
+.card:not(.face-up){background:repeating-linear-gradient(45deg,#003580,#003580 5px,#0047ab 5px,#0047ab 10px)}
+.card.selected{outline:2px solid #f1c40f;z-index:50}
+</style>
+</head>
+<body>
+<h1>♠ Solitaire</h1>
+<div id="controls"><button id="new-game">New Game</button></div>
+<div class="area-label">Foundation</div>
+<div id="foundation"></div>
+<div class="area-label">Stock</div>
+<div id="deck">🂠</div>
+<div class="area-label">Tableau</div>
+<div id="tableau"></div>
+<script src="../../../js/solitaire.js"></script>
+</body>
+</html>

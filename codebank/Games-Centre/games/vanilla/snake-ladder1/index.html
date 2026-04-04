@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake & Ladder</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;color:#fff;font-family:Arial,sans-serif;padding:10px}
+h1{margin-bottom:8px;font-size:1.4rem}
+#status{margin-bottom:8px;font-size:.95rem;color:#f39c12;min-height:1.3rem;text-align:center}
+#board{display:grid;grid-template-columns:repeat(10,44px);grid-template-rows:repeat(10,44px);border:2px solid #c9aa71;margin-bottom:10px}
+.cell{width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:.7rem;border:1px solid rgba(255,255,255,.1);position:relative;flex-direction:column}
+.cell.light{background:#1e3a5f}
+.cell.dark{background:#0d2644}
+.cell.snake-head{background:rgba(231,76,60,.3)}
+.cell.snake-tail{background:rgba(231,76,60,.15)}
+.cell.ladder-bot{background:rgba(46,204,113,.3)}
+.cell.ladder-top{background:rgba(46,204,113,.15)}
+.cell .num{font-size:.55rem;opacity:.5;position:absolute;top:2px;left:3px}
+.token{font-size:1.1rem}
+#controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
+#rollBtn{padding:10px 24px;background:#f39c12;color:#000;border:none;border-radius:6px;cursor:pointer;font-size:1rem;font-weight:bold}
+#rollBtn:hover{background:#e67e22}
+#rollBtn:disabled{opacity:.5;cursor:not-allowed}
+#dice{font-size:2.5rem;margin:0 8px}
+.player-info{display:flex;gap:16px;margin-bottom:8px;font-size:.9rem}
+.pi{padding:4px 10px;border-radius:4px;background:rgba(255,255,255,.05)}
+</style>
+</head>
+<body>
+<h1>🐍 Snake &amp; Ladder</h1>
+<div class="player-info">
+  <div class="pi">🔵 P1: <strong id="p1pos">1</strong></div>
+  <div class="pi">🔴 P2 (CPU): <strong id="p2pos">1</strong></div>
+</div>
+<div id="status">Player 1's turn</div>
+<div id="board"></div>
+<div id="controls">
+  <div id="dice">🎲</div>
+  <button id="rollBtn">Roll Dice</button>
+</div>
+<script>
+const SNAKES={16:6,47:26,49:11,56:53,62:19,64:60,87:24,93:73,95:75,99:78};
+const LADDERS={4:14,9:31,20:38,28:84,40:59,51:67,63:81,71:91};
+const DICE_FACES=['⚀','⚁','⚂','⚃','⚄','⚅'];
+let pos=[1,1],turn=0,gameOver=false;
+const boardEl=document.getElementById('board');
+function getNum(row,col){
+  const r=9-row;
+  return r%2===0?r*10+col+1:r*10+(9-col)+1;
+}
+function buildBoard(){
+  boardEl.innerHTML='';
+  for(let r=0;r<10;r++)for(let c=0;c<10;c++){
+    const num=getNum(r,c);
+    const cell=document.createElement('div');
+    cell.className='cell '+((r+c)%2===0?'light':'dark');
+    cell.id='cell-'+num;
+    if(SNAKES[num]){cell.classList.add('snake-head');cell.title='Snake to '+SNAKES[num];}
+    if(Object.values(SNAKES).includes(num))cell.classList.add('snake-tail');
+    if(LADDERS[num]){cell.classList.add('ladder-bot');cell.title='Ladder to '+LADDERS[num];}
+    if(Object.values(LADDERS).includes(num))cell.classList.add('ladder-top');
+    const numDiv=document.createElement('div');numDiv.className='num';numDiv.textContent=num;
+    cell.appendChild(numDiv);
+    boardEl.appendChild(cell);
+  }
+  renderTokens();
+}
+function renderTokens(){
+  document.querySelectorAll('.token').forEach(t=>t.remove());
+  pos.forEach((p,i)=>{
+    const cell=document.getElementById('cell-'+p);
+    if(cell){const t=document.createElement('div');t.className='token';t.textContent=i===0?'🔵':'🔴';cell.appendChild(t);}
+  });
+}
+function roll(){
+  if(gameOver)return;
+  const d=Math.floor(Math.random()*6)+1;
+  document.getElementById('dice').textContent=DICE_FACES[d-1];
+  let newPos=pos[turn]+d;
+  if(newPos>100){document.getElementById('status').textContent=(turn===0?'P1':'CPU')+' rolled '+d+' — too far, stay!';afterTurn();return;}
+  pos[turn]=newPos;
+  let msg=(turn===0?'P1':'CPU')+' rolled '+d+' → '+newPos;
+  if(SNAKES[newPos]){msg+=' 🐍 Snake! → '+SNAKES[newPos];pos[turn]=SNAKES[newPos];}
+  else if(LADDERS[newPos]){msg+=' 🪜 Ladder! → '+LADDERS[newPos];pos[turn]=LADDERS[newPos];}
+  document.getElementById('status').textContent=msg;
+  document.getElementById(turn===0?'p1pos':'p2pos').textContent=pos[turn];
+  renderTokens();
+  if(pos[turn]===100){document.getElementById('status').textContent=(turn===0?'Player 1':'CPU')+' wins! 🎉';gameOver=true;document.getElementById('rollBtn').disabled=true;return;}
+  afterTurn();
+}
+function afterTurn(){
+  turn=(turn+1)%2;
+  if(!gameOver){
+    document.getElementById('rollBtn').disabled=turn===1;
+    if(turn===1){setTimeout(()=>{if(!gameOver)roll();},900);}
+    else{document.getElementById('status').textContent=document.getElementById('status').textContent+' — Your turn!';}
+  }
+}
+document.getElementById('rollBtn').addEventListener('click',()=>{if(turn===0&&!gameOver)roll();});
+buildBoard();
+</script>
+</body>
+</html>

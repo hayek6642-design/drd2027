@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tic Tac Toe</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;color:#fff;font-family:Arial,sans-serif}
+h1{margin-bottom:12px;font-size:1.4rem}
+#game-status{font-size:1.1rem;margin-bottom:16px;color:#f39c12;min-height:1.5rem}
+#tictactoe-board{display:grid;grid-template-columns:repeat(3,100px);grid-template-rows:repeat(3,100px);gap:6px;margin-bottom:20px}
+.cell{width:100px;height:100px;background:#1c2128;border:2px solid #333;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;cursor:pointer;transition:.15s}
+.cell:hover{background:#2d333b}
+.cell.x{color:#e74c3c}
+.cell.o{color:#3498db}
+#restart-game{padding:10px 28px;background:#2ea043;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:1rem;font-weight:bold}
+#restart-game:hover{background:#3fb950}
+</style>
+</head>
+<body>
+<h1>✖️ Tic Tac Toe</h1>
+<div id="game-status">Current Player: X</div>
+<div id="tictactoe-board"></div>
+<button id="restart-game">Restart</button>
+<script src="../../../js/tictactoe.js"></script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Car Race</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;color:#fff;font-family:Arial,sans-serif}
+h1{margin-bottom:8px;font-size:1.4rem}
+#hud{display:flex;gap:20px;margin-bottom:6px;font-size:1rem;color:#f39c12}
+canvas{border:2px solid #333;border-radius:4px}
+#msg{margin-top:8px;font-size:1rem;min-height:1.4rem;color:#2ecc71;text-align:center}
+.hint{font-size:.75rem;opacity:.5;margin-top:4px}
+</style>
+</head>
+<body>
+<h1>🏎️ Car Race</h1>
+<div id="hud"><span>Score: <strong id="score">0</strong></span><span>Lives: <strong id="lives">3</strong></span></div>
+<canvas id="c" width="360" height="480"></canvas>
+<div id="msg">Press ← → or tap left/right to start</div>
+<div class="hint">Arrow keys / WASD · Mobile: tap left/right side</div>
+<script>
+const C=document.getElementById('c'),ctx=C.getContext('2d');
+const W=360,H=480,LW=80,LANES=3,ROAD_L=120,ROAD_R=240;
+let player,enemies,score,lives,speed,running=false,anim;
+let keys={};
+function init(){
+  player={x:W/2-20,y:H-100,w:40,h:60,lane:1};
+  enemies=[];score=0;lives=3;speed=3;
+  document.getElementById('score').textContent=0;
+  document.getElementById('lives').textContent=3;
+  document.getElementById('msg').textContent='';
+  if(!running){running=true;anim=requestAnimationFrame(tick);}
+}
+let roadY=0,spawnTimer=0,scoreTimer=0;
+function tick(){
+  if(!running)return;
+  anim=requestAnimationFrame(tick);
+  // Move road
+  roadY=(roadY+speed)%60;
+  // Spawn enemy
+  spawnTimer++;
+  if(spawnTimer>Math.max(30,80-score/20)){
+    spawnTimer=0;
+    const lane=Math.floor(Math.random()*3);
+    enemies.push({x:ROAD_L+lane*LW+(LW-36)/2,y:-70,w:36,h:60,lane});
+  }
+  // Score
+  scoreTimer++;
+  if(scoreTimer>30){scoreTimer=0;score++;document.getElementById('score').textContent=score;speed=Math.min(12,3+score/50);}
+  // Move enemies
+  enemies.forEach(e=>e.y+=speed+1);
+  enemies=enemies.filter(e=>e.y<H+80);
+  // Player move
+  if((keys.ArrowLeft||keys.a)&&player.x>ROAD_L+2){player.x-=5;}
+  if((keys.ArrowRight||keys.d)&&player.x<ROAD_R-player.w-2){player.x+=5;}
+  // Collision
+  enemies.forEach(e=>{
+    if(player.x<e.x+e.w&&player.x+player.w>e.x&&player.y<e.y+e.h&&player.y+player.h>e.y){
+      e.y=-200;lives--;document.getElementById('lives').textContent=lives;
+      if(lives<=0){gameOver();}
+    }
+  });
+  draw();
+}
+function gameOver(){
+  running=false;cancelAnimationFrame(anim);
+  document.getElementById('msg').textContent='Game Over! Tap or press key to restart';
+  ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#e74c3c';ctx.font='bold 26px Arial';ctx.textAlign='center';
+  ctx.fillText('GAME OVER',W/2,H/2-20);
+  ctx.fillStyle='#fff';ctx.font='18px Arial';ctx.fillText('Score: '+score,W/2,H/2+20);
+}
+function drawCar(x,y,w,h,color,num){
+  ctx.fillStyle=color;ctx.fillRect(x,y,w,h);
+  ctx.fillStyle='rgba(0,0,0,.4)';ctx.fillRect(x+4,y+4,w-8,14);ctx.fillRect(x+4,y+h-18,w-8,14);
+  ctx.fillStyle='#ffdd57';ctx.fillRect(x+2,y,8,8);ctx.fillRect(x+w-10,y,8,8);
+  ctx.fillStyle='#c00';ctx.fillRect(x+2,y+h-8,8,8);ctx.fillRect(x+w-10,y+h-8,8,8);
+}
+function draw(){
+  // Sky
+  ctx.fillStyle='#1a1a2e';ctx.fillRect(0,0,W,H);
+  // Grass
+  ctx.fillStyle='#145a32';ctx.fillRect(0,0,ROAD_L,H);ctx.fillRect(ROAD_R,0,W-ROAD_R,H);
+  // Road
+  ctx.fillStyle='#333';ctx.fillRect(ROAD_L,0,ROAD_R-ROAD_L,H);
+  // Lane markers
+  ctx.setLineDash([30,30]);ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.lineDashOffset=-roadY;
+  [ROAD_L+LW,ROAD_L+LW*2].forEach(x=>{
+    ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
+  });
+  ctx.setLineDash([]);
+  // Enemies
+  enemies.forEach(e=>drawCar(e.x,e.y,e.w,e.h,'#e74c3c'));
+  // Player
+  drawCar(player.x,player.y,player.w,player.h,'#3498db');
+}
+document.addEventListener('keydown',e=>{
+  keys[e.key]=true;
+  if(['ArrowLeft','ArrowRight','a','d'].includes(e.key))e.preventDefault();
+  if(!running)init();
+});
+document.addEventListener('keyup',e=>{keys[e.key]=false;});
+C.addEventListener('touchstart',e=>{
+  const x=e.touches[0].clientX-C.getBoundingClientRect().left;
+  if(x<W/2)keys.ArrowLeft=true;else keys.ArrowRight=true;
+  if(!running)init();
+},{passive:true});
+C.addEventListener('touchend',()=>{keys.ArrowLeft=false;keys.ArrowRight=false;},{passive:true});
+draw();
+</script>
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blackjack</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#076324;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;color:#fff;font-family:Arial,sans-serif;padding:10px}
+h1{margin-bottom:6px;font-size:1.4rem}
+#balance{color:#f39c12;margin-bottom:8px;font-size:1rem}
+#msg{font-size:1.1rem;min-height:1.5rem;text-align:center;color:#f1c40f;margin-bottom:8px;font-weight:bold}
+.hand-area{margin-bottom:10px;text-align:center}
+.hand-label{font-size:.85rem;opacity:.7;margin-bottom:5px}
+.hand{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;min-height:90px;align-items:center}
+.card{width:58px;height:82px;background:#fff;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.3rem;font-weight:bold;border:1px solid #ccc;flex-shrink:0}
+.card.red{color:#c0392b}
+.card.black{color:#111}
+.card.back{background:repeating-linear-gradient(45deg,#003580,#003580 5px,#0047ab 5px,#0047ab 10px);color:transparent}
+.count{font-size:.8rem;margin-top:4px;opacity:.8}
+.bet-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;justify-content:center}
+.chip{width:46px;height:46px;border-radius:50%;border:3px solid rgba(255,255,255,.3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:.85rem;transition:.15s}
+.chip:hover,.chip.active{transform:scale(1.1);border-color:#f39c12}
+.chip[data-v="5"]{background:#e74c3c}
+.chip[data-v="10"]{background:#3498db}
+.chip[data-v="25"]{background:#2ecc71}
+.chip[data-v="50"]{background:#9b59b6}
+#betDisplay{font-size:.95rem;margin-bottom:10px;color:#2ecc71}
+.btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.btn{padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:.95rem;font-weight:bold;transition:.15s}
+.btn:hover:not(:disabled){opacity:.85}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+#dealBtn{background:#f39c12;color:#000}
+#hitBtn{background:#2ecc71;color:#000}
+#standBtn{background:#e74c3c;color:#fff}
+#doubleBtn{background:#9b59b6;color:#fff}
+</style>
+</head>
+<body>
+<h1>🃏 Blackjack</h1>
+<div id="balance">Balance: <strong id="bal">500</strong> | Bet: <span id="betDisplay">0</span></div>
+<div id="msg">Place your bet and deal!</div>
+<div class="hand-area">
+  <div class="hand-label">Dealer <span id="dealerCount" class="count"></span></div>
+  <div class="hand" id="dealerHand"></div>
+</div>
+<div class="hand-area">
+  <div class="hand-label">You <span id="playerCount" class="count"></span></div>
+  <div class="hand" id="playerHand"></div>
+</div>
+<div class="bet-row">
+  <div class="chip active" data-v="5">5</div>
+  <div class="chip" data-v="10">10</div>
+  <div class="chip" data-v="25">25</div>
+  <div class="chip" data-v="50">50</div>
+</div>
+<div class="btns">
+  <button class="btn" id="dealBtn">Deal</button>
+  <button class="btn" id="hitBtn" disabled>Hit</button>
+  <button class="btn" id="standBtn" disabled>Stand</button>
+  <button class="btn" id="doubleBtn" disabled>Double</button>
+</div>
+<script>
+const SUITS=['♠','♣','♥','♦'];const VALS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+let deck=[],playerH=[],dealerH=[],balance=500,bet=0,chipVal=5,phase='bet';
+
+function createDeck(){deck=[];SUITS.forEach(s=>VALS.forEach(v=>deck.push({s,v})));shuffle(deck);}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}}
+function cardVal(c){if(c.v==='A')return 11;if(['J','Q','K'].includes(c.v))return 10;return +c.v;}
+function handVal(h){let v=h.reduce((s,c)=>s+cardVal(c),0),aces=h.filter(c=>c.v==='A').length;while(v>21&&aces>0){v-=10;aces--;}return v;}
+function isRed(s){return s==='♥'||s==='♦';}
+function renderCard(c,hidden){
+  const d=document.createElement('div');
+  d.className='card '+(hidden?'back':isRed(c.s)?'red':'black');
+  if(!hidden)d.innerHTML=`<span>${c.v}</span><span>${c.s}</span>`;
+  return d;
+}
+function renderHands(showDealer){
+  const ph=document.getElementById('playerHand'),dh=document.getElementById('dealerHand');
+  ph.innerHTML='';dh.innerHTML='';
+  playerH.forEach(c=>ph.appendChild(renderCard(c,false)));
+  dealerH.forEach((c,i)=>dh.appendChild(renderCard(c,!showDealer&&i===1)));
+  document.getElementById('playerCount').textContent='('+handVal(playerH)+')';
+  document.getElementById('dealerCount').textContent=showDealer?'('+handVal(dealerH)+')':'(?)';
+}
+function updateBal(){document.getElementById('bal').textContent=balance;}
+function updateBet(){document.getElementById('betDisplay').textContent=bet;}
+function setMsg(m){document.getElementById('msg').textContent=m;}
+function setButtons(deal,hit,stand,dbl){
+  document.getElementById('dealBtn').disabled=!deal;
+  document.getElementById('hitBtn').disabled=!hit;
+  document.getElementById('standBtn').disabled=!stand;
+  document.getElementById('doubleBtn').disabled=!dbl;
+}
+document.querySelectorAll('.chip').forEach(c=>{
+  c.addEventListener('click',()=>{
+    if(phase!=='bet')return;
+    document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+    c.classList.add('active');chipVal=+c.dataset.v;
+    if(balance>=chipVal){bet+=chipVal;balance-=chipVal;updateBal();updateBet();}
+    else setMsg('Not enough balance!');
+  });
+});
+document.getElementById('dealBtn').addEventListener('click',()=>{
+  if(bet===0){setMsg('Place a bet first!');return;}
+  createDeck();playerH=[deck.pop(),deck.pop()];dealerH=[deck.pop(),deck.pop()];
+  phase='play';renderHands(false);setButtons(false,true,true,balance>=bet);
+  const pv=handVal(playerH);
+  if(pv===21){setMsg('Blackjack!');stand();}else setMsg('Hit or Stand?');
+});
+document.getElementById('hitBtn').addEventListener('click',()=>{
+  playerH.push(deck.pop());renderHands(false);
+  const v=handVal(playerH);
+  if(v>21){setMsg('Bust! You lose.');endRound(-bet);return;}
+  if(v===21)stand();
+});
+document.getElementById('standBtn').addEventListener('click',stand);
+document.getElementById('doubleBtn').addEventListener('click',()=>{
+  balance-=bet;bet*=2;updateBal();updateBet();
+  playerH.push(deck.pop());renderHands(false);
+  if(handVal(playerH)>21){setMsg('Bust! You lose.');endRound(-bet);}else stand();
+});
+function stand(){
+  phase='dealer';setButtons(false,false,false,false);
+  renderHands(true);
+  let dv=handVal(dealerH);
+  function dealerPlay(){
+    if(dv<17){dealerH.push(deck.pop());dv=handVal(dealerH);renderHands(true);setTimeout(dealerPlay,500);}
+    else{
+      const pv=handVal(playerH);
+      if(dv>21||pv>dv){setMsg('You win! +'+bet);endRound(bet);}
+      else if(pv===dv){setMsg('Push — bet returned');endRound(0);}
+      else{setMsg('Dealer wins. -'+bet);endRound(-bet);}
+    }
+  }
+  setTimeout(dealerPlay,600);
+}
+function endRound(delta){
+  balance+=bet+delta;updateBal();bet=0;updateBet();phase='bet';
+  setButtons(true,false,false,false);if(balance===0){balance=500;setMsg('Out of chips! Reset to 500.');updateBal();}
+}
+setButtons(true,false,false,false);
+</script>
+</body>
+</html>

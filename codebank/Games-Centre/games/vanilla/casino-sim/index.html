@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Casino Sim</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;color:#fff;font-family:Arial,sans-serif;padding:16px}
+h1{margin-bottom:4px;font-size:1.5rem;background:linear-gradient(135deg,#f39c12,#e74c3c,#9b59b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{font-size:.8rem;opacity:.5;margin-bottom:12px}
+#balance{color:#f39c12;font-size:1.1rem;margin-bottom:10px}
+/* Slot machine */
+.machine{background:#1a1a2e;border:3px solid #c9aa71;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 0 20px rgba(201,170,113,.2)}
+.reels{display:flex;gap:8px;margin-bottom:12px;justify-content:center}
+.reel{width:70px;height:70px;background:#0d1117;border:2px solid #333;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:2.4rem;transition:all .3s}
+.reel.spinning{animation:spin .15s linear infinite}
+@keyframes spin{from{transform:rotateX(0)}to{transform:rotateX(360deg)}}
+#spinSlot{padding:12px 32px;background:linear-gradient(135deg,#f39c12,#e67e22);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:1rem;font-weight:bold;width:100%}
+#spinSlot:hover{opacity:.9}
+#spinSlot:disabled{opacity:.4;cursor:not-allowed}
+#slotMsg{text-align:center;font-size:.95rem;color:#f39c12;min-height:1.3rem;margin-top:6px}
+/* Scratch card */
+.scratch-section{background:#1a1a2e;border:3px solid #9b59b6;border-radius:12px;padding:14px;margin-bottom:12px;text-align:center;width:100%;max-width:360px}
+.scratch-title{font-size:.85rem;opacity:.7;margin-bottom:8px}
+.scratch-grid{display:grid;grid-template-columns:repeat(3,80px);gap:6px;justify-content:center;margin-bottom:8px}
+.scratch-cell{width:80px;height:54px;background:linear-gradient(135deg,#9b59b6,#6c3483);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;cursor:pointer;position:relative;overflow:hidden;transition:.2s}
+.scratch-cell.revealed{background:#1a1a2e;border:1px solid #9b59b6}
+.scratch-cell::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,#9b59b6,#6c3483);transition:.3s}
+.scratch-cell.revealed::before{opacity:0}
+.scratch-val{position:relative;z-index:1}
+#newScratch{padding:8px 20px;background:#6c3483;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.9rem}
+#newScratch:hover{background:#7d3c98}
+#scratchMsg{font-size:.9rem;color:#a29bfe;min-height:1.3rem;margin-top:6px}
+/* Coin flip */
+.flip-section{background:#1a1a2e;border:3px solid #2ecc71;border-radius:12px;padding:14px;text-align:center;width:100%;max-width:360px}
+.flip-coin{font-size:3.5rem;margin:8px 0;transition:transform .4s}
+.flip-coin.flipping{animation:flip .4s linear infinite}
+@keyframes flip{0%{transform:scaleX(1)}50%{transform:scaleX(0)}100%{transform:scaleX(1)}}
+.flip-btns{display:flex;gap:8px;justify-content:center;margin-bottom:8px}
+.flip-btn{padding:8px 20px;border:none;border-radius:6px;cursor:pointer;font-size:.9rem;font-weight:bold}
+#headsBtn{background:#f1c40f;color:#000}
+#tailsBtn{background:#95a5a6;color:#000}
+#flipResult{font-size:.95rem;color:#2ecc71;min-height:1.3rem}
+.bet-row{display:flex;gap:6px;justify-content:center;margin-bottom:8px}
+.chip-s{width:38px;height:38px;border-radius:50%;border:2px solid rgba(255,255,255,.3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:bold}
+.chip-s:hover,.chip-s.active{border-color:#f39c12;transform:scale(1.1)}
+</style>
+</head>
+<body>
+<h1>🎰 Casino Sim</h1>
+<div class="subtitle">Slots · Scratch · Coin Flip</div>
+<div id="balance">Coins: <strong id="coins">1000</strong></div>
+
+<!-- Slot Machine -->
+<div class="machine" style="width:100%;max-width:360px">
+  <div style="font-size:.85rem;opacity:.7;text-align:center;margin-bottom:8px">🎰 Slot Machine — Bet 10/spin</div>
+  <div class="reels">
+    <div class="reel" id="r0">🍒</div>
+    <div class="reel" id="r1">🍋</div>
+    <div class="reel" id="r2">🔔</div>
+  </div>
+  <button id="spinSlot">SPIN (10 coins)</button>
+  <div id="slotMsg"></div>
+</div>
+
+<!-- Scratch Card -->
+<div class="scratch-section">
+  <div class="scratch-title">🎫 Scratch Card — Cost 25 coins · Tap to reveal</div>
+  <div class="scratch-grid" id="scratchGrid"></div>
+  <button id="newScratch">New Card (25 coins)</button>
+  <div id="scratchMsg">Buy a scratch card!</div>
+</div>
+
+<!-- Coin Flip -->
+<div class="flip-section">
+  <div style="font-size:.85rem;opacity:.7;margin-bottom:6px">🪙 Coin Flip — Pick heads or tails</div>
+  <div class="bet-row">
+    <div class="chip-s active" style="background:#e74c3c" data-flip="10">10</div>
+    <div class="chip-s" style="background:#3498db" data-flip="25">25</div>
+    <div class="chip-s" style="background:#2ecc71" data-flip="50">50</div>
+  </div>
+  <div class="flip-coin" id="flipCoin">🪙</div>
+  <div class="flip-btns">
+    <button class="flip-btn" id="headsBtn">Heads</button>
+    <button class="flip-btn" id="tailsBtn">Tails</button>
+  </div>
+  <div id="flipResult">Choose heads or tails!</div>
+</div>
+
+<script>
+let coins=1000,flipBet=10;
+function updateCoins(){document.getElementById('coins').textContent=coins;}
+
+// SLOTS
+const SYMBOLS=['🍒','🍋','🍊','🍇','⭐','🔔','💎','7️⃣'];
+const PAYOUTS={'🍒':2,'🍋':3,'🍊':4,'🍇':5,'⭐':8,'🔔':12,'💎':20,'7️⃣':50};
+let slotSpinning=false;
+document.getElementById('spinSlot').addEventListener('click',()=>{
+  if(slotSpinning)return;
+  if(coins<10){document.getElementById('slotMsg').textContent='Not enough coins!';return;}
+  coins-=10;updateCoins();slotSpinning=true;
+  document.getElementById('spinSlot').disabled=true;
+  const reels=[0,1,2].map(i=>document.getElementById('r'+i));
+  reels.forEach(r=>r.classList.add('spinning'));
+  const results=SYMBOLS.map(()=>SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)]);
+  setTimeout(()=>{reels[0].classList.remove('spinning');reels[0].textContent=results[0];},600);
+  setTimeout(()=>{reels[1].classList.remove('spinning');reels[1].textContent=results[1];},900);
+  setTimeout(()=>{
+    reels[2].classList.remove('spinning');reels[2].textContent=results[2];
+    let win=0,msg='';
+    if(results[0]===results[1]&&results[1]===results[2]){win=10*PAYOUTS[results[0]];msg='🎉 JACKPOT! +'+win+' coins!';}
+    else if(results[0]===results[1]||results[1]===results[2]||results[0]===results[2]){win=10*2;msg='✨ 2 Match! +'+win+' coins';}
+    else{msg='No match. Try again!';}
+    if(win>0){coins+=win;updateCoins();}
+    document.getElementById('slotMsg').textContent=msg;
+    slotSpinning=false;document.getElementById('spinSlot').disabled=false;
+  },1200);
+});
+
+// SCRATCH
+const SCRATCH_PRIZES=['💎 100','⭐ 50','🎰 25','💰 15','🎁 10','❌ 0','❌ 0','❌ 0','❌ 0'];
+let scratchRevealed=0,scratchCard=[],scratchActive=false;
+function newScratch(){
+  if(coins<25){document.getElementById('scratchMsg').textContent='Need 25 coins!';return;}
+  coins-=25;updateCoins();scratchRevealed=0;scratchActive=true;
+  scratchCard=[...SCRATCH_PRIZES].sort(()=>Math.random()-.5);
+  const grid=document.getElementById('scratchGrid');grid.innerHTML='';
+  scratchCard.forEach((prize,i)=>{
+    const cell=document.createElement('div');cell.className='scratch-cell';
+    cell.innerHTML=`<span class="scratch-val">${prize}</span>`;
+    cell.addEventListener('click',()=>{
+      if(!scratchActive||cell.classList.contains('revealed'))return;
+      cell.classList.add('revealed');scratchRevealed++;
+      if(scratchRevealed===9){calcScratch();}
+    });
+    grid.appendChild(cell);
+  });
+  document.getElementById('scratchMsg').textContent='Tap to scratch!';
+}
+function calcScratch(){
+  scratchActive=false;let win=0;
+  const vals=scratchCard.map(p=>{const m=p.match(/(\d+)/);return m?+m[1]:0;});
+  const counts={};vals.forEach(v=>{counts[v]=(counts[v]||0)+1;});
+  Object.entries(counts).forEach(([v,c])=>{if(+v>0&&c>=2)win+=+v*(c===3?3:1);});
+  if(win>0){coins+=win;updateCoins();document.getElementById('scratchMsg').textContent='You won '+win+' coins! 🎉';}
+  else{document.getElementById('scratchMsg').textContent='No win this time.';}
+}
+document.getElementById('newScratch').addEventListener('click',newScratch);
+newScratch();
+
+// COIN FLIP
+document.querySelectorAll('.chip-s').forEach(c=>{
+  c.addEventListener('click',()=>{document.querySelectorAll('.chip-s').forEach(x=>x.classList.remove('active'));c.classList.add('active');flipBet=+c.dataset.flip;});
+});
+function doFlip(guess){
+  if(coins<flipBet){document.getElementById('flipResult').textContent='Not enough coins!';return;}
+  coins-=flipBet;updateCoins();
+  document.getElementById('headsBtn').disabled=true;document.getElementById('tailsBtn').disabled=true;
+  const coin=document.getElementById('flipCoin');coin.classList.add('flipping');
+  setTimeout(()=>{
+    coin.classList.remove('flipping');
+    const result=Math.random()<0.5?'heads':'tails';
+    coin.textContent=result==='heads'?'🌝':'🌚';
+    const won=result===guess;
+    if(won){coins+=flipBet*2;updateCoins();document.getElementById('flipResult').textContent='It\'s '+result+'! You win +'+flipBet+' coins! 🎉';}
+    else{document.getElementById('flipResult').textContent='It\'s '+result+'! You lose. Better luck next time!';}
+    document.getElementById('headsBtn').disabled=false;document.getElementById('tailsBtn').disabled=false;
+  },800);
+}
+document.getElementById('headsBtn').addEventListener('click',()=>doFlip('heads'));
+document.getElementById('tailsBtn').addEventListener('click',()=>doFlip('tails'));
+</script>
+</body>
+</html>

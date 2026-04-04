@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tetris Classic</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;color:#fff;font-family:Arial,sans-serif;padding:10px}
+h1{margin-bottom:8px;font-size:1.4rem}
+#scoreboard{margin-bottom:8px;font-size:1.1rem;color:#f39c12}
+#tetris-canvas{border:2px solid #333;max-width:100%}
+.hint{margin-top:8px;font-size:.8rem;opacity:.6;text-align:center}
+</style>
+</head>
+<body>
+<h1>🧩 Tetris Classic</h1>
+<div id="scoreboard">Score: <span id="score">0</span></div>
+<canvas id="tetris-canvas"></canvas>
+<div class="hint">← → move · ↑ rotate · ↓ soft drop · Space hard drop · P pause</div>
+<script src="../../../js/tetris.js"></script>
+</body>
+</html>

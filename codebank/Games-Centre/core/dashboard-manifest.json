@@ -1,64 +1,21 @@
 {
   "vanilla": [
-    {
-      "name": "snake",
-      "path": "games/vanilla/snake/index.html"
-    },
-    {
-      "name": "tertis-classic",
-      "path": "games/vanilla/tertis-classic/index.html"
-    },
-    {
-      "name": "american-roulette",
-      "path": "games/vanilla/american_roulette/index.html"
-    },
-    {
-      "name": "spinner",
-      "path": "games/vanilla/spinner/index.html"
-    },
-    {
-      "name": "billiard",
-      "path": "games/vanilla/billiard/index.html"
-    },
-    {
-      "name": "car-race",
-      "path": "games/vanilla/car_race/index.html"
-    },
-    {
-      "name": "river-raid",
-      "path": "games/vanilla/river-raid/index.html"
-    },
-    {
-      "name": "chess",
-      "path": "games/vanilla/chess1/index.html"
-    },
-    {
-      "name": "chess-nexus",
-      "path": "games/vanilla/chess-nexus/index.html"
-    },
-    {
-      "name": "dominos",
-      "path": "games/vanilla/dominos/index.html"
-    },
-    {
-      "name": "tic-tac-toe",
-      "path": "games/vanilla/tic-tac/index.html"
-    },
-    {
-      "name": "snake-ladder",
-      "path": "games/vanilla/snake&ladder1/index.html"
-    },
-    {
-      "name": "solitaire",
-      "path": "games/vanilla/solitaire/index.html"
-    },
-    {
-      "name": "pubgy-kids",
-      "path": "games/vanilla/pubgy-kids/index.html"
-    },
-    {
-      "name": "cards",
-      "path": "games/vanilla/cards/index.html"
-    }
+    { "name": "snake", "path": "games/vanilla/snake/index.html" },
+    { "name": "tertis-classic", "path": "games/vanilla/tertis-classic/index.html" },
+    { "name": "american-roulette", "path": "games/vanilla/american_roulette/index.html" },
+    { "name": "spinner", "path": "games/vanilla/spinner/index.html" },
+    { "name": "billiard", "path": "games/vanilla/billiard/index.html" },
+    { "name": "super-billard", "path": "games/vanilla/super-billard/index.html" },
+    { "name": "car-race", "path": "games/vanilla/car_race/index.html" },
+    { "name": "river-raid", "path": "games/vanilla/river-raid/index.html" },
+    { "name": "chess", "path": "games/vanilla/chess1/index.html" },
+    { "name": "chess-nexus", "path": "games/vanilla/chess-nexus/index.html" },
+    { "name": "dominos", "path": "games/vanilla/dominos/index.html" },
+    { "name": "tic-tac-toe", "path": "games/vanilla/tic-tac/index.html" },
+    { "name": "snake-ladder", "path": "games/vanilla/snake-ladder1/index.html" },
+    { "name": "solitaire", "path": "games/vanilla/solitaire/index.html" },
+    { "name": "pubgy-kids", "path": "games/vanilla/pubgy-kids/index.html" },
+    { "name": "cards", "path": "games/vanilla/cards/index.html" },
+    { "name": "casino-sim", "path": "games/vanilla/casino-sim/index.html" }
   ]
 }
