@@ -84,6 +84,7 @@ import shotsRouter from './api/modules/shots.js';
 import biometricRouter from './api/modules/biometric.js';
 import gambleRouter from './api/modules/gamble.js';
 import sammAutoRouter from './api/modules/samma3ny-automode.js';
+import likesRouter from './api/modules/likes.js';
 
 import { 
   getAllCountries, 
@@ -274,6 +275,7 @@ app.use('/api/shots', shotsRouter);
 app.use('/api/auth', biometricRouter);
 app.use('/api/gamble', gambleRouter);
 app.use('/api/samma3ny', sammAutoRouter);
+app.use('/api/likes', likesRouter);
 
 // AUTH REMOVED — CLEAN RESET
 
@@ -5307,7 +5309,17 @@ async function applyNeonCompressionDDL(){
       last_id INT DEFAULT 0,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`,
-    "INSERT INTO event_offsets (key, last_id) VALUES ('default', 0) ON CONFLICT (key) DO NOTHING"
+    "INSERT INTO event_offsets (key, last_id) VALUES ('default', 0) ON CONFLICT (key) DO NOTHING",
+    `CREATE TABLE IF NOT EXISTS interaction_events (
+      bucket_key    TEXT PRIMARY KEY,
+      from_user_id  TEXT NOT NULL,
+      to_user_id    TEXT NOT NULL,
+      event_type    TEXT NOT NULL,
+      bucket_date   TEXT NOT NULL,
+      count         INTEGER NOT NULL DEFAULT 1,
+      total_codes   INTEGER NOT NULL DEFAULT 0,
+      last_at       DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`
   ];
   
   try {
