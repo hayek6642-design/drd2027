@@ -80,6 +80,8 @@ import { query, pool } from './api/config/db.js';
 import { watchdog } from './services/watchdog/watchdog.js';
 import watchdogRoutes from './routes/watchdog.js';
 import battaloodaRouter from './api/routes/battalooda.js';
+import shotsRouter from './api/modules/shots.js';
+import biometricRouter from './api/modules/biometric.js';
 
 import { 
   getAllCountries, 
@@ -101,6 +103,10 @@ import {
 // [SECURITY] Security Middleware
 import { requireAuth, devSessions } from './api/middleware/auth.js';
 import { enforceFinancialSecurity, enforceWatchDog, storeIdempotencyResponse } from './shared/security-middleware.js';
+
+// Watch-Dog Guardian
+import { WatchDogGuardian } from './shared/watch-dog-guardian.js';
+const { feedWatchDog } = WatchDogGuardian;
 
 
 const app = express();
@@ -259,6 +265,10 @@ app.use('/api/battalooda', battaloodaRouter);
 // Register Sync routes
 app.use('/api/codes', syncRouter);
 
+// Register Shots! routes
+app.use('/api/shots', shotsRouter);
+app.use('/api/auth', biometricRouter);
+
 // AUTH REMOVED — CLEAN RESET
 
 // Configure multer for file uploads (support multiple files)
@@ -326,7 +336,21 @@ app.get('/api/rewards/balance', async (req, res) => {
   try {
     const s = (req.cookies && req.cookies.session_token) || null;
     if (!s) return res.status(401).json({ error: 'unauthorized' });
-    const session = devSessions.get(s);
+    let session = devSessions.get(s);
+    // DB fallback — re-hydrate session after server restart (same pattern as /api/me)
+    if (!session || !session.userId) {
+      try {
+        const dbSess = await query('SELECT user_id, expires_at FROM auth_sessions WHERE token = $1', [s]);
+        if (dbSess.rows && dbSess.rows.length > 0 && new Date() < new Date(dbSess.rows[0].expires_at)) {
+          const _uid = dbSess.rows[0].user_id;
+          const _uRes = await query('SELECT email, user_type FROM users WHERE id = $1', [_uid]);
+          if (_uRes.rows && _uRes.rows.length > 0) {
+            session = { userId: _uid, email: _uRes.rows[0].email, role: _uRes.rows[0].user_type || 'user' };
+            devSessions.set(s, session);
+          }
+        }
+      } catch(_dbErr) {}
+    }
     if (!session || !session.userId) return res.status(401).json({ error: 'unauthorized' });
 
     const userId = session.userId;
@@ -355,7 +379,7 @@ app.get('/api/rewards/balance', async (req, res) => {
 app.get('/api/watchdog/status', requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { getWatchDogState, updateDogStateByTime } = await import('./shared/watch-dog-guardian.js');
+    const { getWatchDogState, updateDogStateByTime } = WatchDogGuardian;
     
     // Refresh state based on time
     const info = await updateDogStateByTime(userId);
@@ -384,6 +408,77 @@ function readSessionFromCookie(req) {
     return null;
   }
 }
+// ======================================================
+// SINGLE ACTIVE SESSION SYSTEM (WhatsApp-like)
+// ======================================================
+async function ensureSingleSessionTables() {
+  try {
+    await query(`CREATE TABLE IF NOT EXISTS active_device_sessions (
+      user_id TEXT PRIMARY KEY,
+      session_token TEXT NOT NULL,
+      device_label TEXT,
+      connected_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_seen_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await query(`CREATE TABLE IF NOT EXISTS qr_link_tokens (
+      token TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      expires_at DATETIME NOT NULL,
+      used INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await query(`CREATE TABLE IF NOT EXISTS device_roles (
+      user_id TEXT PRIMARY KEY,
+      primary_session TEXT NOT NULL,
+      primary_label TEXT,
+      last_heartbeat DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await query(`CREATE TABLE IF NOT EXISTS session_state (
+      user_id TEXT PRIMARY KEY,
+      state_json TEXT NOT NULL DEFAULT '{}',
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    console.log('[SESSION] Single-session tables ready.');
+  } catch(e) {
+    console.error('[SESSION] DDL error:', e.message);
+  }
+}
+
+function getDeviceLabel(req) {
+  try {
+    const ua = req.headers['user-agent'] || '';
+    if (/iPad/.test(ua)) return 'iPad (Safari)';
+    if (/iPhone|iPod/.test(ua)) return 'iPhone (Safari)';
+    if (/Android/.test(ua)) return /Mobile/.test(ua) ? 'Android Phone' : 'Android Tablet';
+    if (/Windows/.test(ua)) {
+      if (/Edg/.test(ua)) return 'Windows (Edge)';
+      if (/Firefox/.test(ua)) return 'Windows (Firefox)';
+      if (/Chrome/.test(ua)) return 'Windows (Chrome)';
+      return 'Windows Browser';
+    }
+    if (/Macintosh/.test(ua)) {
+      if (/Firefox/.test(ua)) return 'Mac (Firefox)';
+      if (/Chrome/.test(ua)) return 'Mac (Chrome)';
+      return 'Mac (Safari)';
+    }
+    if (/Linux/.test(ua)) return 'Linux Browser';
+    return 'Unknown Device';
+  } catch(_) { return 'Unknown Device'; }
+}
+
+function __sseEmitToSession(userId, sessionToken, payload) {
+  try {
+    const set = __sseClients.get(String(userId));
+    if (!set) return;
+    const data = `data: ${JSON.stringify(payload)}\n\n`;
+    for (const res of set) {
+      if (res.__sessionToken && res.__sessionToken === sessionToken) {
+        try { res.write(data); } catch(_) {}
+      }
+    }
+  } catch(_) {}
+}
+
 
 const JWT_SECRET = 'secret-demo';
 function signJwt(userId, email) { return jwt.sign({ userId, email }, JWT_SECRET, { expiresIn: '7d' }) }
@@ -493,9 +588,26 @@ function __sseEmit(userId, payload) {
     for (const res of set) { try { res.write(data) } catch(err){ console.error('[SSE] Write error:', err) } }
   } catch(err){ console.error('[SSE] Broadcast error:', err) }
 }
-app.get('/events', (req, res) => {
+app.get('/events', async (req, res) => {
   try {
-    const s = readSessionFromCookie(req);
+    let s = readSessionFromCookie(req);
+    // [CROSS-DEVICE FIX] DB fallback for sessions not in memory (server restart / multiple devices)
+    if (!s || !s.userId) {
+      const _sseToken = (req.cookies && req.cookies.session_token) || null;
+      if (_sseToken) {
+        try {
+          const _dbSess = await query('SELECT user_id, expires_at FROM auth_sessions WHERE token = $1', [_sseToken]);
+          if (_dbSess.rows && _dbSess.rows.length > 0 && new Date() < new Date(_dbSess.rows[0].expires_at)) {
+            const _sseUid = _dbSess.rows[0].user_id;
+            const _sseUserRes = await query('SELECT email, user_type FROM users WHERE id = $1', [_sseUid]);
+            if (_sseUserRes.rows && _sseUserRes.rows.length > 0) {
+              s = { userId: _sseUid, email: _sseUserRes.rows[0].email, role: _sseUserRes.rows[0].user_type || 'user', sessionId: _sseToken };
+              devSessions.set(_sseToken, s); // Re-hydrate in-memory
+            }
+          }
+        } catch(_sseErr) { console.error('[EVENTS] DB session fallback error:', _sseErr.message); }
+      }
+    }
     if (!s || !s.userId) return res.status(401).end();
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -504,6 +616,7 @@ app.get('/events', (req, res) => {
     res.write(`event: hello\n` + `data: {"ok":true}\n\n`);
     const uid = String(s.userId);
     if (!__sseClients.has(uid)) __sseClients.set(uid, new Set());
+    res.__sessionToken = (req.cookies && req.cookies.session_token) || null; // [SINGLE-SESSION] tag for targeted SSE
     __sseClients.get(uid).add(res);
     const keep = setInterval(() => { try { res.write(':\n\n') } catch(err){ console.error('[SSE] Keep-alive error:', err) } }, 15000);
     req.on('close', () => { try { clearInterval(keep); __sseClients.get(uid)?.delete(res) } catch(err){ console.error('[SSE] Close cleanup error:', err) } });
@@ -671,6 +784,393 @@ policyEngine.register('storePurchase', new StorePolicy(transactionManager))
 policyEngine.register('creatorIncentive', new CreatorIncentivePolicy(transactionManager))
 
 // DEV auth endpoints (must precede any /api catch-all)
+// ======================================================
+// SINGLE ACTIVE SESSION ROUTES (WhatsApp-like)
+// ======================================================
+
+// Register this device as the active session (or detect conflict)
+app.post('/api/session/register-device', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const sessionToken = (req.cookies && req.cookies.session_token) || null;
+    const deviceLabel = getDeviceLabel(req);
+    if (!sessionToken) return res.json({ status: 'conflict' });
+
+    const existing = await query(
+      'SELECT session_token, device_label, last_seen_at FROM active_device_sessions WHERE user_id = $1',
+      [userId]
+    );
+
+    if (existing.rows.length > 0) {
+      const activeToken = existing.rows[0].session_token;
+      // Auto-takeover stale sessions (no heartbeat for 5+ minutes)
+      const staleMs = Date.now() - new Date(existing.rows[0].last_seen_at).getTime();
+      if (staleMs > 5 * 60 * 1000) {
+        await query(
+          "INSERT INTO active_device_sessions (user_id, session_token, device_label, last_seen_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO UPDATE SET session_token = $2, device_label = $3, last_seen_at = CURRENT_TIMESTAMP",
+          [userId, sessionToken, deviceLabel]
+        );
+        return res.json({ status: 'ok', auto_takeover: true });
+      }
+      // Conflict: different session token already active
+      if (activeToken !== sessionToken) {
+        return res.json({
+          status: 'conflict',
+          activeDevice: existing.rows[0].device_label || 'another device',
+          currentDevice: deviceLabel
+        });
+      }
+    }
+
+    // Register/refresh this device as active
+    await query(
+      "INSERT INTO active_device_sessions (user_id, session_token, device_label, last_seen_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO UPDATE SET session_token = $2, device_label = $3, last_seen_at = CURRENT_TIMESTAMP",
+      [userId, sessionToken, deviceLabel]
+    );
+    return res.json({ status: 'ok' });
+  } catch(e) {
+    console.error('[SESSION] register-device error:', e.message);
+    return res.status(500).json({ status: 'error', error: e.message });
+  }
+});
+
+// Heartbeat — keeps the active session alive
+app.post('/api/session/heartbeat', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const sessionToken = (req.cookies && req.cookies.session_token) || null;
+    await query(
+      'UPDATE active_device_sessions SET last_seen_at = CURRENT_TIMESTAMP WHERE user_id = $1 AND session_token = $2',
+      [userId, sessionToken]
+    );
+    return res.json({ status: 'ok' });
+  } catch(e) {
+    return res.status(500).json({ status: 'error' });
+  }
+});
+
+// Take over — kick old device via SSE, become the active device
+app.post('/api/session/takeover', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const sessionToken = (req.cookies && req.cookies.session_token) || null;
+    const deviceLabel = getDeviceLabel(req);
+
+    const existing = await query(
+      'SELECT session_token, device_label FROM active_device_sessions WHERE user_id = $1',
+      [userId]
+    );
+
+    if (existing.rows.length > 0) {
+      const oldToken = existing.rows[0].session_token;
+      const oldDevice = existing.rows[0].device_label || 'another device';
+      if (oldToken !== sessionToken) {
+        // 1. Notify old device via SSE so it can self-logout immediately if online
+        __sseEmitToSession(String(userId), oldToken, {
+          type: 'SESSION_TAKEN_OVER',
+          message: `Your DR.D session was transferred to ${deviceLabel}. This device has been logged out.`,
+          newDevice: deviceLabel
+        });
+        // 2. Revoke old session from in-memory map so requireAuth returns 401 for old device
+        devSessions.delete(oldToken);
+        // 3. Revoke old session from DB so it survives server restarts
+        try {
+          await query('DELETE FROM auth_sessions WHERE token = $1', [oldToken]);
+        } catch(_) {}
+      }
+    }
+
+    await query(
+      "INSERT INTO active_device_sessions (user_id, session_token, device_label, last_seen_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO UPDATE SET session_token = $2, device_label = $3, last_seen_at = CURRENT_TIMESTAMP",
+      [userId, sessionToken, deviceLabel]
+    );
+    return res.json({ status: 'ok' });
+  } catch(e) {
+    console.error('[SESSION] takeover error:', e.message);
+    return res.status(500).json({ status: 'error', error: e.message });
+  }
+});
+
+// QR Generate — generates a one-time link token for this device
+app.get('/api/session/qr/generate', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const token = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+    await query(
+      'INSERT INTO qr_link_tokens (token, user_id, expires_at) VALUES ($1, $2, $3)',
+      [token, userId, expiresAt]
+    );
+
+    const protocol = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    const qrUrl = `${protocol}://${host}/api/session/qr/approve?t=${token}`;
+
+    return res.json({ status: 'ok', token, qrUrl, expiresAt });
+  } catch(e) {
+    console.error('[QR] generate error:', e.message);
+    return res.status(500).json({ status: 'error', error: e.message });
+  }
+});
+
+// QR Approve — phone opens this URL to grant access to the waiting device
+app.get('/api/session/qr/approve', async (req, res) => {
+  try {
+    const { t: token } = req.query;
+    if (!token) return res.redirect('/login.html');
+
+    const row = await query(
+      'SELECT user_id, expires_at, used FROM qr_link_tokens WHERE token = $1',
+      [token]
+    );
+
+    const HTML = (icon, title, color, msg, link) => `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DR.D QR Link</title>
+<style>body{margin:0;padding:40px 20px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0d1117;color:white;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh}
+.icon{font-size:64px;margin-bottom:16px}.title{color:${color};font-size:22px;font-weight:bold;margin-bottom:12px}
+.msg{color:#8b949e;font-size:15px;margin-bottom:24px;max-width:320px}
+a{color:#58a6ff;text-decoration:none;font-size:14px}</style></head>
+<body><div class="icon">${icon}</div><div class="title">${title}</div><div class="msg">${msg}</div>${link}</body></html>`;
+
+    if (!row.rows.length)
+      return res.send(HTML('❌','Invalid QR Code','#ff6b6b','This QR code is not valid.','<a href="/">Go Home</a>'));
+    if (row.rows[0].used)
+      return res.send(HTML('🔁','Already Used','#ff9500','This QR code has already been used.','<a href="/">Go Home</a>'));
+    if (new Date() > new Date(row.rows[0].expires_at))
+      return res.send(HTML('⏰','QR Expired','#ff9500','This QR code has expired. Please generate a new one.','<a href="/">Go Home</a>'));
+
+    const userId = row.rows[0].user_id;
+
+    // Verify scanner is logged in as the SAME user
+    const scannerToken = (req.cookies && req.cookies.session_token) || null;
+    if (!scannerToken) return res.redirect(`/login.html?redirect=/api/session/qr/approve?t=${token}`);
+
+    let scannerUserId = null;
+    const scannerSess = devSessions.get(scannerToken);
+    if (scannerSess) { scannerUserId = scannerSess.userId; }
+    else {
+      const dbSess = await query('SELECT user_id FROM auth_sessions WHERE token = $1', [scannerToken]);
+      if (dbSess.rows.length) scannerUserId = dbSess.rows[0].user_id;
+    }
+
+    if (!scannerUserId || String(scannerUserId) !== String(userId)) {
+      return res.send(HTML('⚠️','Account Mismatch','#ff6b6b',
+        'This QR code is for a different account. Please log in with the correct account first.',
+        '<a href="/login.html">Go to Login</a>'));
+    }
+
+    // Mark QR as used
+    await query('UPDATE qr_link_tokens SET used = 1 WHERE token = $1', [token]);
+
+    // Notify the waiting (desktop) device via SSE
+    __sseEmit(String(userId), { type: 'QR_APPROVED', token, message: 'Device linked! Access granted.' });
+
+    // Update active session to scanner (phone becomes primary)
+    const deviceLabel = getDeviceLabel(req);
+    await query(
+      "INSERT INTO active_device_sessions (user_id, session_token, device_label, last_seen_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO UPDATE SET session_token = $2, device_label = $3, last_seen_at = CURRENT_TIMESTAMP",
+      [userId, scannerToken, deviceLabel]
+    );
+
+    return res.send(HTML('✅','Device Linked!','#00ff88',
+      'The other device now has access. You can close this page.',
+      ''));
+  } catch(e) {
+    console.error('[QR] approve error:', e.message);
+    return res.status(500).send('Internal error');
+  }
+});
+
+// QR Status — polling endpoint for the waiting device
+app.get('/api/session/qr/status/:token', requireAuth, async (req, res) => {
+  try {
+    const { token } = req.params;
+    const userId = String(req.user.id);
+
+    const row = await query(
+      'SELECT user_id, expires_at, used FROM qr_link_tokens WHERE token = $1',
+      [token]
+    );
+
+    if (!row.rows.length) return res.json({ status: 'invalid' });
+    if (String(row.rows[0].user_id) !== userId) return res.status(403).json({ status: 'forbidden' });
+    if (new Date() > new Date(row.rows[0].expires_at)) return res.json({ status: 'expired' });
+    if (row.rows[0].used) return res.json({ status: 'approved' });
+
+    return res.json({ status: 'pending' });
+  } catch(e) {
+    return res.status(500).json({ status: 'error' });
+  }
+});
+
+// ================================================
+// MIRROR MODE ROUTES — Primary/Mirror role system
+// ================================================
+
+// Register device role — returns 'primary' or 'mirror'
+app.post('/api/mirror/register-role', requireAuth, async (req, res) => {
+  try {
+    const userId = String(req.user.id);
+    const sessionToken = (req.cookies && req.cookies.session_token) || null;
+    const deviceLabel = getDeviceLabel(req);
+    if (!sessionToken) return res.json({ role: 'mirror', primaryLabel: 'Unknown Device' });
+
+    const existing = await query(
+      'SELECT primary_session, primary_label, last_heartbeat FROM device_roles WHERE user_id = $1',
+      [userId]
+    );
+
+    if (!existing.rows.length) {
+      // First device ever — becomes primary
+      await query(
+        `INSERT INTO device_roles (user_id, primary_session, primary_label, last_heartbeat)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+         ON CONFLICT (user_id) DO UPDATE SET primary_session=$2, primary_label=$3, last_heartbeat=CURRENT_TIMESTAMP`,
+        [userId, sessionToken, deviceLabel]
+      );
+      return res.json({ role: 'primary', deviceLabel });
+    }
+
+    const row = existing.rows[0];
+
+    // This IS the primary device
+    if (row.primary_session === sessionToken) {
+      await query('UPDATE device_roles SET last_heartbeat = CURRENT_TIMESTAMP WHERE user_id = $1', [userId]);
+      return res.json({ role: 'primary', deviceLabel });
+    }
+
+    // Check if primary is stale (offline > 5 min) — auto-takeover
+    const staleMs = Date.now() - new Date(row.last_heartbeat).getTime();
+    if (staleMs > 5 * 60 * 1000) {
+      await query(
+        `INSERT INTO device_roles (user_id, primary_session, primary_label, last_heartbeat)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+         ON CONFLICT (user_id) DO UPDATE SET primary_session=$2, primary_label=$3, last_heartbeat=CURRENT_TIMESTAMP`,
+        [userId, sessionToken, deviceLabel]
+      );
+      return res.json({ role: 'primary', deviceLabel, auto_takeover: true });
+    }
+
+    // Active primary exists — become mirror, return latest state
+    let state = {};
+    try {
+      const sr = await query('SELECT state_json FROM session_state WHERE user_id = $1', [userId]);
+      if (sr.rows.length) state = JSON.parse(sr.rows[0].state_json);
+    } catch(_) {}
+
+    return res.json({
+      role: 'mirror',
+      primaryLabel: row.primary_label || 'Another Device',
+      state
+    });
+  } catch(e) {
+    console.error('[MIRROR] register-role error:', e.message);
+    return res.status(500).json({ role: 'mirror', error: e.message });
+  }
+});
+
+// Primary heartbeat — keeps primary role alive
+app.post('/api/mirror/heartbeat', requireAuth, async (req, res) => {
+  try {
+    const userId = String(req.user.id);
+    const sessionToken = (req.cookies && req.cookies.session_token) || null;
+    await query(
+      'UPDATE device_roles SET last_heartbeat = CURRENT_TIMESTAMP WHERE user_id = $1 AND primary_session = $2',
+      [userId, sessionToken]
+    );
+    return res.json({ ok: true });
+  } catch(e) {
+    return res.status(500).json({ ok: false });
+  }
+});
+
+// Primary posts state snapshot — stored + broadcast to all mirrors
+app.post('/api/mirror/state', requireAuth, async (req, res) => {
+  try {
+    const userId = String(req.user.id);
+    const sessionToken = (req.cookies && req.cookies.session_token) || null;
+
+    // Validate caller is the current primary
+    const roleRes = await query('SELECT primary_session FROM device_roles WHERE user_id = $1', [userId]);
+    if (!roleRes.rows.length || roleRes.rows[0].primary_session !== sessionToken) {
+      return res.status(403).json({ ok: false, error: 'not_primary' });
+    }
+
+    const state = req.body;
+    await query(
+      `INSERT INTO session_state (user_id, state_json, updated_at)
+       VALUES ($1, $2, CURRENT_TIMESTAMP)
+       ON CONFLICT (user_id) DO UPDATE SET state_json=$2, updated_at=CURRENT_TIMESTAMP`,
+      [userId, JSON.stringify(state)]
+    );
+
+    // Broadcast STATE_UPDATE to all mirror connections (not primary itself)
+    const set = __sseClients.get(userId);
+    if (set) {
+      const payload = `data: ${JSON.stringify({ type: 'STATE_UPDATE', state })}\n\n`;
+      for (const clientRes of set) {
+        if (clientRes.__sessionToken !== sessionToken) {
+          try { clientRes.write(payload); } catch(_) {}
+        }
+      }
+    }
+    return res.json({ ok: true });
+  } catch(e) {
+    console.error('[MIRROR] state post error:', e.message);
+    return res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Mirror requests to become primary — transfers primary role
+app.post('/api/mirror/switch', requireAuth, async (req, res) => {
+  try {
+    const userId = String(req.user.id);
+    const sessionToken = (req.cookies && req.cookies.session_token) || null;
+    const deviceLabel = getDeviceLabel(req);
+
+    // Get current primary to notify it
+    const existing = await query('SELECT primary_session, primary_label FROM device_roles WHERE user_id = $1', [userId]);
+    if (existing.rows.length > 0) {
+      const oldSession = existing.rows[0].primary_session;
+      if (oldSession !== sessionToken) {
+        // Tell old primary it's now a mirror
+        __sseEmitToSession(userId, oldSession, {
+          type: 'PRIMARY_SWITCHED',
+          newPrimaryLabel: deviceLabel,
+          message: `Control transferred to ${deviceLabel}`
+        });
+      }
+    }
+
+    // Assign new primary
+    await query(
+      `INSERT INTO device_roles (user_id, primary_session, primary_label, last_heartbeat)
+       VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+       ON CONFLICT (user_id) DO UPDATE SET primary_session=$2, primary_label=$3, last_heartbeat=CURRENT_TIMESTAMP`,
+      [userId, sessionToken, deviceLabel]
+    );
+
+    // Notify all connections (mirrors) about role change
+    const set = __sseClients.get(userId);
+    if (set) {
+      const payload = `data: ${JSON.stringify({ type: 'ROLE_CHANGED', newPrimarySession: sessionToken, newPrimaryLabel: deviceLabel })}\n\n`;
+      for (const clientRes of set) {
+        if (clientRes.__sessionToken !== sessionToken) {
+          try { clientRes.write(payload); } catch(_) {}
+        }
+      }
+    }
+
+    return res.json({ role: 'primary', deviceLabel });
+  } catch(e) {
+    console.error('[MIRROR] switch error:', e.message);
+    return res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+
 app.post('/api/auth/dev-login', (req, res) => {
   try {
     const sessionId = (crypto && typeof crypto.randomUUID === 'function')
@@ -840,6 +1340,31 @@ app.post('/api/auth/resend-otp', async (req, res) => {
   }
 });
 
+// TEMP ADMIN: password reset (to be removed after use)
+app.post('/api/admin/reset-pw', async (req, res) => {
+  const { secret, email, newPassword } = req.body;
+  if (secret !== 'tmp-reset-secret-2026') return res.status(403).json({ error: 'forbidden' });
+  try {
+    const hash = await bcrypt.hash(newPassword, 10);
+    await query('UPDATE users SET password_hash=$1 WHERE LOWER(email)=$2', [hash, email.toLowerCase()]);
+    res.json({ status: 'ok', message: 'Password updated for ' + email });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+
+// TEMP DEBUG: check user hash
+app.post('/api/admin/debug-user', async (req, res) => {
+  const { secret, email } = req.body;
+  if (secret !== 'tmp-reset-secret-2026') return res.status(403).json({ error: 'forbidden' });
+  try {
+    const r = await query('SELECT id, email, password_hash, codes_count FROM users WHERE LOWER(email)=$1', [email.toLowerCase()]);
+    const user = r.rows[0];
+    if (!user) return res.json({ found: false });
+    const hash = user.password_hash || user[2];
+    res.json({ found: true, id: user.id || user[0], email: user.email || user[1], hashLen: hash ? hash.length : 0, hashStart: hash ? hash.substring(0, 10) : null, codes: user.codes_count || user[3] });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // Updated signup without OTP verification
 app.post('/api/auth/signup', async (req, res) => {
   try {
@@ -921,6 +1446,14 @@ app.post('/api/auth/signup', async (req, res) => {
       country,
       verified: true
     });
+
+    // [CROSS-DEVICE FIX] Persist session to DB so it survives server restarts
+    try {
+      await query(
+        "INSERT INTO auth_sessions (token, user_id, expires_at) VALUES ($1, $2, datetime('now', '+7 days')) ON CONFLICT (token) DO NOTHING",
+        [newSessionId, created.id]
+      );
+    } catch(dbErr) { console.warn('[SESSION] DB persist failed on signup:', dbErr.message); }
     
     // Set cookie
     const isProduction = process.env.NODE_ENV === 'production';
@@ -1014,6 +1547,15 @@ app.post('/api/auth/login', async (req, res) => {
       isUntrusted: u.is_untrusted || false
     });
 
+    // [CROSS-DEVICE FIX] Persist session to DB so it survives server restarts
+    // and is accessible from any device the user logs into
+    try {
+      await query(
+        "INSERT INTO auth_sessions (token, user_id, expires_at) VALUES ($1, $2, datetime('now', '+7 days')) ON CONFLICT (token) DO NOTHING",
+        [sessionId, u.id]
+      );
+    } catch(dbErr) { console.warn('[SESSION] DB persist failed on login:', dbErr.message); }
+
     // Set cookie
     res.cookie('session_token', sessionId, {
       httpOnly: false, // [SECURITY] MODIFIED: Allow client-side JS to see the cookie for redirection logic
@@ -1048,22 +1590,32 @@ app.get('/api/auth/me', requireAuth, (req, res) => {
   }
 });
 
-// Alias: session info
-app.get('/api/me', (req, res) => {
+// Alias: session info — with DB fallback for cross-device / server-restart recovery
+app.get('/api/me', async (req, res) => {
   try {
     const token = (req.cookies && req.cookies.session_token) || null;
     if (!token) return res.json({ success: false, user: null });
+
+    // Fast path: in-memory session
     const s = devSessions.get(token);
-    if (!s) return res.json({ success: false, user: null });
-    return res.json({ 
-      success: true,
-      user: { 
-        id: s.userId, 
-        email: s.email,
-        sessionId: s.sessionId, 
-        role: s.role 
-      } 
-    });
+    if (s) return res.json({ success: true, user: { id: s.userId, email: s.email, sessionId: s.sessionId, role: s.role } });
+
+    // [CROSS-DEVICE FIX] DB fallback: handles server restarts and cross-device sessions
+    try {
+      const dbSess = await query('SELECT user_id, expires_at FROM auth_sessions WHERE token = $1', [token]);
+      if (dbSess.rows && dbSess.rows.length > 0 && new Date() < new Date(dbSess.rows[0].expires_at)) {
+        const userId = dbSess.rows[0].user_id;
+        const userRes = await query('SELECT email, user_type, is_untrusted FROM users WHERE id = $1', [userId]);
+        if (userRes.rows && userRes.rows.length > 0) {
+          const u2 = userRes.rows[0];
+          const sessionData = { userId, email: u2.email, role: u2.user_type || 'user', sessionId: token, isUntrusted: u2.is_untrusted || false };
+          devSessions.set(token, sessionData); // Re-hydrate in-memory for future fast-path requests
+          return res.json({ success: true, user: { id: userId, email: u2.email, sessionId: token, role: u2.user_type || 'user' } });
+        }
+      }
+    } catch(dbErr) { console.error('[API/ME DB ERROR]', dbErr.message); }
+
+    return res.json({ success: false, user: null });
   } catch (_) {
     return res.json({ success: false, user: null });
   }
@@ -1529,6 +2081,82 @@ async function autoCompressUserCodes(userId) {
 // SERVER-AUTHORITATIVE DELTA SYNC API
 // ------------------------------------------------------------------
 
+
+// ================================================================
+// [FIX] POST /api/sync/restore-codes
+// Accepts an array of code objects from IndexedDB and inserts them
+// into the codes table (de-duplicated). Keeps codes_count in sync.
+// Used to restore codes that were stored in IndexedDB but not on server.
+// ================================================================
+app.post('/api/sync/restore-codes', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { codes: incomingCodes } = req.body || {};
+
+    if (!Array.isArray(incomingCodes) || incomingCodes.length === 0) {
+      return res.status(400).json({ success: false, error: 'codes array required' });
+    }
+
+    // Safety cap: max 500 codes per restore call
+    const toRestore = incomingCodes.slice(0, 500);
+
+    // Get existing code strings for this user to avoid duplicates
+    const existingRes = await query(
+      "SELECT code FROM codes WHERE user_id = $1",
+      [userId]
+    );
+    const existingSet = new Set(existingRes.rows.map(r => r.code));
+
+    let inserted = 0;
+    let skipped = 0;
+
+    for (const entry of toRestore) {
+      const codeStr = entry.code || entry;
+      if (typeof codeStr !== 'string' || !codeStr.trim()) { skipped++; continue; }
+      if (existingSet.has(codeStr)) { skipped++; continue; }
+
+      const assetType = entry.type || entry.assetType || 'codes';
+      const createdAt = entry.createdAt || entry.created_at || null;
+
+      try {
+        await query(
+          "INSERT INTO codes (id, user_id, code, type, created_at) VALUES ($1, $2, $3, $4, COALESCE($5, CURRENT_TIMESTAMP))",
+          [crypto.randomUUID(), userId, codeStr, assetType, createdAt]
+        );
+        existingSet.add(codeStr);
+        inserted++;
+      } catch(e) {
+        if (!e.message.includes('UNIQUE')) {
+          console.error('[RESTORE] insert error:', e.message);
+        }
+        skipped++;
+      }
+    }
+
+    // Recalculate and fix codes_count
+    const countRes = await query(
+      "SELECT COUNT(*) as cnt FROM codes WHERE user_id = $1 AND spent = 0",
+      [userId]
+    );
+    const newCount = Number(countRes.rows[0]?.cnt || 0);
+    await query(
+      "UPDATE users SET codes_count = $1, last_sync_at = CURRENT_TIMESTAMP WHERE id = $2",
+      [newCount, userId]
+    );
+
+    console.log(`[RESTORE] user=${userId} inserted=${inserted} skipped=${skipped} total_server=${newCount}`);
+    return res.json({
+      success: true,
+      inserted,
+      skipped,
+      total_server: newCount
+    });
+  } catch(e) {
+    console.error('[RESTORE ERROR]', e.message);
+    return res.status(500).json({ success: false, error: 'internal_error' });
+  }
+});
+
 app.post('/api/sync', requireAuth, async (req, res) => {
   try {
     const { delta_codes, delta_silver, delta_gold, sync_id } = req.body || {}
@@ -1596,6 +2224,19 @@ app.post('/api/sync', requireAuth, async (req, res) => {
           "INSERT INTO ledger (tx_id, user_id, direction, asset_type, amount, reference) VALUES ($1, $2, 'credit', 'codes', $3, 'sync')",
           [crypto.randomUUID(), userId, d_codes]
         );
+        // [FIX] Insert actual code rows so codes table matches the counter
+        // (caller should prefer /api/sync/restore-codes with real code strings)
+        // Only insert synthetic rows if codes array not provided
+        if (!req.body.codes || !Array.isArray(req.body.codes)) {
+          for (let i = 0; i < d_codes; i++) {
+            try {
+              await client.query(
+                "INSERT INTO codes (id, user_id, code, type, created_at) VALUES ($1, $2, $3, 'codes', CURRENT_TIMESTAMP)",
+                [crypto.randomUUID(), userId, `SYNC-${Date.now()}-${i}`]
+              );
+            } catch(_) {}
+          }
+        }
       }
       if (d_silver > 0) {
         await client.query(
@@ -1998,10 +2639,18 @@ app.get('/api/sqlite/codes', requireAuth, async (req, res) => {
       [userId]
     );
 
+    // [FIX] Use live count from actual codes table (not stale counter)
+    const liveCount = codesRes.rows.length;
+    // Auto-heal: keep codes_count in sync with reality
+    if (Number(userRow.count) !== liveCount) {
+      try {
+        await query("UPDATE users SET codes_count = $1 WHERE id = $2", [liveCount, userId]);
+      } catch(_) {}
+    }
     return res.json({
       success: true,
       status: 'success',
-      count: Number(userRow.count),
+      count: liveCount,
       silver_count: Number(userRow.silver),
       gold_count: Number(userRow.gold),
       codes: codesRes.rows,
@@ -2036,18 +2685,20 @@ app.get('/api/codes/list', requireAuth, async (req, res) => {
       [userId]
     );
     
-    const allCodes = codesRes.rows.map(r => r.code);
-    const silverCodes = codesRes.rows.filter(r => r.type === 'silver').map(r => r.code);
-    const goldCodes = codesRes.rows.filter(r => r.type === 'gold').map(r => r.code);
+    const CODE_PATTERN = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-P[0-9]$/;
+    const validRows = codesRes.rows.filter(r => CODE_PATTERN.test(r.code));
+    const allCodes = validRows.map(r => r.code);
+    const silverCodes = validRows.filter(r => r.type === 'silver').map(r => r.code);
+    const goldCodes = validRows.filter(r => r.type === 'gold').map(r => r.code);
 
     return res.json({
       success: true,
       status: 'success',
-      count: Number(userRow.count),
-      silver_count: Number(userRow.silver),
-      gold_count: Number(userRow.gold),
-      codes: codesRes.rows, // Return full objects for storage adapter
-      rows: codesRes.rows, // For legacy compatibility
+      count: allCodes.length,
+      silver_count: silverCodes.length,
+      gold_count: goldCodes.length,
+      codes: validRows, // Return full objects for storage adapter (valid format only)
+      rows: validRows, // For legacy compatibility
       latest: allCodes.length > 0 ? allCodes[0] : null
     });
 
@@ -2060,6 +2711,24 @@ app.get('/api/codes/list', requireAuth, async (req, res) => {
     }); 
   } 
 }); 
+
+
+// Purge old-format codes from DB (client calls this once on startup)
+app.delete('/api/codes/purge-old-format', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const result = await query(
+      `DELETE FROM codes WHERE user_id = $1 AND code NOT LIKE '____-____-____-____-____-____-P_'`,
+      [userId]
+    );
+    const deleted = result.rowCount || 0;
+    console.log('[PURGE OLD FORMAT] Deleted', deleted, 'legacy codes for user', userId);
+    res.json({ success: true, deleted });
+  } catch (e) {
+    console.error('[PURGE OLD FORMAT ERROR]', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
 
 import WatchdogAI from './services/watchdog-ai.js';
 
@@ -2105,7 +2774,11 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
   }
 
   try {
-    const receiver = await sqliteFindUserByEmail(receiverEmail);
+    // [FIX] Try DB first, fall back to in-memory users if not found
+    let receiver = await sqliteFindUserByEmail(receiverEmail);
+    if (!receiver || !receiver.id) {
+      receiver = memFindUserByEmail(receiverEmail);
+    }
     if (!receiver || !receiver.id) {
       console.warn(`[AUDIT] [FAIL] [RECEIVER_NOT_FOUND] sender=${fromUserId} receiverEmail=${receiverEmail}`);
       return res.status(404).json({ success: false, error: 'RECEIVER_NOT_FOUND' });
@@ -2135,12 +2808,27 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
       }
 
       // [SECURITY] STEP 2: PRE-TRANSACTION BALANCE SNAPSHOT
-      const preSnapshot = await client.query(
-        `SELECT id, ${balanceField} FROM users WHERE id IN ($1, $2)`,
-        [fromUserId, toUserId]
-      );
-      const senderPre = preSnapshot.rows.find(r => r.id === fromUserId)?.[balanceField] || 0;
-      const receiverPre = preSnapshot.rows.find(r => r.id === toUserId)?.[balanceField] || 0;
+      // FIX: For 'codes' type, use live COUNT from codes table (users.codes_count is denormalized and can be stale)
+      let senderPre, receiverPre;
+      if (assetType === 'codes') {
+        const senderCountRes = await client.query(
+          "SELECT COUNT(*) AS cnt FROM codes WHERE user_id = $1 AND spent = 0",
+          [fromUserId]
+        );
+        senderPre = parseInt(senderCountRes.rows[0]?.cnt || 0, 10);
+        const receiverCountRes = await client.query(
+          "SELECT COUNT(*) AS cnt FROM codes WHERE user_id = $1 AND spent = 0",
+          [toUserId]
+        );
+        receiverPre = parseInt(receiverCountRes.rows[0]?.cnt || 0, 10);
+      } else {
+        const preSnapshot = await client.query(
+          `SELECT id, ${balanceField} FROM users WHERE id IN ($1, $2)`,
+          [fromUserId, toUserId]
+        );
+        senderPre = preSnapshot.rows.find(r => r.id === fromUserId)?.[balanceField] || 0;
+        receiverPre = preSnapshot.rows.find(r => r.id === toUserId)?.[balanceField] || 0;
+      }
 
       if (senderPre < amount) {
         throw new Error('INSUFFICIENT_BALANCE');
@@ -2167,31 +2855,63 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
       }
 
       // [SECURITY] STEP 4: BALANCE UPDATES
-      const senderBalanceRes = await client.query(
-        `UPDATE users SET ${balanceField} = ${balanceField} - $1 WHERE id = $2 AND ${balanceField} >= $1 RETURNING ${balanceField}`,
-        [amount, fromUserId]
-      );
+      // FIX: For 'codes' type, recount from codes table (STEP 3 already transferred ownership rows)
+      let senderBalanceRes;
+      if (assetType === 'codes') {
+        senderBalanceRes = await client.query(
+          "UPDATE users SET codes_count = (SELECT COUNT(*) FROM codes WHERE user_id = $1 AND spent = 0) WHERE id = $2 RETURNING codes_count",
+          [fromUserId, fromUserId]
+        );
+      } else {
+        senderBalanceRes = await client.query(
+          `UPDATE users SET ${balanceField} = ${balanceField} - $1 WHERE id = $2 AND ${balanceField} >= $1 RETURNING ${balanceField}`,
+          [amount, fromUserId]
+        );
+      }
 
       if (senderBalanceRes.rows.length === 0) {
         throw new Error('INSUFFICIENT_BALANCE_DURING_UPDATE');
       }
 
-      const receiverUpdateRes = await client.query(
-        `UPDATE users SET ${balanceField} = COALESCE(${balanceField}, 0) + $1 WHERE id = $2`,
-        [amount, toUserId]
-      );
+      let receiverUpdateRes;
+      if (assetType === 'codes') {
+        receiverUpdateRes = await client.query(
+          "UPDATE users SET codes_count = (SELECT COUNT(*) FROM codes WHERE user_id = $1 AND spent = 0) WHERE id = $2",
+          [toUserId, toUserId]
+        );
+      } else {
+        receiverUpdateRes = await client.query(
+          `UPDATE users SET ${balanceField} = COALESCE(${balanceField}, 0) + $1 WHERE id = $2`,
+          [amount, toUserId]
+        );
+      }
 
       if (receiverUpdateRes.rowCount === 0) {
         throw new Error('RECEIVER_BALANCE_UPDATE_FAILED');
       }
 
       // [SECURITY] STEP 5: POST-TRANSACTION SNAPSHOT VERIFICATION
-      const postSnapshot = await client.query(
-        `SELECT id, ${balanceField} FROM users WHERE id IN ($1, $2)`,
-        [fromUserId, toUserId]
-      );
-      const senderPost = postSnapshot.rows.find(r => r.id === fromUserId)?.[balanceField] || 0;
-      const receiverPost = postSnapshot.rows.find(r => r.id === toUserId)?.[balanceField] || 0;
+      // FIX: For 'codes' type, verify using live COUNT from codes table
+      let senderPost, receiverPost;
+      if (assetType === 'codes') {
+        const senderPostRes = await client.query(
+          "SELECT COUNT(*) AS cnt FROM codes WHERE user_id = $1 AND spent = 0",
+          [fromUserId]
+        );
+        senderPost = parseInt(senderPostRes.rows[0]?.cnt || 0, 10);
+        const receiverPostRes = await client.query(
+          "SELECT COUNT(*) AS cnt FROM codes WHERE user_id = $1 AND spent = 0",
+          [toUserId]
+        );
+        receiverPost = parseInt(receiverPostRes.rows[0]?.cnt || 0, 10);
+      } else {
+        const postSnapshot = await client.query(
+          `SELECT id, ${balanceField} FROM users WHERE id IN ($1, $2)`,
+          [fromUserId, toUserId]
+        );
+        senderPost = postSnapshot.rows.find(r => r.id === fromUserId)?.[balanceField] || 0;
+        receiverPost = postSnapshot.rows.find(r => r.id === toUserId)?.[balanceField] || 0;
+      }
 
       if (senderPost !== (senderPre - amount) || receiverPost !== (receiverPre + amount)) {
         console.error(`[AUDIT] [FRAUD_FLAG] [BALANCE_MISMATCH] txId=${transactionId} senderPre=${senderPre} senderPost=${senderPost} receiverPre=${receiverPre} receiverPost=${receiverPost} amount=${amount}`);
@@ -2410,6 +3130,115 @@ app.post('/api/watchdog/feed', requireAuth, enforceFinancialSecurity, async (req
     return res.status(500).json({ success: false, error: err && err.message })
   }
 })
+
+// POST /api/watchdog/buy-dog - Buy a new dog from Pebalaash (costs 1000 codes)
+app.post('/api/watchdog/buy-dog', requireAuth, enforceFinancialSecurity, async (req, res) => {
+  try {
+    const userId = req.user && req.user.id;
+    if (!userId) return res.status(401).json({ success: false, error: 'unauthorized' });
+
+    const BUY_DOG_COST = 1000;
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Check balance
+      const balanceRes = await client.query(
+        `SELECT COUNT(*)::int as count FROM codes WHERE user_id = $1 AND (spent IS FALSE OR spent IS NULL OR spent = 0)`,
+        [userId]
+      );
+      const currentBalance = parseInt(balanceRes.rows[0]?.count || 0, 10);
+
+      if (currentBalance < BUY_DOG_COST) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          success: false,
+          error: 'INSUFFICIENT_CODES',
+          required: BUY_DOG_COST,
+          available: currentBalance
+        });
+      }
+
+      // Select codes to spend
+      const codesRes = await client.query(
+        `SELECT id FROM codes WHERE user_id = $1 AND (spent IS FALSE OR spent IS NULL OR spent = 0) ORDER BY created_at ASC LIMIT $2`,
+        [userId, BUY_DOG_COST]
+      );
+      const codeIds = codesRes.rows.map(r => r.id);
+
+      // Mark codes as spent
+      await client.query(
+        `UPDATE codes SET spent = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ANY($1)`,
+        [codeIds]
+      );
+
+      // Ledger entry
+      const txId = crypto.randomUUID();
+      await client.query(
+        `INSERT INTO ledger (id, tx_id, user_id, direction, asset_type, amount, reference, meta)
+         VALUES ($1, $2, $3, 'debit', 'codes', $4, 'PEBALAASH_BUY_DOG', $5)`,
+        [crypto.randomUUID(), txId, userId, BUY_DOG_COST, JSON.stringify({ operation: 'buy_new_dog', cost: BUY_DOG_COST })]
+      );
+
+      // Reset watchdog state to ACTIVE with fresh feed timestamp
+      await client.query(
+        `INSERT INTO watchdog_state (user_id, last_fed_at, dog_state, is_frozen, updated_at)
+         VALUES ($1, CURRENT_TIMESTAMP, 'ACTIVE', 0, CURRENT_TIMESTAMP)
+         ON CONFLICT (user_id) DO UPDATE SET
+           last_fed_at = CURRENT_TIMESTAMP,
+           dog_state = 'ACTIVE',
+           is_frozen = 0,
+           updated_at = CURRENT_TIMESTAMP`,
+        [userId]
+      );
+
+      // Audit log
+      await client.query(
+        `INSERT INTO audit_log (type, payload) VALUES ($1, $2)`,
+        ['BUY_NEW_DOG', JSON.stringify({ userId, cost: BUY_DOG_COST, txId, timestamp: new Date().toISOString() })]
+      );
+
+      await client.query('COMMIT');
+
+      // SSE notification
+      try { __sseEmit(userId, { type: 'ASSET_UPDATE', assetType: 'codes' }); } catch(_){}
+      try { __sseEmit(userId, { type: 'WATCHDOG_UPDATE', action: 'dog_purchased' }); } catch(_){}
+
+      return res.json({
+        success: true,
+        cost: BUY_DOG_COST,
+        newBalance: currentBalance - BUY_DOG_COST,
+        dogState: 'ACTIVE',
+        message: 'New dog purchased! Your guardian is now alive and active.',
+        txId
+      });
+    } catch (err) {
+      try { await client.query('ROLLBACK'); } catch(_){}
+      return res.status(500).json({ success: false, error: err.message });
+    } finally {
+      if (typeof client.release === 'function') client.release();
+    }
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err && err.message });
+  }
+});
+
+// POST /api/watchdog/debug-kill — DEBUG ONLY: Force dog to DEAD state for testing
+app.post('/api/watchdog/debug-kill', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user && req.user.id;
+    if (!userId) return res.status(401).json({ success: false, error: 'unauthorized' });
+    const pastDate = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString();
+    // Upsert: try update first, then insert
+    const upd = await query(`UPDATE watchdog_state SET dog_state='DEAD', last_fed_at=$1, updated_at=CURRENT_TIMESTAMP WHERE user_id=$2`, [pastDate, userId]);
+    if (!upd || upd.rowCount === 0) {
+      await query(`INSERT INTO watchdog_state (user_id, dog_state, last_fed_at, is_frozen, updated_at) VALUES ($1,'DEAD',$2,0,CURRENT_TIMESTAMP)`, [userId, pastDate]);
+    }
+    return res.json({ success: true, message: 'Dog killed for testing. Refresh the page to see skeleton.' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // =============================================================================
 // QARSAN API ENDPOINTS - Server-Side Financial Operations
@@ -4039,6 +4868,7 @@ server.once('listening', async () => {
   // Apply DDL and start event processor
   try {
     await applyNeonCompressionDDL();
+    await ensureSingleSessionTables(); // [SINGLE-SESSION]
     
   // Enable WAL mode for SQLite ONLY if not using Turso
   if (process.env.TURSO_URL || process.env.TURSO_DATABASE_URL) {

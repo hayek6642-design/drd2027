@@ -10,6 +10,44 @@ const State = {
     }
 };
 
+// ==========================================
+// NATIVE PATH RESOLUTION (Capacitor Support)
+// ==========================================
+const NativePathResolver = (() => {
+    const isNative = (() => {
+        try {
+            return window.Capacitor && window.Capacitor.isNativePlatform();
+        } catch (_) { return false; }
+    })();
+
+    const serverUrl = 'https://drd2027.onrender.com';
+
+    /**
+     * Resolve a relative/absolute service URL for native platforms.
+     * On web: paths like './safecode.html' or '/codebank/safecode.html' work as-is.
+     * On native: relative paths must be converted to absolute URLs pointing to the server.
+     */
+    function resolveUrl(url) {
+        if (!isNative) return url;
+        if (!url) return url;
+
+        // Already absolute URL
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+
+        // Remove leading ./ for consistency
+        let cleanPath = url.replace(/^\.\//, '');
+        
+        // Ensure leading slash
+        if (!cleanPath.startsWith('/')) {
+            cleanPath = '/codebank/' + cleanPath;
+        }
+
+        return serverUrl + cleanPath;
+    }
+
+    return { isNative, resolveUrl, serverUrl };
+})();
+
 // Recursive function to try URLs until one works
 function tryOpenService(app, fallbackIndex = 0) {
     // 🚀 PHASE 4: Single Instance Policy
@@ -20,7 +58,8 @@ function tryOpenService(app, fallbackIndex = 0) {
         return;
     }
 
-    const urls = [app.url, ...(app.fallbackUrls || [])];
+    // Resolve URLs for native platform
+    const urls = [app.url, ...(app.fallbackUrls || [])].map(u => NativePathResolver.resolveUrl(u));
     
     if (fallbackIndex >= urls.length) {
         // All URLs failed
@@ -66,6 +105,13 @@ function tryOpenService(app, fallbackIndex = 0) {
             
             // 🚀 PHASE 4: Track opened app
             State.openedApps.set(app.id, modalIframe);
+            
+            // 🔧 FIX: Send auth + assets to service iframe after it loads
+            setTimeout(() => {
+                if (typeof window.sendInitToIframe === 'function') {
+                    window.sendInitToIframe();
+                }
+            }, 400);
         };
         
         // Error handler
@@ -88,6 +134,13 @@ function tryOpenService(app, fallbackIndex = 0) {
             }
         }, 8000);
         
+        // On native platforms, adjust iframe sandbox to allow cross-origin loading
+        if (NativePathResolver.isNative) {
+            modalIframe.removeAttribute('sandbox');
+            // Allow all necessary features for native WebView
+            modalIframe.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; clipboard-write');
+        }
+
         // Set the source to load the service
         modalIframe.src = url;
     } else {
@@ -176,39 +229,27 @@ function setupModalControls() {
         closeBtn.onclick = () => {
             modal.classList.remove('active');
             
-            // Phase 1: Proper Iframe Destruction
+            // 🔧 FIX: Reset iframe WITHOUT replacing DOM element
+            // Replacing the element makes Consolidated Service Manager's reference stale
             if (iframe) {
-                console.log('[AppLauncher] Destroying iframe for GC');
-                
                 // 🚀 PHASE 4: Remove from tracked apps
                 if (State.currentApp) {
                     State.openedApps.delete(State.currentApp.id);
                 }
 
                 try {
-                    // Send destroy signal
                     if (iframe.contentWindow) {
                         iframe.contentWindow.postMessage({ type: 'service:destroy' }, "*");
                     }
-                    iframe.src = 'about:blank';
-                    
-                    // Remove from DOM and re-add fresh one
-                    const container = iframe.parentNode;
-                    if (container) {
-                        const newIframe = document.createElement('iframe');
-                        newIframe.id = 'service-modal-iframe';
-                        newIframe.sandbox = iframe.sandbox;
-                        container.replaceChild(newIframe, iframe);
-                    }
-                } catch (e) {
-                    iframe.src = 'about:blank';
-                }
+                } catch (e) {}
+                
+                // Reset src to blank — do NOT replace DOM element
+                try { iframe.src = 'about:blank'; } catch(e) {}
             }
             
             State.isAppOpen = false;
             State.currentApp = null;
             
-            // Trigger GC hint
             if (window.gc) try { window.gc(); } catch(_) {}
         };
     }

@@ -308,8 +308,12 @@
             });
 
             // Force watchdog activation after 3 seconds if not already done
+            // Check for both 3D canvas AND 2D fallback before retrying
             setTimeout(() => {
-                if (!document.getElementById('guardian-dog-container').querySelector('canvas')) {
+                const dogContainer = document.getElementById('guardian-dog-container');
+                const hasCanvas = dogContainer && dogContainer.querySelector('canvas');
+                const hasFallback = dogContainer && dogContainer.querySelector('.fallback-dog');
+                if (!hasCanvas && !hasFallback && !window.__DOG_INITIALIZING__) {
                     updateDebug('Forcing watchdog activation after timeout');
                     activateWatchdog();
                 }

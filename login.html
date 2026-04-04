@@ -219,15 +219,50 @@
     font-size: 14px;
   }
 </style>
+<script src="https://unpkg.com/@simplewebauthn/browser@10/dist/bundle/index.umd.min.js"></script>
 </head>
 <body>
+<!-- Single-Session Kickout Banner -->
+<script>
+(function() {
+  var reason = new URLSearchParams(window.location.search).get('reason');
+  if (reason === 'kicked') {
+    var msg = sessionStorage.getItem('__kickout_reason__') ||
+      'Your account was opened on another device. Sign in here to continue.';
+    sessionStorage.removeItem('__kickout_reason__');
+    // Inject banner after body opens
+    document.addEventListener('DOMContentLoaded', function() {
+      var banner = document.createElement('div');
+      banner.id = 'kickout-banner';
+      banner.style.cssText = [
+        'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:99999',
+        'background:linear-gradient(90deg,#c0392b,#e74c3c)',
+        'color:#fff', 'text-align:center', 'padding:12px 20px',
+        'font-size:14px', 'font-family:-apple-system,BlinkMacSystemFont,sans-serif',
+        'box-shadow:0 2px 12px rgba(0,0,0,0.4)', 'display:flex',
+        'align-items:center', 'justify-content:center', 'gap:10px'
+      ].join(';');
+      banner.innerHTML = '<span>📱</span><span>' + msg + '</span>' +
+        '<button onclick="document.getElementById('kickout-banner').remove()" ' +
+        'style="background:rgba(255,255,255,0.2);border:none;color:#fff;' +
+        'padding:4px 10px;border-radius:4px;cursor:pointer;font-size:13px;margin-left:8px">✕</button>';
+      document.body.insertBefore(banner, document.body.firstChild);
+      // Auto-dismiss after 8s
+      setTimeout(function() {
+        var b = document.getElementById('kickout-banner');
+        if (b) b.remove();
+      }, 8000);
+    });
+  }
+})();
+</script>
 
 <div class="container">
   <h2>🔐 YT-Clear Hybrid Auth</h2>
   
   <div class="tab-switcher">
-    <button class="tab-btn active" onclick="switchTab('signup')">Sign Up</button>
-    <button class="tab-btn" onclick="switchTab('login')">Login</button>
+    <button class="tab-btn active" onclick="switchTab('signup', event)">Sign Up</button>
+    <button class="tab-btn" onclick="switchTab('login', event)">Login</button>
   </div>
 
   <!-- SIGNUP FORM -->
@@ -292,7 +327,45 @@
       <input type="password" id="loginPassword" placeholder="Enter your password" required>
     </div>
     
+
     <button onclick="handleLogin()">Login</button>
+
+    <!-- ─── Biometric Login ──────────────────────────────────── -->
+    <div id="biometricSection" style="display:none; margin-top:16px;">
+      <div style="display:flex;align-items:center;gap:10px;margin:12px 0;">
+        <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
+        <span style="color:#666;font-size:12px">or</span>
+        <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
+      </div>
+      <button id="bioAuthBtn" onclick="handleBiometricLogin()" style="
+        background:linear-gradient(135deg,#1a1a2e,#0f3460);
+        border:2px solid rgba(0,212,255,0.4);
+        display:flex;align-items:center;justify-content:center;gap:10px;
+        font-size:15px;letter-spacing:0.3px;">
+        <span style="font-size:22px">🪪</span> Sign in with Fingerprint / Face ID
+      </button>
+    </div>
+
+    <!-- ─── Register Biometric (shown after password login) ─── -->
+    <div id="registerBiometricSection" style="display:none;margin-top:20px;
+      background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.25);
+      border-radius:12px;padding:18px;text-align:center;">
+      <div style="font-size:28px;margin-bottom:8px">🪪</div>
+      <div style="font-weight:600;margin-bottom:6px">Enable Fingerprint Login?</div>
+      <div style="font-size:13px;color:#aaa;margin-bottom:14px">
+        Use your device fingerprint or face to sign in instantly next time — no password needed.
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="registerBiometric()" style="
+          background:linear-gradient(135deg,#00d4ff,#0099cc);font-size:14px;padding:10px 0;">
+          ✅ Enable Now
+        </button>
+        <button onclick="document.getElementById('registerBiometricSection').style.display='none'" 
+          class="secondary" style="font-size:14px;padding:10px 0;margin-top:0">
+          Not Now
+        </button>
+      </div>
+    </div>
   </div>
 
   <pre id="output"></pre>
@@ -321,7 +394,7 @@ console.log('🔥 Window origin:', window.location.origin);
       fetch('/api/auth/me', { credentials: 'include' })
         .then(function(r) { return r.json(); })
         .then(function(data) {
-          if (data.authenticated || data.ok) {
+          if (data.success || data.authenticated || data.ok) {
             window.location.href = "/yt-new-clear.html";
           } else {
             // Server says NO — nuke stale client state
@@ -452,9 +525,9 @@ function updateCountryCode() {
   }
 }
 
-function switchTab(tab) {
+function switchTab(tab, evt) {
   document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-  event.target.classList.add('active');
+  if (evt && evt.target) evt.target.classList.add('active');
   
   if (tab === 'signup') {
     document.getElementById('signupForm').style.display = 'block';
@@ -519,8 +592,11 @@ async function sendHybridOTP() {
       // Show mock OTP in development
       if (data.mockOtp) {
         console.log('🔐 DEVELOPMENT OTP:', data.mockOtp);
-        const output = document.getElementById('output');
-        if (output) output.textContent = `[DEV MOCK OTP]: ${data.mockOtp}`;
+        // Only display OTP on screen in local development (never in production)
+        if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+          const output = document.getElementById('output');
+          if (output) output.textContent = `[DEV MOCK OTP]: ${data.mockOtp}`;
+        }
       }
       
       startTimer();
@@ -650,6 +726,16 @@ async function handleSignup() {
     return;
   }
   
+  // Password strength validation
+  if (password.length < 8) {
+    showStatus('Password must be at least 8 characters long', 'error');
+    return;
+  }
+  if (!/[0-9!@#$%^&*()_\-+=]/.test(password)) {
+    showStatus('Password must include at least one number or special character', 'error');
+    return;
+  }
+  
   const signupBtn = document.getElementById('signupBtn');
   signupBtn.disabled = true;
   signupBtn.innerHTML = '<span class="loading"></span> Creating account...';
@@ -759,9 +845,14 @@ async function handleLogin() {
         });
       }
       
-      setTimeout(() => {
-        window.location.href = '/yt-new-clear.html';
-      }, 1500);
+      localStorage.setItem('last_login_email', email);
+      // Offer biometric registration if device supports it
+      if (window.SimpleWebAuthnBrowser && window.SimpleWebAuthnBrowser.browserSupportsWebAuthn()) {
+        document.getElementById('registerBiometricSection').style.display = 'block';
+        setTimeout(() => { window.location.href = '/yt-new-clear.html'; }, 4000);
+      } else {
+        setTimeout(() => { window.location.href = '/yt-new-clear.html'; }, 1500);
+      }
     } else {
       showStatus(data.error || 'Login failed', 'error');
     }
@@ -769,6 +860,140 @@ async function handleLogin() {
     showStatus('Network error. Please try again.', 'error');
   }
 }
+
+
+// ══════════════════════════════════════════════════════
+//  BIOMETRIC / WEBAUTHN
+// ══════════════════════════════════════════════════════
+const { startRegistration, startAuthentication, browserSupportsWebAuthn } =
+  window.SimpleWebAuthnBrowser || {};
+
+// On page load: check if biometric is available + email known
+document.addEventListener('DOMContentLoaded', () => {
+  if (browserSupportsWebAuthn && browserSupportsWebAuthn()) {
+    const storedEmail = localStorage.getItem('last_login_email');
+    if (storedEmail) {
+      document.getElementById('loginEmail').value = storedEmail;
+      document.getElementById('biometricSection').style.display = 'block';
+    }
+  }
+});
+
+// Called when user types in email field — show fingerprint button if biometric available
+document.addEventListener('DOMContentLoaded', () => {
+  const emailInput = document.getElementById('loginEmail');
+  if (!emailInput) return;
+  emailInput.addEventListener('input', () => {
+    const bio = document.getElementById('biometricSection');
+    if (bio && browserSupportsWebAuthn && browserSupportsWebAuthn()) {
+      bio.style.display = emailInput.value.includes('@') ? 'block' : 'none';
+    }
+  });
+});
+
+async function handleBiometricLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  if (!email) { showStatus('Enter your email first', 'error'); return; }
+
+  const btn = document.getElementById('bioAuthBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading"></span> Verifying biometric...';
+
+  try {
+    // Step 1: Get auth options from server
+    const beginRes = await fetch('/api/auth/biometric/auth-begin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const beginData = await beginRes.json();
+    if (!beginData.success) throw new Error(beginData.error || 'Could not start biometric auth');
+
+    // Step 2: Prompt native biometric (fingerprint / Face ID)
+    const assertion = await startAuthentication({ optionsJSON: beginData.options });
+
+    // Step 3: Verify with server
+    const finishRes = await fetch('/api/auth/biometric/auth-finish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ userId: beginData.userId, response: assertion }),
+    });
+    const finishData = await finishRes.json();
+
+    if (finishData.status === 'success') {
+      localStorage.setItem('session_token', finishData.sessionId);
+      localStorage.setItem('user_data', JSON.stringify(finishData.user));
+      localStorage.setItem('session_active', 'true');
+      localStorage.setItem('last_login_email', email);
+      showStatus('✅ Biometric verified! Redirecting...', 'success');
+      setTimeout(() => { window.location.href = '/yt-new-clear.html'; }, 1000);
+    } else {
+      throw new Error(finishData.error || 'Biometric authentication failed');
+    }
+  } catch (err) {
+    console.error('[BIOMETRIC]', err);
+    if (err.name === 'NotAllowedError') {
+      showStatus('Biometric cancelled — please try again or use password', 'error');
+    } else {
+      showStatus(err.message || 'Biometric failed', 'error');
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<span style="font-size:22px">🪪</span> Sign in with Fingerprint / Face ID';
+  }
+}
+
+async function registerBiometric() {
+  if (!browserSupportsWebAuthn || !browserSupportsWebAuthn()) {
+    showStatus('Your device / browser does not support biometric login', 'error');
+    return;
+  }
+  const section = document.getElementById('registerBiometricSection');
+  try {
+    section.innerHTML = '<div style="text-align:center;padding:10px"><span class="loading"></span> Setting up biometric...</div>';
+
+    // Step 1: Get registration options
+    const beginRes = await fetch('/api/auth/biometric/register-begin', {
+      credentials: 'include',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const beginData = await beginRes.json();
+    if (!beginData.success) throw new Error(beginData.error);
+
+    // Step 2: Native biometric prompt
+    const attResp = await startRegistration({ optionsJSON: beginData.options });
+
+    // Step 3: Verify with server
+    const finishRes = await fetch('/api/auth/biometric/register-finish', {
+      credentials: 'include',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ response: attResp }),
+    });
+    const finishData = await finishRes.json();
+
+    if (finishData.success) {
+      section.innerHTML = `
+        <div style="text-align:center;padding:10px;color:#00ff88">
+          🎉 Fingerprint / Face ID enabled!<br>
+          <small style="color:#aaa">Next login, just tap the fingerprint button.</small>
+        </div>`;
+      // Show fingerprint button on login form for next visit
+      localStorage.setItem('biometric_registered', '1');
+    } else {
+      throw new Error(finishData.error);
+    }
+  } catch (err) {
+    console.error('[BIOMETRIC REG]', err);
+    section.innerHTML = `
+      <div style="text-align:center;padding:10px;color:#ff6b6b">
+        ❌ ${err.message || 'Biometric registration failed'}<br>
+        <small style="color:#aaa">You can try again from your profile settings.</small>
+      </div>`;
+  }
+}
+
 </script>
 </body>
 </html>

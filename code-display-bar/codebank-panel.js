@@ -5,6 +5,10 @@
     'use strict';
     
     // CodeBank side panel functionality
+       // FIX: Track retry attempts to avoid infinite retries
+       var __cbPanelRetries = 0;
+       var __cbPanelMaxRetries = 5;
+       
        function initCodeBankPanel() {
         const panel = document.getElementById('codebank-panel');
         const toggleBtn = document.getElementById('codebank-toggle');
@@ -15,13 +19,18 @@
         window.__CODEBANK_CLOSE_REQUESTED__ = false;
         
         if (!panel || !toggleBtn || !closeBtn) {
-            console.warn('CodeBank panel elements not found');
-            // No long-press behavior on code-display
-            if (codeDisplay && overlay && content) {
-                // Intentionally left without long-press listeners per requirements
+            // FIX: Retry with backoff instead of silently failing
+            if (__cbPanelRetries < __cbPanelMaxRetries) {
+                __cbPanelRetries++;
+                var delay = __cbPanelRetries * 1000; // 1s, 2s, 3s, 4s, 5s
+                console.warn('[CodeBank] Panel elements not found, retrying in ' + delay + 'ms (attempt ' + __cbPanelRetries + '/' + __cbPanelMaxRetries + ')');
+                setTimeout(initCodeBankPanel, delay);
+            } else {
+                console.warn('[CodeBank] Panel elements not found after ' + __cbPanelMaxRetries + ' retries — giving up');
             }
             return;
         }
+        __cbPanelRetries = 0; // Reset on success
         
         toggleBtn.addEventListener('click', () => {
             const willOpen = !panel.classList.contains('active');

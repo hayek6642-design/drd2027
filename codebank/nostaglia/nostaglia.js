@@ -67,6 +67,14 @@
     });
   }
   async function react(upload_id, type, cancel) {
+    // Spend an asset for the reaction (like=1, super=5, mega=20) unless cancelling
+    if (!cancel && typeof window.useAsset === 'function') {
+      const costMap = { like: 1, super: 5, mega: 20 };
+      const cost = costMap[type] || 1;
+      try {
+        await window.useAsset(type, cost, 'nostaglia', type + ' on ' + upload_id);
+      } catch (_) { /* proceed even if asset spend fails */ }
+    }
     const res = await fetch('/api/nostaglia/react', { method:'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ upload_id, type, cancel }) });
     if (!res.ok) return {};
     const data = await res.json();

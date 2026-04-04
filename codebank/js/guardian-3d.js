@@ -25,7 +25,8 @@
         'idle': 'idle',
         'monitoring': 'watching',
         'threat detected': 'alert',
-        'healing': 'healing'
+        'healing': 'healing',
+        'dead': 'dead'
       };
 
       this.init();
@@ -45,7 +46,12 @@
         this.cleanupContainer();
 
         this.dogInstance = createWatchDog(this.container, {
-          initialState: this.stateMap[this.state] || 'idle'
+          initialState: this.stateMap[this.state] || 'idle',
+          onDogClick: (info) => {
+            window.dispatchEvent(new CustomEvent('guardian:dog-clicked', {
+              detail: { isDead: info.isDead, timestamp: Date.now() }
+            }));
+          }
         });
 
         console.log('[Guardian3D] Watchdog Core initialized successfully');

@@ -1,68 +1,143 @@
 import { WatchDogScene } from './watchdog-scene.js';
 import { WatchDogAnimator } from './watchdog-animator.js';
 import { STATES } from './watchdog-states.js';
+import { WatchDogSkeletonScene } from './watchdog-skeleton-scene.js';
+import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 
 /**
  * Creates and mounts a 3D Watch Dog component inside the given container.
- * 
- * @param {HTMLElement} container - The DOM element to mount the 3D canvas in.
- * @param {Object} options - Configuration options
- * @param {string} [options.initialState='idle'] - The starting state ('idle', 'watching', 'alert', 'healing')
- * @returns {Object} Controller API to interact with the component
+ * @param {HTMLElement} container
+ * @param {Object} options
+ * @param {string} [options.initialState='idle']
+ * @param {Function} [options.onDogClick] - Called when user clicks the 3D dog
+ * @returns {Object} Controller API
  */
 export function createWatchDog(container, options = {}) {
   if (!container || !(container instanceof HTMLElement)) {
     throw new Error('A valid DOM container element is required for WatchDog3D');
   }
 
-  const scene = new WatchDogScene(container);
-  const animator = new WatchDogAnimator(scene);
+  let scene = null;
+  let animator = null;
+  let skeletonScene = null;
+  let isDead = false;
+  let raycaster = null;
+  let mouse = null;
+  let dogMeshes = [];
 
-  // Apply optional initial state
-  const startingState = options.initialState || STATES.IDLE;
-  if (Object.values(STATES).includes(startingState)) {
-    animator.setState(startingState);
-  } else {
-    animator.setState(STATES.IDLE);
-    console.warn(`Invalid initial state: ${startingState}. Defaulting to 'idle'.`);
+  function buildLiveScene() {
+    scene = new WatchDogScene(container);
+    animator = new WatchDogAnimator(scene);
+    // Collect all meshes in dogGroup for raycasting
+    dogMeshes = [];
+    if (scene.dogGroup) {
+      scene.dogGroup.traverse(obj => {
+        if (obj.isMesh) dogMeshes.push(obj);
+      });
+    }
   }
 
-  animator.start();
+  function buildSkeletonScene() {
+    skeletonScene = new WatchDogSkeletonScene(container);
+    // Collect skeleton meshes for raycasting
+    dogMeshes = [];
+    if (skeletonScene.dogGroup) {
+      skeletonScene.dogGroup.traverse(obj => {
+        if (obj.isMesh) dogMeshes.push(obj);
+      });
+    }
+  }
+
+  // Setup raycasting for click detection
+  function setupRaycasting() {
+    raycaster = new THREE.Raycaster();
+    mouse = new THREE.Vector2();
+  }
+
+  function handleCanvasClick(event) {
+    if (!options.onDogClick) return;
+    const currentScene = isDead ? skeletonScene : scene;
+    if (!currentScene || !currentScene.camera || !currentScene.renderer) return;
+
+    const rect = currentScene.renderer.domElement.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, currentScene.camera);
+    const intersects = raycaster.intersectObjects(dogMeshes, true);
+    if (intersects.length > 0) {
+      options.onDogClick({ isDead });
+    }
+  }
+
+  // Build initial scene
+  const startingState = options.initialState || STATES.IDLE;
+  if (startingState === STATES.DEAD) {
+    isDead = true;
+    buildSkeletonScene();
+  } else {
+    buildLiveScene();
+    if (Object.values(STATES).includes(startingState) && startingState !== STATES.DEAD) {
+      animator.setState(startingState);
+    } else {
+      animator.setState(STATES.IDLE);
+    }
+    animator.start();
+  }
+
+  setupRaycasting();
+
+  // Attach click handler to the container
+  container.style.cursor = 'pointer';
+  container.addEventListener('click', handleCanvasClick);
 
   const handleResize = () => {
-    scene.resize();
+    if (isDead) {
+      skeletonScene?.resize();
+    } else {
+      scene?.resize();
+    }
   };
-
   window.addEventListener('resize', handleResize);
 
   return {
-    /**
-     * Updates the dog's behavior state
-     * @param {string} state - "idle" | "watching" | "alert" | "healing"
-     */
     setState: (state) => {
-      if (Object.values(STATES).includes(state)) {
+      if (state === STATES.DEAD && !isDead) {
+        // Switch to dead mode
+        isDead = true;
+        if (animator) animator.stop();
+        if (scene) scene.destroy();
+        scene = null;
+        animator = null;
+        buildSkeletonScene();
+        return;
+      }
+
+      if (state !== STATES.DEAD && isDead) {
+        // Resurrect - switch back to live
+        isDead = false;
+        if (skeletonScene) skeletonScene.destroy();
+        skeletonScene = null;
+        buildLiveScene();
+        animator.setState(STATES.IDLE);
+        animator.start();
+        return;
+      }
+
+      if (!isDead && animator && Object.values(STATES).includes(state)) {
         animator.setState(state);
-      } else {
-        console.warn(`WatchDog3D: Invalid state '${state}'. Valid states are: ${Object.values(STATES).join(', ')}`);
       }
     },
-    
-    /**
-     * Manually triggers a resize calculation (useful if container changes size programmatically)
-     */
+
     resize: handleResize,
-    
-  /**
-   * Completely cleans up the component, removing it from DOM and freeing memory
-   */
-  destroy: () => {
-    window.removeEventListener('resize', handleResize);
-    if (animator) animator.stop();
-    if (scene) scene.destroy();
-    
-    // 🛡️ CRITICAL FIX: Explicitly null out references to help GC
-    console.log('[WATCHDOG CORE] Cleanup successful');
-  }
+
+    destroy: () => {
+      container.removeEventListener('click', handleCanvasClick);
+      window.removeEventListener('resize', handleResize);
+      if (animator) animator.stop();
+      if (scene) scene.destroy();
+      if (skeletonScene) skeletonScene.destroy();
+      console.log('[WATCHDOG CORE] Cleanup successful');
+    }
   };
 }

@@ -290,9 +290,51 @@ async function updateDogStateByTime(userId) {
  * - enhanced integrity verification
  */
 async function feedWatchDog(userId, idempotencyKey = null) {
-  const FEED_COST = 10;
+  let FEED_COST = 10;
   
   console.log(`[WATCHDOG] Feeding dog for user ${userId}, cost: ${FEED_COST} codes`);
+
+  // Check last fed time FIRST (before any transaction)
+  const currentDogState = await getWatchDogState(userId);
+
+  // 1. Check if dog is DEAD (>= 72h) - cannot feed, must buy
+  if (currentDogState.lastFedAt) {
+    const lastFed = new Date(currentDogState.lastFedAt);
+    const hoursSinceFeed = (new Date() - lastFed) / (1000 * 60 * 60);
+
+    if (hoursSinceFeed >= 72) {
+      return {
+        success: false,
+        error: 'DOG_DEAD',
+        message: 'Your dog has died after 3 days without feeding. Buy a new dog to continue.',
+        dogState: 'DEAD'
+      };
+    }
+
+    // 2. Check if already fed today (< 24h)
+    if (hoursSinceFeed < 24) {
+      return {
+        success: false,
+        error: 'ALREADY_FED',
+        message: 'The dog is already fed today! Come back in ' + Math.ceil(24 - hoursSinceFeed) + ' hours.',
+        nextFeedIn: Math.ceil(24 - hoursSinceFeed),
+        dogState: currentDogState.dogState
+      };
+    }
+
+    // 3. If 2+ days without feeding → double cost penalty
+    if (hoursSinceFeed >= 48) {
+      FEED_COST = 20; // Double penalty for 2-day neglect
+      console.warn(`[WATCHDOG] 2-day neglect penalty: charging ${FEED_COST} codes for user ${userId}`);
+    }
+  } else if (currentDogState.dogState === 'DEAD') {
+    return {
+      success: false,
+      error: 'DOG_DEAD',
+      message: 'Your dog has died. Buy a new dog from Pebalaash (1000 codes) to continue.',
+      dogState: 'DEAD'
+    };
+  }
   
   try {
     const client = await pool.connect();
@@ -377,6 +419,7 @@ async function feedWatchDog(userId, idempotencyKey = null) {
       const meta = {
         operation: 'watchdog_feed',
         codes_spent: FEED_COST,
+        penalty: FEED_COST > 10 ? '2day_neglect_double_penalty' : 'normal',
         ...(idempotencyKey && { idempotency_key: idempotencyKey })
       };
       

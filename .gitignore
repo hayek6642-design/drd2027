@@ -83,3 +83,8 @@ project_tree.txt
 # System files
 .DS_Store
 Thumbs.db
+
+# ── SECURITY: files that must NEVER be committed ──
+.trae-cookie.txt
+*-dump.sql
+FARRAGNA_API_DOCS.md

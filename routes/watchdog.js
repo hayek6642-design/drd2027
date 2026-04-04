@@ -26,21 +26,20 @@ router.get('/state', async (req, res) => {
   }
 });
 
-// 🦴 Compatibility Endpoint for UI
-router.get('/status', async (req, res) => {
+// 🖥️ System health endpoint (renamed from /status to avoid collision with pet-dog /status)
+router.get('/system-health', async (req, res) => {
   try {
     const result = await watchdog.verifySystemIntegrity();
     
-    // Return format expected by safe-list-actions.js
     res.json({
       success: true,
-      dogState: result.status === 'error' ? 'DEAD' : (result.status === 'alert' ? 'ALERT' : 'ALIVE'),
+      systemState: result.status === 'error' ? 'DEAD' : (result.status === 'alert' ? 'ALERT' : 'ALIVE'),
       status: result.status,
       ok: result.ok,
       timestamp: new Date().toISOString()
     });
   } catch (err) {
-    res.json({ success: false, dogState: 'DEAD', error: err.message });
+    res.json({ success: false, systemState: 'DEAD', error: err.message });
   }
 });
 

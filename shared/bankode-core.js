@@ -476,9 +476,9 @@
           let currentCodes = this.codes;
           
           // Filter assets for normalization
-          const normalCodes = currentCodes.filter(c => !String(c).includes('SBAR') && !String(c).includes('GBAR'));
-          const silverBars = currentCodes.filter(c => String(c).includes('SBAR'));
-          const goldBars = currentCodes.filter(c => String(c).includes('GBAR'));
+          const normalCodes = currentCodes.filter(c => !String(c).includes('SLVR') && !String(c).includes('GOLD'));
+          const silverBars = currentCodes.filter(c => String(c).includes('SLVR'));
+          const goldBars = currentCodes.filter(c => String(c).includes('GOLD'));
 
           // 🛡️ GUARANTEE LATEST: Use the absolute last code from internal array
           const latestCode = currentCodes[currentCodes.length - 1] || null;
@@ -791,7 +791,10 @@
               if (this.mismatchCount >= this.maxRetries) {
                 console.error('[LedgerMonitor] Max retries reached, forcing recovery refresh');
                 // Use replace instead of reload to prevent history spam
-                window.location.replace(window.location.href);
+                console.warn('[LedgerMonitor] Max retries reached — skipping reload, resetting counter');
+                this.mismatchCount = 0;
+                this.checkInterval = 60000;
+                this.scheduleCheck();
                 return;
               }
               
@@ -1153,6 +1156,35 @@
           Bankode.processSyncQueue();
         }
         try { if (Bankode.retryTxQueue) Bankode.retryTxQueue(); } catch(_){ }
+        // [FIX] Auto-restore IndexedDB codes to server after auth is ready
+        try {
+          (async function autoRestoreToServer() {
+            try {
+              const allCodes = await idbGetAllCodes();
+              if (!allCodes || allCodes.length === 0) return;
+              // Get server count first
+              const serverResp = await fetch('/api/sqlite/codes', { credentials: 'include' });
+              const serverData = await serverResp.json().catch(() => ({}));
+              const serverCount = serverData.count || 0;
+              if (serverCount >= allCodes.length) return; // Server already has same or more
+              console.log(`[RESTORE] Local has ${allCodes.length} codes, server has ${serverCount} — pushing to server`);
+              const resp = await fetch('/api/sync/restore-codes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ codes: allCodes })
+              });
+              const result = await resp.json().catch(() => ({}));
+              if (result.success) {
+                console.log(`[RESTORE] ✅ Synced ${result.inserted} codes to server (skipped ${result.skipped}). Total: ${result.total_server}`);
+                // Dispatch event so UI can refresh count
+                window.dispatchEvent(new CustomEvent('codes:restored', { detail: result }));
+              }
+            } catch(e) {
+              console.warn('[RESTORE] Auto-restore failed:', e.message);
+            }
+          })();
+        } catch(_) {}
       }
     });
   } catch(_) {}

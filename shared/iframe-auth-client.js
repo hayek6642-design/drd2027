@@ -410,6 +410,7 @@
     // Create window.Auth interface
     window.Auth = {
       isAuthenticated: () => state.authenticated,
+      getStatus: () => state.authenticated ? 'authenticated' : (state.userId ? 'loading' : 'unauthenticated'),
       getUser: () => state.user || { id: state.userId },
       getToken: () => state.sessionId,
       getState: () => ({

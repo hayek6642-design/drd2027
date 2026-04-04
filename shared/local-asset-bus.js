@@ -5,9 +5,27 @@
 import { AssetPolicy } from './asset-policy.js';
 
 let __VERIFIED_STATE__ = null;
+// 🛡️ IFRAME-BOOTSTRAP FIX: Read from localStorage immediately so iframes get state without waiting for storage events
+try {
+  const _bootstrapRaw = localStorage.getItem('codebank_assets');
+  if (_bootstrapRaw) {
+    const _bootstrapParsed = JSON.parse(_bootstrapRaw);
+    if (_bootstrapParsed && _bootstrapParsed.updatedAt) {
+      // Filter out legacy-format codes (old format: CODE-V-2026-XXX-PX)
+      const _validFmt = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-P[0-9]$/;
+      if (Array.isArray(_bootstrapParsed.codes)) {
+        _bootstrapParsed.codes = _bootstrapParsed.codes.filter(c => _validFmt.test(c) || c === 'BOOTSTRAPPED_CODE');
+      }
+      __VERIFIED_STATE__ = _bootstrapParsed;
+      console.log('[AssetBus] Bootstrapped from localStorage on init, codes:', (_bootstrapParsed.codes || []).length);
+    }
+  }
+} catch (_bootstrapErr) { /* ignore */ }
 let __IS_SYNCING__ = false;
 let __LEDGER_LOCKED__ = true; // Default to locked
 let __DRIFT_COUNT__ = 0; // 🛡️ DRIFT LOOP PREVENTION
+let __AUTH_BACKOFF_UNTIL__ = 0; // 🛡️ Auth failure backoff timestamp
+const __AUTH_BACKOFF_MS__ = 5 * 60 * 1000; // 5 minutes backoff on 401/403
 
 // ========================
 // Utilities
@@ -22,6 +40,8 @@ function now() {
  */
 async function fetchLedgerState() {
   if (__IS_SYNCING__) return null;
+  // 🛡️ AUTH BACKOFF: Don't hammer the server if we got 401/403 recently
+  if (Date.now() < __AUTH_BACKOFF_UNTIL__) return null;
   __IS_SYNCING__ = true;
   
   try {
@@ -30,6 +50,11 @@ async function fetchLedgerState() {
     });
     
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        // Auth failure — back off for 5 minutes to avoid flooding console
+        __AUTH_BACKOFF_UNTIL__ = Date.now() + __AUTH_BACKOFF_MS__;
+        return null; // Silent return, no console spam
+      }
       console.warn('[AssetBus] Ledger fetch failed with status:', response.status);
       throw new Error('Ledger unreachable');
     }
@@ -459,7 +484,7 @@ const createAssetBus = () => {
   };
 
   // Start periodic sync - Rule: 30-60s
-  let _syncInterval = setInterval(() => bus.sync(), 60000); 
+  let _syncInterval = setInterval(() => bus.sync(), 15000); // [CROSS-DEVICE FIX] Reduced from 60s to 15s for faster cross-device sync
   
   window.__assetBusInstance = bus;
 

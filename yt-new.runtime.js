@@ -552,8 +552,9 @@ Are you sure you want to continue?`);
                 // Close panel
                 this.close();
 
-                // Reload application
-                window.location.reload();
+                // Reload application — guarded to prevent loop
+                console.warn('🚫 [Runtime] Reload after reset BLOCKED to prevent reload loop');
+                // window.location.reload(); // DISABLED — use manual refresh instead
 
             } catch (error) {
                 console.error('Reset failed:', error);

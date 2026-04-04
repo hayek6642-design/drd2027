@@ -1,233 +1,366 @@
+/**
+ * watchdog-scene.js — FULLY CODED 3D Guardian Dog (no .glb, no GLTFLoader)
+ * Uses only Three.js primitives + MeshStandardMaterial for a rich, animated dog.
+ * Supports states: idle | watching | alert | healing
+ */
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-import { GLTFLoader } from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
-import { DRACOLoader } from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/DRACOLoader.js';
 
 export class WatchDogScene {
   constructor(container) {
     this.container = container;
+
     this.scene = new THREE.Scene();
-    
-    this.camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
-    this.camera.position.set(0, 3, 8);
-    this.camera.lookAt(0, 1, 0);
+    this.scene.fog = new THREE.FogExp2(0x080814, 0.06);
+
+    const w = container.clientWidth || 300;
+    const h = container.clientHeight || 300;
+
+    this.camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+    this.camera.position.set(0, 3.2, 8);
+    this.camera.lookAt(0, 1.2, 0);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    this.renderer.setSize(container.clientWidth, container.clientHeight);
+    this.renderer.setSize(w, h);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFShadowMap;
-    this.renderer.domElement.style.display = 'block';
-    this.renderer.domElement.style.width = '100%';
-    this.renderer.domElement.style.height = '100%';
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.domElement.style.cssText = 'display:block;width:100%;height:100%;';
     container.appendChild(this.renderer.domElement);
 
-    this.buildLighting();
-    
-    // 🛡️ LOAD THE REAL 3D MODEL (.glb)
-    this.loadGLBModel();
-    
-    const planeGeo = new THREE.PlaneGeometry(50, 50);
-    const planeMat = new THREE.ShadowMaterial({ opacity: 0.15 });
-    const plane = new THREE.Mesh(planeGeo, planeMat);
-    plane.rotation.x = -Math.PI / 2;
-    plane.receiveShadow = true;
-    this.scene.add(plane);
+    this._buildLighting();
+    this._buildFloor();
+    this._buildDog();
+
+    console.log('[WatchDogScene] ✅ Procedural guardian dog created (no GLB required)');
+    window.dispatchEvent(new CustomEvent('watchdog:model-loaded'));
   }
 
-  buildLighting() {
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-    this.dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+  // ─────────────────────────────────────────────
+  //  LIGHTING
+  // ─────────────────────────────────────────────
+  _buildLighting() {
+    // Ambient — cool purple night
+    this.scene.add(new THREE.AmbientLight(0x9966ff, 0.35));
+
+    // Main key light
+    this.dirLight = new THREE.DirectionalLight(0xffffff, 1.1);
     this.dirLight.position.set(5, 10, 5);
     this.dirLight.castShadow = true;
     this.dirLight.shadow.mapSize.set(1024, 1024);
+    this.dirLight.shadow.camera.near = 0.1;
+    this.dirLight.shadow.camera.far = 50;
     this.scene.add(this.dirLight);
-    
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.4);
-    this.scene.add(hemiLight);
 
-    this.glowLight = new THREE.PointLight(0x00ff88, 0, 10);
-    this.glowLight.position.set(0, 1, 0);
+    // Rim light (back-purple silhouette)
+    const rimLight = new THREE.DirectionalLight(0xb043ff, 0.7);
+    rimLight.position.set(-4, 6, -6);
+    this.scene.add(rimLight);
+
+    // Front fill
+    const fillLight = new THREE.PointLight(0x3355ff, 0.4, 20);
+    fillLight.position.set(0, 3, 7);
+    this.scene.add(fillLight);
+
+    // Guardian glow — driven by state
+    this.glowLight = new THREE.PointLight(0xb043ff, 0, 12);
+    this.glowLight.position.set(0, 2.2, 0);
     this.scene.add(this.glowLight);
+
+    // Eye-level dramatic light
+    this.eyeLight = new THREE.PointLight(0xb043ff, 0.6, 4);
+    this.eyeLight.position.set(0, 2.6, 2.8);
+    this.scene.add(this.eyeLight);
   }
 
-  async loadGLBModel() {
-    const loader = new GLTFLoader();
-    
-    // 🧬 Optional: Add Draco support for compressed models
-    const dracoLoader = new DRACOLoader();
-    dracoLoader.setDecoderPath('https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/');
-    loader.setDRACOLoader(dracoLoader);
+  // ─────────────────────────────────────────────
+  //  FLOOR + GUARDIAN RINGS
+  // ─────────────────────────────────────────────
+  _buildFloor() {
+    // Shadow-catch plane
+    const planeMat = new THREE.ShadowMaterial({ opacity: 0.25 });
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(50, 50), planeMat);
+    plane.rotation.x = -Math.PI / 2;
+    plane.receiveShadow = true;
+    this.scene.add(plane);
 
-    // 🛡️ AUTHORITATIVE MODEL PATH (with cache buster)
-    const modelPath = '/shared/watchdog-core/dog-3d-model.glb?v=' + Date.now();
-    
-    console.log('[WatchDogScene] 🛡️ Loading Authoritative GLB model from:', modelPath);
-    
-    try {
-      const gltf = await new Promise((resolve, reject) => {
-        loader.load(modelPath, (gltf) => {
-            console.log('[WatchDogScene] Model loaded successfully, processing scene...');
-            resolve(gltf);
-        }, (progress) => {
-            const percent = (progress.loaded / progress.total * 100).toFixed(0);
-            console.log(`[WatchDogScene] Loading progress: ${percent}%`);
-        }, (err) => {
-            console.error('[WatchDogScene] Error loading GLB:', err);
-            reject(err);
-        });
-      });
-      
-      this.dogGroup = gltf.scene;
-      
-      // 📐 Scale and position adjustment for the GLB model
-      // Increase scale to ensure visibility
-      this.dogGroup.scale.set(3, 3, 3);
-      this.dogGroup.position.set(0, 0.5, 0);
-      
-      // Traverse the model to enable shadows and find specific parts for animation
-      this.dogGroup.traverse((node) => {
-        if (node.isMesh) {
-          node.castShadow = true;
-          node.receiveShadow = true;
-          
-          // Map meshes to expected properties for the animator
-          // Note: These names are guesses based on standard GLB exports; 
-          // if they don't match, we fallback to the group structure.
-          if (node.name.toLowerCase().includes('head')) this.head = node;
-          if (node.name.toLowerCase().includes('body')) this.body = node;
-          if (node.name.toLowerCase().includes('tail')) this.tail = node;
-          if (node.name.toLowerCase().includes('eye_l')) this.leftEye = node;
-          if (node.name.toLowerCase().includes('eye_r')) this.rightEye = node;
-        }
-      });
-      
-      // Fallback: If parts aren't named, use the whole group as body/head for basic animation
-      if (!this.body) this.body = this.dogGroup;
-      if (!this.headGroup) this.headGroup = this.dogGroup; // Basic fallback
-      
-      // Create empty groups/meshes for parts that might be missing to prevent animator crashes
-      if (!this.neck) this.neck = new THREE.Group();
-      if (!this.headGroup) this.headGroup = new THREE.Group();
-      if (!this.tail) this.tail = new THREE.Group();
-      if (!this.tongue) this.tongue = new THREE.Group();
-      if (!this.leftEye) this.leftEye = new THREE.Group();
-      if (!this.rightEye) this.rightEye = new THREE.Group();
-      if (!this.leftEar) this.leftEar = new THREE.Group();
-      if (!this.rightEar) this.rightEar = new THREE.Group();
-      
-      this.scene.add(this.dogGroup);
-      console.log('[WatchDogScene] GLB model loaded successfully');
-      
-      // Signal animator that loading is complete
-      window.dispatchEvent(new CustomEvent('watchdog:model-loaded'));
-      
-    } catch (error) {
-      console.error('[WatchDogScene] Failed to load GLB model, falling back to primitive dog:', error);
-      this.loadDog(); // Fallback to the original primitive-based dog
-    }
+    // Outer guardian ring
+    this.guardianRing = new THREE.Mesh(
+      new THREE.RingGeometry(1.9, 2.3, 72),
+      new THREE.MeshBasicMaterial({
+        color: 0xb043ff,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.18
+      })
+    );
+    this.guardianRing.rotation.x = -Math.PI / 2;
+    this.guardianRing.position.y = 0.01;
+    this.scene.add(this.guardianRing);
+
+    // Inner ring
+    this.innerRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.7, 0.95, 64),
+      new THREE.MeshBasicMaterial({
+        color: 0xff77e9,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.12
+      })
+    );
+    this.innerRing.rotation.x = -Math.PI / 2;
+    this.innerRing.position.y = 0.02;
+    this.scene.add(this.innerRing);
   }
 
-  loadDog() {
-    // Original primitive-based dog implementation as fallback
+  // ─────────────────────────────────────────────
+  //  DOG CONSTRUCTION
+  // ─────────────────────────────────────────────
+  _buildDog() {
     this.dogGroup = new THREE.Group();
-    const bodyMat = new THREE.MeshStandardMaterial({ 
-      color: 0x8b4513, 
-      roughness: 0.5, 
-      metalness: 0.05 
-    });
-    const accentMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
-    const eyeMat = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.05, metalness: 0.9 });
-    const tongueMat = new THREE.MeshStandardMaterial({ color: 0xff66aa, roughness: 0.3 });
 
-    const torsoGeo = new THREE.SphereGeometry(0.7, 32, 32);
-    this.body = new THREE.Mesh(torsoGeo, bodyMat);
-    this.body.scale.set(1, 0.95, 1.8);
-    this.body.position.y = 1.2;
+    // ── Materials ──────────────────────────────
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: 0x1c1c30,
+      roughness: 0.7,
+      metalness: 0.18,
+      emissive: 0x110033,
+      emissiveIntensity: 0.15
+    });
+    const accentMat = new THREE.MeshStandardMaterial({
+      color: 0x2a2a44,
+      roughness: 0.8,
+      metalness: 0.05
+    });
+    const darkMat = new THREE.MeshStandardMaterial({
+      color: 0x101022,
+      roughness: 0.75,
+      metalness: 0.08
+    });
+    const noseMat = new THREE.MeshStandardMaterial({
+      color: 0x060608,
+      roughness: 0.35,
+      metalness: 0.05
+    });
+    // Eye material — emissive, updated per state
+    this.eyeMat = new THREE.MeshStandardMaterial({
+      color: 0x050508,
+      emissive: 0xb043ff,
+      emissiveIntensity: 2.0,
+      roughness: 0.05,
+      metalness: 0.9
+    });
+    const eyeMatR = this.eyeMat.clone(); // independent clone for right eye
+    const tongueMat = new THREE.MeshStandardMaterial({
+      color: 0xff66aa,
+      roughness: 0.4,
+      emissive: 0xff2266,
+      emissiveIntensity: 0.3
+    });
+
+    // ── Torso ──────────────────────────────────
+    this.body = new THREE.Mesh(new THREE.SphereGeometry(0.76, 20, 14), bodyMat);
+    this.body.scale.set(1.1, 0.88, 2.0);
+    this.body.position.y = 1.3;
     this.body.castShadow = true;
     this.dogGroup.add(this.body);
 
-    const neckGeo = new THREE.SphereGeometry(0.4, 32, 32);
-    this.neck = new THREE.Mesh(neckGeo, bodyMat);
-    this.neck.scale.set(1, 1.5, 1.2);
-    this.neck.position.set(0, 1.7, 1.0);
-    this.neck.rotation.x = -Math.PI / 6;
+    // Chest underside (lighter)
+    const chest = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 8), accentMat);
+    chest.scale.set(0.85, 0.7, 1.4);
+    chest.position.set(0, 1.0, 0.35);
+    this.dogGroup.add(chest);
+
+    // ── Neck ───────────────────────────────────
+    this.neck = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.5, 8, 12), bodyMat);
+    this.neck.position.set(0, 1.85, 0.98);
+    this.neck.rotation.x = -Math.PI / 4.5;
+    this.neck.castShadow = true;
     this.dogGroup.add(this.neck);
 
+    // ── Head group ─────────────────────────────
     this.headGroup = new THREE.Group();
-    this.headGroup.position.set(0, 2.3, 1.5);
-    const headGeo = new THREE.SphereGeometry(0.5, 32, 32);
-    this.head = new THREE.Mesh(headGeo, bodyMat);
-    this.head.scale.set(1, 1, 1.2);
+    this.headGroup.position.set(0, 2.42, 1.62);
+
+    // Skull
+    this.head = new THREE.Mesh(new THREE.SphereGeometry(0.47, 18, 14), bodyMat);
+    this.head.scale.set(1.0, 1.05, 1.18);
     this.head.castShadow = true;
     this.headGroup.add(this.head);
 
-    const muzzleGeo = new THREE.SphereGeometry(0.32, 32, 32);
-    const muzzle = new THREE.Mesh(muzzleGeo, bodyMat);
-    muzzle.scale.set(0.9, 0.8, 1.8);
-    muzzle.position.set(0, -0.2, 0.4);
+    // Forehead bump
+    const ridgeMesh = new THREE.Mesh(new THREE.SphereGeometry(0.17, 8, 6), bodyMat);
+    ridgeMesh.scale.set(1.3, 0.65, 1.0);
+    ridgeMesh.position.set(0, 0.3, 0.22);
+    this.headGroup.add(ridgeMesh);
+
+    // Muzzle (elongated shepherd snout)
+    const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.29, 14, 10), bodyMat);
+    muzzle.scale.set(0.82, 0.72, 1.7);
+    muzzle.position.set(0, -0.2, 0.52);
     this.headGroup.add(muzzle);
 
-    const noseGeo = new THREE.SphereGeometry(0.08, 16, 16);
-    const nose = new THREE.Mesh(noseGeo, accentMat);
-    nose.position.set(0, -0.15, 0.95);
+    // Nose tip (black)
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.085, 10, 8), noseMat);
+    nose.position.set(0, -0.11, 0.97);
     this.headGroup.add(nose);
 
-    const tongueGeo = new THREE.CapsuleGeometry(0.1, 0.2, 4, 8);
-    this.tongue = new THREE.Mesh(tongueGeo, tongueMat);
-    this.tongue.position.set(0, -0.35, 0.6);
+    // ── Ears (pointed, cone-based) ─────────────
+    const earGeo = new THREE.ConeGeometry(0.17, 0.52, 7);
+    const innerEarGeo = new THREE.ConeGeometry(0.09, 0.36, 7);
+    const innerEarMat = new THREE.MeshStandardMaterial({ color: 0x2a1830, roughness: 0.9 });
+
+    this.leftEar = new THREE.Mesh(earGeo, bodyMat);
+    this.leftEar.position.set(-0.34, 0.44, -0.04);
+    this.leftEar.rotation.set(-0.12, 0, 0.28);
+    this.leftEar.castShadow = true;
+
+    this.rightEar = new THREE.Mesh(earGeo, bodyMat);
+    this.rightEar.position.set(0.34, 0.44, -0.04);
+    this.rightEar.rotation.set(-0.12, 0, -0.28);
+    this.rightEar.castShadow = true;
+
+    const leftInner = new THREE.Mesh(innerEarGeo, innerEarMat);
+    leftInner.position.set(-0.34, 0.44, -0.02);
+    leftInner.rotation.set(-0.12, 0, 0.28);
+
+    const rightInner = new THREE.Mesh(innerEarGeo, innerEarMat);
+    rightInner.position.set(0.34, 0.44, -0.02);
+    rightInner.rotation.set(-0.12, 0, -0.28);
+
+    this.headGroup.add(this.leftEar, this.rightEar, leftInner, rightInner);
+
+    // ── Eyes ───────────────────────────────────
+    const eyeGeo = new THREE.SphereGeometry(0.068, 14, 12);
+    this.leftEye = new THREE.Mesh(eyeGeo, this.eyeMat);
+    this.leftEye.position.set(-0.21, 0.17, 0.5);
+
+    this.rightEye = new THREE.Mesh(eyeGeo, eyeMatR);
+    this.rightEye.position.set(0.21, 0.17, 0.5);
+
+    // Eye shine (tiny white dot)
+    const shineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const shineGeo = new THREE.SphereGeometry(0.022, 5, 4);
+    const lShine = new THREE.Mesh(shineGeo, shineMat);
+    lShine.position.set(-0.20, 0.19, 0.56);
+    const rShine = new THREE.Mesh(shineGeo, shineMat);
+    rShine.position.set(0.22, 0.19, 0.56);
+
+    this.headGroup.add(this.leftEye, this.rightEye, lShine, rShine);
+
+    // ── Tongue (hidden by default, shown in healing) ──
+    this.tongue = new THREE.Mesh(new THREE.CapsuleGeometry(0.085, 0.2, 4, 8), tongueMat);
+    this.tongue.position.set(0, -0.39, 0.64);
     this.tongue.rotation.x = Math.PI / 2;
     this.tongue.scale.set(0, 0, 0);
     this.headGroup.add(this.tongue);
 
-    const earGeo = new THREE.SphereGeometry(0.22, 32, 32);
-    this.leftEar = new THREE.Mesh(earGeo, bodyMat);
-    this.leftEar.scale.set(0.15, 1.8, 1.3);
-    this.leftEar.position.set(-0.48, 0.1, 0.1);
-    this.leftEar.rotation.set(0.3, 0, 0.35);
-    
-    this.rightEar = new THREE.Mesh(earGeo, bodyMat);
-    this.rightEar.scale.set(0.15, 1.8, 1.3);
-    this.rightEar.position.set(0.48, 0.1, 0.1);
-    this.rightEar.rotation.set(0.3, 0, -0.35);
-    this.headGroup.add(this.leftEar, this.rightEar);
-
-    const eyeGeo = new THREE.SphereGeometry(0.065, 16, 16);
-    this.leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-    this.leftEye.position.set(-0.22, 0.25, 0.5);
-    
-    this.rightEye = new THREE.Mesh(eyeGeo, eyeMat.clone());
-    this.rightEye.position.set(0.22, 0.25, 0.5);
-    this.headGroup.add(this.leftEye, this.rightEye);
-
     this.dogGroup.add(this.headGroup);
 
-    const legGeo = new THREE.CapsuleGeometry(0.16, 0.8, 8, 16);
+    // ── Collar ─────────────────────────────────
+    const collarMat = new THREE.MeshStandardMaterial({
+      color: 0xb043ff,
+      emissive: 0xb043ff,
+      emissiveIntensity: 1.0,
+      roughness: 0.25,
+      metalness: 0.75
+    });
+    this.collar = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.045, 8, 28), collarMat);
+    this.collar.rotation.x = Math.PI / 2;
+    this.collar.position.set(0, -0.18, 0.32);
+    this.neck.add(this.collar);
+
+    // Collar tag
+    const tagMat = new THREE.MeshStandardMaterial({
+      color: 0xffd700,
+      emissive: 0xff9900,
+      emissiveIntensity: 0.6,
+      metalness: 0.95,
+      roughness: 0.08
+    });
+    const tag = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.025, 8), tagMat);
+    tag.position.set(0, -0.35, 0.32);
+    this.neck.add(tag);
+
+    // ── Legs ───────────────────────────────────
     this.legs = [];
-    const legPos = [[-0.45, 0.5, 0.8], [0.45, 0.5, 0.8], [-0.45, 0.5, -0.8], [0.45, 0.5, -0.8]];
-    legPos.forEach(pos => {
-      const leg = new THREE.Mesh(legGeo, bodyMat);
-      leg.position.set(...pos);
-      leg.castShadow = true;
-      this.dogGroup.add(leg);
-      this.legs.push(leg);
+    this.legGroups = [];
+
+    // [x, z, isFront]
+    const legConfig = [
+      [-0.44, 0.82, true],
+      [ 0.44, 0.82, true],
+      [-0.44,-0.82, false],
+      [ 0.44,-0.82, false],
+    ];
+
+    legConfig.forEach(([x, z, isFront]) => {
+      const legGroup = new THREE.Group();
+      legGroup.position.set(x, 1.28, z);
+
+      // Thigh
+      const upper = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.38, 6, 10), bodyMat);
+      upper.position.y = -0.24;
+      upper.castShadow = true;
+      legGroup.add(upper);
+
+      // Lower leg (shin + paw) group — pivot at knee
+      const lowerGroup = new THREE.Group();
+      lowerGroup.position.y = -0.52;
+
+      const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.095, 0.36, 6, 8), darkMat);
+      shin.position.y = -0.2;
+      shin.castShadow = true;
+      lowerGroup.add(shin);
+
+      // Paw
+      const paw = new THREE.Mesh(new THREE.SphereGeometry(0.125, 8, 6), darkMat);
+      paw.scale.set(1.2, 0.55, 1.45);
+      paw.position.y = -0.44;
+      paw.castShadow = true;
+      paw.receiveShadow = true;
+      lowerGroup.add(paw);
+
+      legGroup.add(lowerGroup);
+      this.dogGroup.add(legGroup);
+      this.legs.push(legGroup);
+      this.legGroups.push({ group: legGroup, lower: lowerGroup, isFront });
     });
 
-    const tailGeo = new THREE.SphereGeometry(0.08, 16, 16);
-    this.tail = new THREE.Mesh(tailGeo, bodyMat);
-    this.tail.scale.set(1, 1, 9);
-    this.tail.position.set(0, 1.5, -1.0);
-    this.tail.rotation.x = -Math.PI / 2.5;
-    this.tail.castShadow = true;
-    this.dogGroup.add(this.tail);
+    // ── Tail (chain of spheres, curves upward) ──
+    this.tailGroup = new THREE.Group();
+    this.tailGroup.position.set(0, 1.5, -1.35);
+    this.tail = this.tailGroup; // animator references this.tail
+
+    const tailCount = 7;
+    this.tailSegments = [];
+    for (let i = 0; i < tailCount; i++) {
+      const t = i / (tailCount - 1);
+      const r = 0.11 * (1 - t * 0.65);
+      const seg = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 6), bodyMat);
+      // Arc: rises up then curves over
+      seg.position.set(
+        0,
+        t * 0.55 + 0.1,
+        -t * 0.5
+      );
+      seg.castShadow = true;
+      this.tailGroup.add(seg);
+      this.tailSegments.push(seg);
+    }
+    this.dogGroup.add(this.tailGroup);
 
     this.scene.add(this.dogGroup);
   }
 
+  // ─────────────────────────────────────────────
   resize() {
     if (!this.container) return;
-    this.camera.aspect = this.container.clientWidth / this.container.clientHeight;
+    const w = this.container.clientWidth;
+    const h = this.container.clientHeight;
+    if (!w || !h) return;
+    this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+    this.renderer.setSize(w, h);
   }
 
   destroy() {
@@ -235,13 +368,11 @@ export class WatchDogScene {
       this.container.removeChild(this.renderer.domElement);
     }
     this.renderer.dispose();
-    this.scene.traverse((obj) => {
+    this.scene.traverse(obj => {
       if (obj.isMesh) {
-        if (obj.geometry) obj.geometry.dispose();
-        if (obj.material) {
-          if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
-          else obj.material.dispose();
-        }
+        obj.geometry?.dispose();
+        if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+        else obj.material?.dispose();
       }
     });
   }

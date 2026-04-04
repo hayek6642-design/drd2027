@@ -117,6 +117,22 @@ export const CodeBankBridge = {
     } catch(_){}
   });
       __rehydrateFromSnapshot__();
+      // [FIX] Check for code already fetched before this module loaded (timing fix)
+      try {
+        if (!__LAST_LATEST_CODE__ && window.__PENDING_LATEST_CODE__) {
+          __LAST_LATEST_CODE__ = window.__PENDING_LATEST_CODE__;
+          __applyLatest__(window.__PENDING_LATEST_CODE__);
+        }
+      } catch(_) {}
+      // Also retry after a short delay to catch codes that arrive just after module init
+      setTimeout(function() {
+        try {
+          if (!__LAST_LATEST_CODE__ && window.__PENDING_LATEST_CODE__) {
+            __LAST_LATEST_CODE__ = window.__PENDING_LATEST_CODE__;
+            __applyLatest__(window.__PENDING_LATEST_CODE__);
+          }
+        } catch(_) {}
+      }, 1000);
       try {
         const targetContainer = document.getElementById('counter-container') || document.body;
         const mo = new MutationObserver(() => {

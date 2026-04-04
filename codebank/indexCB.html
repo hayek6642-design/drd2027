@@ -12,6 +12,25 @@
     <!-- Favicon -->
     <link rel="icon" href="data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAABILAAASCwAAAAAAAAAAAAD///8A////AP///wA=">
     
+    <!-- ✅ Prevent service iframes from triggering "Leave site?" dialog -->
+    <script>
+      (function suppressBeforeunload() {
+        // Intercept addEventListener to block beforeunload registrations
+        var _origAEL = EventTarget.prototype.addEventListener;
+        EventTarget.prototype.addEventListener = function(type, handler, opts) {
+          if (this === window && type === 'beforeunload') return; // silently discard
+          return _origAEL.call(this, type, handler, opts);
+        };
+        // Also block onbeforeunload property assignment
+        try {
+          Object.defineProperty(window, 'onbeforeunload', {
+            get: function() { return null; },
+            set: function() { /* silently discard */ },
+            configurable: false
+          });
+        } catch(e) {}
+      })();
+    </script>
     <!-- ⚡ EMERGENCY PERFORMANCE FIXES (Phase 1) -->
     <script src="./js/performance-monitor.js"></script>
     <script>
@@ -84,10 +103,10 @@
     <script type="module">
         import { AssetBus } from '/shared/local-asset-bus.js';
         
-        // 🛡️ Phase 2: Expose Single Source of Truth
-        if (window.self === window.top) { 
-            window.AssetBus = AssetBus; 
-            console.log("✅ AssetBus exposed globally"); 
+        // 🛡️ Phase 2: AssetBus is already set globally by local-asset-bus.js
+        // DO NOT reassign window.AssetBus — it is defined as writable:false
+        if (window.self === window.top && window.AssetBus) {
+            console.log("✅ AssetBus ready globally");
         }
         
         // 🛡️ Phase 3: Secure Event Dispatch
@@ -102,6 +121,7 @@
     <!-- Modular App Core -->
     <script type="module" src="/codebank/js/app-core.js"></script>
     <script src="/codebank/js/service-manager.js"></script>
+    <script src="/shared/single-session.js"></script>
     <script type="module" src="/codebank/js/sync-test.js"></script>
 
     <style>
@@ -664,37 +684,76 @@
             };
             
             function sendInitToIframe() {
+                // 🔧 FIX: Always re-query the iframe to avoid stale reference after DOM replacement
+                const iframeEl = document.getElementById('service-modal-iframe');
                 try {
-                    const user = JSON.parse(localStorage.getItem('user') || '{}');
+                    if (!iframeEl || !iframeEl.contentWindow) {
+                        console.warn('[CodeBank] sendInitToIframe: iframe not ready, skipping');
+                        return;
+                    }
                     
-                    // 🛡️ ARCHITECTURE ALIGNMENT: Get codes from AssetBus (Authoritative Runtime)
+                    // Get user from multiple possible localStorage keys
+                    let userData = null;
+                    try {
+                        userData = JSON.parse(localStorage.getItem('__cached_user__') || localStorage.getItem('user') || 'null');
+                    } catch(_) {}
+                    const sessionId = localStorage.getItem('session_token') || localStorage.getItem('__cached_session_id__') || '';
+                    
+                    // 🛡️ Get codes + full assets from AssetBus
                     let codes = [];
+                    let assetSnapshot = {};
                     if (window.AssetBus && typeof window.AssetBus.snapshot === 'function') {
                         const snap = window.AssetBus.snapshot();
                         codes = snap.codes || [];
+                        assetSnapshot = snap;
                     }
-                    
-                    // Fallback to localStorage if AssetBus is empty
                     if (!codes.length) {
-                        codes = JSON.parse(localStorage.getItem('safeCodes') || localStorage.getItem('bankode_codes') || '[]');
+                        try { codes = JSON.parse(localStorage.getItem('safeCodes') || localStorage.getItem('bankode_codes') || '[]'); } catch(_) {}
                     }
-                    
-                    modalIframe.contentWindow.postMessage({
-                        type: 'auth:ready',
-                        source: 'codebank-parent',
+
+                    const assetPayload = Object.assign({}, assetSnapshot, {
+                        codes_count:  Array.isArray(assetSnapshot.codes)  ? assetSnapshot.codes.length  : (assetSnapshot.codes_count  || 0),
+                        silver_count: Array.isArray(assetSnapshot.silver) ? assetSnapshot.silver.length : (assetSnapshot.silver_count || 0),
+                        gold_count:   Array.isArray(assetSnapshot.gold)   ? assetSnapshot.gold.length   : (assetSnapshot.gold_count   || 0),
+                    });
+
+                    // ① AUTH_RESPONSE — for iframe-auth-client.js (waits for this specific type)
+                    iframeEl.contentWindow.postMessage({
+                        type:          'AUTH_RESPONSE',
+                        authenticated: !!(userData && (userData.uid || userData.id || userData.email)),
+                        userId:        userData?.uid || userData?.id || userData?.email || null,
+                        sessionId:     sessionId,
+                        user:          userData,
+                        timestamp:     Date.now()
+                    }, '*');
+
+                    // ② assets:sync — for bridge bar
+                    iframeEl.contentWindow.postMessage({
+                        type:   'assets:sync',
+                        assets: assetPayload
+                    }, '*');
+
+                    // ③ auth:ready — for older services (auth-ready-component pattern)
+                    iframeEl.contentWindow.postMessage({
+                        type:      'auth:ready',
+                        source:    'codebank-parent',
                         serviceId: currentServiceUrl,
                         payload: {
-                            user: user,
-                            codes: codes,
+                            user:      userData,
+                            codes:     codes,
+                            assets:    assetPayload,
                             timestamp: Date.now()
                         }
                     }, '*');
                     
-                    console.log('[CodeBank] Sent auth:ready to iframe with', codes.length, 'codes');
+                    console.log('[CodeBank] Sent AUTH_RESPONSE + auth:ready + assets:sync to iframe');
                 } catch (e) {
                     console.error('[CodeBank] Failed to send init:', e);
                 }
             }
+            
+            // 🔧 FIX: Expose globally so app-launcher.js can call it after iframe loads
+            window.sendInitToIframe = sendInitToIframe;
             
             function closeServiceModal() {
                 modal.classList.remove('active');
@@ -730,11 +789,19 @@
             
             // Listen for messages from iframe
             window.addEventListener('message', (e) => {
+                // 🔧 FIX: Handle AUTH_REQUEST from iframe-auth-client.js — respond with AUTH_RESPONSE
+                if (e.data?.type === 'AUTH_REQUEST' || e.data?.type === 'AUTH_REFRESH' || e.data?.type === 'IFRAME_READY') {
+                    console.log('[CodeBank] Auth request from service iframe:', e.data.type);
+                    sendInitToIframe();
+                    return;
+                }
+                
                 // Forward AUTH_SYNC to the service iframe
                 if (e.data?.type === 'AUTH_SYNC' || e.data?.type === 'AUTH_CONTEXT') {
                     console.log('[CodeBank] Forwarding auth message to service iframe');
-                    if (modalIframe && modalIframe.contentWindow) {
-                        modalIframe.contentWindow.postMessage(e.data, '*');
+                    const currentIframe = document.getElementById('service-modal-iframe');
+                    if (currentIframe && currentIframe.contentWindow) {
+                        currentIframe.contentWindow.postMessage(e.data, '*');
                     }
                 }
 
@@ -747,11 +814,137 @@
                     console.log('[CodeBank] SafeCode specifically reports ready');
                     modalLoading.classList.add('hidden');
                 }
+
+                // ── ACC Asset handling ──────────────────────────────────────
+                if (e.data?.type === 'assets:request') {
+                    // Service is asking for the current asset snapshot
+                    sendInitToIframe();
+                }
+
+                if (e.data?.type === 'assets:spend') {
+                    _handleAssetSpend(e.data);
+                }
+
+                if (e.data?.type === 'assets:earn') {
+                    _handleAssetEarn(e.data);
+                }
             });
             
             // Legacy compatibility - redirect old calls to new modal
             window.openServiceLegacy = window.openService;
-            
+
+            // ── ACC: Build normalised snapshot helper ──────────────────────
+            function _buildAssetPayload(snap) {
+                if (!snap) return {};
+                return Object.assign({}, snap, {
+                    codes_count:  Array.isArray(snap.codes)  ? snap.codes.length  : (snap.codes_count  || 0),
+                    silver_count: Array.isArray(snap.silver) ? snap.silver.length : (snap.silver_count || 0),
+                    gold_count:   Array.isArray(snap.gold)   ? snap.gold.length   : (snap.gold_count   || 0),
+                });
+            }
+
+            // ── ACC: Push fresh assets to the open service iframe ──────────
+            function _pushAssetsToService() {
+                // 🔧 FIX: Always re-query iframe to avoid stale reference
+                const currentIframe = document.getElementById('service-modal-iframe');
+                if (!currentIframe || !currentIframe.contentWindow) return;
+                if (!modal.classList.contains('active')) return;
+                const snap = window.AssetBus ? window.AssetBus.snapshot() : null;
+                if (!snap) return;
+                currentIframe.contentWindow.postMessage({
+                    type:   'assets:sync',
+                    assets: _buildAssetPayload(snap)
+                }, '*');
+            }
+
+            // ── ACC: Handle spend request from service ─────────────────────
+            async function _handleAssetSpend(data) {
+                const { reqId, assetType, amount, serviceId, reason } = data;
+                let success = false;
+                let err = '';
+
+                try {
+                    // Map like/super/mega to the AssetBus counter names
+                    const fieldMap = { like: 'likes', super: 'superlikes', mega: 'superlikes', superlike: 'superlikes', megalike: 'superlikes' };
+                    const field = fieldMap[assetType] || assetType;
+
+                    if (window.AssetBus) {
+                        const snap = window.AssetBus.snapshot();
+                        const current = parseInt(snap[field]) || 0;
+                        const cost    = parseInt(amount)       || 1;
+                        if (current >= cost) {
+                            const upd = Object.assign({}, snap);
+                            upd[field] = current - cost;
+                            await window.AssetBus.update(upd, 'service-spend');
+                            success = true;
+                        } else {
+                            err = 'Insufficient ' + field;
+                        }
+                    } else {
+                        err = 'AssetBus unavailable';
+                    }
+                } catch (e) {
+                    err = e.message;
+                }
+
+                const freshSnap = window.AssetBus ? window.AssetBus.snapshot() : {};
+                const _spendIframe = document.getElementById('service-modal-iframe');
+                if (_spendIframe && _spendIframe.contentWindow) {
+                    _spendIframe.contentWindow.postMessage({
+                        type:    'assets:spend:result',
+                        reqId:   reqId,
+                        success: success,
+                        error:   err,
+                        assets:  _buildAssetPayload(freshSnap)
+                    }, '*');
+                }
+            }
+
+            // ── ACC: Handle earn request from service ──────────────────────
+            async function _handleAssetEarn(data) {
+                const { reqId, assetType, amount, serviceId, reason } = data;
+                let success = false;
+
+                try {
+                    const fieldMap = { like: 'likes', super: 'superlikes', games: 'games' };
+                    const field = fieldMap[assetType] || assetType;
+
+                    if (window.AssetBus) {
+                        const snap  = window.AssetBus.snapshot();
+                        const upd   = Object.assign({}, snap);
+                        upd[field]  = (parseInt(upd[field]) || 0) + (parseInt(amount) || 1);
+                        await window.AssetBus.update(upd, 'service-earn');
+                        success = true;
+                    }
+                } catch (e) {}
+
+                const freshSnap = window.AssetBus ? window.AssetBus.snapshot() : {};
+                const _earnIframe = document.getElementById('service-modal-iframe');
+                if (_earnIframe && _earnIframe.contentWindow) {
+                    _earnIframe.contentWindow.postMessage({
+                        type:    'assets:earn:result',
+                        reqId:   reqId,
+                        success: success,
+                        assets:  _buildAssetPayload(freshSnap)
+                    }, '*');
+                }
+            }
+
+            // ── ACC: Subscribe AssetBus → push to open service on every update ──
+            window.addEventListener('assetbus:ready', function () {
+                if (window.AssetBus && typeof window.AssetBus.subscribe === 'function') {
+                    window.AssetBus.subscribe('assets:updated', function () {
+                        _pushAssetsToService();
+                    });
+                }
+            });
+            // Also try subscribing immediately in case AssetBus is already ready
+            if (window.AssetBus && typeof window.AssetBus.subscribe === 'function') {
+                window.AssetBus.subscribe('assets:updated', function () {
+                    _pushAssetsToService();
+                });
+            }
+
             console.log('[CodeBank] Service Manager initialized');
         })();
 
@@ -927,23 +1120,177 @@
             if (signOutBtn) {
                 signOutBtn.addEventListener('click', async () => {
                     console.log('🔓 Signing out...');
-                    
-                    // 1. Remove session active flag
+
+                    // 1. Clear ALL cached auth & user-specific data
                     localStorage.removeItem('session_active');
-                    
-                    // 2. Optional: Notify backend
+                    localStorage.removeItem('session_token');
+                    localStorage.removeItem('user_data');
+                    localStorage.removeItem('__cached_user__');
+                    localStorage.removeItem('__cached_session_id__');
+                    localStorage.removeItem('auth_timestamp');
+                    localStorage.removeItem('safeCodes');
+                    localStorage.removeItem('bankode_codes');
+                    localStorage.removeItem('last_reload_time');
+                    try { document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax'; } catch(_){}
+
+                    // 2. Clear IndexedDB snapshots so next user starts fresh
                     try {
-                        await fetch('/api/auth/logout', { method: 'POST' });
+                        var idbReq = indexedDB.open('CodeBankSnapshotDB', 1);
+                        idbReq.onsuccess = function() {
+                            try {
+                                var db = idbReq.result;
+                                var tx = db.transaction('snapshots', 'readwrite');
+                                tx.objectStore('snapshots').clear();
+                                db.close();
+                            } catch(_) {}
+                        };
+                    } catch(_) {}
+
+                    // 3. Notify backend
+                    try {
+                        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
                     } catch (e) {
                         console.warn('Logout notification failed:', e);
                     }
-                    
-                    // 3. Redirect to login
+
+                    // 4. Redirect to login
                     window.location.href = '/login.html';
                 });
             }
         })();
     </script>
+
+<script>
+// =====================================================
+// MIRROR MODE for CodeBank (indexCB.html)
+// Only ONE button is active in mirror mode:
+//   → "Switch Device" floating button
+// Every other button/link is silently blocked.
+// =====================================================
+(function() {
+  var _role = null;      // 'primary' | 'mirror'
+  var _sseConn = null;
+
+  async function initCBMirror() {
+    return; // [DISABLED] Mirror mode / Switch Device button disabled per user request
+    try {
+      var res = await fetch('/api/mirror/register-role', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      var data = await res.json();
+      _role = data.role || 'primary';
+
+      if (_role === 'mirror') {
+        _installCBBlocker();
+        _addSwitchBtn(data.primaryLabel || 'Primary Device');
+        _connectSSE();
+      }
+    } catch(e) {
+      _role = 'primary'; // fail-safe
+    }
+  }
+
+  function _installCBBlocker() {
+    var handler = function(e) {
+      if (_role !== 'mirror') return;
+      var switchBtn = document.getElementById('mirror-switch-btn');
+      if (switchBtn && (e.target === switchBtn || switchBtn.contains(e.target))) return;
+      e.stopPropagation();
+      e.preventDefault();
+    };
+    document.addEventListener('click', handler, true);
+    document.addEventListener('touchstart', handler, { capture: true, passive: false });
+    document.addEventListener('touchend', handler, { capture: true, passive: false });
+  }
+
+  function _addSwitchBtn(primaryLabel) {
+    // Mirror banner at top
+    var banner = document.createElement('div');
+    banner.style.cssText = [
+      'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:2147483646',
+      'background:rgba(35,134,54,0.93)', 'color:#fff',
+      'text-align:center', 'font-family:-apple-system,sans-serif',
+      'font-size:13px', 'padding:8px 16px', 'pointer-events:none'
+    ].join(';');
+    banner.textContent = '📡 Mirror Mode · Mirroring ' + primaryLabel;
+    document.body.appendChild(banner);
+
+    // Floating Switch Device button
+    var btn = document.createElement('button');
+    btn.id = 'mirror-switch-btn';
+    btn.innerHTML = '🔄 Switch Device';
+    btn.style.cssText = [
+      'position:fixed', 'bottom:96px', 'left:50%',
+      'transform:translateX(-50%)',
+      'background:linear-gradient(135deg,#238636,#1a7f37)',
+      'color:#fff', 'border:none', 'border-radius:50px',
+      'padding:15px 36px', 'font-size:15px', 'font-weight:700',
+      'cursor:pointer', 'z-index:2147483647',
+      'box-shadow:0 4px 24px rgba(35,134,54,0.5)',
+      'letter-spacing:0.3px', 'white-space:nowrap'
+    ].join(';');
+
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      e.preventDefault();
+      _doSwitch();
+    }, true);
+
+    document.body.appendChild(btn);
+  }
+
+  async function _doSwitch() {
+    try {
+      // Notify parent window (when inside iframe)
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'MIRROR_SWITCH_DEVICE' }, '*');
+      }
+      // Also call API directly (belt + suspenders)
+      var res = await fetch('/api/mirror/switch', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      var data = await res.json();
+      if (data.role === 'primary') {
+        _role = 'primary';
+        var btn = document.getElementById('mirror-switch-btn');
+        if (btn) btn.remove();
+        // Reload to unlock all interactions
+        window.location.reload();
+      }
+    } catch(e) {}
+  }
+
+  function _connectSSE() {
+    if (_sseConn) return;
+    try {
+      _sseConn = new EventSource('/events', { withCredentials: true });
+      _sseConn.onmessage = function(ev) {
+        try {
+          var d = JSON.parse(ev.data);
+          // If we were demoted to mirror while we thought we were primary
+          if (d.type === 'PRIMARY_SWITCHED' && _role === 'primary') {
+            _role = 'mirror';
+            window.location.reload();
+          }
+          // If a role change happened and we might be the new primary
+          if (d.type === 'ROLE_CHANGED' && _role === 'mirror') {
+            // Parent frame will handle this; reload for clean state
+            window.location.reload();
+          }
+        } catch(_) {}
+      };
+    } catch(_) {}
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCBMirror);
+  } else {
+    initCBMirror();
+  }
+})();
+</script>
 
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">

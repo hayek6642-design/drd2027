@@ -56,8 +56,12 @@
       });
      </script>
 
-     <!-- External Libraries -->
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- External Libraries -->
      <script src="https://cdn.jsdelivr.net/npm/@capacitor/core/dist/capacitor.js"></script>
+     <!-- Native Bridge & Storage for Capacitor mobile builds -->
+     <script src="/src/native-bridge.js"></script>
+     <script src="/src/native-storage.js"></script>
      <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
      <script src="https://unpkg.com/parse@6.1.1/dist/parse.min.js"></script>
@@ -1855,6 +1859,51 @@
 </head>
 
 <body class="bg-light">
+<!-- ==========================================
+     SINGLE SESSION OVERLAYS (WhatsApp-like)
+     ========================================== -->
+
+<!-- Conflict Overlay: shown when another device is already active -->
+<div id="session-conflict-overlay" style="display:none;position:fixed;inset:0;background:rgba(13,17,23,0.98);z-index:99999998;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:-apple-system,BlinkMacSystemFont,sans-serif;text-align:center;padding:20px;">
+  <div style="max-width:380px;width:100%;">
+    <div style="font-size:52px;margin-bottom:16px;">📱🔒</div>
+    <h2 style="color:#ff6b6b;margin:0 0 10px;font-size:20px;">DR.D is already open</h2>
+    <p id="conflict-device-label" style="color:#8b949e;margin:0 0 28px;font-size:14px;line-height:1.5;">Your account is currently active on another device.</p>
+
+    <button id="session-takeover-btn" onclick="window.__sessionMgr && window.__sessionMgr.takeOver()" style="width:100%;padding:15px;background:#238636;border:none;border-radius:10px;color:white;font-size:15px;font-weight:bold;cursor:pointer;margin-bottom:12px;transition:opacity .2s;">
+      ⚡ Switch to This Device
+    </button>
+
+    <button id="session-qr-btn" onclick="window.__sessionMgr && window.__sessionMgr.startQRLink()" style="width:100%;padding:14px;background:transparent;border:1.5px solid #30363d;border-radius:10px;color:#58a6ff;font-size:14px;cursor:pointer;margin-bottom:28px;">
+      📷 Open via QR Code (scan from your phone)
+    </button>
+
+    <!-- QR Display Section -->
+    <div id="session-qr-section" style="display:none;">
+      <p style="color:#8b949e;font-size:13px;margin-bottom:14px;">Open your phone camera and scan this code:</p>
+      <div id="session-qr-canvas" style="background:white;padding:14px;border-radius:12px;display:inline-block;margin-bottom:12px;"></div>
+      <p id="session-qr-status" style="color:#58a6ff;font-size:13px;margin:8px 0;">Waiting for scan...</p>
+      <p style="color:#444;font-size:11px;">Expires in 5 minutes</p>
+    </div>
+  </div>
+</div>
+
+<!-- Kicked Overlay: shown when this device is taken over by another -->
+<div id="session-kicked-overlay" style="display:none;position:fixed;inset:0;background:rgba(13,17,23,0.99);z-index:99999999;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:-apple-system,BlinkMacSystemFont,sans-serif;text-align:center;padding:20px;">
+  <div style="max-width:360px;width:100%;">
+    <div style="font-size:52px;margin-bottom:16px;">👋</div>
+    <h2 style="color:#ff9500;margin:0 0 10px;font-size:20px;">Session Transferred</h2>
+    <p id="kicked-msg" style="color:#8b949e;margin:0 0 28px;font-size:14px;line-height:1.5;">Your session was transferred to another device.</p>
+    <button onclick="window.location.reload()" style="width:100%;padding:15px;background:#238636;border:none;border-radius:10px;color:white;font-size:15px;font-weight:bold;cursor:pointer;margin-bottom:12px;">
+      🔄 Use DR.D on This Device
+    </button>
+    <button onclick="window.location.href='/login.html'" style="width:100%;padding:14px;background:transparent;border:1.5px solid #30363d;border-radius:10px;color:#8b949e;font-size:13px;cursor:pointer;">
+      Log Out
+    </button>
+  </div>
+</div>
+
+
     <!--  Loading Overlay (Initially Hidden, Activated by Script) -->
     <div id="loading-overlay">
         <div class="loading-text">جارِ التهيئة</div>
@@ -2039,6 +2088,13 @@
                         var snapshot = { latest: latest, rows: data.rows };
                         try { window.dispatchEvent(new CustomEvent('sqlite:snapshot', { detail: snapshot })); } catch(_){}
                         try { window.UVLog && window.UVLog('sqlite:snapshot:emit', snapshot, 'yt-new-clear') } catch(_){}
+                        // [FIX] Store globally for codebank-bridge.js (timing: bridge module may load after this fires)
+                        if (latest) {
+                            window.__PENDING_LATEST_CODE__ = latest;
+                            if (typeof window.updateCodeDisplay === 'function') {
+                                window.updateCodeDisplay(latest);
+                            }
+                        }
                         return true;
                     }
                     return false;
@@ -2060,8 +2116,14 @@
                     try {
                         var okAuth = !!(e && e.detail && e.detail.authenticated);
                         if (!okAuth) {
-                            // [FIX] auth:ready fired with unauthenticated — redirect to login
-                            // (checkAuth may have already done this; guard prevents double redirect)
+                            // [FIX] Only redirect if NO cached session exists
+                            const _cachedUser = localStorage.getItem('__cached_user__') || localStorage.getItem('user_data');
+                            const _cachedToken = localStorage.getItem('session_token');
+                            if (_cachedUser && _cachedToken) {
+                                // Cached session exists — don't redirect; background verify handles it
+                                console.warn('[AUTH] auth:ready unauthenticated but cached session exists, NOT redirecting');
+                                return;
+                            }
                             if (!window.__authReadyRedirected) {
                                 window.__authReadyRedirected = true;
                                 console.warn('[AUTH] auth:ready unauthenticated — redirecting to login');
@@ -2078,6 +2140,36 @@
                             for (var i=0;i<attempts;i++){ if (await fn()) return true; await sleep(delay) }
                             return false;
                         }
+
+                        // [CROSS-DEVICE FIX] SSE EventSource for real-time cross-device sync.
+                        // When ANY device earns a code, server emits CODES_RECEIVED to ALL devices.
+                        // All connected sessions (phone, computer, tablet) immediately re-fetch
+                        // from the DB and show the same codes — like a mirror, not separate users.
+                        try {
+                            if (!window.__sseSource) {
+                                var _sseSource = new EventSource('/events', { withCredentials: true });
+                                window.__sseSource = _sseSource;
+                                _sseSource.onmessage = async function(evnt) {
+                                    try {
+                                        var d = JSON.parse(evnt.data);
+                // [SINGLE-SESSION] Handle session conflict events
+                try { if (window.__sessionMgr) window.__sessionMgr.handleSSEMessage(d); } catch(_) {}
+                try { if (window.__mirrorManager) window.__mirrorManager.handleSSEMessage(d); } catch(_) {}
+                                        if (d && (d.type === 'CODES_RECEIVED' || d.type === 'ASSET_UPDATE')) {
+                                            console.log('[SSE] Cross-device sync:', d.type, '— re-fetching codes');
+                                            await fetchSqliteCodesFirst();
+                                            try { if (window.AssetBus && typeof window.AssetBus.sync === 'function') {
+                                                setTimeout(function(){ try { window.AssetBus.sync(); } catch(_){} }, 500);
+                                            }} catch(_){}
+                                        }
+                                    } catch(_) {}
+                                };
+                                _sseSource.onerror = function() {
+                                    try { if (_sseSource.readyState === EventSource.CLOSED) { window.__sseSource = null; } } catch(_){}
+                                };
+                            }
+                        } catch(_) {}
+
                         var ok = await tryWithRetry(fetchSqliteCodesFirst, 3, 1200);
                         if (ok) return;
                         setTimeout(async function(){ try { await tryWithRetry(fetchSqliteCodesFirst, 3, 1500) } catch(_){} }, 2500);
@@ -2279,6 +2371,7 @@
     <!-- modules: migrated from yt-coder to yt-clear -->
     <!-- 1. Core -->
     <script src="/shared/auth-core.js"></script>
+    <script src="/shared/single-session.js"></script>
     
     <!-- 2. Layout (creates video-container) -->
     <script type="module" src="/layout-bootstrap.js"></script>
@@ -2349,6 +2442,41 @@
             (async function checkAuth() {
                 if (window.location.pathname.includes('login.html')) return;
                 try {
+                    // [FIX] Restore session token from localStorage to cookie BEFORE server check
+                    // This ensures the cookie is present even after mobile browser restarts
+                    const localToken = localStorage.getItem('session_token');
+                    const cachedUser = localStorage.getItem('__cached_user__') || localStorage.getItem('user_data');
+                    if (localToken) {
+                        const cookieHasToken = document.cookie.indexOf('session_token=') !== -1;
+                        if (!cookieHasToken) {
+                            document.cookie = `session_token=${localToken}; path=/; max-age=${7*24*60*60}; SameSite=Lax`;
+                        }
+                    }
+                    // [FIX] If we have cached auth, trust it and verify in background (keeps user logged in on reopen)
+                    if (localToken && cachedUser) {
+                        console.log('[AUTH] Cached session found, app will load. Background verification running...');
+                        (async function bgVerify(){
+                            try {
+                                const _ctrl2 = new AbortController();
+                                const _tid2 = setTimeout(() => _ctrl2.abort(), 8000);
+                                let r2;
+                                try {
+                                    r2 = await fetch('/api/auth/me', { credentials: 'include', signal: _ctrl2.signal });
+                                } finally { clearTimeout(_tid2); }
+                                if (r2 && r2.ok) {
+                                    const d2 = await r2.json();
+                                    if (d2 && d2.user) {
+                                        console.log('[AUTH] Background verify: session confirmed', d2.user.username || d2.user.id);
+                                        return;
+                                    }
+                                }
+                                console.warn('[AUTH] Background verify: server unauthenticated, but cached session exists. Not redirecting.');
+                            } catch(e2) {
+                                console.warn('[AUTH] Background verify failed (network?):', e2.message);
+                            }
+                        })();
+                        return; // Let app load with cached session
+                    }
                     const _ctrl = new AbortController();
                     const _tid = setTimeout(() => _ctrl.abort(), 8000);
                     let res;
@@ -2512,12 +2640,16 @@ document.addEventListener('DOMContentLoaded', async function(){
     <script>
         (function(){
             async function ensureUser(){
+                // [CROSS-DEVICE FIX] Do NOT fall back to /api/auth/dev-login.
+                // That endpoint creates a brand-new random userId each time it's called,
+                // which makes the phone and computer look like two completely different users.
+                // If /api/me fails, return null so the balloon engine simply doesn't run
+                // until the user properly logs in.
                 try {
                     const r = await fetch('/api/me', { credentials: 'include' }).then(x=>x.json());
                     if (r && r.user && r.user.id) return r.user.id;
-                    const d = await fetch('/api/auth/dev-login', { method: 'POST', credentials: 'include' }).then(x=>x.json());
-                    return d && d.userId ? d.userId : null;
-                } catch(_){ return null }
+                } catch(_){}
+                return null;
             }
             async function init(){
                 const uid = await ensureUser();
@@ -2797,6 +2929,470 @@ document.addEventListener('DOMContentLoaded', async function(){
             updateUI(last, 'initial-bankode');
           }
         }, 1500);
+      });
+    })();
+    </script>
+
+<script>
+// ================================================================
+// SINGLE ACTIVE SESSION MANAGER (WhatsApp-like) — drd2027
+// ================================================================
+(function() {
+  'use strict';
+  var _heartbeatTimer = null;
+  var _qrPollTimer = null;
+  var _currentQrToken = null;
+
+  function showEl(id, flex) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = flex ? 'flex' : 'block';
+  }
+  function hideEl(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  }
+  function setText(id, txt) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = txt;
+  }
+
+  // ---- Heartbeat (keep active session alive) ----
+  function startHeartbeat() {
+    if (_heartbeatTimer) return;
+    _heartbeatTimer = setInterval(function() {
+      try {
+        fetch('/api/session/heartbeat', { method: 'POST', credentials: 'include' }).catch(function(){});
+      } catch(_) {}
+    }, 30000);
+    console.log('[SESSION] Heartbeat started.');
+  }
+  function stopHeartbeat() {
+    if (_heartbeatTimer) { clearInterval(_heartbeatTimer); _heartbeatTimer = null; }
+  }
+
+  // ---- Conflict UI ----
+  function showConflict(activeDevice) {
+    setText('conflict-device-label', 'Your account is currently active on: ' + (activeDevice || 'another device'));
+    showEl('session-conflict-overlay', true);
+  }
+  function hideConflict() { hideEl('session-conflict-overlay'); }
+
+  function showKicked(msg) {
+    setText('kicked-msg', msg || 'Your session was transferred to another device.');
+    showEl('session-kicked-overlay', true);
+  }
+
+  // ---- Register device ----
+  async function registerDevice() {
+    try {
+      var res = await fetch('/api/session/register-device', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      var data = await res.json();
+      if (data.status === 'conflict') {
+        showConflict(data.activeDevice);
+        return false;
+      }
+      startHeartbeat();
+      return true;
+    } catch(e) {
+      console.warn('[SESSION] register-device error:', e);
+      return true; // Allow access on network error
+    }
+  }
+
+  // ---- Take over ----
+  async function takeOver() {
+    try {
+      var btn = document.getElementById('session-takeover-btn');
+      if (btn) { btn.textContent = 'Switching...'; btn.style.opacity = '0.6'; btn.disabled = true; }
+      await fetch('/api/session/takeover', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      hideConflict();
+      startHeartbeat();
+      // Re-fetch codes for this device
+      try { if (typeof fetchSqliteCodesFirst === 'function') fetchSqliteCodesFirst(); } catch(_) {}
+    } catch(e) {
+      var btn = document.getElementById('session-takeover-btn');
+      if (btn) { btn.textContent = '⚡ Switch to This Device'; btn.style.opacity = '1'; btn.disabled = false; }
+    }
+  }
+
+  // ---- QR Link ----
+  async function startQRLink() {
+    try {
+      var qrSection = document.getElementById('session-qr-section');
+      var qrCanvas = document.getElementById('session-qr-canvas');
+      var qrStatus = document.getElementById('session-qr-status');
+
+      if (qrSection) qrSection.style.display = 'block';
+      if (qrCanvas) qrCanvas.innerHTML = '<p style="color:#666;font-size:13px">Generating QR...</p>';
+
+      var res = await fetch('/api/session/qr/generate', { credentials: 'include' });
+      var data = await res.json();
+      if (!data || !data.qrUrl) throw new Error('No QR URL returned');
+
+      _currentQrToken = data.token;
+
+      // Render QR
+      if (qrCanvas) {
+        qrCanvas.innerHTML = '';
+        try {
+          new QRCode(qrCanvas, {
+            text: data.qrUrl, width: 200, height: 200,
+            colorDark: '#000000', colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.H
+          });
+        } catch(_) {
+          // Fallback: clickable link
+          qrCanvas.innerHTML = '<a href="' + data.qrUrl + '" target="_blank" style="color:#58a6ff;font-size:11px;word-break:break-all">Tap to open link</a>';
+        }
+      }
+      if (qrStatus) qrStatus.textContent = 'Scan with your phone camera...';
+
+      // Poll for approval
+      if (_qrPollTimer) clearInterval(_qrPollTimer);
+      _qrPollTimer = setInterval(async function() {
+        try {
+          var sr = await fetch('/api/session/qr/status/' + _currentQrToken, { credentials: 'include' });
+          var sd = await sr.json();
+          if (sd.status === 'approved') {
+            clearInterval(_qrPollTimer);
+            if (qrStatus) qrStatus.textContent = '✅ Linked! Connecting...';
+            setTimeout(function() {
+              hideConflict();
+              startHeartbeat();
+              try { if (typeof fetchSqliteCodesFirst === 'function') fetchSqliteCodesFirst(); } catch(_) {}
+            }, 1000);
+          } else if (sd.status === 'expired') {
+            clearInterval(_qrPollTimer);
+            if (qrStatus) qrStatus.textContent = '⏰ QR expired. Click the button again to retry.';
+          }
+        } catch(_) {}
+      }, 2000);
+
+    } catch(e) {
+      var qrStatus = document.getElementById('session-qr-status');
+      if (qrStatus) qrStatus.textContent = '❌ Failed to generate QR. Please try again.';
+      console.error('[SESSION] QR error:', e);
+    }
+  }
+
+  // ---- SSE takeover handler (called from SSE message handler) ----
+  function handleSSEMessage(d) {
+    if (!d) return;
+    if (d.type === 'SESSION_TAKEN_OVER') {
+      stopHeartbeat();
+      showKicked(d.message || 'Your session was transferred to another device.');
+    }
+    if (d.type === 'QR_APPROVED') {
+      if (_qrPollTimer) { clearInterval(_qrPollTimer); _qrPollTimer = null; }
+      hideConflict();
+      startHeartbeat();
+      try { if (typeof fetchSqliteCodesFirst === 'function') fetchSqliteCodesFirst(); } catch(_) {}
+    }
+  }
+
+  // ---- Expose globally ----
+  window.__sessionMgr = {
+    registerDevice: registerDevice,
+    takeOver: takeOver,
+    startQRLink: startQRLink,
+    handleSSEMessage: handleSSEMessage,
+    showKicked: showKicked
+  };
+
+  // ---- Run on auth:ready ----
+  window.addEventListener('auth:ready', function(e) {
+    try {
+      if (!(e && e.detail && e.detail.authenticated === true)) return;
+      registerDevice();
+    } catch(_) {}
+  });
+
+})();
+</script>
+
+<script>
+// =====================================================
+// MIRROR MANAGER — Primary / Mirror role system
+// Device A = full control. Device B = read-only mirror.
+// Only 2 buttons active on mirror:
+//   1. play-pause  →  opens CodeBank
+//   2. Switch Device (inside CodeBank)  →  takes control
+// =====================================================
+(function() {
+  window.__mirrorManager = {
+    role: null,          // 'primary' | 'mirror'
+    primaryLabel: null,
+    _stateTimer: null,
+    _heartbeatIv: null,
+    _mo: [],             // MutationObservers
+
+    async init() {
+      try {
+        const res = await fetch('/api/mirror/register-role', {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (!res.ok) { this.role = 'primary'; this._startPrimary(); return; }
+        const data = await res.json();
+        this.role = data.role || 'primary';
+        this.primaryLabel = data.primaryLabel || null;
+
+        if (this.role === 'primary') {
+          this._startPrimary();
+        } else {
+          this._startMirror(data.state || {});
+        }
+      } catch(e) {
+        this.role = 'primary';
+        this._startPrimary();
+      }
+    },
+
+    _startPrimary() {
+      // Keep-alive heartbeat every 30s
+      this._heartbeatIv = setInterval(() => {
+        fetch('/api/mirror/heartbeat', { method: 'POST', credentials: 'include' }).catch(() => {});
+      }, 30000);
+      // State broadcaster (after DOM ready)
+      const setup = () => this._setupBroadcaster();
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setup);
+      else setup();
+    },
+
+    _startMirror(initialState) {
+      // 1. Hide conflict overlay from PR#16 session logic — we handle it as mirror
+      try {
+        const co = document.getElementById('session-conflict-overlay');
+        if (co) co.style.display = 'none';
+        const ko = document.getElementById('session-kicked-overlay');
+        if (ko) ko.style.display = 'none';
+      } catch(_) {}
+
+      // 2. Apply initial state received from server
+      if (initialState && Object.keys(initialState).length > 0) {
+        this._applyState(initialState);
+      }
+
+      // 3. Block all interactions except play-pause button (opens CodeBank)
+      this._installBlocker();
+
+      // 4. Show mirror banner at top of screen
+      this._showBanner();
+    },
+
+    _installBlocker() {
+      const self = this;
+      const handler = function(e) {
+        if (self.role !== 'mirror') return;
+        const ppBtn = document.getElementById('play-pause-button');
+        if (ppBtn && (e.target === ppBtn || ppBtn.contains(e.target))) {
+          // In mirror mode: play-pause OPENS CodeBank, not play/pause video
+          e.stopPropagation();
+          e.preventDefault();
+          try {
+            const overlay = document.getElementById('code-popup-overlay');
+            if (overlay) {
+              overlay.style.display = 'flex';
+              const iframe = document.getElementById('code-popup-iframe');
+              // Reload iframe so mirror mode initializes fresh
+              if (iframe && iframe.src && !iframe.__mirrorLoaded) {
+                iframe.src = iframe.src;
+                iframe.__mirrorLoaded = true;
+              }
+            }
+          } catch(_) {}
+          return;
+        }
+        // Silently swallow everything else — deceptive, no visual feedback
+        e.stopPropagation();
+        e.preventDefault();
+      };
+      document.addEventListener('click', handler, true);
+      document.addEventListener('touchstart', handler, { capture: true, passive: false });
+      document.addEventListener('touchend', handler, { capture: true, passive: false });
+    },
+
+    _showBanner() {
+      if (document.getElementById('mirror-mode-banner')) return;
+      const label = this.primaryLabel || 'Primary Device';
+      const b = document.createElement('div');
+      b.id = 'mirror-mode-banner';
+      b.style.cssText = [
+        'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:2147483640',
+        'background:rgba(35,134,54,0.93)', 'color:#fff',
+        'text-align:center', 'font-family:-apple-system,BlinkMacSystemFont,sans-serif',
+        'font-size:13px', 'padding:8px 16px',
+        'letter-spacing:0.2px', 'pointer-events:none'
+      ].join(';');
+      b.innerHTML = '📡 Mirroring <strong>' + label + '</strong>&nbsp;·&nbsp;<em>Tap ▶ to open CodeBank → Switch Device</em>';
+      document.body.appendChild(b);
+    },
+
+    _applyState(state) {
+      if (!state) return;
+      try {
+        if (typeof state.extraModeActive === 'boolean') {
+          document.body.classList.toggle('extra-mode', state.extraModeActive);
+        }
+        if (typeof state.soundMuted === 'boolean') {
+          document.body.classList.toggle('muted', state.soundMuted);
+        }
+        if (state.codeDisplay) {
+          const el = document.getElementById('code-display');
+          if (el) {
+            const span = el.querySelector('span') || el;
+            if (span.textContent !== state.codeDisplay) span.textContent = state.codeDisplay;
+          }
+        }
+        if (state.extraCodeBar) {
+          const el2 = document.getElementById('extra-code-bar');
+          if (el2 && el2.textContent !== state.extraCodeBar) el2.textContent = state.extraCodeBar;
+        }
+      } catch(_) {}
+    },
+
+    _setupBroadcaster() {
+      const self = this;
+      // Watch body class changes (extra-mode, muted, etc.)
+      const mo1 = new MutationObserver(() => self._broadcastState());
+      mo1.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+      self._mo.push(mo1);
+      // Watch code-display changes (delayed — element may not exist yet)
+      setTimeout(() => {
+        const cdEl = document.getElementById('code-display');
+        if (cdEl) {
+          const mo2 = new MutationObserver(() => self._broadcastState());
+          mo2.observe(cdEl, { childList: true, characterData: true, subtree: true });
+          self._mo.push(mo2);
+        }
+        const ecEl = document.getElementById('extra-code-bar');
+        if (ecEl) {
+          const mo3 = new MutationObserver(() => self._broadcastState());
+          mo3.observe(ecEl, { childList: true, characterData: true, subtree: true });
+          self._mo.push(mo3);
+        }
+      }, 3000);
+    },
+
+    _broadcastState() {
+      if (this.role !== 'primary') return;
+      clearTimeout(this._stateTimer);
+      this._stateTimer = setTimeout(() => {
+        const state = {
+          extraModeActive: document.body.classList.contains('extra-mode'),
+          soundMuted: document.body.classList.contains('muted'),
+          codeDisplay: (document.getElementById('code-display')?.textContent || '').trim(),
+          extraCodeBar: (document.getElementById('extra-code-bar')?.textContent || '').trim(),
+          activeSection: window.__activeSection || 'home',
+          updatedAt: Date.now()
+        };
+        fetch('/api/mirror/state', {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(state)
+        }).catch(() => {});
+      }, 300);
+    },
+
+    handleSSEMessage(d) {
+      if (!d || !d.type) return;
+
+      // Mirror receives state update from primary
+      if (d.type === 'STATE_UPDATE' && this.role === 'mirror') {
+        this._applyState(d.state);
+        return;
+      }
+
+      // Primary was dethroned — become mirror
+      if (d.type === 'PRIMARY_SWITCHED' && this.role === 'primary') {
+        this.role = 'mirror';
+        this.primaryLabel = d.newPrimaryLabel || 'Another Device';
+        if (this._heartbeatIv) { clearInterval(this._heartbeatIv); this._heartbeatIv = null; }
+        this._mo.forEach(o => o.disconnect()); this._mo = [];
+        // Remove old banner if any and show new one
+        const old = document.getElementById('mirror-mode-banner');
+        if (old) old.remove();
+        this._installBlocker();
+        this._showBanner();
+        return;
+      }
+    },
+
+    // Called by postMessage from CodeBank iframe (Switch Device button)
+    requestSwitch() {
+      fetch('/api/mirror/switch', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      }).then(r => r.json()).then(data => {
+        if (data.role === 'primary') {
+          this.role = 'primary';
+          this.primaryLabel = null;
+          const banner = document.getElementById('mirror-mode-banner');
+          if (banner) banner.remove();
+          // Close CodeBank popup
+          try {
+            const overlay = document.getElementById('code-popup-overlay');
+            if (overlay) overlay.style.display = 'none';
+          } catch(_) {}
+          this._startPrimary();
+        }
+      }).catch(() => {});
+    }
+  };
+
+  // Init after auth is confirmed
+  window.addEventListener('auth:ready', function(e) {
+    try {
+      if (!(e && e.detail && e.detail.authenticated === true)) return;
+      // Small delay so registerDevice() runs first
+      setTimeout(() => {
+        window.__mirrorManager.init().catch(() => {});
+      }, 800);
+    } catch(_) {}
+  });
+
+  // Listen for Switch Device postMessage from CodeBank iframe
+  window.addEventListener('message', function(e) {
+    if (e && e.data && e.data.type === 'MIRROR_SWITCH_DEVICE') {
+      try { window.__mirrorManager.requestSwitch(); } catch(_) {}
+    }
+  });
+})();
+</script>
+
+
+    <!-- Todo Side Panel -->
+    <script src="/yt-todo-panel/todo-panel.js"></script>
+
+    <!-- Fix: Resume YT player when phone screen unlocks (visibilitychange) -->
+    <script>
+    (function() {
+      var _wasPlayingBeforeLock = false;
+      document.addEventListener('visibilitychange', function() {
+        try {
+          if (!window.player || typeof window.player.getPlayerState !== 'function') return;
+          if (document.hidden) {
+            // Screen locked — remember if it was playing
+            _wasPlayingBeforeLock = (window.player.getPlayerState() === 1);
+          } else {
+            // Screen unlocked — resume if it was playing
+            if (_wasPlayingBeforeLock) {
+              setTimeout(function() {
+                try {
+                  if (window.player && window.player.getPlayerState() !== 1) {
+                    window.player.playVideo();
+                  }
+                } catch(e) {}
+              }, 300);
+            }
+          }
+        } catch(e) {}
       });
     })();
     </script>

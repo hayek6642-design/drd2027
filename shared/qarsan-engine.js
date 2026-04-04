@@ -21,6 +21,11 @@ class QarsanEngine {
     return window.__currentUserId || null;
   }
 
+  static getCurrentUserEmail() {
+    // Get user email from session storage or global
+    return window.__currentUserEmail || localStorage.getItem('userEmail') || null;
+  }
+
   /**
    * Get Qarsan status for current user
    * @returns {Promise<{success: boolean, qarsanMode: string, walletBalance: number, watchDogState: string, stealScope: string, lastFedAt: string}>}
@@ -295,6 +300,25 @@ class QarsanEngine {
         error: 'network_error',
         message: error.message
       };
+    }
+  }
+
+  static async buyNewDog() {
+    try {
+      const response = await fetch('/api/watchdog/buy-dog', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+      const data = await response.json();
+      if (data.success) {
+        window.dispatchEvent(new CustomEvent('watchdog:dog-purchased', {
+          detail: { dogState: data.dogState, cost: data.cost }
+        }));
+      }
+      return data;
+    } catch (err) {
+      return { success: false, error: err.message };
     }
   }
 
