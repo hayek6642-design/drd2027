@@ -24,6 +24,8 @@ try {
 let __IS_SYNCING__ = false;
 let __LEDGER_LOCKED__ = true; // Default to locked
 let __DRIFT_COUNT__ = 0; // 🛡️ DRIFT LOOP PREVENTION
+let __AUTH_BACKOFF_UNTIL__ = 0; // 🛡️ Auth failure backoff timestamp
+const __AUTH_BACKOFF_MS__ = 5 * 60 * 1000; // 5 minutes backoff on 401/403
 
 // ========================
 // Utilities
@@ -38,6 +40,8 @@ function now() {
  */
 async function fetchLedgerState() {
   if (__IS_SYNCING__) return null;
+  // 🛡️ AUTH BACKOFF: Don't hammer the server if we got 401/403 recently
+  if (Date.now() < __AUTH_BACKOFF_UNTIL__) return null;
   __IS_SYNCING__ = true;
   
   try {
@@ -46,6 +50,11 @@ async function fetchLedgerState() {
     });
     
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        // Auth failure — back off for 5 minutes to avoid flooding console
+        __AUTH_BACKOFF_UNTIL__ = Date.now() + __AUTH_BACKOFF_MS__;
+        return null; // Silent return, no console spam
+      }
       console.warn('[AssetBus] Ledger fetch failed with status:', response.status);
       throw new Error('Ledger unreachable');
     }

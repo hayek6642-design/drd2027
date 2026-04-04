@@ -12,6 +12,25 @@
     <!-- Favicon -->
     <link rel="icon" href="data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAABILAAASCwAAAAAAAAAAAAD///8A////AP///wA=">
     
+    <!-- ✅ Prevent service iframes from triggering "Leave site?" dialog -->
+    <script>
+      (function suppressBeforeunload() {
+        // Intercept addEventListener to block beforeunload registrations
+        var _origAEL = EventTarget.prototype.addEventListener;
+        EventTarget.prototype.addEventListener = function(type, handler, opts) {
+          if (this === window && type === 'beforeunload') return; // silently discard
+          return _origAEL.call(this, type, handler, opts);
+        };
+        // Also block onbeforeunload property assignment
+        try {
+          Object.defineProperty(window, 'onbeforeunload', {
+            get: function() { return null; },
+            set: function() { /* silently discard */ },
+            configurable: false
+          });
+        } catch(e) {}
+      })();
+    </script>
     <!-- ⚡ EMERGENCY PERFORMANCE FIXES (Phase 1) -->
     <script src="./js/performance-monitor.js"></script>
     <script>
