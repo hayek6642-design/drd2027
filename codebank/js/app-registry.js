@@ -185,6 +185,17 @@ export const AppRegistry = {
             badge: 'AI'
         },
         {
+            id: 'aihub',
+            name: 'AI Hub',
+            category: 'tools',
+            icon: 'fa-robot',
+            color: '#7c3aed',
+            url: './aihub.html',
+            description: 'Gateway to the AI World',
+            status: 'online',
+            badge: 'AI'
+        },
+        {
             id: 'e7ki',
             name: 'E7ki',
             category: 'tools',
@@ -203,7 +214,8 @@ export const DockConfig = [
     { id: 'samma3ny', name: 'Samma3ny', icon: 'fa-music', color: 'media' },
     { id: 'eb3at', name: 'Eb3at', icon: 'fa-paper-plane', color: 'finance' },
     { id: 'games', name: 'Games', icon: 'fa-gamepad', color: 'games' },
-    { id: 'corsa', name: 'CoRsA', icon: 'fa-brain', color: 'tools' }
+    { id: 'corsa', name: 'CoRsA', icon: 'fa-brain', color: 'tools' },
+    { id: 'aihub', name: 'AI Hub', icon: 'fa-robot', color: 'tools' }
 ];
 
 // Export path variants for diagnostic use

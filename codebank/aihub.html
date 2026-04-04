@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Hub 🤖 — Gateway to the AI World</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0a0a16;
+      --surface:   #12122a;
+      --surface2:  #1c1c38;
+      --border:    rgba(255,255,255,0.07);
+      --accent:    #7c3aed;
+      --accent2:   #06b6d4;
+      --gold:      #f59e0b;
+      --text:      #f0f0ff;
+      --muted:     #8888aa;
+      --green:     #22c55e;
+      --red:       #ef4444;
+      --radius:    14px;
+      --card-w:    160px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ───────────────────────────────────────────── */
+    .header {
+      background: linear-gradient(135deg, #0d0d22 0%, #130d2e 100%);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-bottom: 1px solid rgba(124,58,237,0.3);
+      position: sticky; top: 0; z-index: 200;
+      backdrop-filter: blur(12px);
+    }
+    .header-logo { font-size: 30px; line-height: 1; }
+    .header-text h1 { font-size: 20px; font-weight: 900; background: linear-gradient(90deg,#7c3aed,#06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .header-text p  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .header-right   { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+    /* search */
+    .search-wrap {
+      position: relative; display: flex; align-items: center;
+    }
+    .search-wrap i { position: absolute; left: 12px; color: var(--muted); font-size: 13px; }
+    #searchInput {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 30px; color: var(--text);
+      padding: 8px 14px 8px 34px; font-size: 13px; outline: none;
+      width: 220px; transition: border-color 0.2s, width 0.3s;
+    }
+    #searchInput:focus { border-color: var(--accent); width: 280px; }
+    #searchInput::placeholder { color: var(--muted); }
+
+    /* ── Filter tabs ──────────────────────────────────────── */
+    .tabs-bar {
+      display: flex; gap: 8px; padding: 14px 20px 0;
+      overflow-x: auto; scrollbar-width: none;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      position: sticky; top: 65px; z-index: 100;
+    }
+    .tabs-bar::-webkit-scrollbar { display: none; }
+    .tab {
+      padding: 7px 16px; border-radius: 30px; font-size: 12px; font-weight: 700;
+      cursor: pointer; white-space: nowrap; border: 1px solid var(--border);
+      background: var(--surface); color: var(--muted);
+      transition: all 0.2s; user-select: none; flex-shrink: 0;
+      margin-bottom: 10px;
+    }
+    .tab:hover { border-color: var(--accent); color: var(--text); }
+    .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* ── Category sections ───────────────────────────────── */
+    .content { padding: 20px; flex: 1; }
+
+    .cat-section { margin-bottom: 32px; }
+    .cat-title {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13px; font-weight: 800; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 1.5px;
+      margin-bottom: 14px; padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .cat-title .cat-icon { font-size: 16px; }
+    .cat-count { font-size: 11px; background: var(--surface2); padding: 2px 8px; border-radius: 20px; font-weight: 600; }
+
+    /* ── Service grid ────────────────────────────────────── */
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(var(--card-w), 1fr));
+      gap: 12px;
+    }
+
+    .service-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 12px 14px;
+      cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      text-align: center;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .service-card::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at top, var(--c, transparent) 0%, transparent 70%);
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .service-card:hover::before { opacity: 0.12; }
+    .service-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .service-card .svc-logo {
+      width: 54px; height: 54px; border-radius: 12px;
+      object-fit: contain; background: var(--surface2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; flex-shrink: 0;
+      border: 1px solid var(--border);
+    }
+    .service-card .svc-logo img {
+      width: 100%; height: 100%; object-fit: contain; border-radius: 11px;
+    }
+    .service-card .svc-name {
+      font-size: 12px; font-weight: 700; color: var(--text);
+      line-height: 1.3; word-break: break-word;
+    }
+    .service-card .svc-desc {
+      font-size: 10px; color: var(--muted); line-height: 1.4;
+    }
+    .service-card .svc-badge {
+      position: absolute; top: 7px; right: 7px;
+      font-size: 9px; font-weight: 800; padding: 2px 6px;
+      border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .badge-new   { background: rgba(34,197,94,0.2);  color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+    .badge-hot   { background: rgba(239,68,68,0.2);  color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+    .badge-free  { background: rgba(6,182,212,0.2);  color: #06b6d4; border: 1px solid rgba(6,182,212,0.3); }
+    .badge-ai    { background: rgba(124,58,237,0.2); color: #a78bfa; border: 1px solid rgba(124,58,237,0.3); }
+    .badge-open  { background: rgba(245,158,11,0.2); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+
+    /* ── Viewer overlay ──────────────────────────────────── */
+    .viewer-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+      z-index: 900; flex-direction: column;
+    }
+    .viewer-overlay.open { display: flex; }
+
+    .viewer-bar {
+      background: #0d0d22;
+      border-bottom: 1px solid rgba(124,58,237,0.3);
+      padding: 10px 16px;
+      display: flex; align-items: center; gap: 10px;
+      flex-shrink: 0;
+    }
+    .viewer-logo { width: 28px; height: 28px; border-radius: 6px; object-fit: contain; background: var(--surface2); flex-shrink:0; display:flex;align-items:center;justify-content:center; font-size:16px; }
+    .viewer-logo img { width:100%;height:100%;border-radius:6px;object-fit:contain; }
+    .viewer-title { font-size: 14px; font-weight: 700; color: var(--text); }
+    .viewer-url-bar {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 5px 12px; font-size: 12px; color: var(--muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .viewer-btn {
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      border-radius: 8px; padding: 7px 12px; font-size: 12px; font-weight: 700;
+      cursor: pointer; transition: all 0.2s; white-space: nowrap;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .viewer-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .viewer-btn.close-btn:hover { border-color: var(--red); color: var(--red); }
+
+    .viewer-frame-wrap {
+      flex: 1; position: relative; overflow: hidden;
+    }
+    #viewerFrame {
+      width: 100%; height: 100%; border: none;
+      background: #fff;
+    }
+
+    /* Loading spinner */
+    .frame-loader {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px; background: var(--bg);
+      transition: opacity 0.3s;
+    }
+    .frame-loader.hidden { opacity: 0; pointer-events: none; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 3px solid var(--surface2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader-name { font-size: 16px; font-weight: 700; color: var(--text); }
+    .loader-url  { font-size: 12px; color: var(--muted); }
+
+    /* Blocked/fallback state */
+    .frame-blocked {
+      position: absolute; inset: 0;
+      display: none; flex-direction: column; align-items: center; justify-content: center;
+      gap: 20px; background: var(--bg); text-align: center; padding: 40px;
+    }
+    .frame-blocked.show { display: flex; }
+    .blocked-icon { font-size: 64px; }
+    .blocked-title { font-size: 22px; font-weight: 900; color: var(--text); }
+    .blocked-desc  { font-size: 14px; color: var(--muted); max-width: 400px; line-height: 1.7; }
+    .open-btn {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff; border: none; border-radius: 12px;
+      padding: 14px 32px; font-size: 15px; font-weight: 800;
+      cursor: pointer; transition: transform 0.2s, opacity 0.2s;
+      display: flex; align-items: center; gap: 10px;
+      text-decoration: none;
+    }
+    .open-btn:hover { transform: scale(1.04); opacity: 0.92; }
+
+    /* ── Favorites strip ─────────────────────────────────── */
+    .fav-bar {
+      display: none; flex-direction: column;
+      padding: 14px 20px 0;
+    }
+    .fav-bar.has-favs { display: flex; }
+    .fav-bar-title { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; }
+    .fav-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+    .fav-pill {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 30px; padding: 5px 12px 5px 8px;
+      cursor: pointer; font-size: 12px; font-weight: 700; color: var(--text);
+      transition: all 0.2s;
+    }
+    .fav-pill:hover { border-color: var(--accent); }
+    .fav-pill .fav-logo { width: 20px; height: 20px; border-radius: 5px; font-size:12px; display:flex;align-items:center;justify-content:center; }
+    .fav-pill .fav-logo img { width:100%;height:100%;border-radius:4px;object-fit:contain; }
+    .fav-pill .fav-remove { color: var(--muted); font-size: 10px; margin-left: 4px; transition: color 0.2s; }
+    .fav-pill .fav-remove:hover { color: var(--red); }
+
+    /* empty search */
+    .no-results {
+      display: none; text-align: center; padding: 60px 20px;
+      color: var(--muted);
+    }
+    .no-results .nr-icon { font-size: 48px; margin-bottom: 12px; }
+    .no-results p { font-size: 15px; }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 10px; }
+
+    /* responsive */
+    @media (max-width: 600px) {
+      :root { --card-w: 130px; }
+      .search-wrap { display: none; }
+      #searchInput { width: 180px; }
+      .viewer-url-bar { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<div class="header">
+  <div class="header-logo">🤖</div>
+  <div class="header-text">
+    <h1>AI Hub</h1>
+    <p>Gateway to the AI World</p>
+  </div>
+  <div class="header-right">
+    <div class="search-wrap">
+      <i class="fa fa-search"></i>
+      <input type="text" id="searchInput" placeholder="Search AI services…" oninput="onSearch()">
+    </div>
+  </div>
+</div>
+
+<!-- ── Filter tabs ── -->
+<div class="tabs-bar" id="tabsBar"></div>
+
+<!-- ── Favorites strip ── -->
+<div class="fav-bar" id="favBar">
+  <div class="fav-bar-title">⭐ Favorites</div>
+  <div class="fav-pills" id="favPills"></div>
+</div>
+
+<!-- ── Main content ── -->
+<div class="content" id="mainContent"></div>
+
+<!-- ── No results ── -->
+<div class="no-results" id="noResults">
+  <div class="nr-icon">🔍</div>
+  <p>No AI services match your search.</p>
+</div>
+
+<!-- ── Viewer overlay ── -->
+<div class="viewer-overlay" id="viewerOverlay">
+  <div class="viewer-bar">
+    <div class="viewer-logo" id="viewerLogo"></div>
+    <span class="viewer-title" id="viewerTitle"></span>
+    <div class="viewer-url-bar" id="viewerUrlBar"></div>
+    <button class="viewer-btn" id="refreshBtn" onclick="reloadFrame()"><i class="fa fa-rotate-right"></i> Reload</button>
+    <button class="viewer-btn" id="openExtBtn" onclick="openExternal()"><i class="fa fa-arrow-up-right-from-square"></i> Open</button>
+    <button class="viewer-btn close-btn" onclick="closeViewer()"><i class="fa fa-xmark"></i> Close</button>
+  </div>
+  <div class="viewer-frame-wrap">
+    <div class="frame-loader" id="frameLoader">
+      <div class="spinner"></div>
+      <div class="loader-name" id="loaderName"></div>
+      <div class="loader-url" id="loaderUrl"></div>
+    </div>
+    <div class="frame-blocked" id="frameBlocked">
+      <div class="blocked-icon" id="blockedIcon"></div>
+      <div class="blocked-title" id="blockedTitle">Opens in a new tab</div>
+      <div class="blocked-desc" id="blockedDesc">This service doesn't allow embedding. Click below to open it just like a browser would.</div>
+      <a class="open-btn" id="blockedOpenBtn" href="#" target="_blank" rel="noopener">
+        <i class="fa fa-arrow-up-right-from-square"></i> Open <span id="blockedOpenName"></span>
+      </a>
+    </div>
+    <iframe id="viewerFrame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-modals allow-downloads" allow="camera; microphone; clipboard-read; clipboard-write; payment; fullscreen"></iframe>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   AI SERVICES DATABASE
+   ═══════════════════════════════════════════════════════════ */
+const SERVICES = [
+
+  /* ── Chat / LLM ────────────────────────────────────────── */
+  { id:'chatgpt',    name:'ChatGPT',        cat:'chat', emoji:'🤖', logo:'https://cdn.oaistatic.com/assets/favicon-o20kmmos.ico',                   url:'https://chatgpt.com',              desc:'OpenAI GPT-4o', badge:'hot'  },
+  { id:'gemini',     name:'Gemini',         cat:'chat', emoji:'✨', logo:'https://www.gstatic.com/lamda/images/gemini_favicon_f069958c85030456e93de685481c559f160ea06.png', url:'https://gemini.google.com',        desc:'Google Gemini AI', badge:'hot' },
+  { id:'claude',     name:'Claude',         cat:'chat', emoji:'🧠', logo:'https://claude.ai/favicon.ico',                                           url:'https://claude.ai',                desc:'Anthropic Claude 3', badge:'hot' },
+  { id:'copilot',    name:'Copilot',        cat:'chat', emoji:'💜', logo:'https://www.bing.com/favicon.ico',                                        url:'https://copilot.microsoft.com',    desc:'Microsoft Copilot' },
+  { id:'grok',       name:'Grok',           cat:'chat', emoji:'🦅', logo:'https://x.ai/favicon.ico',                                               url:'https://grok.com',                 desc:'xAI Grok 3', badge:'new'  },
+  { id:'deepseek',   name:'DeepSeek',       cat:'chat', emoji:'🔮', logo:'https://www.deepseek.com/favicon.ico',                                    url:'https://chat.deepseek.com',        desc:'DeepSeek R2', badge:'hot'  },
+  { id:'kimi',       name:'Kimi',           cat:'chat', emoji:'🌙', logo:'https://kimi.moonshot.cn/favicon.ico',                                    url:'https://kimi.moonshot.cn',         desc:'Moonshot Kimi AI', badge:'new' },
+  { id:'mistral',    name:'Le Chat',        cat:'chat', emoji:'🌬️', logo:'https://mistral.ai/favicon.ico',                                         url:'https://chat.mistral.ai',          desc:'Mistral AI Chat' },
+  { id:'perplexity', name:'Perplexity',     cat:'chat', emoji:'🔍', logo:'https://www.perplexity.ai/favicon.ico',                                   url:'https://www.perplexity.ai',        desc:'AI-powered search', badge:'hot' },
+  { id:'you',        name:'You.com',        cat:'chat', emoji:'🔵', logo:'https://you.com/favicon.ico',                                             url:'https://you.com',                  desc:'AI search engine' },
+  { id:'poe',        name:'Poe',            cat:'chat', emoji:'🐸', logo:'https://poe.com/favicon.ico',                                             url:'https://poe.com',                  desc:'Multi-model chat', badge:'free' },
+  { id:'metaai',     name:'Meta AI',        cat:'chat', emoji:'🦋', logo:'https://static.xx.fbcdn.net/rsrc.php/yv/r/B8XBdCnOF9E.ico',              url:'https://www.meta.ai',              desc:'Meta Llama 3', badge:'free' },
+  { id:'huggingchat',name:'HuggingChat',    cat:'chat', emoji:'🤗', logo:'https://huggingface.co/favicon.ico',                                      url:'https://huggingface.co/chat',      desc:'Open-source LLMs', badge:'free' },
+  { id:'groq',       name:'Groq',           cat:'chat', emoji:'⚡', logo:'https://groq.com/favicon.ico',                                            url:'https://groq.com',                 desc:'Ultra-fast LLM inference', badge:'free' },
+  { id:'pi',         name:'Pi AI',          cat:'chat', emoji:'🥧', logo:'https://pi.ai/favicon.ico',                                               url:'https://pi.ai',                    desc:'Personal AI by Inflection' },
+  { id:'cohere',     name:'Cohere',         cat:'chat', emoji:'🌊', logo:'https://cohere.com/favicon.ico',                                          url:'https://dashboard.cohere.com/playground/chat', desc:'Command R+' },
+  { id:'phind',      name:'Phind',          cat:'chat', emoji:'🧩', logo:'https://www.phind.com/favicon.ico',                                       url:'https://www.phind.com',            desc:'AI search for devs' },
+  { id:'together',   name:'Together AI',    cat:'chat', emoji:'🤝', logo:'https://www.together.ai/favicon.ico',                                     url:'https://api.together.xyz/playground', desc:'Open models playground', badge:'free' },
+  { id:'openrouter', name:'OpenRouter',     cat:'chat', emoji:'🔀', logo:'https://openrouter.ai/favicon.ico',                                       url:'https://openrouter.ai/chat',       desc:'100+ models in one place', badge:'free' },
+  { id:'lmarena',    name:'LM Arena',       cat:'chat', emoji:'🏆', logo:'https://lmarena.ai/favicon.ico',                                          url:'https://lmarena.ai',               desc:'Battle AI models side-by-side', badge:'free' },
+
+  /* ── Image AI ───────────────────────────────────────────── */
+  { id:'midjourney', name:'Midjourney',     cat:'image', emoji:'🎨', logo:'https://www.midjourney.com/favicon.ico',                                 url:'https://www.midjourney.com',       desc:'Top-tier image AI', badge:'hot' },
+  { id:'dalle',      name:'DALL·E 3',       cat:'image', emoji:'🖼️', logo:'https://cdn.oaistatic.com/assets/favicon-o20kmmos.ico',                 url:'https://chatgpt.com/?hints=dalle', desc:'OpenAI image gen' },
+  { id:'ideogram',   name:'Ideogram',       cat:'image', emoji:'🖋️', logo:'https://ideogram.ai/favicon.ico',                                       url:'https://ideogram.ai',              desc:'Best AI text-in-image', badge:'hot' },
+  { id:'leonardo',   name:'Leonardo AI',    cat:'image', emoji:'🦁', logo:'https://cdn.leonardo.ai/favicon.ico',                                    url:'https://app.leonardo.ai',          desc:'Game asset & art gen', badge:'free' },
+  { id:'playground', name:'Playground AI',  cat:'image', emoji:'🎡', logo:'https://playground.com/favicon.ico',                                     url:'https://playground.com',           desc:'Free HD image creation', badge:'free' },
+  { id:'adobefire',  name:'Adobe Firefly',  cat:'image', emoji:'🔥', logo:'https://firefly.adobe.com/favicon.ico',                                  url:'https://firefly.adobe.com',        desc:'Adobe generative AI', badge:'free' },
+  { id:'canvaai',    name:'Canva AI',       cat:'image', emoji:'📐', logo:'https://static.canva.com/web/images/8439b51bb7a19f6e65ce1064bc37c714.ico',url:'https://www.canva.com/ai-image-generator/',desc:'Design + AI gen' },
+  { id:'bingimage',  name:'Bing Image',     cat:'image', emoji:'🌐', logo:'https://www.bing.com/favicon.ico',                                       url:'https://www.bing.com/images/create',desc:'DALL·E 3 powered, free', badge:'free' },
+  { id:'freepikai',  name:'Freepik AI',     cat:'image', emoji:'🌟', logo:'https://www.freepik.com/favicon.ico',                                    url:'https://www.freepik.com/pikaso',   desc:'Pikaso real-time AI' },
+  { id:'clipdrop',   name:'Clipdrop',       cat:'image', emoji:'✂️', logo:'https://clipdrop.co/favicon.ico',                                        url:'https://clipdrop.co',              desc:'Stability AI tools' },
+  { id:'nightcafe',  name:'NightCafe',      cat:'image', emoji:'🌃', logo:'https://nightcafe.studio/favicon.ico',                                   url:'https://nightcafe.studio',         desc:'AI art generator', badge:'free' },
+  { id:'starryai',   name:'StarryAI',       cat:'image', emoji:'⭐', logo:'https://www.starryai.com/favicon.ico',                                   url:'https://www.starryai.com',         desc:'Free AI art credits' },
+  { id:'tensorart',  name:'Tensor.Art',     cat:'image', emoji:'🧲', logo:'https://tensor.art/favicon.ico',                                         url:'https://tensor.art',               desc:'SD models online', badge:'free' },
+  { id:'civitai',    name:'Civitai',        cat:'image', emoji:'🏛️', logo:'https://civitai.com/favicon.ico',                                        url:'https://civitai.com',              desc:'SD model hub & gen', badge:'open' },
+
+  /* ── Video AI ───────────────────────────────────────────── */
+  { id:'runway',     name:'Runway',         cat:'video', emoji:'🎬', logo:'https://runwayml.com/favicon.ico',                                       url:'https://app.runwayml.com',         desc:'Gen-3 video AI', badge:'hot' },
+  { id:'luma',       name:'Luma Dream',     cat:'video', emoji:'💫', logo:'https://lumalabs.ai/favicon.ico',                                        url:'https://lumalabs.ai/dream-machine',desc:'Photorealistic video', badge:'hot' },
+  { id:'sora',       name:'Sora',           cat:'video', emoji:'🌀', logo:'https://cdn.oaistatic.com/assets/favicon-o20kmmos.ico',                  url:'https://sora.com',                 desc:'OpenAI video gen', badge:'new' },
+  { id:'kling',      name:'Kling AI',       cat:'video', emoji:'🎥', logo:'https://klingai.com/favicon.ico',                                        url:'https://klingai.com',              desc:'Kuaishou video gen', badge:'hot' },
+  { id:'pika',       name:'Pika',           cat:'video', emoji:'🎞️', logo:'https://pika.art/favicon.ico',                                           url:'https://pika.art',                 desc:'AI video creation' },
+  { id:'heygenai',   name:'HeyGen',         cat:'video', emoji:'👤', logo:'https://app.heygen.com/favicon.ico',                                     url:'https://app.heygen.com',           desc:'AI avatar videos', badge:'hot' },
+  { id:'synthesia',  name:'Synthesia',      cat:'video', emoji:'🎙️', logo:'https://www.synthesia.io/favicon.ico',                                   url:'https://www.synthesia.io',         desc:'AI presenter videos' },
+  { id:'invideo',    name:'InVideo AI',     cat:'video', emoji:'🎞️', logo:'https://ai.invideo.io/favicon.ico',                                      url:'https://ai.invideo.io',            desc:'Script-to-video AI' },
+  { id:'fliki',      name:'Fliki',          cat:'video', emoji:'📽️', logo:'https://fliki.ai/favicon.ico',                                           url:'https://fliki.ai',                 desc:'Text to video + voice' },
+  { id:'capcut',     name:'CapCut AI',      cat:'video', emoji:'✂️', logo:'https://www.capcut.com/favicon.ico',                                     url:'https://www.capcut.com',           desc:'AI video editor', badge:'free' },
+  { id:'vidu',       name:'Vidu',           cat:'video', emoji:'🌊', logo:'https://www.vidu.io/favicon.ico',                                        url:'https://www.vidu.io',              desc:'High-quality video gen', badge:'new' },
+
+  /* ── Audio / Music AI ───────────────────────────────────── */
+  { id:'elevenlabs', name:'ElevenLabs',     cat:'audio', emoji:'🎤', logo:'https://elevenlabs.io/favicon.ico',                                      url:'https://elevenlabs.io',            desc:'Best AI voice cloning', badge:'hot' },
+  { id:'suno',       name:'Suno',           cat:'audio', emoji:'🎵', logo:'https://suno.com/favicon.ico',                                           url:'https://suno.com',                 desc:'AI music generation', badge:'hot' },
+  { id:'udio',       name:'Udio',           cat:'audio', emoji:'🎶', logo:'https://www.udio.com/favicon.ico',                                       url:'https://www.udio.com',             desc:'AI music studio', badge:'free' },
+  { id:'murf',       name:'Murf AI',        cat:'audio', emoji:'🔊', logo:'https://murf.ai/favicon.ico',                                            url:'https://murf.ai',                  desc:'AI voiceover studio' },
+  { id:'adobesp',    name:'Adobe Podcast',  cat:'audio', emoji:'🎙️', logo:'https://podcast.adobe.com/favicon.ico',                                  url:'https://podcast.adobe.com',        desc:'AI audio enhance + record', badge:'free' },
+  { id:'descript',   name:'Descript',       cat:'audio', emoji:'📝', logo:'https://www.descript.com/favicon.ico',                                   url:'https://www.descript.com',         desc:'Edit audio like text' },
+  { id:'lovo',       name:'Lovo AI',        cat:'audio', emoji:'🗣️', logo:'https://lovo.ai/favicon.ico',                                            url:'https://lovo.ai',                  desc:'AI voice & video gen' },
+  { id:'soundraw',   name:'Soundraw',       cat:'audio', emoji:'🎸', logo:'https://soundraw.io/favicon.ico',                                        url:'https://soundraw.io',              desc:'Royalty-free AI music' },
+  { id:'beatoven',   name:'Beatoven AI',    cat:'audio', emoji:'🥁', logo:'https://www.beatoven.ai/favicon.ico',                                    url:'https://www.beatoven.ai',          desc:'Mood-based music gen', badge:'free' },
+
+  /* ── Code AI ────────────────────────────────────────────── */
+  { id:'v0',         name:'v0 by Vercel',   cat:'code', emoji:'⬛', logo:'https://v0.dev/favicon.ico',                                              url:'https://v0.dev',                   desc:'Prompt → UI component', badge:'hot' },
+  { id:'bolt',       name:'Bolt.new',       cat:'code', emoji:'⚡', logo:'https://bolt.new/favicon.ico',                                            url:'https://bolt.new',                 desc:'Full-stack app from prompt', badge:'hot' },
+  { id:'lovable',    name:'Lovable',        cat:'code', emoji:'💖', logo:'https://lovable.dev/favicon.ico',                                         url:'https://lovable.dev',              desc:'AI-built web apps', badge:'hot' },
+  { id:'replit',     name:'Replit AI',      cat:'code', emoji:'🔄', logo:'https://replit.com/favicon.ico',                                          url:'https://replit.com',               desc:'Code + run in browser' },
+  { id:'cursor',     name:'Cursor',         cat:'code', emoji:'🖱️', logo:'https://www.cursor.com/favicon.ico',                                      url:'https://www.cursor.com',           desc:'AI-first code editor' },
+  { id:'windsurf',   name:'Windsurf',       cat:'code', emoji:'🏄', logo:'https://codeium.com/favicon.ico',                                         url:'https://codeium.com/windsurf',     desc:'AI code editor by Codeium', badge:'new' },
+  { id:'githubco',   name:'GitHub Copilot', cat:'code', emoji:'🐙', logo:'https://github.githubassets.com/favicons/favicon.ico',                    url:'https://github.com/features/copilot', desc:'AI pair programmer' },
+  { id:'codestral',  name:'Codestral',      cat:'code', emoji:'🌬️', logo:'https://mistral.ai/favicon.ico',                                         url:'https://chat.mistral.ai',          desc:'Mistral code model' },
+  { id:'codeium',    name:'Codeium',        cat:'code', emoji:'🔵', logo:'https://codeium.com/favicon.ico',                                         url:'https://codeium.com',              desc:'Free AI code completion', badge:'free' },
+  { id:'huggingface',name:'HuggingFace',    cat:'code', emoji:'🤗', logo:'https://huggingface.co/favicon.ico',                                      url:'https://huggingface.co',           desc:'Models, datasets, Spaces', badge:'open' },
+  { id:'replicate',  name:'Replicate',      cat:'code', emoji:'🔁', logo:'https://replicate.com/favicon.ico',                                       url:'https://replicate.com',            desc:'Run open-source AI models', badge:'open' },
+
+  /* ── Research / Academic AI ────────────────────────────── */
+  { id:'notebooklm',  name:'NotebookLM',    cat:'research', emoji:'📓', logo:'https://notebooklm.google.com/favicon.ico',                           url:'https://notebooklm.google.com',    desc:'Google AI research tool', badge:'free' },
+  { id:'elicit',      name:'Elicit',        cat:'research', emoji:'📚', logo:'https://elicit.com/favicon.ico',                                      url:'https://elicit.com',               desc:'AI research assistant' },
+  { id:'consensus',   name:'Consensus',     cat:'research', emoji:'🎯', logo:'https://consensus.app/favicon.ico',                                   url:'https://consensus.app',            desc:'AI science search' },
+  { id:'scite',       name:'Scite AI',      cat:'research', emoji:'🧪', logo:'https://scite.ai/favicon.ico',                                        url:'https://scite.ai',                 desc:'Smart citations' },
+  { id:'semantic',    name:'Semantic Scholar',cat:'research',emoji:'🏫', logo:'https://www.semanticscholar.org/favicon.ico',                        url:'https://www.semanticscholar.org',  desc:'Academic paper AI search', badge:'free' },
+  { id:'paperswithcode',name:'Papers w/Code',cat:'research',emoji:'📄', logo:'https://paperswithcode.com/favicon.ico',                              url:'https://paperswithcode.com',       desc:'ML research + code', badge:'open' },
+  { id:'arxiv',       name:'arXiv',         cat:'research', emoji:'📐', logo:'https://arxiv.org/favicon.ico',                                       url:'https://arxiv.org',                desc:'AI research preprints', badge:'free' },
+
+  /* ── AI Platforms & Studios ────────────────────────────── */
+  { id:'aistudio',    name:'AI Studio',     cat:'platform', emoji:'🔬', logo:'https://aistudio.google.com/favicon.ico',                             url:'https://aistudio.google.com',      desc:'Google Gemini API playground', badge:'free' },
+  { id:'vertex',      name:'Vertex AI',     cat:'platform', emoji:'🔷', logo:'https://cloud.google.com/favicon.ico',                                url:'https://console.cloud.google.com/vertex-ai', desc:'Google Cloud AI' },
+  { id:'azure_ai',    name:'Azure AI',      cat:'platform', emoji:'☁️', logo:'https://azure.microsoft.com/favicon.ico',                             url:'https://azure.microsoft.com/en-us/solutions/ai', desc:'Microsoft Azure AI' },
+  { id:'tasklet',     name:'Tasklet',       cat:'platform', emoji:'🤖', logo:'https://tasklet.ai/favicon.ico',                                      url:'https://tasklet.ai',               desc:'AI work automation agent', badge:'hot' },
+  { id:'nvidia_nim',  name:'NVIDIA NIM',    cat:'platform', emoji:'💚', logo:'https://www.nvidia.com/favicon.ico',                                  url:'https://build.nvidia.com',         desc:'GPU-accelerated AI models', badge:'free' },
+  { id:'fireworks',   name:'Fireworks AI',  cat:'platform', emoji:'🎆', logo:'https://fireworks.ai/favicon.ico',                                    url:'https://fireworks.ai',             desc:'Fast model serving' },
+  { id:'cerebras',    name:'Cerebras',      cat:'platform', emoji:'🧠', logo:'https://cerebras.ai/favicon.ico',                                     url:'https://inference.cerebras.ai',    desc:'World fastest inference', badge:'new' },
+
+  /* ── Productivity AI ───────────────────────────────────── */
+  { id:'notionai',    name:'Notion AI',     cat:'productivity', emoji:'📋', logo:'https://www.notion.so/favicon.ico',                               url:'https://www.notion.so',            desc:'AI-powered workspace' },
+  { id:'gamma',       name:'Gamma',         cat:'productivity', emoji:'🎯', logo:'https://gamma.app/favicon.ico',                                   url:'https://gamma.app',                desc:'AI presentations', badge:'free' },
+  { id:'tome',        name:'Tome',          cat:'productivity', emoji:'📖', logo:'https://tome.app/favicon.ico',                                    url:'https://tome.app',                 desc:'AI storytelling tool' },
+  { id:'napkin',      name:'Napkin AI',     cat:'productivity', emoji:'🗒️', logo:'https://www.napkin.ai/favicon.ico',                               url:'https://www.napkin.ai',            desc:'Text → visual diagrams', badge:'new' },
+  { id:'otter',       name:'Otter.ai',      cat:'productivity', emoji:'🦦', logo:'https://otter.ai/favicon.ico',                                    url:'https://otter.ai',                 desc:'AI meeting transcription' },
+  { id:'jasper',      name:'Jasper AI',     cat:'productivity', emoji:'✍️', logo:'https://www.jasper.ai/favicon.ico',                               url:'https://www.jasper.ai',            desc:'AI content writing' },
+  { id:'copy_ai',     name:'Copy.ai',       cat:'productivity', emoji:'📝', logo:'https://www.copy.ai/favicon.ico',                                 url:'https://www.copy.ai',              desc:'AI copywriting', badge:'free' },
+  { id:'writesonic',  name:'Writesonic',    cat:'productivity', emoji:'⚡', logo:'https://writesonic.com/favicon.ico',                              url:'https://writesonic.com',           desc:'AI writing assistant' },
+  { id:'beautiful',   name:'Beautiful.ai',  cat:'productivity', emoji:'🖼️', logo:'https://www.beautiful.ai/favicon.ico',                            url:'https://www.beautiful.ai',         desc:'Smart slide design' },
+
+  /* ── Search & Discovery ────────────────────────────────── */
+  { id:'andi',        name:'Andi',          cat:'search', emoji:'🔎', logo:'https://andisearch.com/favicon.ico',                                    url:'https://andisearch.com',           desc:'Conversational search', badge:'free' },
+  { id:'globe_ex',    name:'Globe Explorer',cat:'search', emoji:'🌍', logo:'https://globe.engineer/favicon.ico',                                    url:'https://globe.engineer',           desc:'Visual knowledge explorer', badge:'new' },
+  { id:'exa',         name:'Exa AI',        cat:'search', emoji:'🔬', logo:'https://exa.ai/favicon.ico',                                            url:'https://exa.ai',                   desc:'Neural web search' },
+  { id:'kagi',        name:'Kagi',          cat:'search', emoji:'🔱', logo:'https://kagi.com/favicon.ico',                                          url:'https://kagi.com',                 desc:'Premium AI search' },
+  { id:'you_search',  name:'You.com Search',cat:'search', emoji:'🟦', logo:'https://you.com/favicon.ico',                                           url:'https://you.com',                  desc:'AI-powered search' },
+
+  /* ── Multi-modal / Agent AI ────────────────────────────── */
+  { id:'hume',        name:'Hume AI',       cat:'agent', emoji:'💬', logo:'https://www.hume.ai/favicon.ico',                                        url:'https://www.hume.ai',              desc:'Emotional AI voice', badge:'new' },
+  { id:'adept',       name:'Adept AI',      cat:'agent', emoji:'🤝', logo:'https://www.adept.ai/favicon.ico',                                       url:'https://www.adept.ai',             desc:'AI agents for work' },
+  { id:'browseruse',  name:'Browser Use',   cat:'agent', emoji:'🌐', logo:'https://browser-use.com/favicon.ico',                                    url:'https://browser-use.com',          desc:'AI browser automation', badge:'open' },
+  { id:'langchain',   name:'LangChain',     cat:'agent', emoji:'⛓️', logo:'https://www.langchain.com/favicon.ico',                                  url:'https://www.langchain.com',        desc:'LLM app framework', badge:'open' },
+  { id:'crewai',      name:'CrewAI',        cat:'agent', emoji:'🚢', logo:'https://www.crewai.com/favicon.ico',                                     url:'https://www.crewai.com',           desc:'Multi-agent orchestration', badge:'open' },
+  { id:'n8n',         name:'n8n AI',        cat:'agent', emoji:'🔗', logo:'https://n8n.io/favicon.ico',                                             url:'https://n8n.io',                   desc:'AI workflow automation', badge:'open' },
+  { id:'flowise',     name:'Flowise',       cat:'agent', emoji:'🌊', logo:'https://flowiseai.com/favicon.ico',                                      url:'https://flowiseai.com',            desc:'No-code LLM builder', badge:'open' },
+
+  /* ── YouTube & Video Platforms ─────────────────────────── */
+  { id:'youtube',     name:'YouTube',       cat:'media', emoji:'▶️', logo:'https://www.youtube.com/favicon.ico',                                   url:'https://www.youtube.com',          desc:'AI video search & watch', badge:'free' },
+  { id:'youtube_ai',  name:'YouTube Studio',cat:'media', emoji:'🎬', logo:'https://studio.youtube.com/favicon.ico',                                url:'https://studio.youtube.com',       desc:'Create & manage videos' },
+  { id:'vimeo',       name:'Vimeo AI',      cat:'media', emoji:'🎞️', logo:'https://vimeo.com/favicon.ico',                                         url:'https://vimeo.com/create',         desc:'AI video creation' },
+];
+
+/* ═══════════════════════════════════════════════════════════
+   CATEGORIES CONFIG
+   ═══════════════════════════════════════════════════════════ */
+const CATS = [
+  { id:'all',         label:'All',           icon:'🤖' },
+  { id:'chat',        label:'Chat AI',       icon:'💬' },
+  { id:'image',       label:'Image AI',      icon:'🎨' },
+  { id:'video',       label:'Video AI',      icon:'🎬' },
+  { id:'audio',       label:'Audio AI',      icon:'🎵' },
+  { id:'code',        label:'Code AI',       icon:'💻' },
+  { id:'research',    label:'Research',      icon:'📚' },
+  { id:'platform',    label:'Platforms',     icon:'🔬' },
+  { id:'productivity',label:'Productivity',  icon:'✨' },
+  { id:'search',      label:'Search',        icon:'🔍' },
+  { id:'agent',       label:'Agents',        icon:'⛓️' },
+  { id:'media',       label:'Media',         icon:'▶️' },
+];
+
+const CAT_LABELS = {};
+CATS.forEach(c => CAT_LABELS[c.id] = { label: c.label, icon: c.icon });
+
+/* ═══════════════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════════════ */
+let activeFilter = 'all';
+let searchQuery  = '';
+let favorites    = JSON.parse(localStorage.getItem('aihub_favs') || '[]');
+let currentSvc   = null;
+let frameTimer   = null;
+
+/* ═══════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════ */
+function init() {
+  buildTabs();
+  renderFavBar();
+  renderAll();
+}
+
+/* ── Tabs ── */
+function buildTabs() {
+  const bar = document.getElementById('tabsBar');
+  CATS.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'tab' + (c.id === 'all' ? ' active' : '');
+    btn.dataset.cat = c.id;
+    const count = c.id === 'all' ? SERVICES.length : SERVICES.filter(s => s.cat === c.id).length;
+    btn.innerHTML = `${c.icon} ${c.label} <span style="opacity:0.6;font-size:10px;margin-left:3px">${count}</span>`;
+    btn.onclick = () => setFilter(c.id);
+    bar.appendChild(btn);
+  });
+}
+
+function setFilter(cat) {
+  activeFilter = cat;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.cat === cat));
+  renderAll();
+}
+
+/* ── Render ── */
+function renderAll() {
+  const content = document.getElementById('mainContent');
+  const noRes   = document.getElementById('noResults');
+  content.innerHTML = '';
+
+  const q = searchQuery.trim().toLowerCase();
+  let filtered = SERVICES.filter(s => {
+    const matchCat  = activeFilter === 'all' || s.cat === activeFilter;
+    const matchQ    = !q || s.name.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q) || s.cat.toLowerCase().includes(q);
+    return matchCat && matchQ;
+  });
+
+  if (filtered.length === 0) {
+    noRes.style.display = 'block';
+    return;
+  }
+  noRes.style.display = 'none';
+
+  // Group by category
+  const grouped = {};
+  filtered.forEach(s => {
+    if (!grouped[s.cat]) grouped[s.cat] = [];
+    grouped[s.cat].push(s);
+  });
+
+  Object.entries(grouped).forEach(([cat, svcs]) => {
+    const info = CAT_LABELS[cat] || { label: cat, icon: '🔹' };
+    const section = document.createElement('div');
+    section.className = 'cat-section';
+    section.innerHTML = `
+      <div class="cat-title">
+        <span class="cat-icon">${info.icon}</span>
+        ${info.label}
+        <span class="cat-count">${svcs.length}</span>
+      </div>
+      <div class="services-grid" id="grid-${cat}"></div>
+    `;
+    content.appendChild(section);
+    const grid = section.querySelector('.services-grid');
+    svcs.forEach(s => grid.appendChild(buildCard(s)));
+  });
+}
+
+function buildCard(svc) {
+  const isFav = favorites.includes(svc.id);
+  const card  = document.createElement('div');
+  card.className = 'service-card';
+  card.style.setProperty('--c', svc.color || '#7c3aed');
+
+  let badgeHtml = '';
+  if (svc.badge) {
+    const cls = {hot:'badge-hot', new:'badge-new', free:'badge-free', ai:'badge-ai', open:'badge-open'}[svc.badge] || 'badge-ai';
+    badgeHtml = `<span class="svc-badge ${cls}">${svc.badge}</span>`;
+  }
+
+  card.innerHTML = `
+    ${badgeHtml}
+    <div class="svc-logo" id="logo-${svc.id}">
+      <img src="${svc.logo}" alt="${svc.name}" onerror="this.parentElement.textContent='${svc.emoji}'" loading="lazy">
+    </div>
+    <div class="svc-name">${svc.name}</div>
+    <div class="svc-desc">${svc.desc}</div>
+  `;
+
+  card.onclick = (e) => {
+    if (e.target.classList.contains('fav-star')) { toggleFav(svc.id); return; }
+    openViewer(svc);
+  };
+  card.ondblclick = () => toggleFav(svc.id);
+  card.title = 'Click to open · Double-click to favorite';
+
+  return card;
+}
+
+/* ── Favorites ── */
+function toggleFav(id) {
+  if (favorites.includes(id)) {
+    favorites = favorites.filter(f => f !== id);
+  } else {
+    favorites.push(id);
+  }
+  localStorage.setItem('aihub_favs', JSON.stringify(favorites));
+  renderFavBar();
+}
+
+function renderFavBar() {
+  const bar   = document.getElementById('favBar');
+  const pills = document.getElementById('favPills');
+  pills.innerHTML = '';
+  if (favorites.length === 0) { bar.classList.remove('has-favs'); return; }
+  bar.classList.add('has-favs');
+  favorites.forEach(id => {
+    const svc = SERVICES.find(s => s.id === id);
+    if (!svc) return;
+    const pill = document.createElement('div');
+    pill.className = 'fav-pill';
+    pill.innerHTML = `
+      <div class="fav-logo"><img src="${svc.logo}" alt="${svc.name}" onerror="this.parentElement.textContent='${svc.emoji}'" loading="lazy"></div>
+      ${svc.name}
+      <span class="fav-remove" title="Remove favorite" onclick="event.stopPropagation();toggleFav('${id}')">✕</span>
+    `;
+    pill.onclick = (e) => { if (!e.target.classList.contains('fav-remove')) openViewer(svc); };
+    pills.appendChild(pill);
+  });
+}
+
+/* ── Search ── */
+function onSearch() {
+  searchQuery = document.getElementById('searchInput').value;
+  renderAll();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   VIEWER
+   ═══════════════════════════════════════════════════════════ */
+function openViewer(svc) {
+  currentSvc = svc;
+  const overlay = document.getElementById('viewerOverlay');
+  const frame   = document.getElementById('viewerFrame');
+  const loader  = document.getElementById('frameLoader');
+  const blocked = document.getElementById('frameBlocked');
+
+  // Reset state
+  blocked.classList.remove('show');
+  loader.classList.remove('hidden');
+  frame.src = 'about:blank';
+
+  // Fill header
+  const logoEl = document.getElementById('viewerLogo');
+  logoEl.innerHTML = `<img src="${svc.logo}" alt="${svc.name}" onerror="this.parentElement.textContent='${svc.emoji}'">`;
+  document.getElementById('viewerTitle').textContent = svc.name;
+  document.getElementById('viewerUrlBar').textContent = svc.url;
+  document.getElementById('loaderName').textContent = svc.name;
+  document.getElementById('loaderUrl').textContent = svc.url;
+
+  // Blocked fallback elements
+  document.getElementById('blockedIcon').textContent = svc.emoji;
+  document.getElementById('blockedTitle').textContent = `${svc.name} — Opens in new tab`;
+  document.getElementById('blockedDesc').textContent = `${svc.name} doesn't allow embedding (security policy), but click below to open it just like a normal browser tab.`;
+  document.getElementById('blockedOpenName').textContent = svc.name;
+  document.getElementById('blockedOpenBtn').href = svc.url;
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Try load iframe
+  clearTimeout(frameTimer);
+
+  frame.onload = () => {
+    loader.classList.add('hidden');
+    // If we landed on about:blank quickly it means blocked; check via error
+  };
+
+  frame.onerror = () => {
+    loader.classList.add('hidden');
+    blocked.classList.add('show');
+  };
+
+  // Start load
+  frame.src = svc.url;
+
+  // Timeout fallback — if loader not hidden after 10s assume blocked
+  frameTimer = setTimeout(() => {
+    if (!loader.classList.contains('hidden')) {
+      loader.classList.add('hidden');
+      blocked.classList.add('show');
+    }
+  }, 10000);
+}
+
+function closeViewer() {
+  clearTimeout(frameTimer);
+  const overlay = document.getElementById('viewerOverlay');
+  const frame   = document.getElementById('viewerFrame');
+  overlay.classList.remove('open');
+  document.body.style.overflow = '';
+  frame.src = 'about:blank';
+  currentSvc = null;
+}
+
+function reloadFrame() {
+  if (!currentSvc) return;
+  const frame   = document.getElementById('viewerFrame');
+  const loader  = document.getElementById('frameLoader');
+  const blocked = document.getElementById('frameBlocked');
+  blocked.classList.remove('show');
+  loader.classList.remove('hidden');
+  frame.src = 'about:blank';
+  setTimeout(() => { frame.src = currentSvc.url; }, 100);
+  clearTimeout(frameTimer);
+  frameTimer = setTimeout(() => {
+    if (!loader.classList.contains('hidden')) {
+      loader.classList.add('hidden');
+      blocked.classList.add('show');
+    }
+  }, 10000);
+}
+
+function openExternal() {
+  if (!currentSvc) return;
+  window.open(currentSvc.url, '_blank', 'noopener');
+}
+
+// Close on ESC
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeViewer();
+});
+
+init();
+</script>
+</body>
+</html>
