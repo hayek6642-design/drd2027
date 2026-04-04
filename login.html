@@ -226,8 +226,8 @@
   <h2>🔐 YT-Clear Hybrid Auth</h2>
   
   <div class="tab-switcher">
-    <button class="tab-btn active" onclick="switchTab('signup')">Sign Up</button>
-    <button class="tab-btn" onclick="switchTab('login')">Login</button>
+    <button class="tab-btn active" onclick="switchTab('signup', event)">Sign Up</button>
+    <button class="tab-btn" onclick="switchTab('login', event)">Login</button>
   </div>
 
   <!-- SIGNUP FORM -->
@@ -452,9 +452,9 @@ function updateCountryCode() {
   }
 }
 
-function switchTab(tab) {
+function switchTab(tab, evt) {
   document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-  event.target.classList.add('active');
+  if (evt && evt.target) evt.target.classList.add('active');
   
   if (tab === 'signup') {
     document.getElementById('signupForm').style.display = 'block';
@@ -519,8 +519,11 @@ async function sendHybridOTP() {
       // Show mock OTP in development
       if (data.mockOtp) {
         console.log('🔐 DEVELOPMENT OTP:', data.mockOtp);
-        const output = document.getElementById('output');
-        if (output) output.textContent = `[DEV MOCK OTP]: ${data.mockOtp}`;
+        // Only display OTP on screen in local development (never in production)
+        if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+          const output = document.getElementById('output');
+          if (output) output.textContent = `[DEV MOCK OTP]: ${data.mockOtp}`;
+        }
       }
       
       startTimer();
@@ -647,6 +650,16 @@ async function handleSignup() {
   
   if (!email || !username || !password || !religion || !country || !phone) {
     showStatus('Please fill in all fields', 'error');
+    return;
+  }
+  
+  // Password strength validation
+  if (password.length < 8) {
+    showStatus('Password must be at least 8 characters long', 'error');
+    return;
+  }
+  if (!/[0-9!@#$%^&*()_\-+=]/.test(password)) {
+    showStatus('Password must include at least one number or special character', 'error');
     return;
   }
   
