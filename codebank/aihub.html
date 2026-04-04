@@ -274,6 +274,96 @@
       #searchInput { width: 180px; }
       .viewer-url-bar { display: none; }
     }
+
+    /* ── Creator's Channel Banner ──────────────────────────── */
+    .creator-banner {
+      margin: 16px 20px 0;
+      background: linear-gradient(135deg, #1a0a0a 0%, #2a0d0d 60%, #1a0a16 100%);
+      border: 1.5px solid rgba(255,0,0,0.35);
+      border-radius: 18px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .creator-banner:hover {
+      border-color: rgba(255,0,0,0.7);
+      box-shadow: 0 0 30px rgba(255,0,0,0.15);
+    }
+    .creator-banner::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 80% 50%, rgba(255,0,0,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .creator-avatar {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ff0000, #cc0000);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 900; color: #fff;
+      flex-shrink: 0;
+      border: 2.5px solid rgba(255,255,255,0.15);
+      box-shadow: 0 0 20px rgba(255,0,0,0.3);
+      letter-spacing: -1px;
+    }
+    .creator-info { flex: 1; min-width: 0; }
+    .creator-label {
+      font-size: 10px; font-weight: 800; color: #ff4444;
+      text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .creator-label::before { content: '▶'; font-size: 9px; }
+    .creator-name {
+      font-size: 18px; font-weight: 900; color: #fff;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .creator-desc {
+      font-size: 12px; color: var(--muted); margin-top: 4px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .creator-actions { display: flex; gap: 10px; flex-shrink: 0; }
+    .creator-btn {
+      padding: 9px 18px; border-radius: 30px;
+      font-size: 12px; font-weight: 800; cursor: pointer;
+      border: none; transition: all 0.2s; text-decoration: none;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .creator-btn.sub {
+      background: #ff0000; color: #fff;
+    }
+    .creator-btn.sub:hover { background: #cc0000; transform: scale(1.04); }
+    .creator-btn.visit {
+      background: var(--surface2); color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .creator-btn.visit:hover { border-color: rgba(255,0,0,0.5); color: #ff6666; }
+    .creator-dismiss {
+      position: absolute; top: 10px; right: 12px;
+      background: none; border: none; color: var(--muted);
+      font-size: 16px; cursor: pointer; padding: 4px;
+      line-height: 1; transition: color 0.2s;
+    }
+    .creator-dismiss:hover { color: var(--text); }
+
+    /* ── Creator badge on service cards ────────────────────── */
+    .badge-creator {
+      background: linear-gradient(90deg,#ff0000,#cc2200) !important;
+      color: #fff !important;
+    }
+    .service-card.is-creator {
+      border-color: rgba(255,0,0,0.35) !important;
+      background: linear-gradient(160deg, #1a0a0a, #12122a) !important;
+    }
+    .service-card.is-creator:hover {
+      border-color: rgba(255,0,0,0.7) !important;
+      box-shadow: 0 8px 30px rgba(255,0,0,0.15) !important;
+    }
   </style>
 </head>
 <body>
@@ -294,6 +384,30 @@
 </div>
 
 <!-- ── Filter tabs ── -->
+
+<!-- ── Creator's Channel Banner ───────────────────────────── -->
+<div class="creator-banner" id="creatorBanner" onclick="openCreatorChannel()">
+  <div class="creator-avatar">GG</div>
+  <div class="creator-info">
+    <div class="creator-label">Creator's Channel</div>
+    <div class="creator-name">Gogod Blbless</div>
+    <div class="creator-desc">Official YouTube channel — AI, tech & more. Click to visit →</div>
+  </div>
+  <div class="creator-actions" onclick="event.stopPropagation()">
+    <a class="creator-btn sub"
+       href="https://www.youtube.com/channel/UCZ5heNyv3s5dIw9mtjsAGsg?sub_confirmation=1"
+       target="_blank" rel="noopener">
+      <i class="fab fa-youtube"></i> Subscribe
+    </a>
+    <a class="creator-btn visit"
+       href="https://www.youtube.com/channel/UCZ5heNyv3s5dIw9mtjsAGsg"
+       target="_blank" rel="noopener">
+      <i class="fa fa-arrow-up-right-from-square"></i> Visit
+    </a>
+  </div>
+  <button class="creator-dismiss" onclick="event.stopPropagation(); document.getElementById('creatorBanner').style.display='none'" title="Dismiss">✕</button>
+</div>
+
 <div class="tabs-bar" id="tabsBar"></div>
 
 <!-- ── Favorites strip ── -->
@@ -466,6 +580,7 @@ const SERVICES = [
   { id:'flowise',     name:'Flowise',       cat:'agent', emoji:'🌊', logo:'https://flowiseai.com/favicon.ico',                                      url:'https://flowiseai.com',            desc:'No-code LLM builder', badge:'open' },
 
   /* ── YouTube & Video Platforms ─────────────────────────── */
+  { id:'gg_channel',  name:'Gogod Blbless', cat:'media', emoji:'📺', logo:'https://www.youtube.com/favicon.ico', url:'https://www.youtube.com/channel/UCZ5heNyv3s5dIw9mtjsAGsg', desc:"Creator's official YT channel", badge:'creator', creator:true },
   { id:'youtube',     name:'YouTube',       cat:'media', emoji:'▶️', logo:'https://www.youtube.com/favicon.ico',                                   url:'https://www.youtube.com',          desc:'AI video search & watch', badge:'free' },
   { id:'youtube_ai',  name:'YouTube Studio',cat:'media', emoji:'🎬', logo:'https://studio.youtube.com/favicon.ico',                                url:'https://studio.youtube.com',       desc:'Create & manage videos' },
   { id:'vimeo',       name:'Vimeo AI',      cat:'media', emoji:'🎞️', logo:'https://vimeo.com/favicon.ico',                                         url:'https://vimeo.com/create',         desc:'AI video creation' },
@@ -500,6 +615,11 @@ let searchQuery  = '';
 let favorites    = JSON.parse(localStorage.getItem('aihub_favs') || '[]');
 let currentSvc   = null;
 let frameTimer   = null;
+
+/* ── Creator Channel shortcut ─────────────────────────────── */
+function openCreatorChannel() {
+  window.open('https://www.youtube.com/channel/UCZ5heNyv3s5dIw9mtjsAGsg', '_blank', 'noopener');
+}
 
 /* ═══════════════════════════════════════════════════════════
    INIT
@@ -577,7 +697,7 @@ function renderAll() {
 function buildCard(svc) {
   const isFav = favorites.includes(svc.id);
   const card  = document.createElement('div');
-  card.className = 'service-card';
+  card.className = 'service-card' + (svc.creator ? ' is-creator' : '');
   card.style.setProperty('--c', svc.color || '#7c3aed');
 
   let badgeHtml = '';
