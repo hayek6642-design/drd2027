@@ -387,6 +387,17 @@ class BattaloodaApp {
             const card = this.createVoiceCard(recording);
             mainFeed.appendChild(card);
         });
+
+        // After rendering cards, attach download handlers
+        document.querySelectorAll('.download-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const audioPath = btn.dataset.audioPath;
+                const recordingId = btn.dataset.recordingId;
+                this.handleDownload(audioPath, recordingId);
+            });
+        });
     }
 
     createVoiceCard(recording) {
@@ -443,7 +454,7 @@ class BattaloodaApp {
                         <i class="fas fa-share"></i>
                     </button>
                 </div>
-                <button class="action-btn" onclick="location.href='${recording.audio_path}'" download>
+                <button class="action-btn download-btn" data-audio-path="${recording.audio_path}" data-recording-id="${recording.id}">
                     <i class="fas fa-download"></i> تنزيل
                 </button>
             </div>
@@ -502,19 +513,57 @@ class BattaloodaApp {
     }
 
     async togglePlay(recording) {
-        const audio = new Audio(recording.audio_path);
-        const playBtn = document.querySelector(`.play-btn[data-recording-id="${recording.id}"] i`);
+        const playBtn = document.querySelector(`[data-recording-id="${recording.id}"] .play-btn`) 
+                     || document.querySelector(`.voice-card[data-id="${recording.id}"] .play-btn`);
         
-        if (audio.paused) {
-            audio.play();
-            playBtn.className = 'fas fa-pause';
-        } else {
-            audio.pause();
-            playBtn.className = 'fas fa-play';
+        // If clicking the same recording that's already playing
+        if (this.currentAudio && this.currentPlayingId === recording.id) {
+            if (this.currentAudio.paused) {
+                await this.currentAudio.play();
+                if (playBtn) playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+            } else {
+                this.currentAudio.pause();
+                if (playBtn) playBtn.innerHTML = '<i class="fas fa-play"></i>';
+            }
+            return;
         }
-
-        // Start waveform animation
-        this.animateWaveform(recording.id);
+        
+        // Stop any currently playing audio
+        if (this.currentAudio) {
+            this.currentAudio.pause();
+            this.currentAudio.currentTime = 0;
+            // Reset the old play button
+            const oldBtn = document.querySelector(`[data-recording-id="${this.currentPlayingId}"] .play-btn`)
+                        || document.querySelector(`.voice-card[data-id="${this.currentPlayingId}"] .play-btn`);
+            if (oldBtn) oldBtn.innerHTML = '<i class="fas fa-play"></i>';
+        }
+        
+        // Create new audio and play
+        this.currentAudio = new Audio(recording.audio_path);
+        this.currentPlayingId = recording.id;
+        
+        this.currentAudio.addEventListener('ended', () => {
+            if (playBtn) playBtn.innerHTML = '<i class="fas fa-play"></i>';
+            this.currentPlayingId = null;
+        });
+        
+        this.currentAudio.addEventListener('timeupdate', () => {
+            const timeEl = document.querySelector(`[data-recording-id="${recording.id}"] .time-display`)
+                        || document.querySelector(`.voice-card[data-id="${recording.id}"] .time-display`);
+            if (timeEl) {
+                const mins = Math.floor(this.currentAudio.currentTime / 60);
+                const secs = Math.floor(this.currentAudio.currentTime % 60);
+                timeEl.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            }
+        });
+        
+        try {
+            await this.currentAudio.play();
+            if (playBtn) playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+        } catch (err) {
+            console.error('Playback failed:', err);
+            if (window.showToast) window.showToast('فشل التشغيل', 'error');
+        }
     }
 
     animateWaveform(recordingId) {
@@ -582,12 +631,15 @@ class BattaloodaApp {
             if (data.comments && data.comments.length > 0) {
                 data.comments.forEach(comment => {
                     const commentEl = document.createElement('div');
-                    commentEl.className = 'comment-item';
-                    commentEl.innerHTML = `
-                        <div class="comment-author">${comment.user_name}</div>
-                        <div class="comment-text">${comment.text}</div>
-                        <div class="comment-time">${this.formatTime(comment.created_at)}</div>
-                    `;
+                    commentEl.className = 'comment';
+                    const authorDiv = document.createElement('div');
+                    authorDiv.className = 'comment-author';
+                    authorDiv.textContent = comment.user_name;
+                    const textDiv = document.createElement('div');
+                    textDiv.className = 'comment-text';
+                    textDiv.textContent = comment.text;
+                    commentEl.appendChild(authorDiv);
+                    commentEl.appendChild(textDiv);
                     commentList.appendChild(commentEl);
                 });
             } else {
@@ -725,7 +777,7 @@ class BattaloodaApp {
                     <li>التحدث بشكل طبيعي</li>
                 </ul>
                 <button onclick="window.battaloodaApp.retryRecording()">إعادة المحاولة</button>
-                <button onclick="this.cancelRecording()">إلغاء</button>
+                <button onclick="window.battaloodaApp.stopRecording()">إلغاء</button>
             </div>
         `;
         
@@ -958,8 +1010,18 @@ class BattaloodaApp {
     async openStudio() {
         // 🔧 FIX: Navigate to studio page if not already there
         if (!window.location.pathname.includes('talent-studio.html')) {
-            console.log('[Core] Redirecting to Talent Studio page');
-            window.location.href = './talent-studio.html';
+            // Instead of navigating away, show studio inline
+            const studioPanel = document.getElementById('studioPanel') || document.getElementById('studio-panel');
+            if (studioPanel) {
+                studioPanel.classList.toggle('hidden');
+                studioPanel.classList.toggle('active');
+                return;
+            }
+            // Fallback: ask parent to handle it
+            window.parent.postMessage({
+                type: 'battalooda:open-studio',
+                service: 'talent-studio'
+            }, '*');
             return;
         }
 
@@ -990,6 +1052,27 @@ class BattaloodaApp {
         
         // Open studio
         this.studioUI.openStudio(vocalBlob);
+    }
+
+    // Download handler
+    handleDownload(audioPath, recordingId) {
+        if (!audioPath) {
+            if (window.showToast) window.showToast('لا يوجد ملف للتنزيل', 'error');
+            return;
+        }
+        try {
+            const a = document.createElement('a');
+            a.href = audioPath;
+            a.download = `battalooda-${recordingId || 'recording'}.webm`;
+            a.target = '_blank';
+            a.rel = 'noopener';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        } catch (err) {
+            console.error('Download failed:', err);
+            if (window.showToast) window.showToast('فشل التنزيل', 'error');
+        }
     }
 
     // Utility functions

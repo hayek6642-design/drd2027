@@ -155,14 +155,14 @@
             initChatService(state) {
                 // Your chat initialization logic
                 // Use state.user.id for user identification
-                // Use window.Auth.getToken() for API calls
+                // Use window.Auth?.getToken?.() for API calls
                 
                 // Dispatch to React app
                 window.dispatchEvent(new CustomEvent('e7ki:auth-ready', {
                     detail: {
                         authenticated: true,
                         user: state.user,
-                        token: window.Auth.getToken()
+                        token: window.Auth?.getToken?.() || null
                     }
                 }));
             }
