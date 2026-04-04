@@ -221,6 +221,40 @@
 </style>
 </head>
 <body>
+<!-- Single-Session Kickout Banner -->
+<script>
+(function() {
+  var reason = new URLSearchParams(window.location.search).get('reason');
+  if (reason === 'kicked') {
+    var msg = sessionStorage.getItem('__kickout_reason__') ||
+      'Your account was opened on another device. Sign in here to continue.';
+    sessionStorage.removeItem('__kickout_reason__');
+    // Inject banner after body opens
+    document.addEventListener('DOMContentLoaded', function() {
+      var banner = document.createElement('div');
+      banner.id = 'kickout-banner';
+      banner.style.cssText = [
+        'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:99999',
+        'background:linear-gradient(90deg,#c0392b,#e74c3c)',
+        'color:#fff', 'text-align:center', 'padding:12px 20px',
+        'font-size:14px', 'font-family:-apple-system,BlinkMacSystemFont,sans-serif',
+        'box-shadow:0 2px 12px rgba(0,0,0,0.4)', 'display:flex',
+        'align-items:center', 'justify-content:center', 'gap:10px'
+      ].join(';');
+      banner.innerHTML = '<span>📱</span><span>' + msg + '</span>' +
+        '<button onclick="document.getElementById('kickout-banner').remove()" ' +
+        'style="background:rgba(255,255,255,0.2);border:none;color:#fff;' +
+        'padding:4px 10px;border-radius:4px;cursor:pointer;font-size:13px;margin-left:8px">✕</button>';
+      document.body.insertBefore(banner, document.body.firstChild);
+      // Auto-dismiss after 8s
+      setTimeout(function() {
+        var b = document.getElementById('kickout-banner');
+        if (b) b.remove();
+      }, 8000);
+    });
+  }
+})();
+</script>
 
 <div class="container">
   <h2>🔐 YT-Clear Hybrid Auth</h2>

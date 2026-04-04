@@ -845,11 +845,18 @@ app.post('/api/session/takeover', requireAuth, async (req, res) => {
       const oldToken = existing.rows[0].session_token;
       const oldDevice = existing.rows[0].device_label || 'another device';
       if (oldToken !== sessionToken) {
+        // 1. Notify old device via SSE so it can self-logout immediately if online
         __sseEmitToSession(String(userId), oldToken, {
           type: 'SESSION_TAKEN_OVER',
           message: `Your DR.D session was transferred to ${deviceLabel}. This device has been logged out.`,
           newDevice: deviceLabel
         });
+        // 2. Revoke old session from in-memory map so requireAuth returns 401 for old device
+        devSessions.delete(oldToken);
+        // 3. Revoke old session from DB so it survives server restarts
+        try {
+          await query('DELETE FROM auth_sessions WHERE token = $1', [oldToken]);
+        } catch(_) {}
       }
     }
 
