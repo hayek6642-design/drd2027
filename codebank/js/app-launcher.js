@@ -105,6 +105,13 @@ function tryOpenService(app, fallbackIndex = 0) {
             
             // 🚀 PHASE 4: Track opened app
             State.openedApps.set(app.id, modalIframe);
+            
+            // 🔧 FIX: Send auth + assets to service iframe after it loads
+            setTimeout(() => {
+                if (typeof window.sendInitToIframe === 'function') {
+                    window.sendInitToIframe();
+                }
+            }, 400);
         };
         
         // Error handler
@@ -222,39 +229,27 @@ function setupModalControls() {
         closeBtn.onclick = () => {
             modal.classList.remove('active');
             
-            // Phase 1: Proper Iframe Destruction
+            // 🔧 FIX: Reset iframe WITHOUT replacing DOM element
+            // Replacing the element makes Consolidated Service Manager's reference stale
             if (iframe) {
-                console.log('[AppLauncher] Destroying iframe for GC');
-                
                 // 🚀 PHASE 4: Remove from tracked apps
                 if (State.currentApp) {
                     State.openedApps.delete(State.currentApp.id);
                 }
 
                 try {
-                    // Send destroy signal
                     if (iframe.contentWindow) {
                         iframe.contentWindow.postMessage({ type: 'service:destroy' }, "*");
                     }
-                    iframe.src = 'about:blank';
-                    
-                    // Remove from DOM and re-add fresh one
-                    const container = iframe.parentNode;
-                    if (container) {
-                        const newIframe = document.createElement('iframe');
-                        newIframe.id = 'service-modal-iframe';
-                        newIframe.sandbox = iframe.sandbox;
-                        container.replaceChild(newIframe, iframe);
-                    }
-                } catch (e) {
-                    iframe.src = 'about:blank';
-                }
+                } catch (e) {}
+                
+                // Reset src to blank — do NOT replace DOM element
+                try { iframe.src = 'about:blank'; } catch(e) {}
             }
             
             State.isAppOpen = false;
             State.currentApp = null;
             
-            // Trigger GC hint
             if (window.gc) try { window.gc(); } catch(_) {}
         };
     }

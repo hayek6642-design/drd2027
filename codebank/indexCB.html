@@ -84,10 +84,10 @@
     <script type="module">
         import { AssetBus } from '/shared/local-asset-bus.js';
         
-        // 🛡️ Phase 2: Expose Single Source of Truth
-        if (window.self === window.top) { 
-            window.AssetBus = AssetBus; 
-            console.log("✅ AssetBus exposed globally"); 
+        // 🛡️ Phase 2: AssetBus is already set globally by local-asset-bus.js
+        // DO NOT reassign window.AssetBus — it is defined as writable:false
+        if (window.self === window.top && window.AssetBus) {
+            console.log("✅ AssetBus ready globally");
         }
         
         // 🛡️ Phase 3: Secure Event Dispatch
@@ -665,10 +665,22 @@
             };
             
             function sendInitToIframe() {
+                // 🔧 FIX: Always re-query the iframe to avoid stale reference after DOM replacement
+                const iframeEl = document.getElementById('service-modal-iframe');
                 try {
-                    const user = JSON.parse(localStorage.getItem('user') || '{}');
+                    if (!iframeEl || !iframeEl.contentWindow) {
+                        console.warn('[CodeBank] sendInitToIframe: iframe not ready, skipping');
+                        return;
+                    }
                     
-                    // 🛡️ ARCHITECTURE ALIGNMENT: Get codes + full assets from AssetBus
+                    // Get user from multiple possible localStorage keys
+                    let userData = null;
+                    try {
+                        userData = JSON.parse(localStorage.getItem('__cached_user__') || localStorage.getItem('user') || 'null');
+                    } catch(_) {}
+                    const sessionId = localStorage.getItem('session_token') || localStorage.getItem('__cached_session_id__') || '';
+                    
+                    // 🛡️ Get codes + full assets from AssetBus
                     let codes = [];
                     let assetSnapshot = {};
                     if (window.AssetBus && typeof window.AssetBus.snapshot === 'function') {
@@ -676,43 +688,53 @@
                         codes = snap.codes || [];
                         assetSnapshot = snap;
                     }
-                    
-                    // Fallback to localStorage if AssetBus is empty
                     if (!codes.length) {
-                        codes = JSON.parse(localStorage.getItem('safeCodes') || localStorage.getItem('bankode_codes') || '[]');
+                        try { codes = JSON.parse(localStorage.getItem('safeCodes') || localStorage.getItem('bankode_codes') || '[]'); } catch(_) {}
                     }
 
-                    // Build normalised asset payload for display
                     const assetPayload = Object.assign({}, assetSnapshot, {
                         codes_count:  Array.isArray(assetSnapshot.codes)  ? assetSnapshot.codes.length  : (assetSnapshot.codes_count  || 0),
                         silver_count: Array.isArray(assetSnapshot.silver) ? assetSnapshot.silver.length : (assetSnapshot.silver_count || 0),
                         gold_count:   Array.isArray(assetSnapshot.gold)   ? assetSnapshot.gold.length   : (assetSnapshot.gold_count   || 0),
                     });
 
-                    // ① Send dedicated assets:sync so the bridge bar updates immediately
-                    modalIframe.contentWindow.postMessage({
+                    // ① AUTH_RESPONSE — for iframe-auth-client.js (waits for this specific type)
+                    iframeEl.contentWindow.postMessage({
+                        type:          'AUTH_RESPONSE',
+                        authenticated: !!(userData && (userData.uid || userData.id || userData.email)),
+                        userId:        userData?.uid || userData?.id || userData?.email || null,
+                        sessionId:     sessionId,
+                        user:          userData,
+                        timestamp:     Date.now()
+                    }, '*');
+
+                    // ② assets:sync — for bridge bar
+                    iframeEl.contentWindow.postMessage({
                         type:   'assets:sync',
                         assets: assetPayload
                     }, '*');
 
-                    // ② Standard auth:ready with assets embedded
-                    modalIframe.contentWindow.postMessage({
+                    // ③ auth:ready — for older services (auth-ready-component pattern)
+                    iframeEl.contentWindow.postMessage({
                         type:      'auth:ready',
                         source:    'codebank-parent',
                         serviceId: currentServiceUrl,
                         payload: {
-                            user:      user,
+                            user:      userData,
                             codes:     codes,
                             assets:    assetPayload,
                             timestamp: Date.now()
                         }
                     }, '*');
                     
-                    console.log('[CodeBank] Sent auth:ready + assets:sync to iframe with', codes.length, 'codes');
+                    console.log('[CodeBank] Sent AUTH_RESPONSE + auth:ready + assets:sync to iframe');
                 } catch (e) {
                     console.error('[CodeBank] Failed to send init:', e);
                 }
             }
+            
+            // 🔧 FIX: Expose globally so app-launcher.js can call it after iframe loads
+            window.sendInitToIframe = sendInitToIframe;
             
             function closeServiceModal() {
                 modal.classList.remove('active');
@@ -748,11 +770,19 @@
             
             // Listen for messages from iframe
             window.addEventListener('message', (e) => {
+                // 🔧 FIX: Handle AUTH_REQUEST from iframe-auth-client.js — respond with AUTH_RESPONSE
+                if (e.data?.type === 'AUTH_REQUEST' || e.data?.type === 'AUTH_REFRESH' || e.data?.type === 'IFRAME_READY') {
+                    console.log('[CodeBank] Auth request from service iframe:', e.data.type);
+                    sendInitToIframe();
+                    return;
+                }
+                
                 // Forward AUTH_SYNC to the service iframe
                 if (e.data?.type === 'AUTH_SYNC' || e.data?.type === 'AUTH_CONTEXT') {
                     console.log('[CodeBank] Forwarding auth message to service iframe');
-                    if (modalIframe && modalIframe.contentWindow) {
-                        modalIframe.contentWindow.postMessage(e.data, '*');
+                    const currentIframe = document.getElementById('service-modal-iframe');
+                    if (currentIframe && currentIframe.contentWindow) {
+                        currentIframe.contentWindow.postMessage(e.data, '*');
                     }
                 }
 
@@ -796,11 +826,13 @@
 
             // ── ACC: Push fresh assets to the open service iframe ──────────
             function _pushAssetsToService() {
-                if (!modalIframe || !modalIframe.contentWindow) return;
+                // 🔧 FIX: Always re-query iframe to avoid stale reference
+                const currentIframe = document.getElementById('service-modal-iframe');
+                if (!currentIframe || !currentIframe.contentWindow) return;
                 if (!modal.classList.contains('active')) return;
                 const snap = window.AssetBus ? window.AssetBus.snapshot() : null;
                 if (!snap) return;
-                modalIframe.contentWindow.postMessage({
+                currentIframe.contentWindow.postMessage({
                     type:   'assets:sync',
                     assets: _buildAssetPayload(snap)
                 }, '*');
@@ -837,8 +869,9 @@
                 }
 
                 const freshSnap = window.AssetBus ? window.AssetBus.snapshot() : {};
-                if (modalIframe && modalIframe.contentWindow) {
-                    modalIframe.contentWindow.postMessage({
+                const _spendIframe = document.getElementById('service-modal-iframe');
+                if (_spendIframe && _spendIframe.contentWindow) {
+                    _spendIframe.contentWindow.postMessage({
                         type:    'assets:spend:result',
                         reqId:   reqId,
                         success: success,
@@ -867,8 +900,9 @@
                 } catch (e) {}
 
                 const freshSnap = window.AssetBus ? window.AssetBus.snapshot() : {};
-                if (modalIframe && modalIframe.contentWindow) {
-                    modalIframe.contentWindow.postMessage({
+                const _earnIframe = document.getElementById('service-modal-iframe');
+                if (_earnIframe && _earnIframe.contentWindow) {
+                    _earnIframe.contentWindow.postMessage({
                         type:    'assets:earn:result',
                         reqId:   reqId,
                         success: success,
