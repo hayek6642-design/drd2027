@@ -2078,6 +2078,33 @@
                             for (var i=0;i<attempts;i++){ if (await fn()) return true; await sleep(delay) }
                             return false;
                         }
+
+                        // [CROSS-DEVICE FIX] SSE EventSource for real-time cross-device sync.
+                        // When ANY device earns a code, server emits CODES_RECEIVED to ALL devices.
+                        // All connected sessions (phone, computer, tablet) immediately re-fetch
+                        // from the DB and show the same codes — like a mirror, not separate users.
+                        try {
+                            if (!window.__sseSource) {
+                                var _sseSource = new EventSource('/events', { withCredentials: true });
+                                window.__sseSource = _sseSource;
+                                _sseSource.onmessage = async function(evnt) {
+                                    try {
+                                        var d = JSON.parse(evnt.data);
+                                        if (d && (d.type === 'CODES_RECEIVED' || d.type === 'ASSET_UPDATE')) {
+                                            console.log('[SSE] Cross-device sync:', d.type, '— re-fetching codes');
+                                            await fetchSqliteCodesFirst();
+                                            try { if (window.AssetBus && typeof window.AssetBus.sync === 'function') {
+                                                setTimeout(function(){ try { window.AssetBus.sync(); } catch(_){} }, 500);
+                                            }} catch(_){}
+                                        }
+                                    } catch(_) {}
+                                };
+                                _sseSource.onerror = function() {
+                                    try { if (_sseSource.readyState === EventSource.CLOSED) { window.__sseSource = null; } } catch(_){}
+                                };
+                            }
+                        } catch(_) {}
+
                         var ok = await tryWithRetry(fetchSqliteCodesFirst, 3, 1200);
                         if (ok) return;
                         setTimeout(async function(){ try { await tryWithRetry(fetchSqliteCodesFirst, 3, 1500) } catch(_){} }, 2500);
@@ -2512,12 +2539,16 @@ document.addEventListener('DOMContentLoaded', async function(){
     <script>
         (function(){
             async function ensureUser(){
+                // [CROSS-DEVICE FIX] Do NOT fall back to /api/auth/dev-login.
+                // That endpoint creates a brand-new random userId each time it's called,
+                // which makes the phone and computer look like two completely different users.
+                // If /api/me fails, return null so the balloon engine simply doesn't run
+                // until the user properly logs in.
                 try {
                     const r = await fetch('/api/me', { credentials: 'include' }).then(x=>x.json());
                     if (r && r.user && r.user.id) return r.user.id;
-                    const d = await fetch('/api/auth/dev-login', { method: 'POST', credentials: 'include' }).then(x=>x.json());
-                    return d && d.userId ? d.userId : null;
-                } catch(_){ return null }
+                } catch(_){}
+                return null;
             }
             async function init(){
                 const uid = await ensureUser();

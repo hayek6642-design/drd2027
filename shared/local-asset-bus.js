@@ -475,7 +475,7 @@ const createAssetBus = () => {
   };
 
   // Start periodic sync - Rule: 30-60s
-  let _syncInterval = setInterval(() => bus.sync(), 60000); 
+  let _syncInterval = setInterval(() => bus.sync(), 15000); // [CROSS-DEVICE FIX] Reduced from 60s to 15s for faster cross-device sync
   
   window.__assetBusInstance = bus;
 
