@@ -927,18 +927,40 @@
             if (signOutBtn) {
                 signOutBtn.addEventListener('click', async () => {
                     console.log('🔓 Signing out...');
-                    
-                    // 1. Remove session active flag
+
+                    // 1. Clear ALL cached auth & user-specific data
                     localStorage.removeItem('session_active');
-                    
-                    // 2. Optional: Notify backend
+                    localStorage.removeItem('session_token');
+                    localStorage.removeItem('user_data');
+                    localStorage.removeItem('__cached_user__');
+                    localStorage.removeItem('__cached_session_id__');
+                    localStorage.removeItem('auth_timestamp');
+                    localStorage.removeItem('safeCodes');
+                    localStorage.removeItem('bankode_codes');
+                    localStorage.removeItem('last_reload_time');
+                    try { document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax'; } catch(_){}
+
+                    // 2. Clear IndexedDB snapshots so next user starts fresh
                     try {
-                        await fetch('/api/auth/logout', { method: 'POST' });
+                        var idbReq = indexedDB.open('CodeBankSnapshotDB', 1);
+                        idbReq.onsuccess = function() {
+                            try {
+                                var db = idbReq.result;
+                                var tx = db.transaction('snapshots', 'readwrite');
+                                tx.objectStore('snapshots').clear();
+                                db.close();
+                            } catch(_) {}
+                        };
+                    } catch(_) {}
+
+                    // 3. Notify backend
+                    try {
+                        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
                     } catch (e) {
                         console.warn('Logout notification failed:', e);
                     }
-                    
-                    // 3. Redirect to login
+
+                    // 4. Redirect to login
                     window.location.href = '/login.html';
                 });
             }
@@ -957,6 +979,7 @@
   var _sseConn = null;
 
   async function initCBMirror() {
+    return; // [DISABLED] Mirror mode / Switch Device button disabled per user request
     try {
       var res = await fetch('/api/mirror/register-role', {
         method: 'POST', credentials: 'include',

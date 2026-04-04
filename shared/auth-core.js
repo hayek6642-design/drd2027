@@ -127,6 +127,10 @@
         localStorage.setItem('session_token', this._sessionId);
         localStorage.setItem('user_data', JSON.stringify(this._user));
         localStorage.setItem('auth_timestamp', Date.now().toString());
+        // [FIX] Also save for cache restoration on next load (was missing, causing re-auth on mobile)
+        localStorage.setItem('__cached_user__', JSON.stringify(this._user));
+        localStorage.setItem('__cached_session_id__', this._sessionId);
+        localStorage.setItem('session_active', '1');
       } else if (this._status === 'unauthenticated') {
         localStorage.removeItem('session_token');
         localStorage.removeItem('user_data');
