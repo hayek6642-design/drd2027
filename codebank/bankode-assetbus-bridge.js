@@ -1,8 +1,38 @@
 /**
  * Bankode AssetBus Bridge - GLOBAL PROVIDER
+ * Enhanced with Capacitor native HTTP support for CORS-free requests on mobile.
  */
 (function(window) {
     'use strict';
+
+    // ==========================================
+    // NATIVE HTTP BRIDGE (Capacitor support)
+    // ==========================================
+    const _isNativePlatform = (() => {
+        try { return window.Capacitor && window.Capacitor.isNativePlatform(); } catch(_) { return false; }
+    })();
+
+    const _serverUrl = 'https://drd2027.onrender.com';
+
+    /**
+     * Smart fetch that uses native HTTP on mobile (bypasses CORS)
+     * and standard fetch on web.
+     */
+    async function bridgeFetch(path, options = {}) {
+        const url = path.startsWith('http') ? path : (_isNativePlatform ? _serverUrl + path : path);
+        
+        // On native, try CapacitorHttp first for CORS-free requests
+        if (_isNativePlatform && window.NativeBridge && typeof window.NativeBridge.nativeFetch === 'function') {
+            try {
+                return await window.NativeBridge.nativeFetch(url, options);
+            } catch (e) {
+                if (window.DEBUG_MODE) console.warn('[Bridge] Native fetch failed, falling back to standard fetch:', e.message);
+            }
+        }
+
+        // Standard fetch (web or fallback)
+        return fetch(url, options);
+    }
 
     // This is the "Public Tap" that the iframe looks for
     let _lastPullLog = 0;
@@ -33,7 +63,7 @@
         if (window.DEBUG_MODE) console.log(`[Bridge] Syncing code to server: ${code}`);
         
         try {
-            const res = await fetch('/api/codes/sync', {
+            const res = await bridgeFetch('/api/codes/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ code }),

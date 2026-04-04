@@ -10,6 +10,44 @@ const State = {
     }
 };
 
+// ==========================================
+// NATIVE PATH RESOLUTION (Capacitor Support)
+// ==========================================
+const NativePathResolver = (() => {
+    const isNative = (() => {
+        try {
+            return window.Capacitor && window.Capacitor.isNativePlatform();
+        } catch (_) { return false; }
+    })();
+
+    const serverUrl = 'https://drd2027.onrender.com';
+
+    /**
+     * Resolve a relative/absolute service URL for native platforms.
+     * On web: paths like './safecode.html' or '/codebank/safecode.html' work as-is.
+     * On native: relative paths must be converted to absolute URLs pointing to the server.
+     */
+    function resolveUrl(url) {
+        if (!isNative) return url;
+        if (!url) return url;
+
+        // Already absolute URL
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+
+        // Remove leading ./ for consistency
+        let cleanPath = url.replace(/^\.\//, '');
+        
+        // Ensure leading slash
+        if (!cleanPath.startsWith('/')) {
+            cleanPath = '/codebank/' + cleanPath;
+        }
+
+        return serverUrl + cleanPath;
+    }
+
+    return { isNative, resolveUrl, serverUrl };
+})();
+
 // Recursive function to try URLs until one works
 function tryOpenService(app, fallbackIndex = 0) {
     // 🚀 PHASE 4: Single Instance Policy
@@ -20,7 +58,8 @@ function tryOpenService(app, fallbackIndex = 0) {
         return;
     }
 
-    const urls = [app.url, ...(app.fallbackUrls || [])];
+    // Resolve URLs for native platform
+    const urls = [app.url, ...(app.fallbackUrls || [])].map(u => NativePathResolver.resolveUrl(u));
     
     if (fallbackIndex >= urls.length) {
         // All URLs failed
@@ -88,6 +127,13 @@ function tryOpenService(app, fallbackIndex = 0) {
             }
         }, 8000);
         
+        // On native platforms, adjust iframe sandbox to allow cross-origin loading
+        if (NativePathResolver.isNative) {
+            modalIframe.removeAttribute('sandbox');
+            // Allow all necessary features for native WebView
+            modalIframe.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; clipboard-write');
+        }
+
         // Set the source to load the service
         modalIframe.src = url;
     } else {
