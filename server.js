@@ -83,6 +83,7 @@ import battaloodaRouter from './api/routes/battalooda.js';
 import shotsRouter from './api/modules/shots.js';
 import biometricRouter from './api/modules/biometric.js';
 import gambleRouter from './api/modules/gamble.js';
+import sammAutoRouter from './api/modules/samma3ny-automode.js';
 
 import { 
   getAllCountries, 
@@ -270,6 +271,7 @@ app.use('/api/codes', syncRouter);
 app.use('/api/shots', shotsRouter);
 app.use('/api/auth', biometricRouter);
 app.use('/api/gamble', gambleRouter);
+app.use('/api/samma3ny', sammAutoRouter);
 
 // AUTH REMOVED — CLEAN RESET
 
