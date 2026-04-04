@@ -3201,14 +3201,16 @@ app.post('/api/watchdog/debug-kill', requireAuth, async (req, res) => {
   try {
     const userId = req.user && req.user.id;
     if (!userId) return res.status(401).json({ success: false, error: 'unauthorized' });
+    // Use a past timestamp (4 days ago) - works for both SQLite and Postgres
+    const pastDate = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString();
     await query(
       `INSERT INTO watchdog_state (user_id, dog_state, last_fed_at, is_frozen, updated_at)
-       VALUES ($1, 'DEAD', CURRENT_TIMESTAMP - INTERVAL '4 days', 0, CURRENT_TIMESTAMP)
+       VALUES ($1, 'DEAD', $2, 0, CURRENT_TIMESTAMP)
        ON CONFLICT (user_id) DO UPDATE SET
          dog_state = 'DEAD',
-         last_fed_at = CURRENT_TIMESTAMP - INTERVAL '4 days',
+         last_fed_at = $2,
          updated_at = CURRENT_TIMESTAMP`,
-      [userId]
+      [userId, pastDate]
     );
     return res.json({ success: true, message: 'Dog killed for testing. Refresh the page.' });
   } catch (err) {
