@@ -133,9 +133,24 @@
                 this.loadService(state);
             }
             
-            loadService(authData) {
+            async loadService(authData) {
                 const frame = document.getElementById('service-frame');
                 const baseUrl = './farragna/index.html';
+
+                // Try to get a Farragna JWT token for the iframe
+                let farragnaToken = null;
+                try {
+                    const tokenResp = await fetch('/api/farragna/auth/token', { credentials: 'include' });
+                    if (tokenResp.ok) {
+                        const tokenData = await tokenResp.json();
+                        if (tokenData.ok && tokenData.token) {
+                            farragnaToken = tokenData.token;
+                            console.log('[Farragna] JWT token obtained for iframe');
+                        }
+                    }
+                } catch(e) {
+                    console.warn('[Farragna] Could not get JWT token:', e);
+                }
                 
                 frame.onload = () => {
                     setTimeout(() => {
@@ -143,10 +158,12 @@
                             frame.contentWindow.postMessage({ 
                                 type: 'auth:ready', 
                                 source: 'farragna-loader', 
+                                token: farragnaToken,
+                                user: authData?.user || authData || null,
                                 payload: authData || {} 
                             }, '*');
                         }
-                    }, 1000);
+                    }, 800);
                     frame.style.display = 'block';
                 };
                 

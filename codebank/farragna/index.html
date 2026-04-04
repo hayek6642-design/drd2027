@@ -1,27 +1,1339 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Farragna Reels</title>
-    <link rel="stylesheet" href="./styles.css" />
-  </head>
-  <body>
-    <div id="farragna-root" class="reels-root">
-      <header class="reels-header">
-        <div class="left">
-          <h1>Farragna</h1>
-        </div>
-        <div class="right">
-          <button id="upload-btn" class="btn">+ Upload Video</button>
-          <input id="upload-input" type="file" accept="video/*" style="display:none" />
-        </div>
-      </header>
-      <main id="reels-container" class="reels-container"></main>
-      <div id="status-bar" class="status-bar"></div>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=none">
+<title>Farragna</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#000;--text:#fff;--red:#ff0050;--blue:#00f2ea;
+  --glass:rgba(255,255,255,.08);--glass-border:rgba(255,255,255,.12);
+  --overlay:rgba(0,0,0,.55);--card:rgba(20,20,20,.92);
+  --radius:12px;--transition:.25s cubic-bezier(.4,0,.2,1);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;outline:none}
+input,textarea,select{font:inherit;color:inherit;background:none;border:none;outline:none}
+
+/* ===== APP SHELL ===== */
+#app{position:relative;width:100%;height:100%;overflow:hidden}
+
+/* ===== TOP BAR ===== */
+.top-bar{position:fixed;top:0;left:0;right:0;z-index:100;padding:8px 12px 0;pointer-events:none}
+.top-bar-inner{display:flex;align-items:center;justify-content:space-between;pointer-events:auto}
+.logo-title{font-size:20px;font-weight:800;background:linear-gradient(135deg,var(--red),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-.5px;cursor:pointer;-webkit-user-select:none;user-select:none}
+.top-actions{display:flex;gap:12px;align-items:center}
+.top-actions button{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:var(--transition)}
+.top-actions button:hover{background:rgba(255,255,255,.18)}
+.top-actions button svg{width:20px;height:20px;fill:var(--text)}
+.user-avatar{width:36px;height:36px;border-radius:50%;overflow:hidden;border:2px solid var(--red);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;background:linear-gradient(135deg,var(--red),var(--blue));cursor:pointer;flex-shrink:0}
+.user-avatar img{width:100%;height:100%;object-fit:cover}
+
+/* ===== CATEGORY TABS ===== */
+.cat-tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;padding:8px 12px 6px;pointer-events:auto}
+.cat-tabs::-webkit-scrollbar{display:none}
+.cat-tab{flex-shrink:0;padding:6px 16px;border-radius:20px;font-size:13px;font-weight:600;background:var(--glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--glass-border);transition:var(--transition);white-space:nowrap}
+.cat-tab.active{background:linear-gradient(135deg,var(--red),var(--blue));border-color:transparent;color:#fff}
+.cat-tab:hover:not(.active){background:rgba(255,255,255,.15)}
+
+/* ===== VIDEO FEED ===== */
+.feed-container{width:100%;height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.feed-container::-webkit-scrollbar{display:none}
+.video-slide{position:relative;width:100%;height:100%;scroll-snap-align:start;scroll-snap-stop:always;background:#000;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.video-slide video{width:100%;height:100%;object-fit:cover}
+.video-slide .vid-error{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:rgba(255,255,255,.5);font-size:14px}
+.video-slide .vid-error svg{width:48px;height:48px;fill:rgba(255,255,255,.3)}
+
+/* Progress bar */
+.vid-progress{position:absolute;top:0;left:0;right:0;height:3px;background:rgba(255,255,255,.15);z-index:10}
+.vid-progress-bar{height:100%;background:linear-gradient(90deg,var(--red),var(--blue));width:0%;transition:width .2s linear}
+
+/* Play/Pause indicator */
+.play-indicator{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);width:80px;height:80px;border-radius:50%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:20;opacity:0;transition:transform .15s ease,opacity .15s ease}
+.play-indicator.show{transform:translate(-50%,-50%) scale(1);opacity:1}
+.play-indicator.hide-anim{transform:translate(-50%,-50%) scale(1.3);opacity:0}
+.play-indicator svg{width:36px;height:36px;fill:#fff}
+
+/* Heart animation on double-tap */
+.heart-burst{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:25}
+.heart-burst svg{width:100px;height:100px;fill:var(--red);animation:heartPop .8s ease forwards}
+@keyframes heartPop{0%{transform:scale(0);opacity:1}30%{transform:scale(1.3)}50%{transform:scale(1)}100%{transform:scale(1.3);opacity:0}}
+
+/* ===== VIDEO INFO OVERLAY ===== */
+.vid-info{position:absolute;bottom:0;left:0;right:64px;padding:16px 16px 24px;z-index:10;background:linear-gradient(transparent,rgba(0,0,0,.7))}
+.vid-info .creator{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.vid-info .creator-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--red),var(--blue));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.vid-info .creator-name{font-size:14px;font-weight:700}
+.vid-info .follow-btn{font-size:11px;padding:3px 10px;border-radius:4px;background:var(--red);font-weight:700;margin-left:4px}
+.vid-info .caption{font-size:13px;line-height:1.4;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.vid-info .caption.expanded{-webkit-line-clamp:unset}
+.vid-info .music-row{display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.7)}
+.vid-info .music-row svg{width:14px;height:14px;fill:rgba(255,255,255,.7);animation:spin 3s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ===== RIGHT SIDE ACTIONS ===== */
+.vid-actions{position:absolute;right:8px;bottom:80px;display:flex;flex-direction:column;align-items:center;gap:18px;z-index:10}
+.vid-action{display:flex;flex-direction:column;align-items:center;gap:3px}
+.vid-action button{width:44px;height:44px;border-radius:50%;background:var(--glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;transition:var(--transition)}
+.vid-action button:hover{background:rgba(255,255,255,.2)}
+.vid-action button svg{width:24px;height:24px;fill:#fff;transition:var(--transition)}
+.vid-action button.liked svg{fill:var(--red)}
+.vid-action .count{font-size:11px;font-weight:600;color:rgba(255,255,255,.85)}
+
+/* ===== LOADING SPINNER ===== */
+.spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite}
+.feed-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5}
+
+/* ===== SEARCH OVERLAY ===== */
+.search-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);transform:translateY(-100%);transition:transform .35s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column}
+.search-overlay.open{transform:translateY(0)}
+.search-header{display:flex;align-items:center;gap:10px;padding:12px 16px}
+.search-header input{flex:1;height:40px;padding:0 16px;border-radius:20px;background:rgba(255,255,255,.1);border:1px solid var(--glass-border);font-size:14px;color:#fff}
+.search-header input::placeholder{color:rgba(255,255,255,.4)}
+.search-header .close-search{font-size:14px;color:rgba(255,255,255,.6)}
+.search-body{flex:1;overflow-y:auto;padding:16px}
+.search-body h3{font-size:14px;color:rgba(255,255,255,.5);margin-bottom:12px;font-weight:600}
+.recent-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.recent-item svg{width:18px;height:18px;fill:rgba(255,255,255,.3)}
+.recent-item span{font-size:14px}
+.recent-item .remove-recent{margin-left:auto;font-size:12px;color:rgba(255,255,255,.3)}
+.search-results{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:12px}
+.search-result-item{aspect-ratio:9/16;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden;position:relative}
+.search-result-item video{width:100%;height:100%;object-fit:cover}
+.search-result-item .sr-views{position:absolute;bottom:4px;left:4px;font-size:10px;background:rgba(0,0,0,.6);padding:2px 6px;border-radius:4px}
+
+/* ===== ADMIN PANEL ===== */
+.admin-overlay{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:none;flex-direction:column;overflow:hidden}
+.admin-overlay.open{display:flex}
+.admin-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
+.admin-header h2{font-size:18px;font-weight:800;background:linear-gradient(135deg,var(--red),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.admin-close{font-size:24px;color:rgba(255,255,255,.5);padding:4px 8px}
+.admin-tabs{display:flex;border-bottom:1px solid rgba(255,255,255,.08)}
+.admin-tab{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;color:rgba(255,255,255,.4);border-bottom:2px solid transparent;transition:var(--transition)}
+.admin-tab.active{color:var(--red);border-bottom-color:var(--red)}
+.admin-content{flex:1;overflow-y:auto;padding:16px}
+.admin-section{display:none}
+.admin-section.active{display:block}
+
+/* Admin Upload */
+.upload-zone{border:2px dashed rgba(255,255,255,.15);border-radius:var(--radius);padding:40px 20px;text-align:center;transition:var(--transition);cursor:pointer;margin-bottom:16px}
+.upload-zone.dragover{border-color:var(--red);background:rgba(255,0,80,.05)}
+.upload-zone svg{width:48px;height:48px;fill:rgba(255,255,255,.2);margin-bottom:8px}
+.upload-zone p{font-size:14px;color:rgba(255,255,255,.4)}
+.upload-zone .browse-text{color:var(--red);font-weight:600}
+.upload-fields{display:flex;flex-direction:column;gap:12px;margin-bottom:16px}
+.upload-field label{display:block;font-size:12px;color:rgba(255,255,255,.5);margin-bottom:4px}
+.upload-field input,.upload-field textarea,.upload-field select{width:100%;padding:10px 14px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;font-size:14px}
+.upload-field textarea{resize:vertical;min-height:60px}
+.upload-queue{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.upload-item{background:rgba(255,255,255,.04);border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px}
+.upload-item .file-info{flex:1;min-width:0}
+.upload-item .file-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upload-item .file-size{font-size:11px;color:rgba(255,255,255,.4)}
+.upload-item .upload-progress{width:100%;height:4px;background:rgba(255,255,255,.1);border-radius:2px;margin-top:6px;overflow:hidden}
+.upload-item .upload-progress-bar{height:100%;background:linear-gradient(90deg,var(--red),var(--blue));transition:width .3s;border-radius:2px;width:0%}
+.upload-item .upload-status{font-size:11px;font-weight:600;white-space:nowrap}
+.upload-item .upload-status.success{color:#4caf50}
+.upload-item .upload-status.error{color:var(--red)}
+.upload-item .upload-status.uploading{color:var(--blue)}
+
+.btn{padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;transition:var(--transition);cursor:pointer}
+.btn-primary{background:linear-gradient(135deg,var(--red),var(--blue));color:#fff}
+.btn-primary:hover{opacity:.9}
+.btn-secondary{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.1)}
+.btn-secondary:hover{background:rgba(255,255,255,.14)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-danger{background:rgba(255,0,80,.15);color:var(--red);border:1px solid rgba(255,0,80,.2)}
+
+/* Admin Moderation */
+.mod-filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.mod-filter{padding:5px 14px;border-radius:16px;font-size:12px;font-weight:600;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);transition:var(--transition)}
+.mod-filter.active{background:var(--red);border-color:var(--red)}
+.mod-grid{display:flex;flex-direction:column;gap:10px}
+.mod-card{background:rgba(255,255,255,.04);border-radius:var(--radius);padding:12px;display:flex;gap:12px;align-items:flex-start}
+.mod-thumb{width:60px;height:80px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden;flex-shrink:0}
+.mod-thumb img,.mod-thumb video{width:100%;height:100%;object-fit:cover}
+.mod-details{flex:1;min-width:0}
+.mod-details .mod-caption{font-size:13px;font-weight:600;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mod-details .mod-meta{font-size:11px;color:rgba(255,255,255,.4);display:flex;gap:10px}
+.mod-details .mod-status{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;margin-top:6px}
+.mod-status.ready{background:rgba(76,175,80,.15);color:#4caf50}
+.mod-status.processing{background:rgba(255,193,7,.15);color:#ffc107}
+.mod-status.restricted{background:rgba(255,0,80,.15);color:var(--red)}
+.mod-actions{display:flex;gap:6px;flex-shrink:0}
+.mod-actions button{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px;transition:var(--transition)}
+.mod-actions .approve{background:rgba(76,175,80,.12)}
+.mod-actions .approve:hover{background:rgba(76,175,80,.25)}
+.mod-actions .restrict{background:rgba(255,193,7,.12)}
+.mod-actions .restrict:hover{background:rgba(255,193,7,.25)}
+.mod-actions .delete{background:rgba(255,0,80,.12)}
+.mod-actions .delete:hover{background:rgba(255,0,80,.25)}
+.mod-check{margin-right:8px;width:18px;height:18px;accent-color:var(--red)}
+.bulk-bar{display:flex;gap:8px;margin-bottom:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;align-items:center;font-size:13px}
+.bulk-bar span{margin-right:auto}
+
+/* Admin Analytics */
+.analytics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.stat-card{background:rgba(255,255,255,.04);border-radius:var(--radius);padding:16px;text-align:center}
+.stat-card .stat-value{font-size:28px;font-weight:800;background:linear-gradient(135deg,var(--red),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.stat-card .stat-label{font-size:11px;color:rgba(255,255,255,.4);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+.chart-section{margin-top:20px}
+.chart-section h3{font-size:14px;font-weight:700;margin-bottom:12px}
+.bar-chart{display:flex;align-items:flex-end;gap:6px;height:120px;padding-bottom:20px;position:relative}
+.bar-chart .bar{flex:1;background:linear-gradient(to top,var(--red),var(--blue));border-radius:4px 4px 0 0;min-height:4px;position:relative;transition:height .5s ease}
+.bar-chart .bar-label{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:9px;color:rgba(255,255,255,.3);white-space:nowrap}
+.top-vids{margin-top:20px}
+.top-vid-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.top-vid-rank{font-size:18px;font-weight:800;color:rgba(255,255,255,.2);width:24px;text-align:center}
+.top-vid-info{flex:1;min-width:0}
+.top-vid-info .top-vid-caption{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-vid-info .top-vid-stats{font-size:11px;color:rgba(255,255,255,.4)}
+
+/* Seeder */
+.seeder-section{text-align:center;padding:40px 20px}
+.seeder-section p{font-size:14px;color:rgba(255,255,255,.5);margin-bottom:20px}
+.seed-progress{margin-top:20px;text-align:left}
+.seed-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px}
+.seed-item .seed-status{font-size:18px}
+
+/* ===== TOAST ===== */
+.toast-container{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:400;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{padding:10px 20px;border-radius:8px;background:var(--card);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--glass-border);font-size:13px;font-weight:600;animation:toastIn .3s ease forwards;pointer-events:auto;text-align:center}
+.toast.out{animation:toastOut .3s ease forwards}
+@keyframes toastIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes toastOut{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-10px)}}
+
+/* ===== PULL TO REFRESH ===== */
+.ptr-indicator{position:fixed;top:50px;left:50%;transform:translateX(-50%);z-index:50;opacity:0;transition:opacity .2s}
+.ptr-indicator.visible{opacity:1}
+.ptr-indicator .spinner{width:24px;height:24px;border-width:2px}
+
+/* ===== RESPONSIVE ===== */
+@media(min-width:768px){
+  .feed-container{max-width:420px;margin:0 auto}
+  .top-bar{max-width:420px;left:50%;transform:translateX(-50%)}
+  .vid-actions{right:calc(50% - 200px)}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Toast container -->
+  <div class="toast-container" id="toasts"></div>
+
+  <!-- Pull to refresh indicator -->
+  <div class="ptr-indicator" id="ptrIndicator"><div class="spinner"></div></div>
+
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <div class="top-bar-inner">
+      <span class="logo-title" id="logoTitle">Farragna</span>
+      <div class="top-actions">
+        <button id="searchBtn" aria-label="Search">
+          <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        </button>
+        <div class="user-avatar" id="userAvatar" title="Guest">?</div>
+      </div>
     </div>
+    <!-- Category Tabs -->
+    <div class="cat-tabs" id="catTabs">
+      <button class="cat-tab active" data-cat="foryou">For You</button>
+      <button class="cat-tab" data-cat="trending">Trending</button>
+      <button class="cat-tab" data-cat="music">Music</button>
+      <button class="cat-tab" data-cat="comedy">Comedy</button>
+      <button class="cat-tab" data-cat="sports">Sports</button>
+      <button class="cat-tab" data-cat="education">Education</button>
+      <button class="cat-tab" data-cat="technology">Tech</button>
+    </div>
+  </div>
 
-    <script src="./app.js" type="module"></script>
-  </body>
-  </html>
+  <!-- Video Feed -->
+  <div class="feed-container" id="feedContainer">
+    <div class="feed-loading" id="feedLoading"><div class="spinner"></div></div>
+  </div>
 
+  <!-- Search Overlay -->
+  <div class="search-overlay" id="searchOverlay">
+    <div class="search-header">
+      <input type="text" id="searchInput" placeholder="Search videos..." autocomplete="off">
+      <button class="close-search" id="closeSearch">Cancel</button>
+    </div>
+    <div class="search-body" id="searchBody">
+      <h3>Recent Searches</h3>
+      <div id="recentSearches"></div>
+      <div class="search-results" id="searchResults"></div>
+    </div>
+  </div>
+
+  <!-- Admin Overlay -->
+  <div class="admin-overlay" id="adminOverlay">
+    <div class="admin-header">
+      <h2>⚡ Admin Dashboard</h2>
+      <button class="admin-close" id="adminClose">&times;</button>
+    </div>
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-tab="upload">Upload</button>
+      <button class="admin-tab" data-tab="moderation">Moderation</button>
+      <button class="admin-tab" data-tab="analytics">Analytics</button>
+      <button class="admin-tab" data-tab="seeder">Seeder</button>
+    </div>
+    <div class="admin-content">
+      <!-- Upload Section -->
+      <div class="admin-section active" id="sec-upload">
+        <div class="upload-zone" id="uploadZone">
+          <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+          <p>Drag & drop videos here or <span class="browse-text">browse</span></p>
+          <p style="font-size:11px;color:rgba(255,255,255,.25);margin-top:4px">Supports MP4, MOV, WebM</p>
+        </div>
+        <input type="file" id="fileInput" accept="video/*" multiple hidden>
+        <div class="upload-fields">
+          <div class="upload-field">
+            <label>Caption</label>
+            <textarea id="uploadCaption" placeholder="Write a caption..." rows="2"></textarea>
+          </div>
+          <div class="upload-field">
+            <label>Category</label>
+            <select id="uploadCategory">
+              <option value="entertainment">Entertainment</option>
+              <option value="music">Music</option>
+              <option value="comedy">Comedy</option>
+              <option value="sports">Sports</option>
+              <option value="education">Education</option>
+              <option value="technology">Technology</option>
+              <option value="travel">Travel</option>
+              <option value="lifestyle">Lifestyle</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="uploadBtn" style="width:100%" disabled>Upload Selected</button>
+        <div class="upload-queue" id="uploadQueue"></div>
+      </div>
+
+      <!-- Moderation Section -->
+      <div class="admin-section" id="sec-moderation">
+        <div class="mod-filters" id="modFilters">
+          <button class="mod-filter active" data-status="all">All</button>
+          <button class="mod-filter" data-status="ready">Ready</button>
+          <button class="mod-filter" data-status="processing">Processing</button>
+          <button class="mod-filter" data-status="restricted">Restricted</button>
+        </div>
+        <div class="bulk-bar" id="bulkBar" style="display:none">
+          <span id="bulkCount">0 selected</span>
+          <button class="btn btn-sm btn-secondary" id="bulkApprove">✅ Approve</button>
+          <button class="btn btn-sm btn-danger" id="bulkRestrict">🚫 Restrict</button>
+        </div>
+        <div class="mod-grid" id="modGrid">
+          <p style="text-align:center;color:rgba(255,255,255,.3);padding:40px 0">Loading videos...</p>
+        </div>
+      </div>
+
+      <!-- Analytics Section -->
+      <div class="admin-section" id="sec-analytics">
+        <div class="analytics-grid">
+          <div class="stat-card"><div class="stat-value" id="statVideos">-</div><div class="stat-label">Videos</div></div>
+          <div class="stat-card"><div class="stat-value" id="statViews">-</div><div class="stat-label">Views</div></div>
+          <div class="stat-card"><div class="stat-value" id="statLikes">-</div><div class="stat-label">Likes</div></div>
+        </div>
+        <div class="chart-section">
+          <h3>Upload Timeline</h3>
+          <div class="bar-chart" id="barChart"></div>
+        </div>
+        <div class="top-vids">
+          <h3 style="font-size:14px;font-weight:700;margin-bottom:12px">Top Performing</h3>
+          <div id="topVidsList"></div>
+        </div>
+      </div>
+
+      <!-- Seeder Section -->
+      <div class="admin-section" id="sec-seeder">
+        <div class="seeder-section">
+          <svg viewBox="0 0 24 24" style="width:64px;height:64px;fill:rgba(255,255,255,.1);margin-bottom:16px"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          <h3 style="font-size:18px;font-weight:700;margin-bottom:8px">Pexels Video Seeder</h3>
+          <p>Seed 12 free stock videos from Pexels into the database via the upload API.</p>
+          <button class="btn btn-primary" id="seedBtn">🌱 Seed 12 Free Videos</button>
+          <div class="seed-progress" id="seedProgress" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ===== SEED VIDEOS ===== */
+const SEED_VIDEOS = [
+  {id:'pexels-1',url:'https://videos.pexels.com/video-files/3571264/3571264-uhd_1440_2560_30fps.mp4',caption:'City lights at night ✨',category:'travel',creator:'Pexels Studio',likes:1247,views:45200},
+  {id:'pexels-2',url:'https://videos.pexels.com/video-files/4763824/4763824-uhd_1440_2560_24fps.mp4',caption:'Ocean waves crashing 🌊',category:'travel',creator:'Wave Films',likes:2891,views:89100},
+  {id:'pexels-3',url:'https://videos.pexels.com/video-files/5532771/5532771-uhd_1440_2560_25fps.mp4',caption:'Mountain sunrise journey 🏔️',category:'travel',creator:'Nature Vision',likes:3421,views:112000},
+  {id:'pexels-4',url:'https://videos.pexels.com/video-files/4920904/4920904-uhd_1440_2560_24fps.mp4',caption:'Coding in the zone 💻',category:'technology',creator:'TechSpace',likes:892,views:23400},
+  {id:'pexels-5',url:'https://videos.pexels.com/video-files/6981411/6981411-uhd_1440_2560_25fps.mp4',caption:'Street food vibes 🍜',category:'lifestyle',creator:'FoodieFilms',likes:5210,views:201000},
+  {id:'pexels-6',url:'https://videos.pexels.com/video-files/3196067/3196067-uhd_1440_2560_25fps.mp4',caption:'Neon city drive 🚗',category:'entertainment',creator:'UrbanLens',likes:4103,views:156000},
+  {id:'pexels-7',url:'https://videos.pexels.com/video-files/856116/856116-hd_1920_1080_30fps.mp4',caption:'Peaceful rain drops 🌧️',category:'entertainment',creator:'MoodFilms',likes:6782,views:289000},
+  {id:'pexels-8',url:'https://videos.pexels.com/video-files/2795173/2795173-uhd_2560_1440_25fps.mp4',caption:'Basketball freestyle 🏀',category:'sports',creator:'SportsCam',likes:1845,views:67800},
+  {id:'pexels-9',url:'https://videos.pexels.com/video-files/1526909/1526909-hd_1920_1080_30fps.mp4',caption:'DJ mixing session 🎵',category:'music',creator:'BeatMaker',likes:3290,views:143000},
+  {id:'pexels-10',url:'https://videos.pexels.com/video-files/3209828/3209828-uhd_2560_1440_25fps.mp4',caption:'Sunset time-lapse 🌅',category:'travel',creator:'TimeLapse Pro',likes:8901,views:412000},
+  {id:'pexels-11',url:'https://videos.pexels.com/video-files/5752729/5752729-uhd_1440_2560_25fps.mp4',caption:'Coffee art mastery ☕',category:'lifestyle',creator:'CafeVibes',likes:2341,views:87600},
+  {id:'pexels-12',url:'https://videos.pexels.com/video-files/4434150/4434150-uhd_1440_2560_24fps.mp4',caption:'Galaxy exploration 🌌',category:'education',creator:'SpaceDoc',likes:7123,views:321000}
+];
+
+/* ===== STATE ===== */
+const state = {
+  user: null,
+  jwtToken: localStorage.getItem('farragna_jwt') || null,
+  currentCategory: 'foryou',
+  videos: [],
+  feedPage: 1,
+  feedLoading: false,
+  feedEnd: false,
+  currentVideoIndex: 0,
+  likedVideos: JSON.parse(localStorage.getItem('farragna_likes') || '{}'),
+  bookmarkedVideos: JSON.parse(localStorage.getItem('farragna_bookmarks') || '{}'),
+  recentSearches: JSON.parse(localStorage.getItem('farragna_searches') || '[]'),
+  easterClicks: 0,
+  easterTimer: null,
+  selectedFiles: [],
+  modVideos: [],
+  modSelected: new Set()
+};
+
+/* ===== DOM REFS ===== */
+const $ = (s, p) => (p || document).querySelector(s);
+const $$ = (s, p) => [...(p || document).querySelectorAll(s)];
+const feedContainer = $('#feedContainer');
+const feedLoading = $('#feedLoading');
+
+/* ===== UTILS ===== */
+function formatCount(n) {
+  if (n == null) return '0';
+  n = Number(n);
+  if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n/1000).toFixed(1) + 'K';
+  return String(n);
+}
+
+function toast(msg, dur) {
+  dur = dur || 2500;
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  $('#toasts').appendChild(t);
+  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 300); }, dur);
+}
+
+async function apiFetch(path, opts) {
+  opts = opts || {};
+  const headers = opts.headers || {};
+  if (state.jwtToken) headers['Authorization'] = 'Bearer ' + state.jwtToken;
+  opts.headers = headers;
+  if (!opts.credentials) opts.credentials = 'include';
+  const resp = await fetch(path, opts);
+  return resp;
+}
+
+/* ===== AUTH ===== */
+async function checkAuth() {
+  try {
+    const resp = await fetch('/api/me', { credentials: 'include' });
+    if (resp.ok) {
+      const data = await resp.json();
+      state.user = data.user || data;
+      updateUserUI();
+      // Try to get JWT if we don't have one
+      if (!state.jwtToken && state.user) {
+        tryGetJWT();
+      }
+    }
+  } catch(e) { /* guest */ }
+}
+
+async function tryGetJWT() {
+  // Exchange session cookie for a Farragna JWT token
+  try {
+    const resp = await fetch('/api/farragna/auth/token', { credentials: 'include' });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.ok && data.token) {
+        state.jwtToken = data.token;
+        localStorage.setItem('farragna_jwt', data.token);
+        console.log('[Farragna] JWT acquired via session exchange');
+        return;
+      }
+    }
+  } catch(e) {}
+  // If that fails, check if there was a token in localStorage from a login response
+  const stored = localStorage.getItem('farragna_jwt');
+  if (stored) {
+    state.jwtToken = stored;
+  }
+}
+
+function updateUserUI() {
+  const av = $('#userAvatar');
+  if (state.user) {
+    const name = state.user.display_name || state.user.username || state.user.email || '';
+    av.textContent = name.charAt(0).toUpperCase() || 'U';
+    av.title = name;
+    if (state.user.avatar_url) {
+      av.innerHTML = '<img src="' + state.user.avatar_url + '" alt="avatar">';
+    }
+  } else {
+    av.textContent = '?';
+    av.title = 'Guest';
+  }
+}
+
+// Listen for auth from parent iframe
+window.addEventListener('message', function(e) {
+  if (e.data && e.data.type === 'auth:ready') {
+    if (e.data.token) {
+      state.jwtToken = e.data.token;
+      localStorage.setItem('farragna_jwt', e.data.token);
+    }
+    if (e.data.user) {
+      state.user = e.data.user;
+      updateUserUI();
+    }
+  }
+});
+
+/* ===== FEED LOADING ===== */
+async function loadFeed(reset) {
+  if (state.feedLoading) return;
+  if (!reset && state.feedEnd) return;
+  state.feedLoading = true;
+
+  if (reset) {
+    state.videos = [];
+    state.feedPage = 1;
+    state.feedEnd = false;
+    feedContainer.innerHTML = '';
+    feedContainer.appendChild(feedLoading);
+    feedLoading.style.display = 'flex';
+  }
+
+  let apiVideos = [];
+  try {
+    let endpoint;
+    if (state.currentCategory === 'trending') {
+      endpoint = '/api/farragna/trending';
+    } else {
+      endpoint = '/api/farragna/feed?page=' + state.feedPage + '&page_size=20';
+      if (state.currentCategory !== 'foryou') {
+        endpoint += '&category=' + encodeURIComponent(state.currentCategory);
+      }
+    }
+    const resp = await fetch(endpoint);
+    if (resp.ok) {
+      const data = await resp.json();
+      apiVideos = data.videos || data.data || data || [];
+      if (Array.isArray(apiVideos)) {
+        apiVideos = apiVideos.map(v => ({
+          id: v.id,
+          url: v.playback_url || v.url || '',
+          thumbnail: v.thumbnail_url || '',
+          caption: v.caption || '',
+          category: v.category || '',
+          creator: v.owner_name || v.creator || 'Unknown',
+          likes: v.likes || 0,
+          views: v.views_count || v.views || 0,
+          duration: v.duration || 0,
+          comments: v.comments_count || 0,
+          isApi: true
+        }));
+      }
+    }
+  } catch(e) { /* API unavailable */ }
+
+  // Fallback to seed if no API videos and first page
+  if (apiVideos.length === 0 && state.feedPage === 1) {
+    let seeds = [...SEED_VIDEOS];
+    if (state.currentCategory !== 'foryou' && state.currentCategory !== 'trending') {
+      const catMap = {
+        music:'music', comedy:'comedy', sports:'sports',
+        education:'education', technology:'technology'
+      };
+      const filterCat = catMap[state.currentCategory] || state.currentCategory;
+      seeds = seeds.filter(v => v.category === filterCat);
+    }
+    apiVideos = seeds.map(v => ({...v, isApi: false}));
+    state.feedEnd = true;
+  }
+
+  if (apiVideos.length === 0) {
+    state.feedEnd = true;
+  }
+
+  feedLoading.style.display = 'none';
+  state.videos = state.videos.concat(apiVideos);
+  apiVideos.forEach(v => renderVideoSlide(v));
+  state.feedPage++;
+  state.feedLoading = false;
+
+  // Set up intersection observers on new slides
+  setupObservers();
+}
+
+/* ===== RENDER VIDEO SLIDE ===== */
+function renderVideoSlide(video) {
+  const slide = document.createElement('div');
+  slide.className = 'video-slide';
+  slide.dataset.videoId = video.id;
+
+  const isLiked = !!state.likedVideos[video.id];
+  const isBookmarked = !!state.bookmarkedVideos[video.id];
+  let likeCount = video.likes || 0;
+
+  slide.innerHTML = `
+    <div class="vid-progress"><div class="vid-progress-bar"></div></div>
+    <video playsinline loop preload="none" poster="${video.thumbnail || ''}">
+      <source src="${video.url}" type="video/mp4">
+    </video>
+    <div class="vid-error" style="display:none">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+      <span>Video unavailable</span>
+    </div>
+    <div class="play-indicator">
+      <svg class="play-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      <svg class="pause-icon" viewBox="0 0 24 24" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+    </div>
+    <div class="vid-info">
+      <div class="creator">
+        <div class="creator-avatar">${(video.creator || 'U').charAt(0).toUpperCase()}</div>
+        <span class="creator-name">@${video.creator || 'user'}</span>
+      </div>
+      <div class="caption">${escapeHtml(video.caption || '')}</div>
+      <div class="music-row">
+        <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+        <span>Original Sound - ${video.creator || 'Unknown'}</span>
+      </div>
+    </div>
+    <div class="vid-actions">
+      <div class="vid-action">
+        <button class="like-btn ${isLiked ? 'liked' : ''}" data-id="${video.id}">
+          <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+        </button>
+        <span class="count like-count">${formatCount(likeCount)}</span>
+      </div>
+      <div class="vid-action">
+        <button class="comment-btn">
+          <svg viewBox="0 0 24 24"><path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z"/></svg>
+        </button>
+        <span class="count">${formatCount(video.comments || 0)}</span>
+      </div>
+      <div class="vid-action">
+        <button class="share-btn">
+          <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+        </button>
+        <span class="count">Share</span>
+      </div>
+      <div class="vid-action">
+        <button class="bookmark-btn ${isBookmarked ? 'liked' : ''}" data-id="${video.id}">
+          <svg viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+        </button>
+        <span class="count">Save</span>
+      </div>
+    </div>
+  `;
+
+  const vid = $('video', slide);
+  const errDiv = $('.vid-error', slide);
+  const progressBar = $('.vid-progress-bar', slide);
+  const playIndicator = $('.play-indicator', slide);
+  const playIcon = $('.play-icon', slide);
+  const pauseIcon = $('.pause-icon', slide);
+
+  // Video error handling
+  vid.addEventListener('error', function() {
+    vid.style.display = 'none';
+    errDiv.style.display = 'flex';
+  });
+
+  // Progress update
+  vid.addEventListener('timeupdate', function() {
+    if (vid.duration) {
+      progressBar.style.width = ((vid.currentTime / vid.duration) * 100) + '%';
+    }
+  });
+
+  // Tap to play/pause
+  let lastTapTime = 0;
+  let tapTimeout = null;
+  vid.addEventListener('click', function(e) {
+    const now = Date.now();
+    if (now - lastTapTime < 300) {
+      // Double tap => like
+      clearTimeout(tapTimeout);
+      handleDoubleTap(slide, video);
+      lastTapTime = 0;
+    } else {
+      lastTapTime = now;
+      tapTimeout = setTimeout(() => {
+        // Single tap => toggle play/pause
+        if (vid.paused) {
+          vid.play().catch(()=>{});
+          playIcon.style.display = 'block';
+          pauseIcon.style.display = 'none';
+        } else {
+          vid.pause();
+          playIcon.style.display = 'none';
+          pauseIcon.style.display = 'block';
+        }
+        playIndicator.classList.remove('show','hide-anim');
+        void playIndicator.offsetWidth;
+        playIndicator.classList.add('show');
+        setTimeout(() => {
+          playIndicator.classList.remove('show');
+          playIndicator.classList.add('hide-anim');
+          setTimeout(() => playIndicator.classList.remove('hide-anim'), 200);
+        }, 400);
+      }, 300);
+    }
+  });
+
+  // Like button
+  const likeBtn = $('.like-btn', slide);
+  const likeCountEl = $('.like-count', slide);
+  likeBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    toggleLike(video, likeBtn, likeCountEl);
+  });
+
+  // Bookmark button
+  const bookmarkBtn = $('.bookmark-btn', slide);
+  bookmarkBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    toggleBookmark(video, bookmarkBtn);
+  });
+
+  // Share button
+  const shareBtn = $('.share-btn', slide);
+  shareBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (navigator.share) {
+      navigator.share({ title: video.caption, url: window.location.href }).catch(()=>{});
+    } else {
+      navigator.clipboard.writeText(window.location.href).then(() => toast('Link copied!')).catch(()=>{});
+    }
+  });
+
+  // Comment button
+  const commentBtn = $('.comment-btn', slide);
+  commentBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    toast('Comments coming soon!');
+  });
+
+  // Expandable caption
+  const captionEl = $('.caption', slide);
+  captionEl.addEventListener('click', function(e) {
+    e.stopPropagation();
+    captionEl.classList.toggle('expanded');
+  });
+
+  feedContainer.appendChild(slide);
+}
+
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+/* ===== DOUBLE TAP LIKE ===== */
+function handleDoubleTap(slide, video) {
+  // Show heart burst
+  const burst = document.createElement('div');
+  burst.className = 'heart-burst';
+  burst.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
+  slide.appendChild(burst);
+  setTimeout(() => burst.remove(), 900);
+
+  // Like if not already liked
+  const likeBtn = $('.like-btn', slide);
+  const likeCountEl = $('.like-count', slide);
+  if (!state.likedVideos[video.id]) {
+    toggleLike(video, likeBtn, likeCountEl);
+  }
+}
+
+/* ===== LIKE/BOOKMARK ===== */
+function toggleLike(video, btn, countEl) {
+  const isLiked = state.likedVideos[video.id];
+  if (isLiked) {
+    delete state.likedVideos[video.id];
+    btn.classList.remove('liked');
+    video.likes = Math.max(0, (video.likes || 1) - 1);
+  } else {
+    state.likedVideos[video.id] = true;
+    btn.classList.add('liked');
+    video.likes = (video.likes || 0) + 1;
+  }
+  countEl.textContent = formatCount(video.likes);
+  localStorage.setItem('farragna_likes', JSON.stringify(state.likedVideos));
+
+  // API call (fire and forget)
+  if (video.isApi) {
+    apiFetch('/api/farragna/' + video.id + '/like', { method: 'POST' }).catch(()=>{});
+  }
+}
+
+function toggleBookmark(video, btn) {
+  if (state.bookmarkedVideos[video.id]) {
+    delete state.bookmarkedVideos[video.id];
+    btn.classList.remove('liked');
+    toast('Removed from saved');
+  } else {
+    state.bookmarkedVideos[video.id] = true;
+    btn.classList.add('liked');
+    toast('Saved!');
+  }
+  localStorage.setItem('farragna_bookmarks', JSON.stringify(state.bookmarkedVideos));
+}
+
+/* ===== INTERSECTION OBSERVER (Autoplay/Pause + Lazy) ===== */
+let videoObserver;
+function setupObservers() {
+  if (videoObserver) videoObserver.disconnect();
+  videoObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      const vid = $('video', entry.target);
+      if (!vid) return;
+      if (entry.isIntersecting) {
+        vid.preload = 'auto';
+        vid.play().catch(()=>{});
+        // Preload next
+        const next = entry.target.nextElementSibling;
+        if (next && next.classList.contains('video-slide')) {
+          const nv = $('video', next);
+          if (nv) nv.preload = 'auto';
+        }
+      } else {
+        vid.pause();
+      }
+    });
+  }, { root: feedContainer, threshold: 0.6 });
+
+  $$('.video-slide', feedContainer).forEach(s => videoObserver.observe(s));
+}
+
+/* ===== INFINITE SCROLL ===== */
+let scrollDebounce;
+feedContainer.addEventListener('scroll', function() {
+  clearTimeout(scrollDebounce);
+  scrollDebounce = setTimeout(() => {
+    const sh = feedContainer.scrollHeight;
+    const st = feedContainer.scrollTop;
+    const ch = feedContainer.clientHeight;
+    if (sh - st - ch < ch * 1.5) {
+      loadFeed(false);
+    }
+  }, 150);
+});
+
+/* ===== CATEGORY TABS ===== */
+$('#catTabs').addEventListener('click', function(e) {
+  const tab = e.target.closest('.cat-tab');
+  if (!tab) return;
+  $$('.cat-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  state.currentCategory = tab.dataset.cat;
+  loadFeed(true);
+});
+
+/* ===== SEARCH ===== */
+$('#searchBtn').addEventListener('click', () => {
+  $('#searchOverlay').classList.add('open');
+  setTimeout(() => $('#searchInput').focus(), 350);
+  renderRecentSearches();
+});
+$('#closeSearch').addEventListener('click', () => {
+  $('#searchOverlay').classList.remove('open');
+  $('#searchInput').value = '';
+  $('#searchResults').innerHTML = '';
+});
+
+function renderRecentSearches() {
+  const c = $('#recentSearches');
+  c.innerHTML = '';
+  state.recentSearches.slice(0, 10).forEach((s, i) => {
+    const el = document.createElement('div');
+    el.className = 'recent-item';
+    el.innerHTML = `<svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+      <span>${escapeHtml(s)}</span>
+      <button class="remove-recent" data-idx="${i}">&times;</button>`;
+    el.querySelector('span').addEventListener('click', () => {
+      $('#searchInput').value = s;
+      doSearch(s);
+    });
+    el.querySelector('.remove-recent').addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.recentSearches.splice(i, 1);
+      localStorage.setItem('farragna_searches', JSON.stringify(state.recentSearches));
+      renderRecentSearches();
+    });
+    c.appendChild(el);
+  });
+}
+
+$('#searchInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && this.value.trim()) {
+    doSearch(this.value.trim());
+  }
+});
+
+function doSearch(query) {
+  // Save to recent
+  state.recentSearches = [query, ...state.recentSearches.filter(s => s !== query)].slice(0, 20);
+  localStorage.setItem('farragna_searches', JSON.stringify(state.recentSearches));
+  renderRecentSearches();
+
+  // Search in current videos + seeds
+  const q = query.toLowerCase();
+  const allVids = [...state.videos, ...SEED_VIDEOS];
+  const results = allVids.filter(v =>
+    (v.caption || '').toLowerCase().includes(q) ||
+    (v.creator || '').toLowerCase().includes(q) ||
+    (v.category || '').toLowerCase().includes(q)
+  );
+
+  const rc = $('#searchResults');
+  rc.innerHTML = '';
+  if (results.length === 0) {
+    rc.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:rgba(255,255,255,.3);padding:40px 0">No results found</p>';
+    return;
+  }
+  results.forEach(v => {
+    const item = document.createElement('div');
+    item.className = 'search-result-item';
+    item.innerHTML = `<video src="${v.url}" preload="none" muted></video>
+      <div class="sr-views">▶ ${formatCount(v.views)}</div>`;
+    item.addEventListener('click', () => {
+      $('#searchOverlay').classList.remove('open');
+      // Jump to this video in feed or add it
+      const idx = state.videos.findIndex(fv => fv.id === v.id);
+      if (idx >= 0) {
+        const slides = $$('.video-slide', feedContainer);
+        if (slides[idx]) slides[idx].scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+    // Hover preview
+    const prevVid = $('video', item);
+    item.addEventListener('mouseenter', () => { prevVid.play().catch(()=>{}); });
+    item.addEventListener('mouseleave', () => { prevVid.pause(); prevVid.currentTime = 0; });
+    rc.appendChild(item);
+  });
+}
+
+/* ===== EASTER EGG (7 clicks on logo) ===== */
+$('#logoTitle').addEventListener('click', function() {
+  state.easterClicks++;
+  clearTimeout(state.easterTimer);
+  state.easterTimer = setTimeout(() => { state.easterClicks = 0; }, 3000);
+  if (state.easterClicks >= 7) {
+    state.easterClicks = 0;
+    openAdmin();
+  }
+});
+
+/* ===== ADMIN PANEL ===== */
+function openAdmin() {
+  $('#adminOverlay').classList.add('open');
+  loadModeration();
+  loadAnalytics();
+}
+$('#adminClose').addEventListener('click', () => {
+  $('#adminOverlay').classList.remove('open');
+});
+
+// Admin Tabs
+$$('.admin-tab').forEach(tab => {
+  tab.addEventListener('click', function() {
+    $$('.admin-tab').forEach(t => t.classList.remove('active'));
+    $$('.admin-section').forEach(s => s.classList.remove('active'));
+    this.classList.add('active');
+    $('#sec-' + this.dataset.tab).classList.add('active');
+    if (this.dataset.tab === 'moderation') loadModeration();
+    if (this.dataset.tab === 'analytics') loadAnalytics();
+  });
+});
+
+/* ===== UPLOAD ===== */
+const uploadZone = $('#uploadZone');
+const fileInput = $('#fileInput');
+const uploadBtn = $('#uploadBtn');
+const uploadQueue = $('#uploadQueue');
+
+uploadZone.addEventListener('click', () => fileInput.click());
+uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  handleFiles(e.dataTransfer.files);
+});
+fileInput.addEventListener('change', () => {
+  handleFiles(fileInput.files);
+  fileInput.value = '';
+});
+
+function handleFiles(files) {
+  state.selectedFiles = [...state.selectedFiles, ...Array.from(files).filter(f => f.type.startsWith('video/'))];
+  renderUploadQueue();
+  uploadBtn.disabled = state.selectedFiles.length === 0;
+}
+
+function renderUploadQueue() {
+  uploadQueue.innerHTML = '';
+  state.selectedFiles.forEach((f, i) => {
+    const item = document.createElement('div');
+    item.className = 'upload-item';
+    item.innerHTML = `
+      <div class="file-info">
+        <div class="file-name">${escapeHtml(f.name)}</div>
+        <div class="file-size">${(f.size / (1024*1024)).toFixed(1)} MB</div>
+        <div class="upload-progress"><div class="upload-progress-bar" id="prog-${i}"></div></div>
+      </div>
+      <span class="upload-status" id="status-${i}">Pending</span>
+      <button style="font-size:18px;color:rgba(255,255,255,.3)" data-idx="${i}">&times;</button>`;
+    item.querySelector('button').addEventListener('click', function() {
+      state.selectedFiles.splice(parseInt(this.dataset.idx), 1);
+      renderUploadQueue();
+      uploadBtn.disabled = state.selectedFiles.length === 0;
+    });
+    uploadQueue.appendChild(item);
+  });
+}
+
+uploadBtn.addEventListener('click', async () => {
+  if (state.selectedFiles.length === 0) return;
+  uploadBtn.disabled = true;
+  const caption = $('#uploadCaption').value;
+  const category = $('#uploadCategory').value;
+
+  for (let i = 0; i < state.selectedFiles.length; i++) {
+    const file = state.selectedFiles[i];
+    const statusEl = document.getElementById('status-' + i);
+    const progEl = document.getElementById('prog-' + i);
+    if (!statusEl) continue;
+
+    try {
+      statusEl.textContent = 'Requesting...';
+      statusEl.className = 'upload-status uploading';
+
+      // Step 1: Get upload URL
+      const reqResp = await apiFetch('/api/farragna/upload/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          caption: caption || file.name,
+          category: category,
+          file_name: file.name,
+          file_size: file.size
+        })
+      });
+
+      if (!reqResp.ok) {
+        const errData = await reqResp.json().catch(() => ({}));
+        throw new Error(errData.error || errData.message || 'Upload request failed');
+      }
+
+      const reqData = await reqResp.json();
+      const uploadUrl = reqData.upload_url || reqData.uploadURL;
+
+      if (!uploadUrl) throw new Error('No upload URL received');
+
+      statusEl.textContent = 'Uploading...';
+
+      // Step 2: Upload to Cloudflare
+      const formData = new FormData();
+      formData.append('file', file);
+
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', uploadUrl);
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable && progEl) {
+            progEl.style.width = ((e.loaded / e.total) * 100) + '%';
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error('Upload failed: ' + xhr.status));
+        };
+        xhr.onerror = () => reject(new Error('Network error'));
+        xhr.send(formData);
+      });
+
+      statusEl.textContent = '✓ Done';
+      statusEl.className = 'upload-status success';
+      if (progEl) progEl.style.width = '100%';
+
+    } catch(err) {
+      statusEl.textContent = '✗ ' + err.message;
+      statusEl.className = 'upload-status error';
+    }
+  }
+
+  toast('Upload batch complete');
+  state.selectedFiles = [];
+  uploadBtn.disabled = true;
+});
+
+/* ===== MODERATION ===== */
+async function loadModeration() {
+  const grid = $('#modGrid');
+  grid.innerHTML = '<p style="text-align:center;color:rgba(255,255,255,.3);padding:40px 0">Loading...</p>';
+  state.modSelected.clear();
+  updateBulkBar();
+
+  try {
+    const resp = await fetch('/api/farragna/feed?page=1&page_size=100');
+    if (!resp.ok) throw new Error('Failed to load');
+    const data = await resp.json();
+    state.modVideos = data.videos || data.data || data || [];
+    if (!Array.isArray(state.modVideos)) state.modVideos = [];
+  } catch(e) {
+    state.modVideos = [];
+  }
+
+  renderModGrid();
+}
+
+function renderModGrid(filterStatus) {
+  const grid = $('#modGrid');
+  grid.innerHTML = '';
+  filterStatus = filterStatus || 'all';
+
+  let vids = state.modVideos;
+  if (filterStatus !== 'all') {
+    vids = vids.filter(v => (v.status || 'ready').toLowerCase() === filterStatus);
+  }
+
+  if (vids.length === 0) {
+    grid.innerHTML = '<p style="text-align:center;color:rgba(255,255,255,.3);padding:40px 0">No videos found</p>';
+    return;
+  }
+
+  vids.forEach(v => {
+    const card = document.createElement('div');
+    card.className = 'mod-card';
+    const status = (v.status || 'ready').toLowerCase();
+    card.innerHTML = `
+      <input type="checkbox" class="mod-check" data-id="${v.id}">
+      <div class="mod-thumb">
+        ${v.thumbnail_url ? '<img src="'+v.thumbnail_url+'" loading="lazy">' : '<div style="width:100%;height:100%;background:rgba(255,255,255,.05)"></div>'}
+      </div>
+      <div class="mod-details">
+        <div class="mod-caption">${escapeHtml(v.caption || 'No caption')}</div>
+        <div class="mod-meta">
+          <span>👁 ${formatCount(v.views_count || v.views || 0)}</span>
+          <span>❤ ${formatCount(v.likes || 0)}</span>
+        </div>
+        <span class="mod-status ${status}">${status}</span>
+      </div>
+      <div class="mod-actions">
+        <button class="approve" title="Approve">✅</button>
+        <button class="restrict" title="Restrict">🚫</button>
+        <button class="delete" title="Delete">🗑️</button>
+      </div>`;
+
+    card.querySelector('.mod-check').addEventListener('change', function() {
+      if (this.checked) state.modSelected.add(v.id);
+      else state.modSelected.delete(v.id);
+      updateBulkBar();
+    });
+    card.querySelector('.approve').addEventListener('click', () => modAction(v.id, 'approve'));
+    card.querySelector('.restrict').addEventListener('click', () => modAction(v.id, 'restrict'));
+    card.querySelector('.delete').addEventListener('click', () => modAction(v.id, 'delete'));
+
+    grid.appendChild(card);
+  });
+}
+
+async function modAction(id, action) {
+  try {
+    let endpoint, method, body;
+    if (action === 'delete') {
+      endpoint = '/api/farragna/' + id;
+      method = 'DELETE';
+    } else {
+      endpoint = '/api/farragna/' + id + '/status';
+      method = 'PUT';
+      body = JSON.stringify({ status: action === 'approve' ? 'ready' : 'restricted' });
+    }
+    await apiFetch(endpoint, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body
+    });
+    toast(action.charAt(0).toUpperCase() + action.slice(1) + ' successful');
+    loadModeration();
+  } catch(e) {
+    toast('Action failed');
+  }
+}
+
+function updateBulkBar() {
+  const bar = $('#bulkBar');
+  if (state.modSelected.size > 0) {
+    bar.style.display = 'flex';
+    $('#bulkCount').textContent = state.modSelected.size + ' selected';
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+$('#bulkApprove').addEventListener('click', async () => {
+  for (const id of state.modSelected) await modAction(id, 'approve');
+});
+$('#bulkRestrict').addEventListener('click', async () => {
+  for (const id of state.modSelected) await modAction(id, 'restrict');
+});
+
+// Mod filters
+$('#modFilters').addEventListener('click', function(e) {
+  const f = e.target.closest('.mod-filter');
+  if (!f) return;
+  $$('.mod-filter').forEach(b => b.classList.remove('active'));
+  f.classList.add('active');
+  renderModGrid(f.dataset.status);
+});
+
+/* ===== ANALYTICS ===== */
+async function loadAnalytics() {
+  let videos = state.modVideos;
+  if (videos.length === 0) {
+    try {
+      const resp = await fetch('/api/farragna/feed?page=1&page_size=100');
+      if (resp.ok) {
+        const data = await resp.json();
+        videos = data.videos || data.data || data || [];
+      }
+    } catch(e) {}
+  }
+  if (!Array.isArray(videos)) videos = [];
+
+  // Fallback to seeds
+  if (videos.length === 0) videos = SEED_VIDEOS;
+
+  const totalVideos = videos.length;
+  const totalViews = videos.reduce((a, v) => a + (v.views_count || v.views || 0), 0);
+  const totalLikes = videos.reduce((a, v) => a + (v.likes || 0), 0);
+
+  $('#statVideos').textContent = formatCount(totalVideos);
+  $('#statViews').textContent = formatCount(totalViews);
+  $('#statLikes').textContent = formatCount(totalLikes);
+
+  // Bar chart (group by day or just show per-video)
+  const chart = $('#barChart');
+  chart.innerHTML = '';
+  const maxViews = Math.max(...videos.map(v => v.views_count || v.views || 1));
+  videos.slice(0, 12).forEach((v, i) => {
+    const views = v.views_count || v.views || 0;
+    const pct = Math.max(5, (views / maxViews) * 100);
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    bar.style.height = pct + '%';
+    bar.title = (v.caption || 'Video ' + (i+1)) + ': ' + formatCount(views) + ' views';
+    bar.innerHTML = '<span class="bar-label">#' + (i+1) + '</span>';
+    chart.appendChild(bar);
+  });
+
+  // Top performing
+  const topList = $('#topVidsList');
+  topList.innerHTML = '';
+  const sorted = [...videos].sort((a, b) => (b.views_count || b.views || 0) - (a.views_count || a.views || 0));
+  sorted.slice(0, 5).forEach((v, i) => {
+    const item = document.createElement('div');
+    item.className = 'top-vid-item';
+    item.innerHTML = `
+      <div class="top-vid-rank">${i + 1}</div>
+      <div class="top-vid-info">
+        <div class="top-vid-caption">${escapeHtml(v.caption || 'Untitled')}</div>
+        <div class="top-vid-stats">👁 ${formatCount(v.views_count || v.views || 0)} · ❤ ${formatCount(v.likes || 0)}</div>
+      </div>`;
+    topList.appendChild(item);
+  });
+}
+
+/* ===== SEEDER ===== */
+$('#seedBtn').addEventListener('click', async () => {
+  const prog = $('#seedProgress');
+  prog.style.display = 'block';
+  prog.innerHTML = '';
+  $('#seedBtn').disabled = true;
+
+  for (const video of SEED_VIDEOS) {
+    const item = document.createElement('div');
+    item.className = 'seed-item';
+    item.innerHTML = '<span class="seed-status">⏳</span> <span>' + escapeHtml(video.caption) + '</span>';
+    prog.appendChild(item);
+
+    try {
+      // Try requesting upload slot
+      const resp = await apiFetch('/api/farragna/upload/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          caption: video.caption,
+          category: video.category,
+          url: video.url,
+          seed: true,
+          creator: video.creator,
+          likes: video.likes,
+          views: video.views
+        })
+      });
+
+      if (resp.ok) {
+        item.querySelector('.seed-status').textContent = '✅';
+      } else {
+        const err = await resp.text().catch(() => 'Error');
+        item.querySelector('.seed-status').textContent = '⚠️';
+        item.innerHTML += ' <small style="color:rgba(255,255,255,.3)">' + resp.status + '</small>';
+      }
+    } catch(e) {
+      item.querySelector('.seed-status').textContent = '❌';
+    }
+  }
+
+  toast('Seeding complete!');
+  $('#seedBtn').disabled = false;
+});
+
+/* ===== PULL TO REFRESH ===== */
+let ptrStart = 0;
+let ptrActive = false;
+feedContainer.addEventListener('touchstart', function(e) {
+  if (feedContainer.scrollTop <= 0) {
+    ptrStart = e.touches[0].clientY;
+    ptrActive = true;
+  }
+}, { passive: true });
+feedContainer.addEventListener('touchmove', function(e) {
+  if (!ptrActive) return;
+  const diff = e.touches[0].clientY - ptrStart;
+  if (diff > 60) {
+    $('#ptrIndicator').classList.add('visible');
+  }
+}, { passive: true });
+feedContainer.addEventListener('touchend', function() {
+  if ($('#ptrIndicator').classList.contains('visible')) {
+    loadFeed(true);
+    setTimeout(() => $('#ptrIndicator').classList.remove('visible'), 1000);
+  }
+  ptrActive = false;
+});
+
+/* ===== INIT ===== */
+checkAuth();
+loadFeed(true);
+
+})();
+</script>
+</body>
+</html>
