@@ -2191,7 +2191,7 @@ app.delete('/api/codes/purge-old-format', requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
     const result = await query(
-      `DELETE FROM codes WHERE user_id = $1 AND code NOT SIMILAR TO '[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-P[0-9]'`,
+      `DELETE FROM codes WHERE user_id = $1 AND code NOT LIKE '____-____-____-____-____-____-P_'`,
       [userId]
     );
     const deleted = result.rowCount || 0;
