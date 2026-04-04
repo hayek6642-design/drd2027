@@ -1,0 +1,141 @@
+name: Build Android APK (Capacitor OTA)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Triggers on every push to main that changes web/config files.
+# The APK uses server.url = https://drd2027.onrender.com, so it always loads
+# the latest code from Render — this is the OTA mechanism.
+# Users only need to re-install the APK when native Capacitor code changes.
+# ──────────────────────────────────────────────────────────────────────────────
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'capacitor.config.json'
+      - 'package.json'
+      - 'android/**'
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type (debug or release)'
+        required: false
+        default: 'debug'
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── 2. Java 17 (required by Android Gradle plugin) ──────────────────────
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # ── 3. Node.js ──────────────────────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ── 4. Install dependencies ─────────────────────────────────────────────
+      - name: Install npm dependencies
+        run: npm ci --legacy-peer-deps
+
+      # ── 5. Prepare web dist ─────────────────────────────────────────────────
+      # The APK uses server.url so the dist folder just needs to exist.
+      # All real content is loaded from https://drd2027.onrender.com at runtime.
+      - name: Prepare minimal web dist for Capacitor sync
+        run: |
+          mkdir -p dist
+          cat > dist/index.html << 'HTML'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>CodeBank</title>
+            <style>
+              body { margin:0; background:#000; display:flex; align-items:center; justify-content:center; height:100vh; }
+              p { color:#fff; font-family:sans-serif; }
+            </style>
+          </head>
+          <body><p>Loading CodeBank…</p></body>
+          </html>
+          HTML
+          echo "dist/index.html ready"
+
+      # ── 6. Add + sync Android platform ──────────────────────────────────────
+      - name: Add Capacitor Android platform
+        run: |
+          npx cap add android 2>/dev/null || echo "android already added"
+          npx cap sync android
+          echo "Capacitor synced"
+
+      # ── 7. Setup Android SDK ─────────────────────────────────────────────────
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      # ── 8. Accept licenses ───────────────────────────────────────────────────
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      # ── 9. Build debug APK ───────────────────────────────────────────────────
+      - name: Build debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+          echo "Build complete"
+
+      # ── 10. Find and rename APK ──────────────────────────────────────────────
+      - name: Locate and rename APK
+        run: |
+          mkdir -p artifacts
+          APK_PATH=$(find android -name "*.apk" -type f | head -1)
+          if [ -n "$APK_PATH" ]; then
+            TIMESTAMP=$(date +%Y%m%d-%H%M)
+            cp "$APK_PATH" "artifacts/CodeBank-${TIMESTAMP}.apk"
+            echo "APK: artifacts/CodeBank-${TIMESTAMP}.apk"
+            ls -lh artifacts/
+          else
+            echo "No APK found!"
+            find android -name "*.apk" 2>/dev/null || true
+            exit 1
+          fi
+
+      # ── 11. Upload APK artifact ──────────────────────────────────────────────
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CodeBank-Android-APK
+          path: artifacts/*.apk
+          retention-days: 30
+          if-no-files-found: error
+
+      # ── 12. Build summary ────────────────────────────────────────────────────
+      - name: Build summary
+        run: |
+          echo "## 🤖 Android APK Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ OTA is Active" >> $GITHUB_STEP_SUMMARY
+          echo "This APK loads **https://drd2027.onrender.com** at runtime." >> $GITHUB_STEP_SUMMARY
+          echo "Every push to main → Render redeploys → APK users get the update automatically on next open." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📲 Install this APK" >> $GITHUB_STEP_SUMMARY
+          echo "1. Download the .apk from Artifacts above" >> $GITHUB_STEP_SUMMARY
+          echo "2. Transfer to Android device" >> $GITHUB_STEP_SUMMARY
+          echo "3. Enable 'Install from unknown sources' in Settings" >> $GITHUB_STEP_SUMMARY
+          echo "4. Tap the APK file to install" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔄 You only need a new APK when:" >> $GITHUB_STEP_SUMMARY
+          echo "- capacitor.config.json changes" >> $GITHUB_STEP_SUMMARY
+          echo "- New native Capacitor plugins are added to package.json" >> $GITHUB_STEP_SUMMARY
+          echo "- Otherwise all updates are OTA (automatic via Render)" >> $GITHUB_STEP_SUMMARY
