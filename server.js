@@ -403,6 +403,17 @@ async function ensureSingleSessionTables() {
       used INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
+    await query(`CREATE TABLE IF NOT EXISTS device_roles (
+      user_id TEXT PRIMARY KEY,
+      primary_session TEXT NOT NULL,
+      primary_label TEXT,
+      last_heartbeat DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await query(`CREATE TABLE IF NOT EXISTS session_state (
+      user_id TEXT PRIMARY KEY,
+      state_json TEXT NOT NULL DEFAULT '{}',
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
     console.log('[SESSION] Single-session tables ready.');
   } catch(e) {
     console.error('[SESSION] DDL error:', e.message);
@@ -962,6 +973,172 @@ app.get('/api/session/qr/status/:token', requireAuth, async (req, res) => {
     return res.status(500).json({ status: 'error' });
   }
 });
+
+// ================================================
+// MIRROR MODE ROUTES — Primary/Mirror role system
+// ================================================
+
+// Register device role — returns 'primary' or 'mirror'
+app.post('/api/mirror/register-role', requireAuth, async (req, res) => {
+  try {
+    const userId = String(req.user.id);
+    const sessionToken = (req.cookies && req.cookies.session_token) || null;
+    const deviceLabel = getDeviceLabel(req);
+    if (!sessionToken) return res.json({ role: 'mirror', primaryLabel: 'Unknown Device' });
+
+    const existing = await query(
+      'SELECT primary_session, primary_label, last_heartbeat FROM device_roles WHERE user_id = $1',
+      [userId]
+    );
+
+    if (!existing.rows.length) {
+      // First device ever — becomes primary
+      await query(
+        `INSERT INTO device_roles (user_id, primary_session, primary_label, last_heartbeat)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+         ON CONFLICT (user_id) DO UPDATE SET primary_session=$2, primary_label=$3, last_heartbeat=CURRENT_TIMESTAMP`,
+        [userId, sessionToken, deviceLabel]
+      );
+      return res.json({ role: 'primary', deviceLabel });
+    }
+
+    const row = existing.rows[0];
+
+    // This IS the primary device
+    if (row.primary_session === sessionToken) {
+      await query('UPDATE device_roles SET last_heartbeat = CURRENT_TIMESTAMP WHERE user_id = $1', [userId]);
+      return res.json({ role: 'primary', deviceLabel });
+    }
+
+    // Check if primary is stale (offline > 5 min) — auto-takeover
+    const staleMs = Date.now() - new Date(row.last_heartbeat).getTime();
+    if (staleMs > 5 * 60 * 1000) {
+      await query(
+        `INSERT INTO device_roles (user_id, primary_session, primary_label, last_heartbeat)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+         ON CONFLICT (user_id) DO UPDATE SET primary_session=$2, primary_label=$3, last_heartbeat=CURRENT_TIMESTAMP`,
+        [userId, sessionToken, deviceLabel]
+      );
+      return res.json({ role: 'primary', deviceLabel, auto_takeover: true });
+    }
+
+    // Active primary exists — become mirror, return latest state
+    let state = {};
+    try {
+      const sr = await query('SELECT state_json FROM session_state WHERE user_id = $1', [userId]);
+      if (sr.rows.length) state = JSON.parse(sr.rows[0].state_json);
+    } catch(_) {}
+
+    return res.json({
+      role: 'mirror',
+      primaryLabel: row.primary_label || 'Another Device',
+      state
+    });
+  } catch(e) {
+    console.error('[MIRROR] register-role error:', e.message);
+    return res.status(500).json({ role: 'mirror', error: e.message });
+  }
+});
+
+// Primary heartbeat — keeps primary role alive
+app.post('/api/mirror/heartbeat', requireAuth, async (req, res) => {
+  try {
+    const userId = String(req.user.id);
+    const sessionToken = (req.cookies && req.cookies.session_token) || null;
+    await query(
+      'UPDATE device_roles SET last_heartbeat = CURRENT_TIMESTAMP WHERE user_id = $1 AND primary_session = $2',
+      [userId, sessionToken]
+    );
+    return res.json({ ok: true });
+  } catch(e) {
+    return res.status(500).json({ ok: false });
+  }
+});
+
+// Primary posts state snapshot — stored + broadcast to all mirrors
+app.post('/api/mirror/state', requireAuth, async (req, res) => {
+  try {
+    const userId = String(req.user.id);
+    const sessionToken = (req.cookies && req.cookies.session_token) || null;
+
+    // Validate caller is the current primary
+    const roleRes = await query('SELECT primary_session FROM device_roles WHERE user_id = $1', [userId]);
+    if (!roleRes.rows.length || roleRes.rows[0].primary_session !== sessionToken) {
+      return res.status(403).json({ ok: false, error: 'not_primary' });
+    }
+
+    const state = req.body;
+    await query(
+      `INSERT INTO session_state (user_id, state_json, updated_at)
+       VALUES ($1, $2, CURRENT_TIMESTAMP)
+       ON CONFLICT (user_id) DO UPDATE SET state_json=$2, updated_at=CURRENT_TIMESTAMP`,
+      [userId, JSON.stringify(state)]
+    );
+
+    // Broadcast STATE_UPDATE to all mirror connections (not primary itself)
+    const set = __sseClients.get(userId);
+    if (set) {
+      const payload = `data: ${JSON.stringify({ type: 'STATE_UPDATE', state })}\n\n`;
+      for (const clientRes of set) {
+        if (clientRes.__sessionToken !== sessionToken) {
+          try { clientRes.write(payload); } catch(_) {}
+        }
+      }
+    }
+    return res.json({ ok: true });
+  } catch(e) {
+    console.error('[MIRROR] state post error:', e.message);
+    return res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Mirror requests to become primary — transfers primary role
+app.post('/api/mirror/switch', requireAuth, async (req, res) => {
+  try {
+    const userId = String(req.user.id);
+    const sessionToken = (req.cookies && req.cookies.session_token) || null;
+    const deviceLabel = getDeviceLabel(req);
+
+    // Get current primary to notify it
+    const existing = await query('SELECT primary_session, primary_label FROM device_roles WHERE user_id = $1', [userId]);
+    if (existing.rows.length > 0) {
+      const oldSession = existing.rows[0].primary_session;
+      if (oldSession !== sessionToken) {
+        // Tell old primary it's now a mirror
+        __sseEmitToSession(userId, oldSession, {
+          type: 'PRIMARY_SWITCHED',
+          newPrimaryLabel: deviceLabel,
+          message: `Control transferred to ${deviceLabel}`
+        });
+      }
+    }
+
+    // Assign new primary
+    await query(
+      `INSERT INTO device_roles (user_id, primary_session, primary_label, last_heartbeat)
+       VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+       ON CONFLICT (user_id) DO UPDATE SET primary_session=$2, primary_label=$3, last_heartbeat=CURRENT_TIMESTAMP`,
+      [userId, sessionToken, deviceLabel]
+    );
+
+    // Notify all connections (mirrors) about role change
+    const set = __sseClients.get(userId);
+    if (set) {
+      const payload = `data: ${JSON.stringify({ type: 'ROLE_CHANGED', newPrimarySession: sessionToken, newPrimaryLabel: deviceLabel })}\n\n`;
+      for (const clientRes of set) {
+        if (clientRes.__sessionToken !== sessionToken) {
+          try { clientRes.write(payload); } catch(_) {}
+        }
+      }
+    }
+
+    return res.json({ role: 'primary', deviceLabel });
+  } catch(e) {
+    console.error('[MIRROR] switch error:', e.message);
+    return res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 
 app.post('/api/auth/dev-login', (req, res) => {
   try {
