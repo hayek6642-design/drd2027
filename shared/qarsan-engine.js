@@ -21,6 +21,11 @@ class QarsanEngine {
     return window.__currentUserId || null;
   }
 
+  static getCurrentUserEmail() {
+    // Get user email from session storage or global
+    return window.__currentUserEmail || localStorage.getItem('userEmail') || null;
+  }
+
   /**
    * Get Qarsan status for current user
    * @returns {Promise<{success: boolean, qarsanMode: string, walletBalance: number, watchDogState: string, stealScope: string, lastFedAt: string}>}
