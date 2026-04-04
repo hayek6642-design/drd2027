@@ -330,7 +330,21 @@ app.get('/api/rewards/balance', async (req, res) => {
   try {
     const s = (req.cookies && req.cookies.session_token) || null;
     if (!s) return res.status(401).json({ error: 'unauthorized' });
-    const session = devSessions.get(s);
+    let session = devSessions.get(s);
+    // DB fallback — re-hydrate session after server restart (same pattern as /api/me)
+    if (!session || !session.userId) {
+      try {
+        const dbSess = await query('SELECT user_id, expires_at FROM auth_sessions WHERE token = $1', [s]);
+        if (dbSess.rows && dbSess.rows.length > 0 && new Date() < new Date(dbSess.rows[0].expires_at)) {
+          const _uid = dbSess.rows[0].user_id;
+          const _uRes = await query('SELECT email, user_type FROM users WHERE id = $1', [_uid]);
+          if (_uRes.rows && _uRes.rows.length > 0) {
+            session = { userId: _uid, email: _uRes.rows[0].email, role: _uRes.rows[0].user_type || 'user' };
+            devSessions.set(s, session);
+          }
+        }
+      } catch(_dbErr) {}
+    }
     if (!session || !session.userId) return res.status(401).json({ error: 'unauthorized' });
 
     const userId = session.userId;
