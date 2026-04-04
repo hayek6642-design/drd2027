@@ -945,6 +945,137 @@
         })();
     </script>
 
+<script>
+// =====================================================
+// MIRROR MODE for CodeBank (indexCB.html)
+// Only ONE button is active in mirror mode:
+//   → "Switch Device" floating button
+// Every other button/link is silently blocked.
+// =====================================================
+(function() {
+  var _role = null;      // 'primary' | 'mirror'
+  var _sseConn = null;
+
+  async function initCBMirror() {
+    try {
+      var res = await fetch('/api/mirror/register-role', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      var data = await res.json();
+      _role = data.role || 'primary';
+
+      if (_role === 'mirror') {
+        _installCBBlocker();
+        _addSwitchBtn(data.primaryLabel || 'Primary Device');
+        _connectSSE();
+      }
+    } catch(e) {
+      _role = 'primary'; // fail-safe
+    }
+  }
+
+  function _installCBBlocker() {
+    var handler = function(e) {
+      if (_role !== 'mirror') return;
+      var switchBtn = document.getElementById('mirror-switch-btn');
+      if (switchBtn && (e.target === switchBtn || switchBtn.contains(e.target))) return;
+      e.stopPropagation();
+      e.preventDefault();
+    };
+    document.addEventListener('click', handler, true);
+    document.addEventListener('touchstart', handler, { capture: true, passive: false });
+    document.addEventListener('touchend', handler, { capture: true, passive: false });
+  }
+
+  function _addSwitchBtn(primaryLabel) {
+    // Mirror banner at top
+    var banner = document.createElement('div');
+    banner.style.cssText = [
+      'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:2147483646',
+      'background:rgba(35,134,54,0.93)', 'color:#fff',
+      'text-align:center', 'font-family:-apple-system,sans-serif',
+      'font-size:13px', 'padding:8px 16px', 'pointer-events:none'
+    ].join(';');
+    banner.textContent = '📡 Mirror Mode · Mirroring ' + primaryLabel;
+    document.body.appendChild(banner);
+
+    // Floating Switch Device button
+    var btn = document.createElement('button');
+    btn.id = 'mirror-switch-btn';
+    btn.innerHTML = '🔄 Switch Device';
+    btn.style.cssText = [
+      'position:fixed', 'bottom:96px', 'left:50%',
+      'transform:translateX(-50%)',
+      'background:linear-gradient(135deg,#238636,#1a7f37)',
+      'color:#fff', 'border:none', 'border-radius:50px',
+      'padding:15px 36px', 'font-size:15px', 'font-weight:700',
+      'cursor:pointer', 'z-index:2147483647',
+      'box-shadow:0 4px 24px rgba(35,134,54,0.5)',
+      'letter-spacing:0.3px', 'white-space:nowrap'
+    ].join(';');
+
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      e.preventDefault();
+      _doSwitch();
+    }, true);
+
+    document.body.appendChild(btn);
+  }
+
+  async function _doSwitch() {
+    try {
+      // Notify parent window (when inside iframe)
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'MIRROR_SWITCH_DEVICE' }, '*');
+      }
+      // Also call API directly (belt + suspenders)
+      var res = await fetch('/api/mirror/switch', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      var data = await res.json();
+      if (data.role === 'primary') {
+        _role = 'primary';
+        var btn = document.getElementById('mirror-switch-btn');
+        if (btn) btn.remove();
+        // Reload to unlock all interactions
+        window.location.reload();
+      }
+    } catch(e) {}
+  }
+
+  function _connectSSE() {
+    if (_sseConn) return;
+    try {
+      _sseConn = new EventSource('/events', { withCredentials: true });
+      _sseConn.onmessage = function(ev) {
+        try {
+          var d = JSON.parse(ev.data);
+          // If we were demoted to mirror while we thought we were primary
+          if (d.type === 'PRIMARY_SWITCHED' && _role === 'primary') {
+            _role = 'mirror';
+            window.location.reload();
+          }
+          // If a role change happened and we might be the new primary
+          if (d.type === 'ROLE_CHANGED' && _role === 'mirror') {
+            // Parent frame will handle this; reload for clean state
+            window.location.reload();
+          }
+        } catch(_) {}
+      };
+    } catch(_) {}
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCBMirror);
+  } else {
+    initCBMirror();
+  }
+})();
+</script>
+
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </body>
