@@ -493,9 +493,26 @@ function __sseEmit(userId, payload) {
     for (const res of set) { try { res.write(data) } catch(err){ console.error('[SSE] Write error:', err) } }
   } catch(err){ console.error('[SSE] Broadcast error:', err) }
 }
-app.get('/events', (req, res) => {
+app.get('/events', async (req, res) => {
   try {
-    const s = readSessionFromCookie(req);
+    let s = readSessionFromCookie(req);
+    // [CROSS-DEVICE FIX] DB fallback for sessions not in memory (server restart / multiple devices)
+    if (!s || !s.userId) {
+      const _sseToken = (req.cookies && req.cookies.session_token) || null;
+      if (_sseToken) {
+        try {
+          const _dbSess = await query('SELECT user_id, expires_at FROM auth_sessions WHERE token = $1', [_sseToken]);
+          if (_dbSess.rows && _dbSess.rows.length > 0 && new Date() < new Date(_dbSess.rows[0].expires_at)) {
+            const _sseUid = _dbSess.rows[0].user_id;
+            const _sseUserRes = await query('SELECT email, user_type FROM users WHERE id = $1', [_sseUid]);
+            if (_sseUserRes.rows && _sseUserRes.rows.length > 0) {
+              s = { userId: _sseUid, email: _sseUserRes.rows[0].email, role: _sseUserRes.rows[0].user_type || 'user', sessionId: _sseToken };
+              devSessions.set(_sseToken, s); // Re-hydrate in-memory
+            }
+          }
+        } catch(_sseErr) { console.error('[EVENTS] DB session fallback error:', _sseErr.message); }
+      }
+    }
     if (!s || !s.userId) return res.status(401).end();
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -946,6 +963,14 @@ app.post('/api/auth/signup', async (req, res) => {
       country,
       verified: true
     });
+
+    // [CROSS-DEVICE FIX] Persist session to DB so it survives server restarts
+    try {
+      await query(
+        "INSERT INTO auth_sessions (token, user_id, expires_at) VALUES ($1, $2, datetime('now', '+7 days')) ON CONFLICT (token) DO NOTHING",
+        [newSessionId, created.id]
+      );
+    } catch(dbErr) { console.warn('[SESSION] DB persist failed on signup:', dbErr.message); }
     
     // Set cookie
     const isProduction = process.env.NODE_ENV === 'production';
@@ -1039,6 +1064,15 @@ app.post('/api/auth/login', async (req, res) => {
       isUntrusted: u.is_untrusted || false
     });
 
+    // [CROSS-DEVICE FIX] Persist session to DB so it survives server restarts
+    // and is accessible from any device the user logs into
+    try {
+      await query(
+        "INSERT INTO auth_sessions (token, user_id, expires_at) VALUES ($1, $2, datetime('now', '+7 days')) ON CONFLICT (token) DO NOTHING",
+        [sessionId, u.id]
+      );
+    } catch(dbErr) { console.warn('[SESSION] DB persist failed on login:', dbErr.message); }
+
     // Set cookie
     res.cookie('session_token', sessionId, {
       httpOnly: false, // [SECURITY] MODIFIED: Allow client-side JS to see the cookie for redirection logic
@@ -1073,22 +1107,32 @@ app.get('/api/auth/me', requireAuth, (req, res) => {
   }
 });
 
-// Alias: session info
-app.get('/api/me', (req, res) => {
+// Alias: session info — with DB fallback for cross-device / server-restart recovery
+app.get('/api/me', async (req, res) => {
   try {
     const token = (req.cookies && req.cookies.session_token) || null;
     if (!token) return res.json({ success: false, user: null });
+
+    // Fast path: in-memory session
     const s = devSessions.get(token);
-    if (!s) return res.json({ success: false, user: null });
-    return res.json({ 
-      success: true,
-      user: { 
-        id: s.userId, 
-        email: s.email,
-        sessionId: s.sessionId, 
-        role: s.role 
-      } 
-    });
+    if (s) return res.json({ success: true, user: { id: s.userId, email: s.email, sessionId: s.sessionId, role: s.role } });
+
+    // [CROSS-DEVICE FIX] DB fallback: handles server restarts and cross-device sessions
+    try {
+      const dbSess = await query('SELECT user_id, expires_at FROM auth_sessions WHERE token = $1', [token]);
+      if (dbSess.rows && dbSess.rows.length > 0 && new Date() < new Date(dbSess.rows[0].expires_at)) {
+        const userId = dbSess.rows[0].user_id;
+        const userRes = await query('SELECT email, user_type, is_untrusted FROM users WHERE id = $1', [userId]);
+        if (userRes.rows && userRes.rows.length > 0) {
+          const u2 = userRes.rows[0];
+          const sessionData = { userId, email: u2.email, role: u2.user_type || 'user', sessionId: token, isUntrusted: u2.is_untrusted || false };
+          devSessions.set(token, sessionData); // Re-hydrate in-memory for future fast-path requests
+          return res.json({ success: true, user: { id: userId, email: u2.email, sessionId: token, role: u2.user_type || 'user' } });
+        }
+      }
+    } catch(dbErr) { console.error('[API/ME DB ERROR]', dbErr.message); }
+
+    return res.json({ success: false, user: null });
   } catch (_) {
     return res.json({ success: false, user: null });
   }
