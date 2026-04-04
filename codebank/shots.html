@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shots! 📸 — Campaign Screenshots</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f172a;
+      --surface:   #1e293b;
+      --surface2:  #334155;
+      --gold:      #f59e0b;
+      --gold-dim:  rgba(245,158,11,0.15);
+      --text:      #f1f5f9;
+      --muted:     #94a3b8;
+      --red:       #ef4444;
+      --green:     #22c55e;
+      --radius:    14px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    .header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-icon { font-size: 28px; }
+    .header-text h1 { font-size: 22px; font-weight: 800; color: var(--gold); }
+    .header-text p  { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .header-actions { margin-left: auto; display: flex; gap: 10px; }
+    .btn {
+      padding: 9px 18px; border-radius: 10px; border: none;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    .btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    .btn-gold    { background: var(--gold); color: #000; }
+    .btn-red     { background: var(--red);  color: #fff; }
+    .btn-outline { background: transparent; border: 1px solid var(--muted); color: var(--text); }
+
+    /* ── Empty State ─────────────────────────────────────────────── */
+    .empty {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 80px 24px; gap: 16px;
+      color: var(--muted); text-align: center;
+    }
+    .empty .big-icon { font-size: 64px; }
+    .empty h2 { font-size: 20px; color: var(--text); }
+    .empty p  { font-size: 14px; max-width: 360px; line-height: 1.6; }
+
+    /* ── Grid ────────────────────────────────────────────────────── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 18px;
+      padding: 24px;
+    }
+
+    .shot-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.06);
+      cursor: pointer;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+      position: relative;
+    }
+    .shot-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--gold);
+      box-shadow: 0 8px 24px rgba(245,158,11,0.2);
+    }
+    .shot-card .thumb {
+      width: 100%; aspect-ratio: 16/9;
+      object-fit: cover; display: block;
+      background: #1a1a2e;
+    }
+    .shot-card .thumb-placeholder {
+      width: 100%; aspect-ratio: 16/9;
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 40px; color: var(--muted);
+    }
+    .shot-card .card-body {
+      padding: 12px 14px 14px;
+    }
+    .shot-card .track-name {
+      font-size: 13px; font-weight: 700; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .shot-card .shot-time {
+      font-size: 11px; color: var(--muted); margin-top: 4px;
+    }
+    .shot-card .confirmed-badge {
+      position: absolute; top: 8px; right: 8px;
+      background: var(--green); color: #fff;
+      font-size: 10px; font-weight: 800;
+      padding: 3px 8px; border-radius: 20px;
+    }
+    .shot-card .del-btn {
+      position: absolute; top: 8px; left: 8px;
+      background: rgba(239,68,68,0.85); color: #fff;
+      border: none; border-radius: 6px;
+      font-size: 12px; padding: 4px 8px; cursor: pointer;
+      opacity: 0; transition: opacity 0.2s;
+    }
+    .shot-card:hover .del-btn { opacity: 1; }
+
+    /* ── Confirm Modal ───────────────────────────────────────────── */
+    .overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);
+      z-index: 500; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border-radius: 20px;
+      border: 1px solid rgba(245,158,11,0.25);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+      width: 100%; max-width: 520px;
+      animation: modalIn 0.25s ease;
+      overflow: hidden;
+    }
+    @keyframes modalIn {
+      from { opacity:0; transform:scale(0.93) translateY(-10px); }
+      to   { opacity:1; transform:none; }
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px 0;
+    }
+    .modal-header h2 { font-size: 18px; font-weight: 800; color: var(--gold); }
+    .modal-close {
+      background: none; border: none; color: var(--muted);
+      font-size: 22px; cursor: pointer; padding: 4px 8px;
+      border-radius: 6px; transition: color 0.2s;
+    }
+    .modal-close:hover { color: var(--text); }
+
+    .modal-body { padding: 16px 24px 24px; }
+
+    .shot-preview {
+      width: 100%; border-radius: 10px; margin-bottom: 16px;
+      border: 1px solid rgba(255,255,255,0.08);
+      max-height: 220px; object-fit: contain; background: #0f172a;
+    }
+
+    .shot-meta { margin-bottom: 16px; }
+    .shot-meta p { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+    .shot-meta span { color: var(--text); font-weight: 600; }
+
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+    .form-group input,
+    .form-group textarea {
+      width: 100%; background: var(--surface2); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px; color: var(--text); padding: 10px 12px;
+      font-size: 13px; resize: vertical; outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus { border-color: var(--gold); }
+
+    .modal-footer {
+      display: flex; gap: 10px; padding: 0 24px 24px;
+    }
+    .modal-footer .btn { flex: 1; padding: 12px; font-size: 14px; border-radius: 10px; }
+
+    .status-msg {
+      text-align: center; padding: 10px 0;
+      font-size: 13px; font-weight: 600;
+    }
+    .status-msg.ok  { color: var(--green); }
+    .status-msg.err { color: var(--red); }
+
+    /* ── Loading spinner ─────────────────────────────────────────── */
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(245,158,11,0.2);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 60px auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<header class="header">
+  <span class="header-icon">📸</span>
+  <div class="header-text">
+    <h1>Shots!</h1>
+    <p>Campaign screenshots — tap any shot to confirm a purchase</p>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-outline" onclick="loadShots()">↺ Refresh</button>
+  </div>
+</header>
+
+<!-- ── Grid Container ──────────────────────────────────────────────────── -->
+<div id="shots-container">
+  <div class="spinner"></div>
+</div>
+
+<!-- ── Confirm Purchase Modal ──────────────────────────────────────────── -->
+<div class="overlay" id="confirm-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>🛒 Confirm Purchase</h2>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <img id="modal-img" class="shot-preview" src="" alt="Campaign Screenshot" />
+
+      <div class="shot-meta">
+        <p>Campaign / Track: <span id="modal-track">—</span></p>
+        <p>Captured: <span id="modal-date">—</span></p>
+      </div>
+
+      <div class="form-group">
+        <label>Your Name (optional)</label>
+        <input type="text" id="buyer-name" placeholder="e.g. Ahmed Mohamed">
+      </div>
+      <div class="form-group">
+        <label>Your Email (optional, for receipt)</label>
+        <input type="email" id="buyer-email" placeholder="e.g. ahmed@example.com">
+      </div>
+      <div class="form-group">
+        <label>Notes (optional)</label>
+        <textarea id="buyer-notes" rows="2" placeholder="Any notes about this purchase..."></textarea>
+      </div>
+
+      <div id="modal-status" class="status-msg" style="display:none;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-gold" id="confirm-btn" onclick="confirmPurchase()">✅ Confirm &amp; Notify Admin</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API = (window.location.origin) + '/api/shots';
+  let currentShot = null;
+
+  /* ── Helpers ──────────────────────────────────────────────────────────── */
+  function fmtDate(ts) {
+    try { return new Date(ts).toLocaleString('en-GB', { dateStyle:'medium', timeStyle:'short' }); }
+    catch(_) { return ts; }
+  }
+
+  /* ── Load shots ───────────────────────────────────────────────────────── */
+  async function loadShots() {
+    const container = document.getElementById('shots-container');
+    container.innerHTML = '<div class="spinner"></div>';
+
+    try {
+      const resp = await fetch(API, { credentials: 'include' });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const data = await resp.json();
+      const shots = data.shots || [];
+
+      if (shots.length === 0) {
+        container.innerHTML = `
+          <div class="empty">
+            <span class="big-icon">📸</span>
+            <h2>No shots yet</h2>
+            <p>Play or pause a track in Samma3ny to automatically capture the page. Your shots will appear here.</p>
+          </div>`;
+        return;
+      }
+
+      const grid = document.createElement('div');
+      grid.className = 'grid';
+
+      shots.forEach(shot => {
+        const card = document.createElement('div');
+        card.className = 'shot-card';
+        card.innerHTML = `
+          ${shot.confirmed ? '<span class="confirmed-badge">✅ Purchased</span>' : ''}
+          <button class="del-btn" title="Delete shot">🗑</button>
+          <div class="thumb-placeholder">📷</div>
+          <div class="card-body">
+            <div class="track-name">${shot.track_title || 'Unknown Track'}</div>
+            <div class="shot-time">${fmtDate(shot.created_at)}</div>
+          </div>`;
+
+        // Click card → open confirm modal (load full image)
+        card.addEventListener('click', (e) => {
+          if (e.target.classList.contains('del-btn')) return;
+          openModal(shot.shot_uid, shot.track_title, shot.created_at);
+        });
+
+        // Delete button
+        card.querySelector('.del-btn').addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (!confirm('Delete this shot?')) return;
+          try {
+            await fetch(API + '/' + shot.shot_uid, { method: 'DELETE', credentials: 'include' });
+            loadShots();
+          } catch(err) {
+            alert('Failed to delete: ' + err.message);
+          }
+        });
+
+        grid.appendChild(card);
+      });
+
+      container.innerHTML = '';
+      container.appendChild(grid);
+    } catch (err) {
+      container.innerHTML = `
+        <div class="empty">
+          <span class="big-icon">⚠️</span>
+          <h2>Could not load shots</h2>
+          <p>${err.message}</p>
+        </div>`;
+    }
+  }
+
+  /* ── Open modal ───────────────────────────────────────────────────────── */
+  async function openModal(shotUid, trackTitle, createdAt) {
+    currentShot = shotUid;
+
+    document.getElementById('modal-track').textContent = trackTitle || 'Unknown Track';
+    document.getElementById('modal-date').textContent  = fmtDate(createdAt);
+    document.getElementById('modal-status').style.display = 'none';
+    document.getElementById('buyer-name').value   = '';
+    document.getElementById('buyer-email').value  = '';
+    document.getElementById('buyer-notes').value  = '';
+    document.getElementById('confirm-btn').disabled = false;
+    document.getElementById('confirm-btn').textContent = '✅ Confirm & Notify Admin';
+
+    // Load full image
+    const imgEl = document.getElementById('modal-img');
+    imgEl.src = '';
+    imgEl.style.display = 'none';
+
+    document.getElementById('confirm-overlay').classList.add('open');
+
+    try {
+      const resp = await fetch(API + '/' + shotUid, { credentials: 'include' });
+      const data = await resp.json();
+      if (data.success && data.shot && data.shot.image_data) {
+        imgEl.src = data.shot.image_data;
+        imgEl.style.display = 'block';
+      }
+    } catch(_) {}
+  }
+
+  /* ── Close modal ──────────────────────────────────────────────────────── */
+  function closeModal() {
+    document.getElementById('confirm-overlay').classList.remove('open');
+    currentShot = null;
+  }
+
+  /* ── Confirm purchase ─────────────────────────────────────────────────── */
+  async function confirmPurchase() {
+    if (!currentShot) return;
+
+    const btn   = document.getElementById('confirm-btn');
+    const status = document.getElementById('modal-status');
+
+    btn.disabled    = true;
+    btn.textContent = 'Sending...';
+    status.style.display = 'none';
+
+    const buyerName  = document.getElementById('buyer-name').value.trim();
+    const buyerEmail = document.getElementById('buyer-email').value.trim();
+    const notes      = document.getElementById('buyer-notes').value.trim();
+
+    try {
+      const resp = await fetch(API + '/' + currentShot + '/confirm', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ buyerName, buyerEmail, notes }),
+      });
+      const data = await resp.json();
+
+      if (data.success) {
+        status.textContent     = '✅ Admin notified! Purchase confirmed.';
+        status.className       = 'status-msg ok';
+        status.style.display   = 'block';
+        btn.textContent        = '✅ Done!';
+        // Auto-close and refresh after 2s
+        setTimeout(() => { closeModal(); loadShots(); }, 2000);
+      } else {
+        throw new Error(data.error || 'Unknown error');
+      }
+    } catch (err) {
+      status.textContent   = '❌ Failed: ' + err.message;
+      status.className     = 'status-msg err';
+      status.style.display = 'block';
+      btn.disabled         = false;
+      btn.textContent      = '✅ Confirm & Notify Admin';
+    }
+  }
+
+  /* ── Close modal on overlay click ────────────────────────────────────── */
+  document.getElementById('confirm-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  /* ── Init ─────────────────────────────────────────────────────────────── */
+  loadShots();
+</script>
+</body>
+</html>

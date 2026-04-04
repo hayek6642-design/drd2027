@@ -80,6 +80,7 @@ import { query, pool } from './api/config/db.js';
 import { watchdog } from './services/watchdog/watchdog.js';
 import watchdogRoutes from './routes/watchdog.js';
 import battaloodaRouter from './api/routes/battalooda.js';
+import shotsRouter from './api/modules/shots.js';
 
 import { 
   getAllCountries, 
@@ -262,6 +263,9 @@ app.use('/api/battalooda', battaloodaRouter);
 
 // Register Sync routes
 app.use('/api/codes', syncRouter);
+
+// Register Shots! routes
+app.use('/api/shots', shotsRouter);
 
 // AUTH REMOVED — CLEAN RESET
 
