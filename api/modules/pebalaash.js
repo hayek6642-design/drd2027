@@ -25,13 +25,16 @@ const emailTransporter = nodemailer.createTransport({
 
 // ─── Startup: ensure all required columns & tables exist ──────────────────────
 async function ensureSchema() {
-  // Silver / gold columns on balances (PostgreSQL: use DO $$ ... $$ pattern)
+  // Silver / gold columns on balances.
+  // Turso/libsql does NOT support "ADD COLUMN IF NOT EXISTS" (PostgreSQL-only).
+  // We simply attempt the ALTER TABLE without IF NOT EXISTS and catch the
+  // "duplicate column" error silently on subsequent startups.
   const alterCols = [
-    `ALTER TABLE balances ADD COLUMN IF NOT EXISTS silver_count INTEGER DEFAULT 0`,
-    `ALTER TABLE balances ADD COLUMN IF NOT EXISTS gold_count   INTEGER DEFAULT 0`,
+    `ALTER TABLE balances ADD COLUMN silver_count INTEGER DEFAULT 0`,
+    `ALTER TABLE balances ADD COLUMN gold_count   INTEGER DEFAULT 0`,
   ]
   for (const sql of alterCols) {
-    try { await query(sql, []) } catch (_) {}
+    try { await query(sql, [], { silent: true }) } catch (_) {}
   }
 
   // Pebalaash orders table (stores full purchase history per user)
