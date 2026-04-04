@@ -267,13 +267,38 @@
 
   <!-- SIGNUP FORM -->
     <div id="signupForm">
-    <div class="info-box">
-      🔒 Secure signup is enabled. No OTP verification required for now.
-    </div>
-    
     <div class="form-group">
       <label>Email Address</label>
-      <input type="email" id="signupEmail" placeholder="your@email.com" required>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="email" id="signupEmail" placeholder="your@email.com" required style="flex:1;">
+        <button type="button" id="sendOtpEmailBtn" onclick="sendEmailOTPCode()" 
+          style="white-space:nowrap;padding:10px 14px;font-size:13px;background:linear-gradient(135deg,#0066cc,#00d4ff);color:#fff;border:none;border-radius:8px;cursor:pointer;transition:opacity .2s;">
+          Send Code
+        </button>
+      </div>
+    </div>
+
+    <!-- OTP Verification Panel (hidden until code sent) -->
+    <div id="emailOtpPanel" style="display:none;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.3);border-radius:10px;padding:14px 16px;margin-bottom:12px;">
+      <p style="margin:0 0 10px;font-size:13px;color:#aaa;">✉️ A 6-digit code was sent to your email. Enter it below:</p>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="emailOtpInput" maxlength="6" placeholder="_ _ _ _ _ _"
+          style="flex:1;letter-spacing:6px;font-size:20px;text-align:center;padding:10px;background:#111;color:#00d4ff;border:1px solid #333;border-radius:8px;"
+          oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+        <button type="button" onclick="verifyEmailOTPCode()"
+          style="padding:10px 16px;background:#00c853;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">
+          Verify ✓
+        </button>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:#666;">
+        <span id="emailOtpStatus"></span>
+        <button type="button" onclick="resendEmailOTPCode()" style="background:none;border:none;color:#00d4ff;cursor:pointer;font-size:12px;padding:0;">Resend code</button>
+      </div>
+    </div>
+
+    <!-- Email verified badge (hidden until verified) -->
+    <div id="emailVerifiedBadge" style="display:none;background:rgba(0,200,83,0.12);border:1px solid #00c853;border-radius:8px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#00c853;">
+      ✅ Email verified — you're good to go!
     </div>
     
     <div class="form-group">
@@ -312,7 +337,7 @@
     
     <div id="statusMessage" class="status-message"></div>
     
-    <button onclick="handleSignup()" id="signupBtn">Complete Sign Up</button>
+    <button onclick="handleSignup()" id="signupBtn">🔒 Verify Email First</button>
   </div>
 
   <!-- LOGIN FORM -->
@@ -415,6 +440,7 @@ console.log('🔥 Window origin:', window.location.origin);
 
   let sessionId = null;
 let verificationStatus = { email: false, phone: false };
+let emailOtpSessionId = null; // tracks active email-OTP session
 let countriesData = [];
 let religionsData = [];
 
@@ -547,6 +573,77 @@ function showStatus(message, type) {
     statusEl.className = 'status-message';
   }, 5000);
 }
+
+// ── Email OTP client functions (freemium) ────────────────────────────────────
+
+async function sendEmailOTPCode() {
+  const email = document.getElementById('signupEmail').value.trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showStatus('Please enter a valid email address first', 'error'); return;
+  }
+  const btn = document.getElementById('sendOtpEmailBtn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/send-email-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    if (data.success) {
+      emailOtpSessionId = data.sessionId;
+      document.getElementById('emailOtpPanel').style.display = 'block';
+      document.getElementById('emailVerifiedBadge').style.display = 'none';
+      document.getElementById('emailOtpStatus').textContent = '';
+      btn.textContent = 'Resend';
+      btn.disabled = false;
+      showStatus(data.message || 'Code sent! Check your inbox.', 'success');
+      // Dev: show mock OTP in console
+      if (data.mockOtp) console.warn('[DEV] Email OTP:', data.mockOtp);
+    } else {
+      showStatus(data.error || 'Failed to send code', 'error');
+      btn.textContent = 'Send Code'; btn.disabled = false;
+    }
+  } catch (e) {
+    showStatus('Network error. Please try again.', 'error');
+    btn.textContent = 'Send Code'; btn.disabled = false;
+  }
+}
+
+async function verifyEmailOTPCode() {
+  const otp = document.getElementById('emailOtpInput').value.trim();
+  const statusEl = document.getElementById('emailOtpStatus');
+  if (!otp || otp.length !== 6) { statusEl.textContent = 'Enter the 6-digit code'; return; }
+  if (!emailOtpSessionId) { statusEl.textContent = 'Please send a code first'; return; }
+  statusEl.textContent = 'Verifying…';
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/verify-email-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: emailOtpSessionId, otp })
+    });
+    const data = await res.json();
+    if (data.success && data.verified) {
+      verificationStatus.email = true;
+      document.getElementById('emailOtpPanel').style.display = 'none';
+      document.getElementById('emailVerifiedBadge').style.display = 'block';
+      const signupBtn = document.getElementById('signupBtn');
+      signupBtn.textContent = 'Complete Sign Up';
+      signupBtn.style.background = 'linear-gradient(135deg,#00c853,#00e676)';
+      showStatus('✅ Email verified!', 'success');
+    } else {
+      statusEl.textContent = data.error || 'Incorrect code. Try again.';
+    }
+  } catch (e) { statusEl.textContent = 'Network error. Try again.'; }
+}
+
+async function resendEmailOTPCode() {
+  emailOtpSessionId = null;
+  await sendEmailOTPCode();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 async function sendHybridOTP() {
   const email = document.getElementById('signupEmail').value.trim();
@@ -723,6 +820,13 @@ async function handleSignup() {
   
   if (!email || !username || !password || !religion || !country || !phone) {
     showStatus('Please fill in all fields', 'error');
+    return;
+  }
+  
+  // 🔒 OTP gate — must verify email before completing signup
+  if (!verificationStatus.email) {
+    showStatus('Please verify your email address first — click "Send Code"', 'error');
+    document.getElementById('signupEmail').focus();
     return;
   }
   

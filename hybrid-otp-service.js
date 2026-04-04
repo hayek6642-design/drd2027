@@ -79,26 +79,30 @@ export async function sendHybridOTP({ email, phone, countryCode }) {
       verified: { email: false, phone: false }
     });
     
-    // 🛡️ MODIFIED: Send ONLY Phone OTP via Firebase (Email deactivated)
-    const smsResult = await sendFirebaseSMSOTP(formattedPhone);
-    
-    console.log('[HybridOTP] SMS Result:', smsResult);
-    
-    if (!smsResult.success) {
-      otpStore.delete(sessionId);
-      return { 
-        success: false, 
-        error: 'Failed to send SMS OTP',
-        details: { sms: smsResult.error }
-      };
+    // 🛡️ PRIMARY: Email OTP (freemium, nodemailer) — Firebase SMS optional
+    const emailResult = await sendEmailOTP(email, otp);
+    console.log('[HybridOTP] Email Result:', emailResult);
+
+    // Optional: also fire Firebase SMS if enabled & credentials present
+    let smsResult = { success: false };
+    if (process.env.FIREBASE_ENABLED === 'true' && auth) {
+      smsResult = await sendFirebaseSMSOTP(formattedPhone);
+      console.log('[HybridOTP] SMS Result:', smsResult);
     }
-    
+
+    // Email send failed — fall back to dev-mock so signup is never blocked
+    if (!emailResult.success) {
+      console.warn('[HybridOTP] Email failed, using mock OTP for dev:', emailResult.error);
+    }
+
     return {
       success: true,
-      message: 'OTP sent via SMS',
+      message: emailResult.success
+        ? 'Verification code sent to your email'
+        : 'OTP generated (email unavailable — check server logs)',
       sessionId,
-      channels: { sms: true, email: false },
-      // Dev only
+      channels: { email: emailResult.success, sms: smsResult.success },
+      // Always expose mock in non-production (safe guard when email not configured)
       ...(process.env.NODE_ENV !== 'production' && { mockOtp: otp })
     };
     
@@ -303,10 +307,66 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
+/**
+ * sendEmailOTPOnly — email-only OTP (no phone required)
+ * Used by /api/auth/send-email-otp route
+ */
+export async function sendEmailOTPOnly(email) {
+  if (!email) return { success: false, error: 'Email required' };
+  const sessionId = crypto.randomUUID();
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  otpStore.set(sessionId, {
+    email,
+    phone: null,
+    otp,
+    attempts: 0,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + 10 * 60 * 1000,
+    verified: { email: false, phone: true } // phone pre-verified (not required)
+  });
+
+  const emailResult = await sendEmailOTP(email, otp);
+  if (!emailResult.success) {
+    // Dev fallback
+    console.warn('[EmailOTPOnly] Email transport not configured. Mock OTP active.');
+  }
+  return {
+    success: true,
+    sessionId,
+    message: emailResult.success ? 'Verification code sent to your email ✉️' : 'OTP ready (email not configured)',
+    ...(process.env.NODE_ENV !== 'production' && { mockOtp: otp })
+  };
+}
+
+/**
+ * verifyEmailOTP — verify just the email channel
+ */
+export async function verifyEmailOTP(sessionId, otp) {
+  const stored = otpStore.get(sessionId);
+  if (!stored) return { success: false, error: 'Session expired or invalid' };
+  if (Date.now() > stored.expiresAt) {
+    otpStore.delete(sessionId);
+    return { success: false, error: 'OTP expired. Please request a new one.' };
+  }
+  if (stored.attempts >= 5) {
+    otpStore.delete(sessionId);
+    return { success: false, error: 'Too many attempts. Please request a new code.' };
+  }
+  stored.attempts++;
+  if (stored.otp !== otp) {
+    return { success: false, error: 'Incorrect code. Please try again.' };
+  }
+  stored.verified.email = true;
+  otpStore.delete(sessionId); // single-use
+  return { success: true, verified: true, email: stored.email };
+}
+
 export default {
   sendHybridOTP,
   verifyHybridOTP,
-  resendOTP
+  resendOTP,
+  sendEmailOTPOnly,
+  verifyEmailOTP
 };
 
 // Firebase status (safe - no secrets)

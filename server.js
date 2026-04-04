@@ -99,7 +99,9 @@ import { sendOTP } from './api/utils/sms-provider.js';
 import { 
   sendHybridOTP, 
   verifyHybridOTP, 
-  resendOTP 
+  resendOTP,
+  sendEmailOTPOnly,
+  verifyEmailOTP
 } from './hybrid-otp-service.js';
 
 // [SECURITY] Security Middleware
@@ -1222,6 +1224,49 @@ app.post('/api/auth/logout', (req, res) => {
 // ------------------------------------------------------------------
 
 // Step 1: Send Hybrid OTP (Email + Phone)
+// ─── Email-Only OTP (freemium, no Firebase required) ───────────────────────
+
+// Step 1: Send email OTP
+app.post('/api/auth/send-email-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ success: false, error: 'Valid email required' });
+    }
+    const result = await sendEmailOTPOnly(email);
+    return res.json({
+      success: result.success,
+      sessionId: result.sessionId,
+      message: result.message,
+      ...(result.mockOtp && { mockOtp: result.mockOtp }) // dev only
+    });
+  } catch (e) {
+    console.error('[EmailOTP] send error:', e);
+    return res.status(500).json({ success: false, error: 'Failed to send OTP' });
+  }
+});
+
+// Step 2: Verify email OTP
+app.post('/api/auth/verify-email-otp', async (req, res) => {
+  try {
+    const { sessionId, otp } = req.body;
+    if (!sessionId || !otp) {
+      return res.status(400).json({ success: false, error: 'sessionId and otp required' });
+    }
+    const result = await verifyEmailOTP(sessionId, otp);
+    if (result.success) {
+      return res.json({ success: true, verified: true, email: result.email });
+    } else {
+      return res.status(400).json({ success: false, error: result.error });
+    }
+  } catch (e) {
+    console.error('[EmailOTP] verify error:', e);
+    return res.status(500).json({ success: false, error: 'Verification failed' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 app.post('/api/auth/send-hybrid-otp', async (req, res) => {
   try {
     const { email, phone, countryCode } = req.body;
