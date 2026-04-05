@@ -110,6 +110,10 @@
     </script>
 
     <style>
+        /* Prevent page scroll — app is a full-screen experience */
+        html, body {
+            overflow: hidden;
+        }
         /*  Loading Overlay Fix - Force Hidden by Default if needed */
         #loading-overlay {
             position: fixed;
@@ -1929,8 +1933,6 @@
     </script>
 
     <div class="container text-center py-5">
-        <h1 class="display-4" data-i18n="general.siteName">My YouTube Channel</h1>
-
         <div class="touch-disabled"></div>
 
         <div class="video-wrapper">

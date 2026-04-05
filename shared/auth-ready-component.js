@@ -95,8 +95,31 @@
           userId: user?.id,
           user: user
         });
-      } else if (this.options.requireAuth) {
-        // Wait for auth
+        return;
+      }
+
+      // FIX: If auth state was already received (even as guest/unauthenticated),
+      // handle it immediately instead of waiting for auth:ready event (which already fired).
+      // This prevents the 30-second "Max retries exceeded" race condition where
+      // iframe-auth-client.js fires auth:ready before our listener is registered.
+      const existingState = window.__AUTH_STATE__;
+      const clientResolved = window.IframeAuthClient && window.IframeAuthClient.getState().initialResponseReceived;
+      if ((existingState && existingState.timestamp) || clientResolved) {
+        if (this.options.requireAuth) {
+          // Auth resolved but user is not authenticated — show login/guest state immediately
+          this.handleAuthReady({
+            authenticated: false,
+            userId: null,
+            user: null
+          });
+        } else {
+          this.handleNoAuth();
+        }
+        return;
+      }
+
+      if (this.options.requireAuth) {
+        // Auth response not yet received, wait for the event
         this.waitForAuth();
       } else {
         // Auth not required, proceed without
