@@ -117,9 +117,9 @@ class ServiceBridgeBase {
         display.className = `acc-service-display acc-${this.serviceName}-display`;
         display.innerHTML = `
             <div class="acc-service-assets">
-                <span class="acc-badge codes" title="Codes">🔐 ${this.assets?.codes_count || 0}</span>
-                <span class="acc-badge silver" title="Silver">🥈 ${this.assets?.silver_balance || 0}</span>
-                <span class="acc-badge gold" title="Gold">🥇 ${this.assets?.gold_balance || 0}</span>
+                <span class="acc-badge codes" title="Codes">${this.assets?.codes_count || 0}</span>
+                <span class="acc-badge silver" title="Silver">${this.assets?.silver_balance || 0}</span>
+                <span class="acc-badge gold" title="Gold">${this.assets?.gold_balance || 0}</span>
             </div>
         `;
 
@@ -135,9 +135,9 @@ class ServiceBridgeBase {
             const silver = display.querySelector('.silver');
             const gold = display.querySelector('.gold');
 
-            if (codes) codes.textContent = `🔐 ${this.assets.codes_count || 0}`;
-            if (silver) silver.textContent = `🥈 ${this.assets.silver_balance || 0}`;
-            if (gold) gold.textContent = `🥇 ${this.assets.gold_balance || 0}`;
+            if (codes) codes.textContent = `${this.assets.codes_count || 0}`;
+            if (silver) silver.textContent = `${this.assets.silver_balance || 0}`;
+            if (gold) gold.textContent = `${this.assets.gold_balance || 0}`;
         }
     }
 }

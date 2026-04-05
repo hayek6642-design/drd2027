@@ -2118,23 +2118,10 @@
                     try {
                         var okAuth = !!(e && e.detail && e.detail.authenticated);
                         if (!okAuth) {
-                            // [FIX] Only redirect if NO cached session exists
-                            const _cachedUser = localStorage.getItem('__cached_user__') || localStorage.getItem('user_data');
-                            const _cachedToken = localStorage.getItem('session_token');
-                            if (_cachedUser && _cachedToken) {
-                                // Cached session exists — don't redirect; background verify handles it
-                                console.warn('[AUTH] auth:ready unauthenticated but cached session exists, NOT redirecting');
-                                return;
-                            }
-                            if (!window.__authReadyRedirected) {
-                                window.__authReadyRedirected = true;
-                                console.warn('[AUTH] auth:ready unauthenticated — redirecting to login');
-                                localStorage.removeItem('session_active');
-                                localStorage.removeItem('__cached_user__');
-                                localStorage.removeItem('__cached_session_id__');
-                                try { document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax'; } catch(_){}
-                                window.location.href = '/login.html';
-                            }
+                            // [FIX v2] Do NOT redirect here. auth-core.js clears localStorage BEFORE
+                            // firing auth:ready(false), making the cache check unreliable and causing loops.
+                            // The checkAuth() IIFE above handles all auth-based redirects safely.
+                            console.warn('[AUTH] auth:ready fired unauthenticated — skipping redirect (checkAuth handles it)');
                             return;
                         }
                         async function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms) }) }

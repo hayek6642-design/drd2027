@@ -267,7 +267,25 @@
           try { Object.freeze(this._state); } catch(_){}; 
           this._locked = true; 
         }
-      } catch(_) {
+      } catch(err) {
+        // [FIX] Network/timeout error — keep cached session, don't clear auth state.
+        // Only clear if server explicitly said unauthenticated (handled above in !u.id branch).
+        var _isNetErr = err && (err.name === 'AbortError' || err.name === 'TypeError' || String(err.message || '').toLowerCase().indexOf('fetch') >= 0);
+        if (_isNetErr && this._sessionId) {
+          console.warn('[AuthCore] Network error during background verify — keeping cached session:', err.name || err.message);
+          try {
+            window.dispatchEvent(new CustomEvent('auth:ready', {
+              detail: {
+                authenticated: this._authenticated,
+                status: this._status,
+                userId: this._userId || null,
+                sessionId: this._sessionId || null,
+                user: this._user
+              }
+            }));
+          } catch(_) {}
+          return;
+        }
         this._setState({ authenticated: false, status: 'unauthenticated' }, null);
         window.__resolveAuthReady && window.__resolveAuthReady(false);
       }
