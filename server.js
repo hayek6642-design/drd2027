@@ -252,6 +252,11 @@ io.use((socket, next) => {
 // Initialize WatchDog with the dbQuery helper
 watchdog.setDb(query);
 
+// ── Parse cookies early so ALL routers below can read req.cookies ──────────
+// cookieParser was previously registered at line ~318, AFTER all route mounts,
+// which meant req.cookies was always undefined inside every API router.
+app.use(cookieParser());
+
 // Register WatchDog routes
 app.use('/api/watchdog', watchdogRoutes);
 
