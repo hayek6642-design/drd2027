@@ -786,6 +786,44 @@
       transition:width 1s linear;
       box-shadow:0 0 6px var(--neon);
     }
+  
+    /* ════════════════════════════════════════════
+       STEP DOTS (PIN CHANGE STEPPER)
+    ════════════════════════════════════════════ */
+    .pm-dot {
+      width:8px; height:8px; border-radius:50%;
+      background:var(--m4);
+      border:1px solid var(--m6);
+      transition:all .3s;
+    }
+    .pm-dot.active  { background:var(--neon);  border-color:var(--neon);  box-shadow:0 0 6px var(--neon); }
+    .pm-dot.done    { background:var(--green); border-color:var(--green); }
+
+    /* ════════════════════════════════════════════
+       COMBO STEP EDITOR
+    ════════════════════════════════════════════ */
+    .combo-step-row {
+      display:flex; align-items:center; gap:6px;
+      padding:5px 0; border-bottom:1px solid rgba(255,255,255,0.06);
+    }
+    .combo-step-row:last-child { border-bottom:none; }
+    .cs-num {
+      width:18px; font-size:9px; color:var(--m7); text-align:center; flex-shrink:0;
+    }
+    .cs-dir-btn {
+      width:34px; padding:3px 0; border-radius:4px;
+      border:1px solid var(--m5); background:var(--m2);
+      color:var(--neon); font-size:10px; font-weight:700;
+      cursor:pointer; text-align:center; transition:all .2s;
+    }
+    .cs-dir-btn.active { background:rgba(0,212,255,0.18); border-color:var(--neon); }
+    .cs-clicks-inp {
+      width:44px; padding:4px 6px; border-radius:4px;
+      border:1px solid var(--m5); background:var(--m1);
+      color:var(--shine); font-size:11px; text-align:center;
+    }
+    .cs-clicks-inp:focus { outline:none; border-color:var(--neon); }
+    .cs-lbl { font-size:9px; color:var(--m7); }
   </style>
 </head>
 <body>
@@ -835,6 +873,7 @@
         </div>
       </div>
       <button class="interior-change-pin" id="btn-change-pin">⚙ Change Passcode</button>
+      <button class="interior-change-pin" id="btn-change-combo" style="background:linear-gradient(135deg,rgba(0,80,180,0.55),rgba(0,40,100,0.45));margin-top:4px;">🔄 Change Combination</button>
       <button class="interior-lock-btn" id="btn-relock">🔒 Lock Vault</button>
     </div>
 
@@ -971,18 +1010,54 @@
 </div><!-- /vault-scene -->
 
 <!-- ═══════════════════════════════════════════
-     PIN CHANGE MODAL
+     PIN CHANGE MODAL  (2-step)
 ════════════════════════════════════════════ -->
 <div class="modal-overlay" id="pin-modal">
   <div class="modal-box">
-    <div class="modal-ttl">Set New Passcode</div>
-    <div class="modal-sub">Choose an 8-digit passcode to secure your vault.<br>Keep it secret — it won't be stored in plain text.</div>
-    <input type="password" id="modal-pin-inp" class="modal-inp"
-           maxlength="8" placeholder="••••••••" inputmode="numeric">
+    <div class="modal-ttl" id="pin-modal-ttl">🔑 Change Passcode</div>
+    <div class="modal-sub" id="pin-modal-sub">Step 1 of 3 — Verify your current passcode</div>
+    <!-- Step 1: current PIN -->
+    <div id="pm-step1">
+      <input type="password" id="pm-old-inp" class="modal-inp"
+             maxlength="8" placeholder="Current passcode" inputmode="numeric">
+    </div>
+    <!-- Step 2: new PIN -->
+    <div id="pm-step2" style="display:none">
+      <input type="password" id="pm-new-inp" class="modal-inp"
+             maxlength="8" placeholder="New passcode (8 digits)" inputmode="numeric">
+    </div>
+    <!-- Step 3: confirm new PIN -->
+    <div id="pm-step3" style="display:none">
+      <input type="password" id="pm-conf-inp" class="modal-inp"
+             maxlength="8" placeholder="Confirm new passcode" inputmode="numeric">
+    </div>
     <div id="modal-pin-err" style="font-size:9px;color:var(--red);min-height:13px;margin-bottom:8px;"></div>
     <div class="modal-btns">
-      <button class="mbtn mbtn-ok"   id="modal-btn-ok">CONFIRM</button>
-      <button class="mbtn mbtn-skip" id="modal-btn-skip">SKIP</button>
+      <button class="mbtn mbtn-ok"   id="modal-btn-ok">NEXT →</button>
+      <button class="mbtn mbtn-skip" id="modal-btn-skip">CANCEL</button>
+    </div>
+    <!-- step dots -->
+    <div style="display:flex;justify-content:center;gap:6px;margin-top:8px;" id="pm-step-dots">
+      <div class="pm-dot active" id="pmd1"></div>
+      <div class="pm-dot" id="pmd2"></div>
+      <div class="pm-dot" id="pmd3"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     COMBO RESET MODAL
+════════════════════════════════════════════ -->
+<div class="modal-overlay" id="combo-modal">
+  <div class="modal-box" style="max-width:310px;">
+    <div class="modal-ttl">🔄 Set Combination</div>
+    <div class="modal-sub">Define your 6-step dial sequence.<br>Edit each step — direction and click count.</div>
+    <div id="combo-steps-editor"></div>
+    <div id="combo-preview" style="font-size:9px;color:var(--neon);margin:8px 0;letter-spacing:1px;text-align:center;min-height:14px;"></div>
+    <div id="combo-err" style="font-size:9px;color:var(--red);min-height:13px;margin-bottom:8px;"></div>
+    <div class="modal-btns">
+      <button class="mbtn mbtn-ok"   id="combo-btn-save">SAVE COMBO</button>
+      <button class="mbtn mbtn-skip" id="combo-btn-cancel">CANCEL</button>
     </div>
   </div>
 </div>
@@ -995,13 +1070,14 @@
    CONSTANTS & CONFIG
 ══════════════════════════════════════════════ */
 const PIN_KEY       = 'drd_vault_pin_v2';
+const COMBO_KEY     = 'drd_vault_combo_v2';
 const DEFAULT_PIN   = '00000000';
 const MAX_ATTEMPTS  = 3;
 const LOCKOUT_SECS  = 300;   // 5 min
 const AUTO_LOCK_SECS = 300;  // 5 min idle
 
 // Combination: 6 steps alternating R/L, each requires N clicks
-const COMBO = [
+const DEFAULT_COMBO = [
   { dir:'R', clicks:3 },
   { dir:'L', clicks:2 },
   { dir:'R', clicks:5 },
@@ -1009,6 +1085,17 @@ const COMBO = [
   { dir:'R', clicks:4 },
   { dir:'L', clicks:2 },
 ];
+function getCombo() {
+  try {
+    const s = localStorage.getItem(COMBO_KEY);
+    if (s) { const c = JSON.parse(s); if (Array.isArray(c) && c.length === 6) return c; }
+  } catch(_) {}
+  return DEFAULT_COMBO;
+}
+let activeCombo = getCombo();
+// alias for backward-compat
+const COMBO = { get length(){ return activeCombo.length; } };
+COMBO[Symbol.iterator] = function*(){ yield* activeCombo; };
 
 /* ══════════════════════════════════════════════
    STATE
@@ -1023,7 +1110,7 @@ let autoLockTimer  = null;
 let autoLockSecsLeft = AUTO_LOCK_SECS;
 
 let spinStep       = 0;
-let spinClicksLeft = COMBO[0].clicks;
+let spinClicksLeft = activeCombo[0].clicks;
 let dialAngle      = 0;
 let dialAnimating  = false;
 
@@ -1111,9 +1198,7 @@ const ppips        = [$('ppip-1'), $('ppip-2'), $('ppip-3')];
 const intCodes     = $('int-codes');
 const intSilver    = $('int-silver');
 const intGold      = $('int-gold');
-const pinModal     = $('pin-modal');
-const modalInp     = $('modal-pin-inp');
-const modalErr     = $('modal-pin-err');
+// pin modal refs now in PIN CHANGE MODAL section below
 const autolockFill = $('autolock-fill');
 const autolockBar  = $('autolock-bar');
 
@@ -1291,7 +1376,7 @@ function toPhase(p) {
 ══════════════════════════════════════════════ */
 function initSpinner() {
   spinStep       = 0;
-  spinClicksLeft = COMBO[0].clicks;
+  spinClicksLeft = activeCombo[0].clicks;
   dialAngle      = 0;
   buildStepPips();
   updateDialUI();
@@ -1299,13 +1384,13 @@ function initSpinner() {
 }
 
 function buildStepPips() {
-  stepPipsEl.innerHTML = COMBO.map((_,i) =>
+  stepPipsEl.innerHTML = activeCombo.map((_,i) =>
     `<div class="stpip ${i===0?'active':''}" id="stp${i}"></div>`
   ).join('');
 }
 
 function updateDialUI() {
-  const step = COMBO[spinStep];
+  const step = activeCombo[spinStep];
   if (!step) return;
   const isR = step.dir === 'R';
   dialDirLbl.textContent  = isR ? 'TURN RIGHT →' : '← TURN LEFT';
@@ -1315,7 +1400,7 @@ function updateDialUI() {
   dialBtnL.style.opacity = isR ? '0.28' : '1';
   dialBtnR.style.opacity = isR ? '1'    : '0.28';
   // Update step pips
-  COMBO.forEach((_,i) => {
+  activeCombo.forEach((_,i) => {
     const el = $('stp'+i);
     if (!el) return;
     el.className = 'stpip' + (i < spinStep ? ' done' : i===spinStep ? ' active' : '');
@@ -1324,7 +1409,7 @@ function updateDialUI() {
 
 function onDialClick(dir) {
   if (dialAnimating || currentPhase !== 2) return;
-  const step = COMBO[spinStep];
+  const step = activeCombo[spinStep];
 
   // Wrong direction
   if (dir !== step.dir) {
@@ -1365,14 +1450,14 @@ function onDialClick(dir) {
       if (spinClicksLeft <= 0) {
         // Step done
         spinStep++;
-        if (spinStep >= COMBO.length) {
+        if (spinStep >= activeCombo.length) {
           // All 6 steps complete!
           SFX.phase();
           setTimeout(() => toPhase(3), 400);
           return;
         }
         SFX.phase();
-        spinClicksLeft = COMBO[spinStep].clicks;
+        spinClicksLeft = activeCombo[spinStep].clicks;
       }
       updateDialUI();
     }
@@ -1630,7 +1715,7 @@ function lockVault() {
     currentPhase   = 1;
     pinEntry       = '';
     spinStep       = 0;
-    spinClicksLeft = COMBO[0].clicks;
+    spinClicksLeft = activeCombo[0].clicks;
     dialAngle      = 0;
     fpProgress     = 0; fpScanning = false;
     if (fpIv) { clearInterval(fpIv); fpIv = null; }
@@ -1724,33 +1809,165 @@ function animCount(el, from, to, dur) {
 }
 
 /* ══════════════════════════════════════════════
-   PIN CHANGE MODAL
+   PIN CHANGE MODAL  (3-step: verify → new → confirm)
 ══════════════════════════════════════════════ */
-function openPinModal() { pinModal.classList.add('open'); modalInp.value=''; modalErr.textContent=''; }
+const pinModal   = $('pin-modal');
+const modalErr   = $('modal-pin-err');
+let pmStep       = 1;
+
+function pmSetStep(s) {
+  pmStep = s;
+  $('pm-step1').style.display = s===1 ? '' : 'none';
+  $('pm-step2').style.display = s===2 ? '' : 'none';
+  $('pm-step3').style.display = s===3 ? '' : 'none';
+  const labels = ['', 'Step 1 of 3 — Verify current passcode',
+                      'Step 2 of 3 — Enter new passcode',
+                      'Step 3 of 3 — Confirm new passcode'];
+  $('pin-modal-sub').textContent = labels[s];
+  $('modal-btn-ok').textContent  = s < 3 ? 'NEXT →' : '✔ CONFIRM';
+  // dots
+  ['pmd1','pmd2','pmd3'].forEach((id,i) => {
+    const d = $(id);
+    d.className = 'pm-dot' + (i+1 < s ? ' done' : i+1===s ? ' active' : '');
+  });
+  // auto-focus active input
+  const inp = s===1?$('pm-old-inp'):s===2?$('pm-new-inp'):$('pm-conf-inp');
+  setTimeout(()=>inp.focus(),80);
+  modalErr.textContent = '';
+}
+
+function openPinModal() {
+  pinModal.classList.add('open');
+  $('pm-old-inp').value=''; $('pm-new-inp').value=''; $('pm-conf-inp').value='';
+  pmSetStep(1);
+}
 function closePinModal() { pinModal.classList.remove('open'); }
 
 $('btn-change-pin').addEventListener('click', openPinModal);
+$('modal-btn-skip').addEventListener('click', closePinModal);
 
 $('modal-btn-ok').addEventListener('click', () => {
-  const v = modalInp.value.trim();
-  if (!/^\d{8}$/.test(v)) {
-    modalErr.textContent = 'Must be exactly 8 digits';
-    modalInp.classList.add('err');
-    setTimeout(() => modalInp.classList.remove('err'), 800);
-    return;
+  if (pmStep === 1) {
+    const old = $('pm-old-inp').value.trim();
+    if (old !== getPin()) {
+      modalErr.textContent = 'Wrong passcode';
+      $('pm-old-inp').classList.add('err');
+      setTimeout(() => $('pm-old-inp').classList.remove('err'), 800);
+      return;
+    }
+    pmSetStep(2);
+  } else if (pmStep === 2) {
+    const nw = $('pm-new-inp').value.trim();
+    if (!/^\d{8}$/.test(nw)) {
+      modalErr.textContent = 'Must be exactly 8 digits';
+      $('pm-new-inp').classList.add('err');
+      setTimeout(() => $('pm-new-inp').classList.remove('err'), 800);
+      return;
+    }
+    pmSetStep(3);
+  } else {
+    const nw   = $('pm-new-inp').value.trim();
+    const conf = $('pm-conf-inp').value.trim();
+    if (nw !== conf) {
+      modalErr.textContent = "Passcodes don't match";
+      $('pm-conf-inp').classList.add('err');
+      setTimeout(() => $('pm-conf-inp').classList.remove('err'), 800);
+      return;
+    }
+    setPin(nw);
+    modalErr.textContent = '';
+    closePinModal();
+    gsap.fromTo(vaultFlash,
+      {opacity:0, background:'rgba(0,255,136,0.15)'},
+      {opacity:1, duration:0.15, yoyo:true, repeat:2, ease:'none'}
+    );
   }
-  setPin(v);
-  modalErr.textContent = '';
-  closePinModal();
-  // Short success flash
+});
+
+// Enter key in any step input
+['pm-old-inp','pm-new-inp','pm-conf-inp'].forEach(id => {
+  $(id).addEventListener('keydown', e => { if (e.key==='Enter') $('modal-btn-ok').click(); });
+});
+
+/* ══════════════════════════════════════════════
+   COMBO RESET MODAL
+══════════════════════════════════════════════ */
+const comboModal = $('combo-modal');
+let   editCombo  = [];  // working copy
+
+function buildComboEditor() {
+  editCombo = getCombo().map(s => ({...s}));
+  const container = $('combo-steps-editor');
+  container.innerHTML = '';
+  editCombo.forEach((step, i) => {
+    const row = document.createElement('div');
+    row.className = 'combo-step-row';
+    row.innerHTML = `
+      <div class="cs-num">${i+1}</div>
+      <button class="cs-dir-btn ${step.dir==='R'?'active':''}" data-i="${i}" data-d="R">R →</button>
+      <button class="cs-dir-btn ${step.dir==='L'?'active':''}" data-i="${i}" data-d="L">← L</button>
+      <input  class="cs-clicks-inp" data-i="${i}" type="number" min="1" max="9"
+              value="${step.clicks}" style="width:44px;">
+      <span class="cs-lbl">clicks</span>`;
+    container.appendChild(row);
+  });
+  // dir buttons
+  container.querySelectorAll('.cs-dir-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = +btn.dataset.i, d = btn.dataset.d;
+      editCombo[idx].dir = d;
+      // update button states in that row
+      const row = container.children[idx];
+      row.querySelectorAll('.cs-dir-btn').forEach(b =>
+        b.classList.toggle('active', b.dataset.d === d)
+      );
+      renderComboPreview();
+    });
+  });
+  // click count inputs
+  container.querySelectorAll('.cs-clicks-inp').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const idx = +inp.dataset.i;
+      const v   = parseInt(inp.value) || 1;
+      editCombo[idx].clicks = Math.max(1, Math.min(9, v));
+      renderComboPreview();
+    });
+  });
+  renderComboPreview();
+}
+
+function renderComboPreview() {
+  const preview = editCombo.map(s =>
+    `${s.dir==='R'?'→':'←'}×${s.clicks}`
+  ).join('  ');
+  $('combo-preview').textContent = preview;
+}
+
+function openComboModal() { comboModal.classList.add('open'); buildComboEditor(); }
+function closeComboModal() { comboModal.classList.remove('open'); }
+
+$('btn-change-combo').addEventListener('click', openComboModal);
+$('combo-btn-cancel').addEventListener('click', closeComboModal);
+
+$('combo-btn-save').addEventListener('click', () => {
+  // Validate: must alternate directions
+  const err = $('combo-err');
+  for (let i=1;i<editCombo.length;i++) {
+    if (editCombo[i].dir === editCombo[i-1].dir) {
+      err.textContent = `Steps ${i} & ${i+1} must alternate directions`;
+      return;
+    }
+  }
+  err.textContent = '';
+  localStorage.setItem(COMBO_KEY, JSON.stringify(editCombo));
+  activeCombo = editCombo.slice();
+  closeComboModal();
+  // Flash confirmation
   gsap.fromTo(vaultFlash,
-    {opacity:0, background:'rgba(0,255,136,0.15)'},
+    {opacity:0, background:'rgba(0,212,255,0.12)'},
     {opacity:1, duration:0.15, yoyo:true, repeat:2, ease:'none'}
   );
 });
-
-$('modal-btn-skip').addEventListener('click', closePinModal);
-modalInp.addEventListener('keydown', e => { if (e.key==='Enter') $('modal-btn-ok').click(); });
 
 /* ══════════════════════════════════════════════
    KEYBOARD SUPPORT (Phase 1 - numpad)
@@ -1776,8 +1993,12 @@ drawDial(0);
 
 // Show "set passcode" hint if on default
 if (isFirstRun()) {
-  setPinMsg('DEFAULT PIN: 00000000');
+  setPinMsg('DEFAULT PIN: 00000000  →  open vault to change');
 }
+
+// On first run after opening vault, auto-open pin modal (skip step 1 since no PIN set yet)
+let _firstRunPinPrompted = false;
+const _origOpenVault = window._openVaultCb;
 </script>
 </body>
 </html>
