@@ -175,35 +175,39 @@ export function initLauncher() {
         
         apps.forEach(app => {
             const card = document.createElement('div');
-            card.className = 'app-card';
+            card.className = 'app-card app-card-tile';
             card.setAttribute('data-id', app.id);
-            
+
+            // Neon tile border — color comes from app.color
+            const tileColor = app.color || '#6366f1';
+            card.style.cssText = `border: 2px solid ${tileColor}; box-shadow: 0 0 16px ${tileColor}44;`;
+
             // Icon wrapper
             const iconWrapper = document.createElement('div');
             iconWrapper.className = 'app-icon-wrapper';
-            if (app.color) iconWrapper.style.color = app.color;
-            
+
             const icon = document.createElement('i');
             // Ensure font-awesome classes are correct
             const iconClass = app.icon.startsWith('fa-') ? `fas ${app.icon}` : app.icon;
             icon.className = iconClass;
-            
+            icon.style.color = tileColor;
+
             iconWrapper.appendChild(icon);
-            
+
             // App name
             const name = document.createElement('span');
-            name.className = 'text-xs font-semibold text-gray-300 text-center';
+            name.className = 'app-tile-name';
             name.textContent = app.name;
-            
+
             // Badge (if exists)
             if (app.badge) {
                 const badge = document.createElement('div');
-                badge.className = 'absolute -top-1 -right-1 bg-blue-600 text-[10px] px-1.5 py-0.5 rounded-full text-white font-bold';
+                badge.className = 'app-tile-badge';
                 badge.textContent = app.badge;
-                iconWrapper.style.position = 'relative';
-                iconWrapper.appendChild(badge);
+                badge.style.backgroundColor = tileColor;
+                card.appendChild(badge);
             }
-            
+
             card.appendChild(iconWrapper);
             card.appendChild(name);
             

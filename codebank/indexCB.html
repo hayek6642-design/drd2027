@@ -397,6 +397,116 @@
         iframe {
             color-scheme: normal;
         }
+
+        /* ══════════════════════════════════════════════════
+           MODERN DARK TILE SKIN — visual only, no logic
+        ══════════════════════════════════════════════════ */
+
+        /* 1. Dark purple page background */
+        body {
+            background: #12082e !important;
+            background-image: none !important;
+        }
+
+        /* 2. Compact section headers */
+        .launcher-section {
+            padding: 0 16px !important;
+            margin-bottom: 18px !important;
+        }
+        .launcher-section h2 {
+            font-size: 0.6rem !important;
+            color: rgba(255,255,255,0.2) !important;
+            letter-spacing: 0.18em !important;
+            margin-bottom: 10px !important;
+            padding-left: 2px !important;
+        }
+
+        /* 3. 4-column neon tile grid */
+        .app-grid {
+            display: grid !important;
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 10px !important;
+        }
+        @media (max-width: 640px) {
+            .app-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+
+        /* 4. Tile card base */
+        .app-card-tile {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: rgba(255,255,255,0.04) !important;
+            border-radius: 10px !important;
+            padding: 18px 10px 13px !important;
+            min-height: 82px !important;
+            cursor: pointer !important;
+            position: relative !important;
+            gap: 9px !important;
+            /* border + box-shadow come from inline style (per-app color) */
+        }
+        .app-card-tile:hover {
+            background: rgba(255,255,255,0.09) !important;
+            transform: translateY(-3px) !important;
+        }
+        .app-card-tile:active {
+            transform: scale(0.96) !important;
+        }
+
+        /* 5. Icon inside tile */
+        .app-card-tile .app-icon-wrapper {
+            width: auto !important;
+            height: auto !important;
+            background: none !important;
+            border-radius: 0 !important;
+            font-size: 24px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            /* color comes from inline style via app.color */
+        }
+
+        /* 6. App name */
+        .app-tile-name {
+            font-size: 11px !important;
+            font-weight: 600 !important;
+            color: rgba(255,255,255,0.88) !important;
+            text-align: center !important;
+            line-height: 1.3 !important;
+            max-width: 100% !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            white-space: nowrap !important;
+            letter-spacing: 0.01em !important;
+        }
+
+        /* 7. Small badge top-right */
+        .app-tile-badge {
+            position: absolute !important;
+            top: 5px !important;
+            right: 5px !important;
+            font-size: 7px !important;
+            font-weight: 800 !important;
+            color: #fff !important;
+            padding: 2px 5px !important;
+            border-radius: 4px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.06em !important;
+            line-height: 1.4 !important;
+        }
+
+        /* 8. Allow transitions & box-shadow on tiles
+               (overrides the perf-mode global suppression) */
+        .app-card-tile,
+        .app-card-tile:hover,
+        .app-card-tile:active {
+            transition: transform 0.15s ease, background 0.15s ease !important;
+        }
+        .app-card-tile {
+            box-shadow: var(--tile-glow, none) !important;
+        }
+        /* End MODERN DARK TILE SKIN */
     </style>
 </head>
 <body>
