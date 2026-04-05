@@ -74,6 +74,27 @@ async function runFarragnaSchemaSetup() {
     `CREATE INDEX IF NOT EXISTS idx_farragna_videos_stream_uid ON farragna_videos(stream_uid)`,
     `CREATE INDEX IF NOT EXISTS idx_farragna_views_video ON farragna_views(video_id)`,
     `CREATE INDEX IF NOT EXISTS idx_farragna_likes_video ON farragna_likes(video_id)`,
+    // Like transactions (replaces simple farragna_likes for paid likes)
+    `CREATE TABLE IF NOT EXISTS farragna_like_transactions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      giver_id TEXT NOT NULL,
+      video_id UUID NOT NULL,
+      like_type TEXT NOT NULL,
+      codes_value INTEGER NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(giver_id, video_id, like_type)
+    )`,
+    // Wallets table (ensure exists for codes)
+    `CREATE TABLE IF NOT EXISTS wallets (
+      user_id TEXT PRIMARY KEY,
+      codes BIGINT NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    // Index on like transactions
+    `CREATE INDEX IF NOT EXISTS idx_farragna_like_tx_video ON farragna_like_transactions(video_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_farragna_like_tx_giver ON farragna_like_transactions(giver_id)`,
+    // likes_breakdown column on videos
+    `ALTER TABLE farragna_videos ADD COLUMN IF NOT EXISTS likes_breakdown JSONB DEFAULT '{"like":0,"super":0,"mega":0,"drd":0}'`,
   ]
   for (const sql of migrations) {
     try { await query(sql) } catch (e) {
@@ -87,17 +108,27 @@ async function runFarragnaSchemaSetup() {
 // Run migration on startup (non-blocking)
 runFarragnaSchemaSetup().catch(e => console.warn('[Farragna] Schema setup failed:', e.message))
 
-// Rate limiting for uploads
-const uploadCounts = new Map()
-const MAX_UPLOADS_PER_HOUR = 20 // increased for admin use
+// Like constants
+const LIKE_TYPES = {
+  like: 1,
+  super: 10,
+  mega: 100,
+  drd: 1000
+}
+const ADMIN_EMAIL = 'dia201244@gmail.com'
 
-function checkUploadRateLimit(userId) {
-  const hour = Math.floor(Date.now() / 3600000)
-  const key = `${userId}_${hour}`
-  const count = uploadCounts.get(key) || 0
-  if (count >= MAX_UPLOADS_PER_HOUR) return false
-  uploadCounts.set(key, count + 1)
-  return true
+// Rate limiting for uploads (DB-backed, 1 video/day for non-admin)
+async function checkUploadRateLimit(userId, email) {
+  if (email === 'dia201244@gmail.com') return { allowed: true }
+  try {
+    const r = await query(
+      `SELECT COUNT(*) as count FROM farragna_videos WHERE owner_id=$1 AND created_at >= CURRENT_DATE`,
+      [userId]
+    )
+    const count = parseInt(r.rows[0]?.count || 0)
+    if (count >= 1) return { allowed: false, reason: 'Daily upload limit reached (1 video per day)' }
+  } catch (e) { /* allow on error */ }
+  return { allowed: true }
 }
 
 const router = Router()
@@ -325,29 +356,131 @@ router.post('/:id/view', softFarragnaAuth, async (req, res) => {
 })
 
 // ─────────────────────────────────────────
-// LIKE / UNLIKE
+// LIKE SYSTEM (4-tier: like=1, super=10, mega=100, drd=1000 codes)
 // ─────────────────────────────────────────
+router.get('/me/balance', requireFarragnaAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT codes FROM wallets WHERE user_id=$1', [req.user.id])
+    res.json({ success: true, codes: parseInt(r.rows[0]?.codes || 0) })
+  } catch (e) {
+    res.status(500).json({ success: false, codes: 0 })
+  }
+})
+
 router.post('/:id/like', requireFarragnaAuth, async (req, res) => {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
     const videoId = req.params.id
     const userId = req.user.id
-    const existing = await client.query('SELECT 1 FROM farragna_likes WHERE user_id=$1 AND video_id=$2', [userId, videoId])
-    if (existing.rowCount) {
-      await client.query('DELETE FROM farragna_likes WHERE user_id=$1 AND video_id=$2', [userId, videoId])
-      await client.query('UPDATE farragna_videos SET likes=GREATEST(0,likes-1) WHERE id=$1', [videoId])
-      await client.query('COMMIT')
-      return res.json({ success: true, liked: false })
-    } else {
-      await client.query('INSERT INTO farragna_likes (user_id, video_id, created_at) VALUES ($1,$2,NOW())', [userId, videoId])
-      await client.query('UPDATE farragna_videos SET likes=likes+1 WHERE id=$1', [videoId])
-      await client.query('COMMIT')
-      return res.json({ success: true, liked: true })
+    const userEmail = req.user.email || ''
+    const likeType = req.body.like_type || 'like'
+
+    // Validate like type
+    if (!LIKE_TYPES[likeType]) {
+      await client.query('ROLLBACK')
+      return res.status(400).json({ success: false, error: 'Invalid like_type. Use: like, super, mega, drd' })
     }
+
+    // Dr.D like: admin only
+    if (likeType === 'drd' && userEmail !== ADMIN_EMAIL) {
+      await client.query('ROLLBACK')
+      return res.status(403).json({ success: false, error: 'Dr.D like is admin only' })
+    }
+
+    // Get video info
+    const vres = await client.query('SELECT id, owner_id FROM farragna_videos WHERE id=$1', [videoId])
+    const video = vres.rows[0]
+    if (!video) {
+      await client.query('ROLLBACK')
+      return res.status(404).json({ success: false, error: 'Video not found' })
+    }
+
+    // Can't like own video
+    if (video.owner_id === userId) {
+      await client.query('ROLLBACK')
+      return res.status(400).json({ success: false, error: 'Cannot like your own video' })
+    }
+
+    // Check duplicate like
+    const dupCheck = await client.query(
+      'SELECT 1 FROM farragna_like_transactions WHERE giver_id=$1 AND video_id=$2 AND like_type=$3',
+      [userId, videoId, likeType]
+    )
+    if (dupCheck.rowCount) {
+      await client.query('ROLLBACK')
+      return res.status(409).json({ success: false, error: 'Already gave this like type to this video' })
+    }
+
+    const codesValue = LIKE_TYPES[likeType]
+    const receiverId = video.owner_id
+
+    // Deduct from giver's wallet (skip for admin Dr.D like)
+    if (likeType !== 'drd') {
+      // Ensure giver wallet exists
+      await client.query(
+        'INSERT INTO wallets (user_id, codes) VALUES ($1, 0) ON CONFLICT (user_id) DO NOTHING',
+        [userId]
+      )
+      const walletRes = await client.query('SELECT codes FROM wallets WHERE user_id=$1 FOR UPDATE', [userId])
+      const currentBalance = parseInt(walletRes.rows[0]?.codes || 0)
+      if (currentBalance < codesValue) {
+        await client.query('ROLLBACK')
+        return res.status(402).json({ success: false, error: `Insufficient codes. Need ${codesValue}, have ${currentBalance}` })
+      }
+      await client.query('UPDATE wallets SET codes = codes - $1, updated_at = NOW() WHERE user_id=$2', [codesValue, userId])
+    }
+
+    // Credit to receiver's wallet
+    if (receiverId) {
+      await client.query(
+        'INSERT INTO wallets (user_id, codes) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET codes = wallets.codes + EXCLUDED.codes, updated_at = NOW()',
+        [receiverId, codesValue]
+      )
+    }
+
+    // Record transaction
+    await client.query(
+      'INSERT INTO farragna_like_transactions (id, giver_id, video_id, like_type, codes_value, created_at) VALUES ($1,$2,$3,$4,$5,NOW())',
+      [crypto.randomUUID(), userId, videoId, likeType, codesValue]
+    )
+
+    // Update video likes count and breakdown
+    await client.query(
+      `UPDATE farragna_videos SET likes=likes+1,
+       likes_breakdown = jsonb_set(COALESCE(likes_breakdown,'{"like":0,"super":0,"mega":0,"drd":0}'::jsonb), $2::text[], 
+         (COALESCE((likes_breakdown->$3)::int,0)+1)::text::jsonb)
+       WHERE id=$1`,
+      [videoId, `{${likeType}}`, likeType]
+    )
+
+    await client.query('COMMIT')
+
+    // Get new balances
+    let giverBalance = null
+    let receiverBalance = null
+    try {
+      if (likeType !== 'drd') {
+        const gb = await query('SELECT codes FROM wallets WHERE user_id=$1', [userId])
+        giverBalance = parseInt(gb.rows[0]?.codes || 0)
+      }
+      if (receiverId) {
+        const rb = await query('SELECT codes FROM wallets WHERE user_id=$1', [receiverId])
+        receiverBalance = parseInt(rb.rows[0]?.codes || 0)
+      }
+    } catch (_) {}
+
+    return res.json({
+      success: true,
+      like_type: likeType,
+      codes_value: codesValue,
+      giver_balance: giverBalance,
+      receiver_balance: receiverBalance
+    })
   } catch (e) {
     try { await client.query('ROLLBACK') } catch (_) {}
-    res.status(500).json({ success: false, error: 'LIKE_ERROR' })
+    console.error('[Farragna] Like error:', e)
+    res.status(500).json({ success: false, error: 'LIKE_ERROR', message: e.message })
   } finally {
     try { client.release() } catch (_) {}
   }
@@ -357,13 +490,19 @@ router.get('/:id/likes', softFarragnaAuth, async (req, res) => {
   try {
     const videoId = req.params.id
     const userId = req.user?.id
-    const countRes = await query('SELECT likes FROM farragna_videos WHERE id=$1', [videoId])
-    let liked = false
+    const vres = await query('SELECT likes, likes_breakdown FROM farragna_videos WHERE id=$1', [videoId])
+    const video = vres.rows[0]
+    let myLikes = {}
     if (userId) {
-      const likedRes = await query('SELECT 1 FROM farragna_likes WHERE user_id=$1 AND video_id=$2', [userId, videoId])
-      liked = !!likedRes.rowCount
+      const r = await query('SELECT like_type FROM farragna_like_transactions WHERE giver_id=$1 AND video_id=$2', [userId, videoId])
+      r.rows.forEach(row => { myLikes[row.like_type] = true })
     }
-    res.json({ success: true, count: countRes.rows[0]?.likes || 0, liked })
+    res.json({
+      success: true,
+      count: video?.likes || 0,
+      breakdown: video?.likes_breakdown || { like: 0, super: 0, mega: 0, drd: 0 },
+      my_likes: myLikes
+    })
   } catch (e) {
     res.status(500).json({ success: false, error: 'LIKES_ERROR' })
   }
@@ -373,9 +512,8 @@ router.get('/:id/likes', softFarragnaAuth, async (req, res) => {
 // UPLOAD REQUEST: Get Cloudflare direct upload URL
 // ─────────────────────────────────────────
 router.post('/upload/request', requireFarragnaAuth, async (req, res) => {
-  if (!checkUploadRateLimit(req.user.id)) {
-    return res.status(429).json({ success: false, error: 'Upload rate limit exceeded' })
-  }
+  const limit = await checkUploadRateLimit(req.user.id, req.user.email)
+  if (!limit.allowed) return res.status(429).json({ success: false, error: limit.reason })
   try {
     const id = cfAccountId()
     const url = `https://api.cloudflare.com/client/v4/accounts/${id}/stream/direct_upload`
