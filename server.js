@@ -115,6 +115,8 @@ const { feedWatchDog } = WatchDogGuardian;
 
 
 const app = express();
+// Share devSessions with all routers via req.app.get('devSessions')
+app.set('devSessions', devSessions);
 
 // Trust Render's reverse proxy (required for express-rate-limit behind proxy)
 app.set('trust proxy', 1);
