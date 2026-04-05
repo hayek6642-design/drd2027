@@ -10,6 +10,11 @@
  * - ACTIVE:   Normal operations allowed. Dog is alive & fed.
  * - SLEEPING: 24h+ without feeding. Extra mode disabled.
  * - DEAD:     72h+ without feeding. Exposed to Qarsan theft.
+ *
+ * Qarsan Steal Flow:
+ * - Rate-limited: 1 steal per 10 minutes per actor
+ * - Efficient: reassigns existing token rows (UPDATE user_id) instead of bulk INSERT
+ * - Fully atomic: ledger + codes + steal_log + victim notification in one transaction
  */
 
 import { query as dbQuery, pool } from '../api/config/db.js';
@@ -19,13 +24,10 @@ import crypto from 'crypto';
 // INTERNAL HELPERS
 // ─────────────────────────────────────────────────────────────────
 
-/**
- * Get ledger balance for a user
- */
 async function getLedgerBalance(userId, assetType = 'codes') {
   try {
     const result = await dbQuery(
-      `SELECT COALESCE(SUM(CASE WHEN direction='credit' THEN amount ELSE -amount END), 0)::int as balance
+      `SELECT COALESCE(SUM(CASE WHEN direction='credit' THEN amount ELSE -amount END), 0) as balance
        FROM ledger
        WHERE user_id = $1 AND asset_type = $2`,
       [userId, assetType]
@@ -37,13 +39,10 @@ async function getLedgerBalance(userId, assetType = 'codes') {
   }
 }
 
-/**
- * Get active (unspent) codes count for a user
- */
 async function countActiveCodes(userId, assetType = 'codes') {
   try {
     const result = await dbQuery(
-      `SELECT COUNT(*)::int as count
+      `SELECT COUNT(*) as count
        FROM codes
        WHERE user_id = $1
        AND COALESCE(type, 'codes') = $2
@@ -57,9 +56,6 @@ async function countActiveCodes(userId, assetType = 'codes') {
   }
 }
 
-/**
- * Get user's Watch-Dog state from database
- */
 async function getWatchDogState(userId) {
   try {
     const result = await dbQuery(
@@ -96,9 +92,6 @@ async function getWatchDogState(userId) {
   }
 }
 
-/**
- * Update Watch-Dog state
- */
 async function updateWatchDogState(userId, updates) {
   try {
     const setClauses = [];
@@ -136,11 +129,6 @@ async function updateWatchDogState(userId, updates) {
   }
 }
 
-/**
- * 🛡️ VERIFY SYSTEM INTEGRITY
- *
- * CRITICAL: This is a DETECTOR only - NEVER auto-heals
- */
 async function verifySystemIntegrity(userId) {
   const results = { codes: {}, silver: {}, gold: {} };
   const assetTypes = ['codes', 'silver', 'gold'];
@@ -175,9 +163,6 @@ async function verifySystemIntegrity(userId) {
   return { results, hasMismatch };
 }
 
-/**
- * Freeze account due to critical error
- */
 async function freezeAccount(userId, reason) {
   console.error(`[WATCHDOG] 🔒 FREEZING ACCOUNT ${userId} reason: ${reason}`);
 
@@ -214,12 +199,6 @@ async function freezeAccount(userId, reason) {
   }
 }
 
-/**
- * Update dog state based on time since last feed.
- *
- * > 24h → SLEEPING (extra mode off, account exposed)
- * > 72h → DEAD (exposed to Qarsan theft)
- */
 async function updateDogStateByTime(userId) {
   try {
     const state = await getWatchDogState(userId);
@@ -264,14 +243,6 @@ async function updateDogStateByTime(userId) {
   }
 }
 
-/**
- * 🛡️ ENHANCED Feed the Watch-Dog (client action)
- *
- * POST /api/watchdog/feed
- * - cost: 10 codes (20 on 2-day neglect)
- * - atomic deduction with proper locking
- * - update lastFedAt
- */
 async function feedWatchDog(userId, idempotencyKey = null) {
   let FEED_COST = 10;
 
@@ -353,7 +324,7 @@ async function feedWatchDog(userId, idempotencyKey = null) {
       }
 
       const balanceRes = await client.query(
-        `SELECT COUNT(*)::int as count FROM codes
+        `SELECT COUNT(*) as count FROM codes
          WHERE user_id = $1 AND (spent IS FALSE OR spent IS NULL OR spent = 0)`,
         [userId]
       );
@@ -436,9 +407,6 @@ async function feedWatchDog(userId, idempotencyKey = null) {
   }
 }
 
-/**
- * Check if user can perform operations
- */
 async function canUserOperate(userId) {
   const state = await getWatchDogState(userId);
 
@@ -461,9 +429,6 @@ async function canUserOperate(userId) {
   return { allowed: true, reason: null };
 }
 
-/**
- * Get full system integrity report (admin only)
- */
 async function runFullSystemIntegrityCheck() {
   console.log('[WATCHDOG] Starting full system integrity check...');
 
@@ -500,21 +465,12 @@ async function runFullSystemIntegrityCheck() {
 // 🦁 QARSAN SOCIAL LEADERBOARD FUNCTIONS
 // ─────────────────────────────────────────────────────────────────
 
-/**
- * Get ALL users with their real balances (codes/silver/gold) and dog states.
- * Used by the Qarsan leaderboard.
- * Updates each user's dog state based on time before returning.
- *
- * @param {string} currentUserId - The requesting user (to flag "you" in the list)
- * @returns {Object} { success, users: [...] }
- */
 async function getAllUsersStatus(currentUserId = null) {
   try {
-    // Fetch all users with their watchdog state
     const result = await dbQuery(`
       SELECT
         u.id,
-        COALESCE(u.name, u.username, split_part(u.email, '@', 1)) AS display_name,
+        COALESCE(u.name, u.username, substr(u.email, 1, instr(u.email, '@') - 1)) AS display_name,
         u.email,
         COALESCE(ws.dog_state, 'SLEEPING') AS dog_state,
         ws.last_fed_at,
@@ -522,51 +478,44 @@ async function getAllUsersStatus(currentUserId = null) {
         COALESCE((
           SELECT SUM(CASE WHEN direction='credit' THEN amount ELSE -amount END)
           FROM ledger WHERE user_id = u.id AND asset_type = 'codes'
-        ), 0)::int AS codes_balance,
+        ), 0) AS codes_balance,
         COALESCE((
           SELECT SUM(CASE WHEN direction='credit' THEN amount ELSE -amount END)
           FROM ledger WHERE user_id = u.id AND asset_type = 'silver'
-        ), 0)::int AS silver_balance,
+        ), 0) AS silver_balance,
         COALESCE((
           SELECT SUM(CASE WHEN direction='credit' THEN amount ELSE -amount END)
           FROM ledger WHERE user_id = u.id AND asset_type = 'gold'
-        ), 0)::int AS gold_balance,
+        ), 0) AS gold_balance,
         COALESCE((
           SELECT qarsan_wallet FROM qarsan_state WHERE user_id = u.id
-        ), 0)::int AS qarsan_wallet
+        ), 0) AS qarsan_wallet
       FROM users u
       LEFT JOIN watchdog_state ws ON ws.user_id = u.id
       ORDER BY codes_balance DESC, silver_balance DESC, gold_balance DESC
     `);
 
-    // Refresh each user's dog state based on time, then build the response
     const users = [];
     for (const row of result.rows) {
-      // Refresh dog state by elapsed time
       const timeCheck = await updateDogStateByTime(row.id);
       const dogState = timeCheck.dogState || row.dog_state;
 
-      const codesBalance = Math.max(0, parseInt(row.codes_balance || 0));
+      const codesBalance  = Math.max(0, parseInt(row.codes_balance  || 0));
       const silverBalance = Math.max(0, parseInt(row.silver_balance || 0));
-      const goldBalance = Math.max(0, parseInt(row.gold_balance || 0));
-      const qarsanWallet = Math.max(0, parseInt(row.qarsan_wallet || 0));
-      const totalAssets = codesBalance + silverBalance + goldBalance + qarsanWallet;
+      const goldBalance   = Math.max(0, parseInt(row.gold_balance   || 0));
+      const qarsanWallet  = Math.max(0, parseInt(row.qarsan_wallet  || 0));
+      const totalAssets   = codesBalance + silverBalance + goldBalance + qarsanWallet;
 
       users.push({
         id: row.id,
         displayName: row.display_name || 'Unknown User',
         isCurrentUser: row.id === currentUserId,
-        dogState,                                   // ACTIVE | SLEEPING | DEAD
+        dogState,
         lastFedAt: row.last_fed_at,
         isFrozen: !!row.is_frozen,
-        isExposed: dogState === 'DEAD',             // 💀 Can be stolen from
-        isProtected: dogState === 'ACTIVE',          // 🛡️ Safe from theft
-        balances: {
-          codes: codesBalance,
-          silver: silverBalance,
-          gold: goldBalance,
-          qarsanWallet
-        },
+        isExposed:   dogState === 'DEAD',
+        isProtected: dogState === 'ACTIVE',
+        balances: { codes: codesBalance, silver: silverBalance, gold: goldBalance, qarsanWallet },
         totalAssets,
         hoursSinceLastFeed: timeCheck.hoursSinceLastFeed || null
       });
@@ -582,10 +531,7 @@ async function getAllUsersStatus(currentUserId = null) {
 
 /**
  * 🔔 Notify a user (with dead dog) to buy a new dog.
- * Free action. Logged in audit_log for in-app notification display.
- *
- * @param {string} actorId - The user sending the notification
- * @param {string} targetId - The user with the dead dog
+ * Free action. Written to both audit_log and qarsan_dog_notifications.
  */
 async function notifyUserBuyDog(actorId, targetId) {
   try {
@@ -593,7 +539,6 @@ async function notifyUserBuyDog(actorId, targetId) {
       return { success: false, error: 'SELF_ACTION', message: 'Cannot notify yourself.' };
     }
 
-    // Verify target has dead dog
     await updateDogStateByTime(targetId);
     const targetState = await getWatchDogState(targetId);
 
@@ -605,15 +550,13 @@ async function notifyUserBuyDog(actorId, targetId) {
       };
     }
 
-    // Check for recent duplicate notification (within last hour)
+    // Deduplicate: only 1 notification per actor→target per hour
     const recentNotify = await dbQuery(
-      `SELECT id FROM audit_log
-       WHERE type = 'QARSAN_DOG_NOTIFICATION'
-         AND payload->>'to' = $1
-         AND payload->>'from' = $2
-         AND created_at > NOW() - INTERVAL '1 hour'
+      `SELECT id FROM qarsan_dog_notifications
+       WHERE from_user = $1 AND to_user = $2
+         AND created_at > datetime('now', '-1 hour')
        LIMIT 1`,
-      [targetId, actorId]
+      [actorId, targetId]
     );
 
     if (recentNotify.rows.length > 0) {
@@ -624,12 +567,23 @@ async function notifyUserBuyDog(actorId, targetId) {
       };
     }
 
+    const notifMsg = '⚠️ Your guard dog has died! Buy a new dog (1000 codes) to protect your assets from being stolen.';
+    const notifId  = crypto.randomUUID();
+
+    // Write to qarsan_dog_notifications (powers the in-app bell)
     await dbQuery(
-      `INSERT INTO audit_log (type, payload) VALUES ($1, $2::jsonb)`,
+      `INSERT INTO qarsan_dog_notifications (id, from_user, to_user, message, seen)
+       VALUES ($1, $2, $3, $4, 0)`,
+      [notifId, actorId, targetId, notifMsg]
+    );
+
+    // Also write to audit_log for admin visibility
+    await dbQuery(
+      `INSERT INTO audit_log (type, payload) VALUES ($1, $2)`,
       ['QARSAN_DOG_NOTIFICATION', JSON.stringify({
         from: actorId,
         to: targetId,
-        message: '⚠️ Your guard dog has died! Buy a new dog (1000 codes) to protect your assets from being stolen by other users.',
+        message: notifMsg,
         timestamp: new Date().toISOString()
       })]
     );
@@ -645,13 +599,7 @@ async function notifyUserBuyDog(actorId, targetId) {
 
 /**
  * 🐕 Buy a new dog for another user (Good Samaritan action).
- *
- * Cost: 1000 codes deducted from actor.
- * Effect: Target's dog_state resets to ACTIVE (last_fed_at = now).
- * Requires: Target must have a DEAD dog.
- *
- * @param {string} actorId - The buyer
- * @param {string} targetId - The user receiving the new dog
+ * Cost: 1000 codes from actor. Effect: target's dog resets to ACTIVE.
  */
 async function buyDogForUser(actorId, targetId) {
   const DOG_COST = 1000;
@@ -664,7 +612,6 @@ async function buyDogForUser(actorId, targetId) {
     };
   }
 
-  // Verify target has dead dog
   await updateDogStateByTime(targetId);
   const targetState = await getWatchDogState(targetId);
 
@@ -681,9 +628,8 @@ async function buyDogForUser(actorId, targetId) {
     try {
       await client.query('BEGIN');
 
-      // Check actor balance
       const balanceRes = await client.query(
-        `SELECT COUNT(*)::int as count FROM codes
+        `SELECT COUNT(*) as count FROM codes
          WHERE user_id = $1 AND (spent IS FALSE OR spent IS NULL OR spent = 0)`,
         [actorId]
       );
@@ -700,7 +646,6 @@ async function buyDogForUser(actorId, targetId) {
         };
       }
 
-      // Select and mark actor's codes as spent
       const codesRes = await client.query(
         `SELECT id FROM codes
          WHERE user_id = $1 AND (spent IS FALSE OR spent IS NULL OR spent = 0)
@@ -715,11 +660,10 @@ async function buyDogForUser(actorId, targetId) {
         );
       }
 
-      // Ledger debit for actor (codes burned)
       const txId = crypto.randomUUID();
       await client.query(
         `INSERT INTO ledger (id, tx_id, user_id, direction, asset_type, amount, reference, meta)
-         VALUES ($1, $2, $3, 'debit', 'codes', $4, 'QARSAN_BUY_DOG_FOR_OTHER', $5::jsonb)`,
+         VALUES ($1, $2, $3, 'debit', 'codes', $4, 'QARSAN_BUY_DOG_FOR_OTHER', $5)`,
         [crypto.randomUUID(), txId, actorId, DOG_COST, JSON.stringify({
           operation: 'buy_dog_for_user',
           targetUserId: targetId,
@@ -727,7 +671,6 @@ async function buyDogForUser(actorId, targetId) {
         })]
       );
 
-      // Revive target's dog → ACTIVE
       await client.query(
         `INSERT INTO watchdog_state (user_id, last_fed_at, dog_state, updated_at)
          VALUES ($1, CURRENT_TIMESTAMP, 'ACTIVE', CURRENT_TIMESTAMP)
@@ -738,9 +681,16 @@ async function buyDogForUser(actorId, targetId) {
         [targetId]
       );
 
-      // Audit log
+      // Notify the target via in-app notification bell
       await client.query(
-        `INSERT INTO audit_log (type, payload) VALUES ($1, $2::jsonb)`,
+        `INSERT INTO qarsan_dog_notifications (id, from_user, to_user, message, seen)
+         VALUES ($1, $2, $3, $4, 0)`,
+        [crypto.randomUUID(), actorId, targetId,
+          '🐕 A generous user just bought you a new guard dog! Your assets are now protected.']
+      );
+
+      await client.query(
+        `INSERT INTO audit_log (type, payload) VALUES ($1, $2)`,
         ['QARSAN_BUY_DOG_FOR_USER', JSON.stringify({
           actorId, targetId, cost: DOG_COST, txId,
           timestamp: new Date().toISOString()
@@ -773,8 +723,12 @@ async function buyDogForUser(actorId, targetId) {
 /**
  * 💀 Steal ALL assets from an exposed user (dead dog).
  *
- * Transfers codes, silver, gold AND qarsan wallet from target → actor.
- * Fully atomic. Only works when target's dog_state === 'DEAD'.
+ * CHANGES vs v1:
+ * ① Rate limit: 1 steal per 10 minutes per actor (checked via qarsan_steal_log)
+ * ② Efficient token transfer: UPDATE codes SET user_id = actorId (no INSERT needed)
+ *    → avoids the code NOT NULL constraint issue and is O(1) vs O(N) inserts
+ * ③ Steal logged to qarsan_steal_log for audit + rate-limiting
+ * ④ Victim notified via qarsan_dog_notifications (visible in the bell icon)
  *
  * @param {string} actorId - The thief
  * @param {string} targetId - The victim (must have DEAD dog)
@@ -784,7 +738,7 @@ async function stealFromUser(actorId, targetId) {
     return { success: false, error: 'SELF_ACTION', message: 'You cannot steal from yourself.' };
   }
 
-  // Verify actor's own dog is ACTIVE (protected users can steal too, but let's be explicit)
+  // ① Verify target has dead dog
   await updateDogStateByTime(targetId);
   const targetState = await getWatchDogState(targetId);
 
@@ -794,6 +748,27 @@ async function stealFromUser(actorId, targetId) {
       error: 'TARGET_PROTECTED',
       message: 'This user\'s guard dog is alive. They are fully protected from theft.'
     };
+  }
+
+  // ② Rate limit: 1 steal per 10 minutes per actor
+  try {
+    const rateLimitCheck = await dbQuery(
+      `SELECT id FROM qarsan_steal_log
+       WHERE actor_id = $1 AND created_at > datetime('now', '-10 minutes')
+       LIMIT 1`,
+      [actorId]
+    );
+
+    if (rateLimitCheck.rows.length > 0) {
+      return {
+        success: false,
+        error: 'RATE_LIMITED',
+        message: '⏳ You can only execute Qarsan once every 10 minutes. Patience, thief!'
+      };
+    }
+  } catch (rlErr) {
+    // If qarsan_steal_log doesn't exist yet, proceed (table created by migration)
+    console.warn('[QARSAN] Rate-limit check skipped (table may not exist):', rlErr.message);
   }
 
   try {
@@ -807,9 +782,9 @@ async function stealFromUser(actorId, targetId) {
 
       // ── Transfer each asset type ─────────────────────────────────
       for (const assetType of assetTypes) {
-        // Get target's current balance from ledger
+        // Get target's current ledger balance
         const balRes = await client.query(
-          `SELECT COALESCE(SUM(CASE WHEN direction='credit' THEN amount ELSE -amount END), 0)::int AS balance
+          `SELECT COALESCE(SUM(CASE WHEN direction='credit' THEN amount ELSE -amount END), 0) AS balance
            FROM ledger WHERE user_id = $1 AND asset_type = $2`,
           [targetId, assetType]
         );
@@ -820,23 +795,16 @@ async function stealFromUser(actorId, targetId) {
 
         totalStolenValue += balance;
 
-        // Mark target's physical tokens as spent
+        // ✅ EFFICIENT: Reassign existing unspent tokens from victim → thief
+        // This avoids inserting new rows and the NOT NULL constraint on codes.code
         await client.query(
-          `UPDATE codes SET spent = 1, updated_at = CURRENT_TIMESTAMP
-           WHERE user_id = $1
-             AND COALESCE(type, 'codes') = $2
+          `UPDATE codes
+           SET user_id = $1, updated_at = CURRENT_TIMESTAMP
+           WHERE user_id = $2
+             AND COALESCE(type, 'codes') = $3
              AND (spent IS FALSE OR spent IS NULL OR spent = 0)`,
-          [targetId, assetType]
+          [actorId, targetId, assetType]
         );
-
-        // Create new tokens for actor (matching count)
-        for (let i = 0; i < balance; i++) {
-          await client.query(
-            `INSERT INTO codes (id, user_id, type, spent, created_at)
-             VALUES ($1, $2, $3, 0, CURRENT_TIMESTAMP)`,
-            [crypto.randomUUID(), actorId, assetType]
-          );
-        }
 
         const txId = crypto.randomUUID();
         const meta = JSON.stringify({
@@ -847,24 +815,24 @@ async function stealFromUser(actorId, targetId) {
           timestamp: new Date().toISOString()
         });
 
-        // Debit target's ledger
+        // Debit victim's ledger
         await client.query(
           `INSERT INTO ledger (id, tx_id, user_id, direction, asset_type, amount, reference, meta)
-           VALUES ($1, $2, $3, 'debit', $4, $5, 'QARSAN_STOLEN', $6::jsonb)`,
+           VALUES ($1, $2, $3, 'debit', $4, $5, 'QARSAN_STOLEN', $6)`,
           [crypto.randomUUID(), txId, targetId, assetType, balance, meta]
         );
 
-        // Credit actor's ledger
+        // Credit thief's ledger
         await client.query(
           `INSERT INTO ledger (id, tx_id, user_id, direction, asset_type, amount, reference, meta)
-           VALUES ($1, $2, $3, 'credit', $4, $5, 'QARSAN_STEAL_GAIN', $6::jsonb)`,
+           VALUES ($1, $2, $3, 'credit', $4, $5, 'QARSAN_STEAL_GAIN', $6)`,
           [crypto.randomUUID(), txId, actorId, assetType, balance, meta]
         );
       }
 
       // ── Also drain qarsan_wallet ─────────────────────────────────
       const qWalletRes = await client.query(
-        `SELECT COALESCE(qarsan_wallet, 0)::int AS wallet FROM qarsan_state WHERE user_id = $1`,
+        `SELECT COALESCE(qarsan_wallet, 0) AS wallet FROM qarsan_state WHERE user_id = $1`,
         [targetId]
       );
       const qarsanWallet = Math.max(0, parseInt(qWalletRes.rows[0]?.wallet || 0, 10));
@@ -873,13 +841,11 @@ async function stealFromUser(actorId, targetId) {
         stolen.qarsan_wallet = qarsanWallet;
         totalStolenValue += qarsanWallet;
 
-        // Zero out target's qarsan wallet
         await client.query(
           `UPDATE qarsan_state SET qarsan_wallet = 0, updated_at = CURRENT_TIMESTAMP WHERE user_id = $1`,
           [targetId]
         );
 
-        // Give to actor's qarsan wallet or codes
         await client.query(
           `INSERT INTO qarsan_state (user_id, qarsan_wallet, updated_at)
            VALUES ($1, $2, CURRENT_TIMESTAMP)
@@ -894,13 +860,13 @@ async function stealFromUser(actorId, targetId) {
 
         await client.query(
           `INSERT INTO ledger (id, tx_id, user_id, direction, asset_type, amount, reference, meta)
-           VALUES ($1, $2, $3, 'debit', 'codes', $4, 'QARSAN_WALLET_STOLEN', $5::jsonb)`,
+           VALUES ($1, $2, $3, 'debit', 'codes', $4, 'QARSAN_WALLET_STOLEN', $5)`,
           [crypto.randomUUID(), txId, targetId, qarsanWallet, meta]
         );
 
         await client.query(
           `INSERT INTO ledger (id, tx_id, user_id, direction, asset_type, amount, reference, meta)
-           VALUES ($1, $2, $3, 'credit', 'codes', $4, 'QARSAN_WALLET_STEAL_GAIN', $5::jsonb)`,
+           VALUES ($1, $2, $3, 'credit', 'codes', $4, 'QARSAN_WALLET_STEAL_GAIN', $5)`,
           [crypto.randomUUID(), txId, actorId, qarsanWallet, meta]
         );
       }
@@ -914,9 +880,50 @@ async function stealFromUser(actorId, targetId) {
         };
       }
 
-      // ── Audit log ────────────────────────────────────────────────
+      // ③ Log to qarsan_steal_log (enables rate-limiting + audit)
+      try {
+        await client.query(
+          `INSERT INTO qarsan_steal_log
+             (id, actor_id, target_id, codes_stolen, silver_stolen, gold_stolen, wallet_stolen, total_stolen)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [
+            crypto.randomUUID(), actorId, targetId,
+            stolen.codes || 0,
+            stolen.silver || 0,
+            stolen.gold || 0,
+            stolen.qarsan_wallet || 0,
+            totalStolenValue
+          ]
+        );
+      } catch (logErr) {
+        // Non-fatal: table may not exist in older deployments
+        console.warn('[QARSAN] steal_log insert failed (non-fatal):', logErr.message);
+      }
+
+      // ④ Notify victim via in-app notification bell
+      const stolenSummary = Object.entries(stolen)
+        .filter(([, v]) => v > 0)
+        .map(([k, v]) => `${v} ${k}`)
+        .join(', ');
+
+      try {
+        await client.query(
+          `INSERT INTO qarsan_dog_notifications
+             (id, from_user, to_user, message, seen)
+           VALUES ($1, 'system', $2, $3, 0)`,
+          [
+            crypto.randomUUID(),
+            targetId,
+            `💀 You were Qarsan'd! Another user stole ${stolenSummary} from your account because your guard dog died. Buy a new dog to protect yourself!`
+          ]
+        );
+      } catch (notifErr) {
+        console.warn('[QARSAN] victim notification failed (non-fatal):', notifErr.message);
+      }
+
+      // Audit log
       await client.query(
-        `INSERT INTO audit_log (type, payload) VALUES ($1, $2::jsonb)`,
+        `INSERT INTO audit_log (type, payload) VALUES ($1, $2)`,
         ['QARSAN_STEAL', JSON.stringify({
           actorId, targetId, stolen, totalStolenValue,
           timestamp: new Date().toISOString()
@@ -925,18 +932,13 @@ async function stealFromUser(actorId, targetId) {
 
       await client.query('COMMIT');
 
-      const stolenSummary = Object.entries(stolen)
-        .filter(([, v]) => v > 0)
-        .map(([k, v]) => `${v} ${k}`)
-        .join(', ');
-
       console.log(`[QARSAN] 💀 ${actorId} stole from ${targetId}: ${stolenSummary}`);
 
       return {
         success: true,
         stolen,
         totalStolenValue,
-        message: `🎉 You successfully stole ${stolenSummary} from this user! All their assets are now yours.`
+        message: `🎉 You successfully Qarsan'd ${stolenSummary} from this user! All their assets are now yours.`
       };
 
     } catch (err) {
@@ -948,6 +950,59 @@ async function stealFromUser(actorId, targetId) {
     }
   } catch (err) {
     console.error('[WATCHDOG] stealFromUser outer error:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 🔔 QARSAN NOTIFICATIONS
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Get notifications for a user from qarsan_dog_notifications.
+ * Returns unread first, max 30 records.
+ *
+ * @param {string} userId
+ * @returns {{ success: boolean, notifications: Array, unreadCount: number }}
+ */
+async function getNotifications(userId) {
+  try {
+    const result = await dbQuery(
+      `SELECT id, from_user, message, seen, created_at
+       FROM qarsan_dog_notifications
+       WHERE to_user = $1
+       ORDER BY seen ASC, created_at DESC
+       LIMIT 30`,
+      [userId]
+    );
+
+    const notifications = result.rows || [];
+    const unreadCount = notifications.filter(n => !n.seen).length;
+
+    return { success: true, notifications, unreadCount };
+  } catch (err) {
+    console.error('[WATCHDOG] getNotifications error:', err);
+    return { success: false, notifications: [], unreadCount: 0, error: err.message };
+  }
+}
+
+/**
+ * Mark all notifications as read for a user.
+ *
+ * @param {string} userId
+ * @returns {{ success: boolean }}
+ */
+async function markNotificationsRead(userId) {
+  try {
+    await dbQuery(
+      `UPDATE qarsan_dog_notifications
+       SET seen = 1
+       WHERE to_user = $1 AND seen = 0`,
+      [userId]
+    );
+    return { success: true };
+  } catch (err) {
+    console.error('[WATCHDOG] markNotificationsRead error:', err);
     return { success: false, error: err.message };
   }
 }
@@ -977,6 +1032,10 @@ export const WatchDogGuardian = {
   notifyUserBuyDog,
   buyDogForUser,
   stealFromUser,
+
+  // 🔔 Notifications
+  getNotifications,
+  markNotificationsRead,
 
   // Admin
   runFullSystemIntegrityCheck
