@@ -407,10 +407,13 @@
 
   // ── API calls ────────────────────────────────────────────────
   async function apiCall(path, method = 'GET', body = null) {
+    const csrfToken =
+      (document.cookie.match(/XSRF-TOKEN=([^;]*)/) || [])[1] ||
+      (document.cookie.match(/csrf_token=([^;]*)/) || [])[1] || '';
     const opts = {
       method,
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken }
     };
     if (body) opts.body = JSON.stringify(body);
     try {
