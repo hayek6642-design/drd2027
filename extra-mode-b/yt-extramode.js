@@ -1064,7 +1064,8 @@ async function claimReward(reward) {
         // STEP 3: Claim the reward via API
         // FIX BUG#1: Added credentials:'include' so session cookie is sent with request
         // FIX BUG#2: Added X-CSRF-TOKEN header for CSRF-protected POST routes
-        const csrfToken = (document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/) || [])[1]
+        const csrfToken = (document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/) || [])[1]
+                       || (document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/) || [])[1]
                        || document.querySelector('meta[name="csrf-token"]')?.content
                        || '';
         const response = await fetch('/api/rewards/claim', {
