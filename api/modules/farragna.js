@@ -16,7 +16,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'secret-demo'
 // ─────────────────────────────────────────
 async function runFarragnaSchemaSetup() {
   const migrations = [
-    // Core farragna_videos table (create if not exists)
+    // Core farragna_videos table (create if not exists — all columns included here)
     `CREATE TABLE IF NOT EXISTS farragna_videos (
       id TEXT PRIMARY KEY,
       owner_id TEXT,
@@ -34,16 +34,9 @@ async function runFarragnaSchemaSetup() {
       likes INTEGER NOT NULL DEFAULT 0,
       comments_count INTEGER NOT NULL DEFAULT 0,
       rewards_earned INTEGER NOT NULL DEFAULT 0,
+      likes_breakdown TEXT DEFAULT '{"like":0,"super":0,"mega":0,"drd":0}',
       created_at TEXT DEFAULT (datetime('now'))
     )`,
-    // Add missing columns if they don't exist (safe migrations)
-    `ALTER TABLE farragna_videos ADD COLUMN url TEXT`,
-    `ALTER TABLE farragna_videos ADD COLUMN thumbnail_url TEXT`,
-    `ALTER TABLE farragna_videos ADD COLUMN caption TEXT DEFAULT 'Untitled'`,
-    `ALTER TABLE farragna_videos ADD COLUMN category TEXT DEFAULT 'entertainment'`,
-    `ALTER TABLE farragna_videos ADD COLUMN cloud_public_id TEXT`,
-    `ALTER TABLE farragna_videos ADD COLUMN likes INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE farragna_videos ADD COLUMN comments_count INTEGER NOT NULL DEFAULT 0`,
     // Views table
     `CREATE TABLE IF NOT EXISTS farragna_views (
       id TEXT PRIMARY KEY,
@@ -93,15 +86,26 @@ async function runFarragnaSchemaSetup() {
     // Index on like transactions
     `CREATE INDEX IF NOT EXISTS idx_farragna_like_tx_video ON farragna_like_transactions(video_id)`,
     `CREATE INDEX IF NOT EXISTS idx_farragna_like_tx_giver ON farragna_like_transactions(giver_id)`,
-    // likes_breakdown column on videos
-    `ALTER TABLE farragna_videos ADD COLUMN likes_breakdown TEXT DEFAULT '{"like":0,"super":0,"mega":0,"drd":0}'`,
   ]
   for (const sql of migrations) {
     try { await query(sql) } catch (e) {
-      // Only warn, don't crash - migrations may partially fail on some DBs
+      // Silence "duplicate column" — column already exists, nothing to do
+      if (e.message && e.message.includes('duplicate column name')) continue
+      // Only warn for unexpected errors, don't crash
       console.warn('[Farragna Schema]', e.message?.slice(0, 120))
     }
   }
+
+  // Safety net: add likes_breakdown to older databases that predate the CREATE TABLE definition
+  try {
+    await query(`ALTER TABLE farragna_videos ADD COLUMN likes_breakdown TEXT DEFAULT '{"like":0,"super":0,"mega":0,"drd":0}'`)
+  } catch (e) {
+    // Expected on fresh or already-migrated DBs — column exists, safe to ignore
+    if (!e.message?.includes('duplicate column name')) {
+      console.warn('[Farragna Schema] likes_breakdown:', e.message?.slice(0, 100))
+    }
+  }
+
   console.log('[Farragna] Schema migration complete')
 }
 
