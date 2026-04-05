@@ -1882,10 +1882,18 @@ app.use((req, res, next) => {
 });
 // Serve static files for all services
 // Serve CodeBank as static app
+// HTML files: no-cache so fixes deploy immediately; JS/CSS: 1d cache
 app.use('/codebank', express.static(path.join(__dirname, 'codebank'), { 
     maxAge: '1d',
     etag: true,
-    lastModified: true 
+    lastModified: true,
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        }
+    }
 }));
 
 app.use('/uploads/images', express.static(path.join(__dirname, 'codebank', 'setta', 'server', 'uploads', 'images')))
@@ -1912,7 +1920,14 @@ try {
 
 // Serve shared modules and codebank assets aliases
 app.use('/shared', express.static(path.join(__dirname, 'shared'), {
-  maxAge: '1d', etag: true, lastModified: true
+  maxAge: '1d', etag: true, lastModified: true,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  }
 }));
 app.use('/shared_external', express.static(path.join(__dirname, 'shared_external'), {
   maxAge: '1d', etag: true, lastModified: true
