@@ -3159,7 +3159,9 @@ document.addEventListener('DOMContentLoaded', async function(){
     _startPrimary() {
       // Keep-alive heartbeat every 30s
       this._heartbeatIv = setInterval(() => {
-        fetch('/api/mirror/heartbeat', { method: 'POST', credentials: 'include' }).catch(() => {});
+        fetch('/api/mirror/heartbeat', { method: 'POST', credentials: 'include' })
+          .then(r => { if (r && r.status === 401) { clearInterval(this._heartbeatIv); this._heartbeatIv = null; } })
+          .catch(() => {});
       }, 30000);
       // State broadcaster (after DOM ready)
       const setup = () => this._setupBroadcaster();
@@ -3298,6 +3300,12 @@ document.addEventListener('DOMContentLoaded', async function(){
           method: 'POST', credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(state)
+        }).then(r => {
+          if (r && r.status === 401) {
+            // Session expired — stop broadcasting to avoid log flood
+            clearTimeout(this._stateTimer); this._stateTimer = null;
+            clearInterval(this._heartbeatIv); this._heartbeatIv = null;
+          }
         }).catch(() => {});
       }, 300);
     },

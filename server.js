@@ -829,7 +829,7 @@ app.post('/api/session/register-device', requireAuth, async (req, res) => {
       const staleMs = Date.now() - new Date(existing.rows[0].last_seen_at).getTime();
       if (staleMs > 5 * 60 * 1000) {
         await query(
-          "INSERT INTO active_device_sessions (user_id, session_token, device_label, last_seen_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO UPDATE SET session_token = $2, device_label = $3, last_seen_at = CURRENT_TIMESTAMP",
+          "INSERT INTO active_device_sessions (user_id, session_token, device_label, last_seen_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO UPDATE SET session_token = excluded.session_token, device_label = excluded.device_label, last_seen_at = CURRENT_TIMESTAMP",
           [userId, sessionToken, deviceLabel]
         );
         return res.json({ status: 'ok', auto_takeover: true });
@@ -846,7 +846,7 @@ app.post('/api/session/register-device', requireAuth, async (req, res) => {
 
     // Register/refresh this device as active
     await query(
-      "INSERT INTO active_device_sessions (user_id, session_token, device_label, last_seen_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO UPDATE SET session_token = $2, device_label = $3, last_seen_at = CURRENT_TIMESTAMP",
+      "INSERT INTO active_device_sessions (user_id, session_token, device_label, last_seen_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO UPDATE SET session_token = excluded.session_token, device_label = excluded.device_label, last_seen_at = CURRENT_TIMESTAMP",
       [userId, sessionToken, deviceLabel]
     );
     return res.json({ status: 'ok' });
@@ -903,7 +903,7 @@ app.post('/api/session/takeover', requireAuth, async (req, res) => {
     }
 
     await query(
-      "INSERT INTO active_device_sessions (user_id, session_token, device_label, last_seen_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO UPDATE SET session_token = $2, device_label = $3, last_seen_at = CURRENT_TIMESTAMP",
+      "INSERT INTO active_device_sessions (user_id, session_token, device_label, last_seen_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO UPDATE SET session_token = excluded.session_token, device_label = excluded.device_label, last_seen_at = CURRENT_TIMESTAMP",
       [userId, sessionToken, deviceLabel]
     );
     return res.json({ status: 'ok' });
@@ -992,7 +992,7 @@ a{color:#58a6ff;text-decoration:none;font-size:14px}</style></head>
     // Update active session to scanner (phone becomes primary)
     const deviceLabel = getDeviceLabel(req);
     await query(
-      "INSERT INTO active_device_sessions (user_id, session_token, device_label, last_seen_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO UPDATE SET session_token = $2, device_label = $3, last_seen_at = CURRENT_TIMESTAMP",
+      "INSERT INTO active_device_sessions (user_id, session_token, device_label, last_seen_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO UPDATE SET session_token = excluded.session_token, device_label = excluded.device_label, last_seen_at = CURRENT_TIMESTAMP",
       [userId, scannerToken, deviceLabel]
     );
 
@@ -1049,7 +1049,7 @@ app.post('/api/mirror/register-role', requireAuth, async (req, res) => {
       await query(
         `INSERT INTO device_roles (user_id, primary_session, primary_label, last_heartbeat)
          VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-         ON CONFLICT (user_id) DO UPDATE SET primary_session=$2, primary_label=$3, last_heartbeat=CURRENT_TIMESTAMP`,
+         ON CONFLICT (user_id) DO UPDATE SET primary_session=excluded.primary_session, primary_label=excluded.primary_label, last_heartbeat=CURRENT_TIMESTAMP`,
         [userId, sessionToken, deviceLabel]
       );
       return res.json({ role: 'primary', deviceLabel });
@@ -1069,7 +1069,7 @@ app.post('/api/mirror/register-role', requireAuth, async (req, res) => {
       await query(
         `INSERT INTO device_roles (user_id, primary_session, primary_label, last_heartbeat)
          VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-         ON CONFLICT (user_id) DO UPDATE SET primary_session=$2, primary_label=$3, last_heartbeat=CURRENT_TIMESTAMP`,
+         ON CONFLICT (user_id) DO UPDATE SET primary_session=excluded.primary_session, primary_label=excluded.primary_label, last_heartbeat=CURRENT_TIMESTAMP`,
         [userId, sessionToken, deviceLabel]
       );
       return res.json({ role: 'primary', deviceLabel, auto_takeover: true });
@@ -1124,7 +1124,7 @@ app.post('/api/mirror/state', requireAuth, async (req, res) => {
     await query(
       `INSERT INTO session_state (user_id, state_json, updated_at)
        VALUES ($1, $2, CURRENT_TIMESTAMP)
-       ON CONFLICT (user_id) DO UPDATE SET state_json=$2, updated_at=CURRENT_TIMESTAMP`,
+       ON CONFLICT (user_id) DO UPDATE SET state_json=excluded.state_json, updated_at=CURRENT_TIMESTAMP`,
       [userId, JSON.stringify(state)]
     );
 
@@ -1170,7 +1170,7 @@ app.post('/api/mirror/switch', requireAuth, async (req, res) => {
     await query(
       `INSERT INTO device_roles (user_id, primary_session, primary_label, last_heartbeat)
        VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-       ON CONFLICT (user_id) DO UPDATE SET primary_session=$2, primary_label=$3, last_heartbeat=CURRENT_TIMESTAMP`,
+       ON CONFLICT (user_id) DO UPDATE SET primary_session=excluded.primary_session, primary_label=excluded.primary_label, last_heartbeat=CURRENT_TIMESTAMP`,
       [userId, sessionToken, deviceLabel]
     );
 
@@ -5318,6 +5318,8 @@ async function applyNeonCompressionDDL(){
       expires_at DATETIME NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`,
+    // Ensure UNIQUE index exists even if table was created before PRIMARY KEY was added
+    `CREATE UNIQUE INDEX IF NOT EXISTS auth_sessions_token_idx ON auth_sessions(token)`,
     `CREATE TABLE IF NOT EXISTS event_offsets (
       key TEXT PRIMARY KEY,
       last_id INT DEFAULT 0,
