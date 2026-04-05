@@ -331,4 +331,4 @@ if (NativeStorage.isNative()) {
   });
 }
 
-export { NativeStorage };
+// NativeStorage is already available globally via window.NativeStorage

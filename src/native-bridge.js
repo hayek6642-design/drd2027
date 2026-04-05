@@ -505,4 +505,4 @@ if (NativeBridge.isNative()) {
   });
 }
 
-export { NativeBridge };
+// NativeBridge is already available globally via window.NativeBridge

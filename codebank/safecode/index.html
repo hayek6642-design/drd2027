@@ -391,8 +391,17 @@
             showLoading();
             updateStatus('connecting', 'Connecting...');
 
-            // Wait for AssetBus
+            // Wait for AssetBus (retry inheritance from parent on each tick)
             const assetBusCheckInterval = setInterval(() => {
+                if (!window.AssetBus && window !== window.parent) {
+                    try {
+                        if (window.parent.AssetBus) {
+                            window.AssetBus = window.parent.AssetBus;
+                        } else if (window.parent.parent && window.parent.parent.AssetBus) {
+                            window.AssetBus = window.parent.parent.AssetBus;
+                        }
+                    } catch(e) { /* cross-origin guard */ }
+                }
                 if (window.AssetBus) {
                     clearInterval(assetBusCheckInterval);
                     subscribeToAssetBus();
