@@ -71,8 +71,8 @@
     _capturing = true;
 
     // ── Get current track title from DOM ──────────────────────────────────
-    const trackTitleEl = document.getElementById('current-track-title');
-    const trackTitle   = (trackTitleEl && trackTitleEl.textContent.trim()) || 'Samma3ny';
+    const trackTitleEl = document.querySelector('#video-title, #current-track-title, .video-title, .track-title');
+    const trackTitle   = (trackTitleEl && trackTitleEl.textContent.trim()) || document.title || 'YT Player';
 
     // ── Request display capture ───────────────────────────────────────────
     let stream;
@@ -185,29 +185,20 @@
     _capturing = false;
   }
 
-  // ── Hook into Play & Pause buttons ───────────────────────────────────────
+  // ── Hook into the main play-pause toggle button (yt-new-clear.html) ──────
   function attachCaptureHooks() {
-    const playBtn  = document.getElementById('play-btn');
-    const pauseBtn = document.getElementById('pause-btn');
+    const ppBtn = document.getElementById('play-pause-button');
 
-    if (!playBtn && !pauseBtn) {
+    if (!ppBtn) {
       // Player not ready yet — retry
       setTimeout(attachCaptureHooks, 400);
       return;
     }
 
-    // We add a CAPTURING event listener (fires before bubbled player listeners)
-    // so we can start the screen capture process alongside normal playback
-    const handler = (e) => {
-      // Don't block the click — let the player handle playback normally
-      // Capture is fire-and-forget
-      captureAndSave();
-    };
+    // Fire-and-forget alongside normal playback toggle
+    ppBtn.addEventListener('click', () => captureAndSave(), false);
 
-    if (playBtn)  playBtn.addEventListener('click',  handler, false);
-    if (pauseBtn) pauseBtn.addEventListener('click', handler, false);
-
-    console.log('[Shots] Capture hooks attached to play/pause buttons');
+    console.log('[Shots] Capture hook attached to #play-pause-button');
   }
 
   // ── Bootstrap ─────────────────────────────────────────────────────────────
