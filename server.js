@@ -58,6 +58,8 @@ import multer from 'multer';
 import { handleSamma3nySongs } from './api/samma3ny/middleware.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import { setupSessionWebSocket } from './server/websocket-server.js';
+import * as sessionManagerWs from './server/core/session-manager.js';
 import rateLimit from 'express-rate-limit';
 import trustRouter from './api/modules/trust.js';
 // Clerk removed: zero-auth mode
@@ -207,22 +209,12 @@ let wss = null;
 try {
   const { WebSocketServer } = await import('ws');
   wss = new WebSocketServer({ server });
-  const wsClients = new Map(); // userId -> ws
-  wss.on('connection', ws => {
-    try { console.log('[WS] Client connected'); } catch(err){ console.error('[WS] Connection error:', err) }
-    ws.on('message', msg => {
-      try {
-        const data = JSON.parse(msg.toString());
-        if (data && data.type === 'AUTH' && data.userId) {
-          ws.userId = String(data.userId);
-          wsClients.set(ws.userId, ws);
-          try { console.log('[WS] Authenticated:', ws.userId); } catch(err){ console.error('[WS] Auth error:', err) }
-        }
-      } catch(e) { try { console.error('[WS ERROR]', e && e.message ? e.message : e); } catch(err){ console.error('[WS] Error handling error:', err) } }
-    });
-    ws.on('close', () => { try { if (ws.userId) wsClients.delete(ws.userId); } catch(err){ console.error('[WS] Close error:', err) } });
+  // Enhanced session-aware WebSocket handler
+  setupSessionWebSocket(wss, {
+    devSessions,
+    query,
+    sseEmit: __sseEmitToSession
   });
-  // WebSocket emit function removed - Using SSE only
 } catch (e) {
     try { console.warn('[WS] WebSocket unavailable:', e && e.message); } catch(err){ console.error('[WS] WebSocket error handling error:', err) }
   }
@@ -887,7 +879,9 @@ app.post('/api/session/takeover', requireAuth, async (req, res) => {
       const oldToken = existing.rows[0].session_token;
       const oldDevice = existing.rows[0].device_label || 'another device';
       if (oldToken !== sessionToken) {
-        // 1. Notify old device via SSE so it can self-logout immediately if online
+        // 1a. Notify old device via WebSocket (real-time, reliable)
+        try { sessionManagerWs.forceLogout(String(userId), 'new_login', deviceLabel); } catch(_) {}
+        // 1b. Notify old device via SSE (fallback for devices not on WS)
         __sseEmitToSession(String(userId), oldToken, {
           type: 'SESSION_TAKEN_OVER',
           message: `Your DR.D session was transferred to ${deviceLabel}. This device has been logged out.`,
@@ -5350,7 +5344,22 @@ async function applyNeonCompressionDDL(){
       count         INTEGER NOT NULL DEFAULT 1,
       total_codes   INTEGER NOT NULL DEFAULT 0,
       last_at       DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`
+    )`,
+    // ── Session tracking for WebSocket-based single-session system ──────────
+    `CREATE TABLE IF NOT EXISTS user_sessions (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id   TEXT UNIQUE NOT NULL,
+      user_id      TEXT NOT NULL,
+      device_type  TEXT,
+      device_name  TEXT,
+      ip_address   TEXT,
+      is_active    BOOLEAN DEFAULT TRUE,
+      created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_active  DATETIME DEFAULT CURRENT_TIMESTAMP,
+      ended_at     DATETIME
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id, is_active)`,
+    `CREATE INDEX IF NOT EXISTS idx_user_sessions_session ON user_sessions(session_id)`
   ];
   
   try {
