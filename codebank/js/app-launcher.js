@@ -132,7 +132,7 @@ function tryOpenService(app, fallbackIndex = 0) {
             } else {
                 modalLoading?.classList.add('hidden');
             }
-        }, 8000);
+        }, 30000); // Extended for Render.com cold start (was 8000ms)
         
         // On native platforms, adjust iframe sandbox to allow cross-origin loading
         if (NativePathResolver.isNative) {
