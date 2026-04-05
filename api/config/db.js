@@ -176,7 +176,7 @@ class Client {
         }
       }
     } catch (error) {
-      if (!options.silent) {
+      if (!options.silent && !error.message?.includes('duplicate column name')) {
         console.error('[DB] Client Error:', error.message, { text: sqliteText, params })
       }
       throw error
