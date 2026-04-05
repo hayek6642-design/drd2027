@@ -89,26 +89,15 @@
         }
     };
 
-    // MODIFIED: Prevent rapid reload loops in iframes (from actly.md)
-    let reloadPrevented = false;
-    window.addEventListener('beforeunload', (e) => {
-        if (reloadPrevented) return;
-        
-        // Check if this is an auth-related reload in an iframe
+    // Notify parent when service unloads (e.g. switching services) — do NOT block navigation
+    window.addEventListener('beforeunload', () => {
         const authState = localStorage.getItem('session_token');
         if (authState && window.parent !== window) {
-            // We're in an iframe with valid auth - don't reload parent
-            e.preventDefault();
-            e.returnValue = '';
-            console.warn('[Bridge] Prevented reload, syncing state instead');
-            
-            // Sync state instead of reloading
+            // Sync state to parent without blocking the navigation
             window.parent.postMessage({
                 type: 'bridge:sync-state',
                 data: { timestamp: Date.now() }
             }, '*');
-            
-            return '';
         }
     });
 
