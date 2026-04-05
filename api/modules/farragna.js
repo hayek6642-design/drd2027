@@ -18,7 +18,7 @@ async function runFarragnaSchemaSetup() {
   const migrations = [
     // Core farragna_videos table (create if not exists)
     `CREATE TABLE IF NOT EXISTS farragna_videos (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      id TEXT PRIMARY KEY,
       owner_id TEXT,
       stream_uid TEXT UNIQUE,
       status TEXT NOT NULL DEFAULT 'processing',
@@ -34,39 +34,39 @@ async function runFarragnaSchemaSetup() {
       likes INTEGER NOT NULL DEFAULT 0,
       comments_count INTEGER NOT NULL DEFAULT 0,
       rewards_earned INTEGER NOT NULL DEFAULT 0,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      created_at TEXT DEFAULT (datetime('now'))
     )`,
     // Add missing columns if they don't exist (safe migrations)
-    `ALTER TABLE farragna_videos ADD COLUMN IF NOT EXISTS url TEXT`,
-    `ALTER TABLE farragna_videos ADD COLUMN IF NOT EXISTS thumbnail_url TEXT`,
-    `ALTER TABLE farragna_videos ADD COLUMN IF NOT EXISTS caption TEXT DEFAULT 'Untitled'`,
-    `ALTER TABLE farragna_videos ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'entertainment'`,
-    `ALTER TABLE farragna_videos ADD COLUMN IF NOT EXISTS cloud_public_id TEXT`,
-    `ALTER TABLE farragna_videos ADD COLUMN IF NOT EXISTS likes INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE farragna_videos ADD COLUMN IF NOT EXISTS comments_count INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE farragna_videos ADD COLUMN url TEXT`,
+    `ALTER TABLE farragna_videos ADD COLUMN thumbnail_url TEXT`,
+    `ALTER TABLE farragna_videos ADD COLUMN caption TEXT DEFAULT 'Untitled'`,
+    `ALTER TABLE farragna_videos ADD COLUMN category TEXT DEFAULT 'entertainment'`,
+    `ALTER TABLE farragna_videos ADD COLUMN cloud_public_id TEXT`,
+    `ALTER TABLE farragna_videos ADD COLUMN likes INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE farragna_videos ADD COLUMN comments_count INTEGER NOT NULL DEFAULT 0`,
     // Views table
     `CREATE TABLE IF NOT EXISTS farragna_views (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      id TEXT PRIMARY KEY,
       video_id UUID NOT NULL,
       viewer_id TEXT NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      created_at TEXT DEFAULT (datetime('now')),
       UNIQUE(video_id, viewer_id)
     )`,
     // Likes table
     `CREATE TABLE IF NOT EXISTS farragna_likes (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
       video_id UUID NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      created_at TEXT DEFAULT (datetime('now')),
       UNIQUE(user_id, video_id)
     )`,
     // Comments table
     `CREATE TABLE IF NOT EXISTS farragna_comments (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      id TEXT PRIMARY KEY,
       video_id UUID NOT NULL,
       user_id TEXT NOT NULL,
       content TEXT NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      created_at TEXT DEFAULT (datetime('now'))
     )`,
     // Indexes for performance
     `CREATE INDEX IF NOT EXISTS idx_farragna_videos_status ON farragna_videos(status)`,
@@ -76,25 +76,25 @@ async function runFarragnaSchemaSetup() {
     `CREATE INDEX IF NOT EXISTS idx_farragna_likes_video ON farragna_likes(video_id)`,
     // Like transactions (replaces simple farragna_likes for paid likes)
     `CREATE TABLE IF NOT EXISTS farragna_like_transactions (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      id TEXT PRIMARY KEY,
       giver_id TEXT NOT NULL,
       video_id UUID NOT NULL,
       like_type TEXT NOT NULL,
       codes_value INTEGER NOT NULL,
-      created_at TIMESTAMPTZ DEFAULT NOW(),
+      created_at TEXT DEFAULT (datetime('now')),
       UNIQUE(giver_id, video_id, like_type)
     )`,
     // Wallets table (ensure exists for codes)
     `CREATE TABLE IF NOT EXISTS wallets (
       user_id TEXT PRIMARY KEY,
       codes BIGINT NOT NULL DEFAULT 0,
-      updated_at TIMESTAMPTZ DEFAULT NOW()
+      updated_at TEXT DEFAULT (datetime('now'))
     )`,
     // Index on like transactions
     `CREATE INDEX IF NOT EXISTS idx_farragna_like_tx_video ON farragna_like_transactions(video_id)`,
     `CREATE INDEX IF NOT EXISTS idx_farragna_like_tx_giver ON farragna_like_transactions(giver_id)`,
     // likes_breakdown column on videos
-    `ALTER TABLE farragna_videos ADD COLUMN IF NOT EXISTS likes_breakdown JSONB DEFAULT '{"like":0,"super":0,"mega":0,"drd":0}'`,
+    `ALTER TABLE farragna_videos ADD COLUMN likes_breakdown TEXT DEFAULT '{"like":0,"super":0,"mega":0,"drd":0}'`,
   ]
   for (const sql of migrations) {
     try { await query(sql) } catch (e) {
@@ -287,7 +287,7 @@ router.get('/trending', async (req, res) => {
     const r = await query(
       `SELECT id, owner_id, url, playback_url, thumbnail_url, caption, category, duration, views_count, likes, comments_count, rewards_earned, created_at
        FROM farragna_videos WHERE status='ready'
-       ORDER BY (views_count * 1.5 + likes * 3 + EXTRACT(EPOCH FROM (NOW() - created_at)) / -3600.0) DESC
+       ORDER BY (views_count * 1.5 + likes * 3 + (julianday('now') - julianday(created_at)) * -24.0) DESC
        LIMIT $1`,
       [limit]
     )
@@ -307,7 +307,7 @@ router.get('/search', async (req, res) => {
   try {
     const r = await query(
       `SELECT id, owner_id, url, playback_url, thumbnail_url, caption, category, views_count, likes, created_at
-       FROM farragna_videos WHERE status='ready' AND (caption ILIKE $1 OR category ILIKE $1)
+       FROM farragna_videos WHERE status='ready' AND (caption LIKE $1 OR category LIKE $1)
        ORDER BY views_count DESC LIMIT 50`,
       [`%${q}%`]
     )
@@ -422,7 +422,7 @@ router.post('/:id/like', requireFarragnaAuth, async (req, res) => {
         'INSERT INTO wallets (user_id, codes) VALUES ($1, 0) ON CONFLICT (user_id) DO NOTHING',
         [userId]
       )
-      const walletRes = await client.query('SELECT codes FROM wallets WHERE user_id=$1 FOR UPDATE', [userId])
+      const walletRes = await client.query('SELECT codes FROM wallets WHERE user_id=$1', [userId])
       const currentBalance = parseInt(walletRes.rows[0]?.codes || 0)
       if (currentBalance < codesValue) {
         await client.query('ROLLBACK')
