@@ -22,9 +22,15 @@
 
 import { Router } from 'express';
 import crypto from 'crypto';
+import cookieParser from 'cookie-parser';
 import { query } from '../config/db.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
+
+// Ensure cookies are parsed for every automode route (cookieParser may not
+// have run yet if it is registered after this router in server.js)
+router.use(cookieParser());
 const TWO_HOURS_MS       = 2 * 60 * 60 * 1000;  // 7,200,000 ms
 const HEARTBEAT_GAP_LIMIT = 3 * 60 * 1000;       // 3 min max acceptable gap
 
@@ -137,7 +143,7 @@ async function depositSilverBar(userId, sessionId) {
 }
 
 // ── POST /automode/start ─────────────────────────────────────
-router.post('/automode/start', async (req, res) => {
+router.post('/automode/start', requireAuth, async (req, res) => {
   try {
     await ensureTable();
     const userId = getUserId(req);
@@ -166,7 +172,7 @@ router.post('/automode/start', async (req, res) => {
 });
 
 // ── POST /automode/heartbeat ──────────────────────────────────
-router.post('/automode/heartbeat', async (req, res) => {
+router.post('/automode/heartbeat', requireAuth, async (req, res) => {
   try {
     await ensureTable();
     const userId = getUserId(req);
@@ -222,7 +228,7 @@ router.post('/automode/heartbeat', async (req, res) => {
 });
 
 // ── POST /automode/cancel ─────────────────────────────────────
-router.post('/automode/cancel', async (req, res) => {
+router.post('/automode/cancel', requireAuth, async (req, res) => {
   try {
     await ensureTable();
     const userId = getUserId(req);
@@ -245,7 +251,7 @@ router.post('/automode/cancel', async (req, res) => {
 });
 
 // ── GET /automode/status ─────────────────────────────────────
-router.get('/automode/status', async (req, res) => {
+router.get('/automode/status', requireAuth, async (req, res) => {
   try {
     await ensureTable();
     const userId = getUserId(req);
