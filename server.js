@@ -336,6 +336,13 @@ app.use(express.json({
   },
 }));
 app.use(express.urlencoded({ extended: true }));
+
+// ✅ Keep-alive ping endpoint (prevents Render free-tier cold starts)
+app.get('/ping', (req, res) => {
+    res.json({ status: 'ok', ts: Date.now() });
+});
+
+
 // Static files will be served later to allow custom route overrides
 app.use('/node_modules', express.static(path.join(__dirname, 'node_modules')));
 // Note: upload.any() is applied only to specific upload routes below
