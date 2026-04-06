@@ -39,7 +39,7 @@ interface Product {
   imageUrl: string; categoryId: number; stock: number; soldCount: number;
   avgRating: number | null; ratingCount: number; countryCode: string;
 }
-interface Wallet { userId: string; codes: number; silver: number; gold: number; }
+interface Wallet { userId: string; codes: number; silver: number; gold: number; balloonPoints?: number; }
 interface Order  {
   id: string; productId: number; productName: string;
   paymentType: PaymentType; amountPaid: number; priceCodes: number;
@@ -129,8 +129,17 @@ export default function Pebalaash() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setBalloonPoints(window.__BALLOON_POINTS__ || 0);
-      const handler = (e: any) => setBalloonPoints(e.detail.points);
+      // Initialise from server on mount
+      fetch("/api/pebalaash/balloon/points")
+        .then(r => r.ok ? r.json() : { balloonPoints: 0 })
+        .then(({ balloonPoints: pts }) => setBalloonPoints(Number(pts ?? 0)))
+        .catch(() => {});
+      // Listen for instant updates from balloon game
+      const handler = (e: any) => {
+        const d = e.detail || {};
+        if (d.newTotal !== undefined) setBalloonPoints(Number(d.newTotal));
+        else if (d.points !== undefined) setBalloonPoints((prev: number) => prev + Number(d.points));
+      };
       window.addEventListener("balloon:points:update", handler);
       return () => window.removeEventListener("balloon:points:update", handler);
     }
