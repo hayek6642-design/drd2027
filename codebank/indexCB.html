@@ -681,6 +681,18 @@
                             <i class="fas fa-sign-out-alt"></i>
                         </button>
                     </section>
+
+                    <section>
+                        <h3 class="text-xs font-bold text-gray-500 uppercase mb-4">Messages</h3>
+                        <button id="drmailBtn" class="w-full p-4 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-xl transition-colors flex items-center justify-between" style="position:relative;">
+                            <span style="display:flex;align-items:center;gap:8px;">
+                                <i class="fas fa-envelope"></i>
+                                Dr.D-mail
+                                <span id="drmail-sidebar-badge" style="display:none;background:#ef4444;color:#fff;font-size:0.62rem;font-weight:700;padding:1px 6px;border-radius:99px;line-height:1.5;">0</span>
+                            </span>
+                            <i class="fas fa-chevron-right" style="font-size:0.75rem;"></i>
+                        </button>
+                    </section>
                 </div>
             </div>
         </aside>
@@ -1271,6 +1283,73 @@
                     window.location.href = '/login.html';
                 });
             }
+        })();
+
+        // ✉️ Dr.D-mail Button
+        (function() {
+            const drmailBtn = document.getElementById('drmailBtn');
+            if (drmailBtn) {
+                drmailBtn.addEventListener('click', function() {
+                    // Close settings panel
+                    const panel = document.getElementById('settings-panel');
+                    const overlay = document.getElementById('settings-overlay');
+                    if (panel) panel.classList.add('translate-x-full');
+                    if (overlay) { overlay.style.opacity = '0'; overlay.style.pointerEvents = 'none'; }
+                    // Open Dr.D-mail service
+                    if (typeof window.openService === 'function') {
+                        window.openService('/codebank/drmail.html', 'Dr.D-mail ✉️');
+                    } else {
+                        window.open('/codebank/drmail.html', '_blank');
+                    }
+                });
+            }
+
+            // Load unread count for Dr.D-mail badge
+            async function loadDrmailUnread() {
+                try {
+                    const res = await fetch('/api/drmail/unread-count', { credentials: 'include' });
+                    const data = await res.json();
+                    const badge = document.getElementById('drmail-sidebar-badge');
+                    if (badge && data.ok && data.count > 0) {
+                        badge.textContent = data.count;
+                        badge.style.display = 'inline-block';
+                    }
+                } catch(_) {}
+            }
+
+            // Try admin unread count too (for admin user)
+            async function loadDrmailUnreadAdmin() {
+                try {
+                    const res = await fetch('/api/drmail/admin/unread-count', { credentials: 'include' });
+                    const data = await res.json();
+                    const badge = document.getElementById('drmail-sidebar-badge');
+                    if (badge && data.ok && data.count > 0) {
+                        badge.textContent = data.count;
+                        badge.style.display = 'inline-block';
+                    }
+                } catch(_) {}
+            }
+
+            // Listen for unread count messages from drmail iframe
+            window.addEventListener('message', function(e) {
+                if (e.data && e.data.type === 'drmail-unread') {
+                    const badge = document.getElementById('drmail-sidebar-badge');
+                    if (badge) {
+                        badge.textContent = e.data.count;
+                        badge.style.display = e.data.count > 0 ? 'inline-block' : 'none';
+                    }
+                }
+            });
+
+            // Load on start and poll
+            setTimeout(function() {
+                loadDrmailUnread();
+                loadDrmailUnreadAdmin();
+                setInterval(function() {
+                    loadDrmailUnread();
+                    loadDrmailUnreadAdmin();
+                }, 60000);
+            }, 2000);
         })();
     </script>
 

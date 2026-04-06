@@ -87,6 +87,7 @@ import biometricRouter from './api/modules/biometric.js';
 import gambleRouter from './api/modules/gamble.js';
 import sammAutoRouter from './api/modules/samma3ny-automode.js';
 import likesRouter from './api/modules/likes.js';
+import drmailRouter from './api/modules/drmail.js';
 
 import { 
   getAllCountries, 
@@ -275,6 +276,7 @@ app.use('/api/auth', biometricRouter);
 app.use('/api/gamble', gambleRouter);
 app.use('/api/samma3ny', sammAutoRouter);
 app.use('/api/likes', likesRouter);
+app.use('/api/drmail', drmailRouter);
 
 // AUTH REMOVED — CLEAN RESET
 
