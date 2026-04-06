@@ -992,53 +992,31 @@
       // =====================================================
       
       if (isPn && window.writeCodeToSQLite) {
-        try {
-          if (window.DEBUG_MODE) console.log('[SQLITE SYNC] Attempting sync for P-code:', code);
-          
-          const writeResult = await window.writeCodeToSQLite({ code, ts: now });
-          
-          if (writeResult && writeResult.ok) {
-            // Sync succeeded
-            meta.persisted = true;
-            meta.source = 'sqlite';
-            meta.syncStatus = 'synced';
-            meta.syncedAt = now;
-            if (window.DEBUG_MODE) console.log('[SQLITE SYNC SUCCESS] Code persisted to SQLite:', code);
-            
-            // 🛡️ UI UPDATE FIX: Emit event immediately after sync
-            try {
-              if (window.BankodeEvents && typeof window.BankodeEvents.emit==='function') {
-                window.BankodeEvents.emit('SQLITE_CODE_SYNCED', { code, userId: this.sessionId, meta });
-              }
-              // Dispatch to window for legacy listeners
-              window.dispatchEvent(new CustomEvent('SQLITE_CODE_SYNCED', { detail: { code, meta } }));
-            } catch(_){ }
-          } else {
-            // Sync failed - BUT WE CONTINUE with local storage
-            meta.persisted = false;
-            meta.source = 'local';
-            meta.syncStatus = 'failed';
-            console.warn('[SQLITE SYNC FAILED] Code stored locally, queued for retry:', {
-              code,
-              error: writeResult && writeResult.error
-            });
-            
-            // Queue for later sync when network/auth is ready
-            this._queueForSync(code, now);
-          }
-        } catch(writeError) {
-          // Exception during sync - CONTINUE with local storage
-          meta.persisted = false;
-          meta.source = 'local';
-          meta.syncStatus = 'failed';
-          console.warn('[SQLITE SYNC EXCEPTION] Code stored locally, queued for retry:', {
-            code,
-            error: writeError && writeError.message
+        // TRULY NON-BLOCKING: SQLite sync runs in background with 8s timeout.
+        // NEVER await this - it MUST NOT block local code generation.
+        (function _bgSqliteSync(bankodeRef, codeVal, tsVal) {
+          Promise.race([
+            window.writeCodeToSQLite({ code: codeVal, ts: tsVal }),
+            new Promise(function(_, rej) { setTimeout(function(){ rej(new Error('SQLITE_TIMEOUT_8s')); }, 8000); })
+          ]).then(function(writeResult) {
+            if (writeResult && writeResult.ok) {
+              if (window.DEBUG_MODE) console.log('[SQLITE SYNC BG OK]', codeVal);
+              try {
+                if (window.BankodeEvents && typeof window.BankodeEvents.emit === 'function') {
+                  window.BankodeEvents.emit('SQLITE_CODE_SYNCED', { code: codeVal, userId: bankodeRef.sessionId });
+                }
+                window.dispatchEvent(new CustomEvent('SQLITE_CODE_SYNCED', { detail: { code: codeVal } }));
+              } catch (_) {}
+            } else {
+              if (window.DEBUG_MODE) console.warn('[SQLITE SYNC BG FAIL]', codeVal, writeResult && writeResult.error);
+              try { bankodeRef._queueForSync(codeVal, tsVal); } catch (_) {}
+            }
+          }).catch(function(err) {
+            if (window.DEBUG_MODE) console.warn('[SQLITE SYNC BG TIMEOUT]', codeVal, err.message);
+            try { bankodeRef._queueForSync(codeVal, tsVal); } catch (_) {}
           });
-          
-          // Queue for later sync
-          this._queueForSync(code, now);
-        }
+        })(this, code, now);
+        // Continue immediately - SQLite sync is fire-and-forget
       } else if (isPP) {
         // PP codes are LOCAL-ONLY by design - this is correct behavior
         meta.persisted = false;
