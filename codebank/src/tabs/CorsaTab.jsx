@@ -1,12 +1,35 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { SERVICE_PATHS } from '../config';
 
 export default function CorsaTab() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
   return (
-    <div style={{ height: '100vh' }}>
+    <div style={{ height: '100vh', position: 'relative' }}>
+      {loading && !error && (
+        <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', zIndex: 1, background: '#0f172a' }}>
+          <div style={{ textAlign: 'center', color: '#94a3b8' }}>
+            <div style={{ marginBottom: 8, fontSize: 18 }}>Loading Corsa…</div>
+            <div style={{ fontSize: 12 }}>Connecting to service</div>
+          </div>
+        </div>
+      )}
+      {error && (
+        <div style={{ height: '100%', display: 'grid', placeItems: 'center' }}>
+          <div style={{ textAlign: 'center', color: '#94a3b8' }}>
+            <h2 style={{ marginBottom: 8 }}>Could not load Corsa</h2>
+            <p style={{ fontSize: 14 }}>Make sure the service is available.</p>
+            <button onClick={() => { setError(false); setLoading(true); }} style={{ marginTop: 12, padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Retry</button>
+          </div>
+        </div>
+      )}
       <iframe
-        src="http://localhost:5175"
-        style={{ width: '100%', height: '100%', border: 'none' }}
+        src={SERVICE_PATHS.corsa}
+        style={{ width: '100%', height: '100%', border: 'none', display: error ? 'none' : 'block' }}
         title="Corsa"
+        onLoad={() => setLoading(false)}
+        onError={() => { setLoading(false); setError(true); }}
       />
     </div>
   );

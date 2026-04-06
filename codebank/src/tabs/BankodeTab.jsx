@@ -1,23 +1,18 @@
 import React, { useEffect, useState } from 'react';
+import { SERVICE_PATHS } from '../config';
 
 export default function BankodeTab() {
   const [html, setHtml] = useState(null);
   const [error, setError] = useState(null);
-  const src = "/indexCB.html";
-  const rawSrc = "/@fs" + encodeURI("/Users/user/Desktop/web-v1/services/codebank/indexCB.html");
+  const src = SERVICE_PATHS.codebank;
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
         const t = Date.now();
-        const rawUrl = `${rawSrc}?t=${t}`;
         const srcUrl = `${src}?t=${t}`;
-        // Try raw FS path first to avoid Vite HTML transform parsing
-        let res = await fetch(rawUrl);
-        if (!res.ok) {
-          res = await fetch(srcUrl);
-        }
+        const res = await fetch(srcUrl);
         if (!alive) return;
         if (!res.ok) {
           setError(`Failed to load indexCB.html (status ${res.status})`);
@@ -27,7 +22,7 @@ export default function BankodeTab() {
         // Inject <base> for correct relative path resolution
         text = text.replace(
           /<head(.*?)>/i,
-          (m) => `${m}\n  <base href="/">\n  <link rel="icon" type="image/svg+xml" href="/vite.svg">`
+          (m) => `${m}\n  <base href="/codebank/">\n  <link rel="icon" type="image/svg+xml" href="/vite.svg">`
         );
         // Remove problematic giant base64 favicon links
         text = text.replace(/<link\s+rel="icon"[^>]*data:image[^>]*>/gi, "");
@@ -47,7 +42,7 @@ export default function BankodeTab() {
           <h2 style={{ marginBottom: 8 }}>Unable to open CodeBank (indexCB.html)</h2>
           <p style={{ color: '#888', marginBottom: 12 }}>{String(error)}</p>
           <p style={{ fontSize: 14 }}>
-            Ensure the dev server is running in <code>services/codebank</code> and that <code>indexCB.html</code> exists at the project root.
+            Ensure the dev server is running and that <code>indexCB.html</code> exists at <code>/codebank/indexCB.html</code>.
           </p>
         </div>
       </div>

@@ -27,7 +27,7 @@ export default function SettaXtes3a() {
   const fetchPhotos = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5002/api/setta/photos");
+      const res = await fetch("/api/setta/photos");
       const data = await res.json();
       const mapped = (data || []).map((d) => ({
         id: d.id ?? null,
@@ -62,7 +62,7 @@ export default function SettaXtes3a() {
 
     try {
       const xhr = new XMLHttpRequest();
-      xhr.open("POST", "http://localhost:5002/api/setta/upload", true);
+      xhr.open("POST", "/api/setta/upload", true);
 
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable)
@@ -106,7 +106,7 @@ export default function SettaXtes3a() {
 
   const fetchChallenge = async () => {
     try {
-      const res = await fetch("http://localhost:5002/api/piccarboon/challenge");
+      const res = await fetch("/api/piccarboon/challenge");
       const data = await res.json();
       setChallenge(data);
     } catch {}
@@ -192,7 +192,7 @@ export default function SettaXtes3a() {
       fd.append('image', blob, 'capture.jpg');
       const features = computeFeatures();
       fd.append('features', JSON.stringify(features || {}));
-      const res = await fetch('http://localhost:5002/api/piccarboon/submit', { method: 'POST', body: fd });
+      const res = await fetch('/api/piccarboon/submit', { method: 'POST', body: fd });
       const data = await res.json();
       setSubmitResult(data);
       await fetchLeaderboard();
@@ -203,12 +203,12 @@ export default function SettaXtes3a() {
   };
 
   const fetchLeaderboard = async () => {
-    try { const r = await fetch('http://localhost:5002/api/piccarboon/leaderboard'); setLeaderboard(await r.json()); } catch {}
+    try { const r = await fetch('/api/piccarboon/leaderboard'); setLeaderboard(await r.json()); } catch {}
   };
   const fetchOutcomes = async () => {
     try {
-      const wr = await fetch('http://localhost:5002/api/piccarboon/winners');
-      const lr = await fetch('http://localhost:5002/api/piccarboon/losers');
+      const wr = await fetch('/api/piccarboon/winners');
+      const lr = await fetch('/api/piccarboon/losers');
       setWinners(await wr.json());
       setLosers(await lr.json());
     } catch {}
