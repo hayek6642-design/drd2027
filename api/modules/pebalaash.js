@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import express, { Router } from 'express'
 import crypto from 'crypto'
 import nodemailer from 'nodemailer'
 import { query } from '../config/db.js'
@@ -7,6 +7,8 @@ import { requireAuth } from '../middleware/auth.js'
 import { publishEvent } from './logicode.js'
 
 const router = Router()
+router.use(express.json())
+router.use(express.urlencoded({ extended: true }))
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || 'dia201244@gmail.com'
