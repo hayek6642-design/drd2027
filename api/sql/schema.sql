@@ -343,3 +343,55 @@ CREATE INDEX IF NOT EXISTS idx_nostaglia_reactions_upload ON nostaglia_reactions
 CREATE INDEX IF NOT EXISTS idx_nostaglia_reactions_user ON nostaglia_reactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_nostaglia_comments_upload ON nostaglia_comments(upload_id);
 CREATE INDEX IF NOT EXISTS idx_nostaglia_shares_upload ON nostaglia_shares(upload_id);
+
+-- ============================================================
+-- CRITICAL PERFORMANCE INDEXES (added to keep row-reads inside
+-- Turso free-tier quota at scale)
+-- ============================================================
+
+-- Auth: every authenticated request looks up token first
+CREATE INDEX IF NOT EXISTS idx_sessions_token    ON auth_sessions(token);
+CREATE INDEX IF NOT EXISTS idx_sessions_user     ON auth_sessions(user_id);
+
+-- Wallets: user balance lookups
+CREATE INDEX IF NOT EXISTS idx_wallets_user      ON wallets(user_id);
+CREATE INDEX IF NOT EXISTS idx_setta_wallets_user ON setta_wallets(user_id);
+CREATE INDEX IF NOT EXISTS idx_corsa_codes_user  ON corsa_codes(user_id);
+CREATE INDEX IF NOT EXISTS idx_corsa_tx_user     ON corsa_transactions(user_id);
+
+-- Farragna: high-frequency social queries
+CREATE INDEX IF NOT EXISTS idx_farragna_likes_video   ON farragna_likes(video_id);
+CREATE INDEX IF NOT EXISTS idx_farragna_likes_user    ON farragna_likes(user_id);
+CREATE INDEX IF NOT EXISTS idx_farragna_comments_video ON farragna_comments(video_id);
+CREATE INDEX IF NOT EXISTS idx_farragna_follows_follower   ON farragna_follows(follower_id);
+CREATE INDEX IF NOT EXISTS idx_farragna_follows_following  ON farragna_follows(following_id);
+CREATE INDEX IF NOT EXISTS idx_farragna_views_video   ON farragna_views(video_id);
+CREATE INDEX IF NOT EXISTS idx_farragna_views_user    ON farragna_views(user_id);
+CREATE INDEX IF NOT EXISTS idx_farragna_search_user   ON farragna_search_history(user_id);
+
+-- Battalooda
+CREATE INDEX IF NOT EXISTS idx_battalooda_rec_user   ON battalooda_recordings(user_id);
+CREATE INDEX IF NOT EXISTS idx_battalooda_likes_rec  ON battalooda_likes(recording_id);
+CREATE INDEX IF NOT EXISTS idx_battalooda_likes_user ON battalooda_likes(user_id);
+CREATE INDEX IF NOT EXISTS idx_battalooda_cmts_rec   ON battalooda_comments(recording_id);
+CREATE INDEX IF NOT EXISTS idx_battalooda_fav_user   ON battalooda_favorite_tracks(user_id);
+
+-- Chat / E7ki
+CREATE INDEX IF NOT EXISTS idx_chat_members_user ON chat_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_messages_created  ON messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_reads_user        ON e7ki_message_reads(user_id);
+
+-- Rewards / assets
+CREATE INDEX IF NOT EXISTS idx_rewards_user      ON rewards(user_id);
+CREATE INDEX IF NOT EXISTS idx_assets_user       ON assets_media(user_id);
+
+-- Dr.D-mail
+CREATE INDEX IF NOT EXISTS idx_drmail_recipient  ON drmail_messages(recipient_id);
+CREATE INDEX IF NOT EXISTS idx_drmail_sender     ON drmail_messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_drmail_thread     ON drmail_messages(thread_id);
+CREATE INDEX IF NOT EXISTS idx_drmail_read       ON drmail_messages(is_read);
+
+-- Pebalaash
+CREATE INDEX IF NOT EXISTS idx_pebalaash_orders_user ON pebalaash_orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_pebalaash_ratings_product ON pebalaash_ratings(product_id);
+CREATE INDEX IF NOT EXISTS idx_pebalaash_ratings_user    ON pebalaash_ratings(user_id);
