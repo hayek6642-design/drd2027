@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { pool } from "./db";
 
 const app = express();
 const httpServer = createServer(app);
@@ -29,7 +30,6 @@ export function log(message: string, source = "express") {
     second: "2-digit",
     hour12: true,
   });
-
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
@@ -51,7 +51,6 @@ app.use((req, res, next) => {
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
-
       log(logLine);
     }
   });
@@ -59,20 +58,52 @@ app.use((req, res, next) => {
   next();
 });
 
+// ── Auto-migration: ensure balloon_points column & balloon_logs table exist ─
+async function runMigrations() {
+  const client = await pool.connect();
+  try {
+    log("Running schema migrations...", "db");
+    await client.query(`
+      ALTER TABLE wallets
+        ADD COLUMN IF NOT EXISTS balloon_points BIGINT NOT NULL DEFAULT 0;
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS balloon_logs (
+        id         SERIAL PRIMARY KEY,
+        user_id    UUID    NOT NULL,
+        amount     INTEGER NOT NULL,
+        option_key TEXT,
+        new_total  BIGINT  NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_balloon_logs_user    ON balloon_logs(user_id);
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_balloon_logs_created ON balloon_logs(created_at DESC);
+    `);
+    log("Migrations complete ✓", "db");
+  } catch (err: any) {
+    log(`Migration error: ${err.message}`, "db");
+  } finally {
+    client.release();
+  }
+}
+
 (async () => {
+  // Run migrations before starting routes
+  await runMigrations();
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
     res.status(status).json({ message });
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
@@ -80,19 +111,9 @@ app.use((req, res, next) => {
     await setupVite(httpServer, app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
   httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-    },
+    { port, host: "0.0.0.0", reusePort: true },
+    () => { log(`serving on port ${port}`); },
   );
 })();
