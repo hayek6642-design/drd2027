@@ -58,17 +58,39 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function getHijriDate(date) {
-    const epoch = new Date(622,7,16);
-    const days  = Math.floor((date - epoch)/(864e5));
-    const avgY  = 354.3667, avgM = 29.530588;
-    const hYear = Math.floor(days/avgY)+1;
-    const dInY  = days - Math.floor((hYear-1)*avgY);
-    const mLen  = [30,29,30,29,30,29,30,29,30,29,30,29];
-    const names = ["Muharram","Safar","Rabi' al-awwal","Rabi' al-thani","Jumada al-awwal",
-                   "Jumada al-thani","Rajab","Sha'ban","Ramadan","Shawwal","Dhu al-Qi'dah","Dhu al-Hijjah"];
-    let acc=0, hM=11, hD=1;
-    for(let i=0;i<12;i++){if(dInY<acc+mLen[i]){hM=i;hD=dInY-acc+1;break;}acc+=mLen[i];}
-    return `${hD} ${names[hM]} ${hYear}`;
+    const names = [
+      "Muharram","Safar","Rabi' al-Awwal","Rabi' al-Thani",
+      "Jumada al-Awwal","Jumada al-Thani","Rajab","Sha'ban",
+      "Ramadan","Shawwal","Dhu al-Qi'dah","Dhu al-Hijjah"
+    ];
+    // Use the browser's built-in Intl API — try Umm al-Qura (Saudi),
+    // then civil Islamic, then generic Islamic as fallbacks.
+    const calTypes = ['islamic-umalqura', 'islamic-civil', 'islamic'];
+    for (const cal of calTypes) {
+      try {
+        const fmt = new Intl.DateTimeFormat(`en-u-ca-${cal}`, {
+          day: 'numeric', month: 'numeric', year: 'numeric'
+        });
+        const parts = fmt.formatToParts(date);
+        const d = parseInt(parts.find(p => p.type === 'day').value, 10);
+        const m = parseInt(parts.find(p => p.type === 'month').value, 10);
+        const y = parseInt(parts.find(p => p.type === 'year').value, 10);
+        if (d > 0 && m > 0 && y > 0) return `${d} ${names[m - 1]} ${y}`;
+      } catch (e) { /* try next calendar type */ }
+    }
+    // Last-resort: correct tabular Islamic calendar (civil epoch, JDN method)
+    const JD  = Math.floor(date.getTime() / 86400000 + 2440587.5);
+    const l   = JD - 1948440 + 10632;
+    const n   = Math.floor((l - 1) / 10631);
+    const ll  = l - 10631 * n + 354;
+    const j   = Math.floor((10985 - ll) / 5316) * Math.floor((50 * ll) / 17719)
+              + Math.floor(ll / 5670) * Math.floor((43 * ll) / 15238);
+    const l2  = ll - Math.floor((30 - j) / 15) * Math.floor((17719 * j) / 50)
+              - Math.floor(j / 16) * Math.floor((15238 * j) / 43) + 29;
+    const hM  = Math.floor((24 * l2) / 709);
+    const hD  = l2 - Math.floor((709 * hM) / 24);
+    const hY  = 30 * n + j - 30;
+    return `${hD} ${names[hM - 1]} ${hY}`;
   }
 
   /* ── normal click / tap (mute/unmute) ────────────────────── */
