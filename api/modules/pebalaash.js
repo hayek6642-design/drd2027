@@ -806,21 +806,15 @@ router.get('/users/search', requireAuth, async (req, res) => {
   const selfId = req.user.id
   if (q.length < 2) return res.json([])
   try {
+    // Simple safe search: email only (username may not exist in all DB versions)
     const r = await query(
-      `SELECT u.id,
-              COALESCE(u.username, SUBSTR(u.email, 1, INSTR(u.email,'@')-1), 'anonymous') AS username,
-              NULL AS avatar_url
-         FROM users u
-        WHERE u.id != $1
-          AND (LOWER(COALESCE(u.username,'')) LIKE LOWER($2)
-               OR LOWER(u.email) LIKE LOWER($3))
-        LIMIT 10`,
-      [selfId, `%${q}%`, `%${q}%`]
+      `SELECT id, email FROM users WHERE id != $1 AND LOWER(email) LIKE LOWER($2) LIMIT 10`,
+      [selfId, `%${q}%`]
     )
     res.json(r.rows.map(row => ({
       id:        row.id,
-      username:  row.username,
-      avatarUrl: row.avatar_url || null,
+      username:  row.email ? row.email.split('@')[0] : 'user',
+      avatarUrl: null,
     })))
   } catch (e) {
     console.error('[PEBALAASH] users/search error:', e.message)
