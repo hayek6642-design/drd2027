@@ -2,7 +2,7 @@ import { Router } from 'express'
 import crypto from 'crypto'
 import nodemailer from 'nodemailer'
 import { query } from '../config/db.js'
-import { requireRole } from '../middleware/admin.js'
+import { requireRole, validateAdminSession } from '../middleware/admin.js'
 import { requireAuth } from '../middleware/auth.js'
 import { publishEvent } from './logicode.js'
 
@@ -910,6 +910,53 @@ router.post('/wallet-items/:id/gift', requireAuth, async (req, res) => {
 })
 
 // ─── Admin routes ──────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/pebalaash/admin/products
+ * Create a new product (admin only)
+ * Body: { name, description, price_codes, image_url, category_id, stock, country_code }
+ */
+router.post('/admin/products', validateAdminSession, async (req, res) => {
+  try {
+    const { name, description = '', price_codes, image_url = '', category_id = null, stock = 10, country_code = 'ALL' } = req.body || {}
+    if (!name || price_codes == null) return res.status(400).json({ ok: false, error: 'name and price_codes required' })
+    const r = await query(
+      `INSERT INTO products (name, description, price_codes, image_url, category_id, stock, country_code, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,CURRENT_TIMESTAMP)`,
+      [name, description, Number(price_codes), image_url, category_id, Number(stock), country_code]
+    )
+    const row = await query('SELECT * FROM products ORDER BY id DESC LIMIT 1', [])
+    res.json({ ok: true, product: row.rows[0] })
+  } catch (e) {
+    console.error('[PEBALAASH] admin/products POST error:', e.message)
+    res.status(500).json({ ok: false, error: e.message })
+  }
+})
+
+/**
+ * POST /api/pebalaash/admin/users/:userId/credit
+ * Add balance (codes) to a user for testing purposes (admin only)
+ * Body: { amount }
+ */
+router.post('/admin/users/:userId/credit', validateAdminSession, async (req, res) => {
+  try {
+    const { userId } = req.params
+    const { amount } = req.body || {}
+    if (!amount || Number(amount) <= 0) return res.status(400).json({ ok: false, error: 'amount required and must be > 0' })
+    // Upsert into user_rewards (the canonical codes ledger)
+    await query(
+      `INSERT INTO user_rewards (user_id, balance, last_updated)
+       VALUES ($1, $2, CURRENT_TIMESTAMP)
+       ON CONFLICT (user_id) DO UPDATE SET balance = balance + $2, last_updated = CURRENT_TIMESTAMP`,
+      [userId, Number(amount)]
+    )
+    const r = await query('SELECT balance FROM user_rewards WHERE user_id=$1', [userId])
+    res.json({ ok: true, userId, newBalance: r.rows[0]?.balance ?? Number(amount) })
+  } catch (e) {
+    console.error('[PEBALAASH] admin/credit error:', e.message)
+    res.status(500).json({ ok: false, error: e.message })
+  }
+})
 
 router.get('/admin/stats', requireRole('admin'), async (_req, res) => {
   try {
