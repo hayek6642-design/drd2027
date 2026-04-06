@@ -19,15 +19,7 @@
         window.__CODEBANK_CLOSE_REQUESTED__ = false;
         
         if (!panel || !toggleBtn || !closeBtn) {
-            // FIX: Retry with backoff instead of silently failing
-            if (__cbPanelRetries < __cbPanelMaxRetries) {
-                __cbPanelRetries++;
-                var delay = __cbPanelRetries * 1000; // 1s, 2s, 3s, 4s, 5s
-                console.warn('[CodeBank] Panel elements not found, retrying in ' + delay + 'ms (attempt ' + __cbPanelRetries + '/' + __cbPanelMaxRetries + ')');
-                setTimeout(initCodeBankPanel, delay);
-            } else {
-                console.warn('[CodeBank] Panel elements not found after ' + __cbPanelMaxRetries + ' retries — giving up');
-            }
+            // Panel elements not present on this page — skip silently
             return;
         }
         __cbPanelRetries = 0; // Reset on success
@@ -75,7 +67,11 @@
         if (overlay && iframe) {
             overlay.classList.add('open');
             overlay.style.display = 'flex';
-            iframe.src = '/codebank/indexCB.html';
+            // Use correct path — do NOT overwrite src if already loaded to avoid reload loop
+            if (!iframe.__cbLoaded) {
+                iframe.src = '/services/yt-clear/codebank/indexCB.html';
+                iframe.__cbLoaded = true;
+            }
             window.dispatchEvent(new Event('codebank:opened'));
         }
     }
@@ -88,7 +84,11 @@
         if (overlay && iframe) {
             overlay.classList.add('open');
             overlay.style.display = 'flex';
-            iframe.src = '/codebank/indexCB.html';
+            // Use correct path — do NOT overwrite src if already loaded to avoid reload loop
+            if (!iframe.__cbLoaded) {
+                iframe.src = '/services/yt-clear/codebank/indexCB.html';
+                iframe.__cbLoaded = true;
+            }
             window.dispatchEvent(new Event('codebank:opened'));
         }
     }
