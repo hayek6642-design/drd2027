@@ -1,287 +1,263 @@
-import { useEffect, useState, useCallback, useRef } from "react";
-import { Snowflake, Flame, Hammer, Crosshair, Thermometer, Target } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Snowflake, Zap, Trophy } from "lucide-react";
 
-interface Hole {
-  id: number;
-  x: number;
-  y: number;
-  size: number;
+/**
+ * IceOverlay — covers Pebalaash products with an ice sheet.
+ *
+ * The ice is FIXED to the viewport so it follows the user while they scroll,
+ * always obscuring the products underneath until enough balloon points are earned.
+ *
+ * Points source: POST /api/pebalaash/balloon/pop  (from balloon game)
+ *                GET  /api/pebalaash/balloon/points (polled every 5 s)
+ *
+ * Melt logic:
+ *   0  pts  → fully frozen  (ice covers everything below nav)
+ *   300 pts → fully melted  (ice gone, products visible)
+ *   Intermediate → partial melt from the BOTTOM UP
+ *     (top portion of ice gradually reveals products from the top as points grow)
+ */
+
+const FULLY_MELTED_PTS = 300;
+
+// Point values per balloon option
+export const BALLOON_OPTION_POINTS: Record<string, number> = {
+  A: 25,  // e.g. "Watch ad"
+  B: 15,  // e.g. "Share"
+  C: 10,  // e.g. "Like"
+  D: 0,   // "Pop nothing" — no points (the trap option)
+};
+
+interface IceOverlayProps {
+  /** Top offset in px for where the ice starts (below the nav bar) */
+  topOffset?: number;
 }
 
-export function IceOverlay() {
-  // 4 Counters
-  const [mainPoints, setMainPoints] = useState(0); // From watchTime
-  const [firePoints, setFirePoints] = useState(0); // From right balloons
-  const [hammerPoints, setHammerPoints] = useState(0); // From top balloons
-  const [sniperPoints, setSniperPoints] = useState(0); // From bottom balloons
+export function IceOverlay({ topOffset = 72 }: IceOverlayProps) {
+  const [balloonPoints, setBalloonPoints] = useState<number>(0);
+  const [loading, setLoading]             = useState(true);
+  const [melted, setMelted]               = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // State for melting
-  const [extraMelt, setExtraMelt] = useState(0); // Points burned by fire/hammer
-  const [holes, setHoles] = useState<Hole[]>([]);
-  const [isSniperMode, setIsSniperMode] = useState(false);
-  const [snowflakes, setSnowflakes] = useState<Array<{ id: number; x: number; delay: number; size: number }>>([]);
-
-  // Max points for full melt (arbitrary, can be adjusted)
-  const MAX_WATCH_TIME = 3600000; // 1 hour for 100% melt
-  const POINTS_PER_MELT_STEP = 100; // Points needed to melt 1% more
-
-  // Calculate total melt progress
-  // Main watchTime melt + extraMelt from tools
-  const watchProgress = Math.min(mainPoints / MAX_WATCH_TIME, 1);
-  const toolProgress = Math.min(extraMelt / 10000, 1); // 10k tool points for full melt
-  const totalMeltProgress = Math.min(watchProgress + toolProgress, 1);
-
-  // Ice covers from top down: at 0 progress, top edge is at 0. At 1 progress, top edge is at 100.
-  // Wait, user said "decreases from up to down to make the products manifest gradually".
-  // This means the ice layer's TOP edge moves DOWN.
-  const iceTopOffset = totalMeltProgress * 100;
-
-  // Initialize snowflakes
-  useEffect(() => {
-    const flakes = Array.from({ length: 40 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      delay: Math.random() * 8,
-      size: Math.random() * 6 + 4,
-    }));
-    setSnowflakes(flakes);
+  // ── Fetch current points from server ──────────────────────────────────────
+  const fetchPoints = useCallback(async () => {
+    try {
+      const res = await fetch("/api/pebalaash/balloon/points");
+      if (!res.ok) return;
+      const { balloonPoints: pts } = await res.json();
+      const n = Number(pts ?? 0);
+      setBalloonPoints(n);
+      if (n >= FULLY_MELTED_PTS) setMelted(true);
+    } catch {/* network error — ignore */}
+    finally { setLoading(false); }
   }, []);
 
-  // Listen for Main Counter (watchTime) from localStorage
+  // ── Poll every 5 s ────────────────────────────────────────────────────────
   useEffect(() => {
-    const checkWatchTime = () => {
-      const stored = parseInt(localStorage.getItem('watchTime') || '0');
-      setMainPoints(stored);
-    };
-    checkWatchTime();
-    const interval = setInterval(checkWatchTime, 2000);
-    return () => clearInterval(interval);
-  }, []);
+    fetchPoints();
+    pollRef.current = setInterval(fetchPoints, 5000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [fetchPoints]);
 
-  // Listen for Tool Points (Balloons)
+  // ── Listen for instant updates from the balloon game ──────────────────────
   useEffect(() => {
-    // Load existing tool points from localStorage
-    setFirePoints(parseInt(localStorage.getItem('pebalaash_fire') || '0'));
-    setHammerPoints(parseInt(localStorage.getItem('pebalaash_hammer') || '0'));
-    setSniperPoints(parseInt(localStorage.getItem('pebalaash_sniper') || '0'));
-
-    const handleBalloonUpdate = (e: any) => {
-      const { delta, side } = e.detail;
-      if (delta > 0) {
-        if (side === 'right') {
-          setFirePoints(prev => {
-            const next = prev + delta;
-            localStorage.setItem('pebalaash_fire', next.toString());
-            return next;
-          });
-        } else if (side === 'top') {
-          setHammerPoints(prev => {
-            const next = prev + delta;
-            localStorage.setItem('pebalaash_hammer', next.toString());
-            return next;
-          });
-        } else if (side === 'bottom') {
-          setSniperPoints(prev => {
-            const next = prev + delta;
-            localStorage.setItem('pebalaash_sniper', next.toString());
-            return next;
-          });
-        }
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ newTotal?: number; delta?: number }>).detail;
+      if (detail?.newTotal !== undefined) {
+        const n = Number(detail.newTotal);
+        setBalloonPoints(n);
+        if (n >= FULLY_MELTED_PTS) setMelted(true);
+      } else if (detail?.delta !== undefined) {
+        setBalloonPoints(prev => {
+          const next = prev + Number(detail.delta);
+          if (next >= FULLY_MELTED_PTS) setMelted(true);
+          return next;
+        });
       }
     };
-
-    window.addEventListener('balloon:points:update', handleBalloonUpdate);
-    return () => window.removeEventListener('balloon:points:update', handleBalloonUpdate);
+    window.addEventListener("balloon:points:update", handler);
+    return () => window.removeEventListener("balloon:points:update", handler);
   }, []);
 
-  // Tool actions
-  const useFire = () => {
-    if (firePoints >= 10) {
-      setFirePoints(prev => {
-        const next = prev - 10;
-        localStorage.setItem('pebalaash_fire', next.toString());
-        return next;
-      });
-      setExtraMelt(prev => prev + 50); // Melt 0.5%
-    }
-  };
+  // ── Derived values ────────────────────────────────────────────────────────
+  const progress    = Math.min(balloonPoints / FULLY_MELTED_PTS, 1);   // 0 → 1
+  const meltPercent = Math.round(progress * 100);
+  // The ice sheet slides UP (negative translateY) as it melts
+  // At 0 pts  → translateY = 0        (fully covers viewport below nav)
+  // At 300 pts → translateY = -100vh  (completely above the screen)
+  const translateY = -progress * 100;
 
-  const useHammer = () => {
-    if (hammerPoints >= 10) {
-      setHammerPoints(prev => {
-        const next = prev - 10;
-        localStorage.setItem('pebalaash_hammer', next.toString());
-        return next;
-      });
-      setExtraMelt(prev => prev + 100); // Break 1%
-    }
-  };
-
-  const useSniper = () => {
-    if (sniperPoints >= 10) {
-      setIsSniperMode(!isSniperMode);
-    }
-  };
-
-  const handleIceClick = (e: React.MouseEvent) => {
-    if (isSniperMode && sniperPoints >= 10) {
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      const x = ((e.clientX - rect.left) / rect.width) * 100;
-      const y = ((e.clientY - rect.top) / rect.height) * 100;
-      
-      setHoles(prev => [...prev, { id: Date.now(), x, y, size: 15 + Math.random() * 10 }]);
-      setSniperPoints(prev => {
-        const next = prev - 10;
-        localStorage.setItem('pebalaash_sniper', next.toString());
-        return next;
-      });
-      setIsSniperMode(false);
-    }
-  };
-
-  // Generate mask-image for holes
-  const maskImage = holes.length > 0 
-    ? holes.map(h => `radial-gradient(circle at ${h.x}% ${h.y}%, transparent ${h.size}px, black ${h.size + 1}px)`).join(', ')
-    : 'none';
-
-  if (iceTopOffset >= 100) return null;
+  if (melted) return null;
 
   return (
     <>
-      {/* 4 Counters Container */}
-      <div className="fixed top-20 right-4 z-[100] flex flex-col gap-3">
-        {/* Main Counter */}
-        <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-card/90 backdrop-blur border border-blue-500/30 text-blue-300 font-bold text-sm shadow-lg min-w-[160px]">
-          <div className="flex items-center gap-2">
-            <Target className="w-4 h-4 text-blue-400" />
-            <span>Main</span>
-          </div>
-          <span className="tabular-nums">{(mainPoints / 1000).toFixed(0)}s</span>
-        </div>
-
-        {/* Fire Tool */}
-        <button
-          onClick={useFire}
-          disabled={firePoints < 10}
-          className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl border font-bold text-sm shadow-lg transition-all active:scale-95 min-w-[160px]
-            ${firePoints >= 10 
-              ? 'bg-orange-500/20 border-orange-500/50 text-orange-400 hover:bg-orange-500/30' 
-              : 'bg-muted/50 border-border text-muted-foreground opacity-50 cursor-not-allowed'}`}
-        >
-          <div className="flex items-center gap-2">
-            <Flame className="w-4 h-4" />
-            <span>Fire</span>
-          </div>
-          <span className="tabular-nums">{firePoints}</span>
-        </button>
-
-        {/* Hammer Tool */}
-        <button
-          onClick={useHammer}
-          disabled={hammerPoints < 10}
-          className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl border font-bold text-sm shadow-lg transition-all active:scale-95 min-w-[160px]
-            ${hammerPoints >= 10 
-              ? 'bg-sky-500/20 border-sky-500/50 text-sky-400 hover:bg-sky-500/30' 
-              : 'bg-muted/50 border-border text-muted-foreground opacity-50 cursor-not-allowed'}`}
-        >
-          <div className="flex items-center gap-2">
-            <Hammer className="w-4 h-4" />
-            <span>Hammer</span>
-          </div>
-          <span className="tabular-nums">{hammerPoints}</span>
-        </button>
-
-        {/* Sniper Tool */}
-        <button
-          onClick={useSniper}
-          disabled={sniperPoints < 10}
-          className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl border font-bold text-sm shadow-lg transition-all active:scale-95 min-w-[160px]
-            ${sniperPoints >= 10 
-              ? (isSniperMode ? 'bg-red-500 border-red-500 text-white animate-pulse' : 'bg-red-500/20 border-red-500/50 text-red-400 hover:bg-red-500/30') 
-              : 'bg-muted/50 border-border text-muted-foreground opacity-50 cursor-not-allowed'}`}
-        >
-          <div className="flex items-center gap-2">
-            <Crosshair className="w-4 h-4" />
-            <span>Sniper</span>
-          </div>
-          <span className="tabular-nums">{sniperPoints}</span>
-        </button>
-      </div>
-
-      {/* Ice layer */}
+      {/* ── Ice Sheet: fixed, sticks while scrolling ─────────────────────── */}
       <div
-        className={`fixed inset-0 z-[60] overflow-hidden transition-all duration-1000 ease-out
-          ${isSniperMode ? 'cursor-crosshair' : 'pointer-events-auto'}`}
+        aria-hidden="true"
+        className="ice-overlay"
         style={{
-          top: `${iceTopOffset}%`,
-          bottom: 0,
-          maskImage: maskImage,
-          WebkitMaskImage: maskImage,
-          transition: "top 1.5s cubic-bezier(0.16, 1, 0.3, 1)",
+          position:   "fixed",
+          top:        topOffset,
+          left:       0,
+          right:      0,
+          bottom:     0,
+          zIndex:     50,
+          transform:  `translateY(${translateY}vh)`,
+          transition: "transform 0.8s cubic-bezier(0.22, 1, 0.36, 1)",
+          overflow:   "hidden",
+          pointerEvents: "all",
         }}
-        onClick={handleIceClick}
       >
-        {/* Main ice surface */}
-        <div className="absolute inset-0 ice-overlay bg-sky-100/40 backdrop-blur-md" 
-          style={{
-            backgroundImage: 'url("https://www.transparenttextures.com/patterns/cracked-ice.png")',
-            backgroundColor: 'rgba(200, 230, 255, 0.7)'
-          }}
-        />
+        {/* Ice texture */}
+        <div style={{
+          position:   "absolute",
+          inset:      0,
+          background: `
+            linear-gradient(
+              180deg,
+              rgba(168,216,255,0.92) 0%,
+              rgba(120,190,255,0.88) 20%,
+              rgba(80,160,240,0.84)  60%,
+              rgba(40,120,210,0.90)  100%
+            )
+          `,
+          backdropFilter: "blur(4px)",
+        }} />
 
-        {/* Frost cracks pattern */}
-        <div className="absolute inset-0 ice-crack opacity-40 mix-blend-overlay" />
+        {/* Crack / crystal pattern */}
+        <svg
+          style={{ position:"absolute", inset:0, width:"100%", height:"100%", opacity:0.18 }}
+          xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice"
+        >
+          <filter id="ice-noise">
+            <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/>
+            <feColorMatrix type="saturate" values="0"/>
+          </filter>
+          <rect width="100%" height="100%" filter="url(#ice-noise)" opacity="0.6"/>
+          {/* Crack lines */}
+          {[
+            "M 10 0 L 35 40 L 20 80 L 45 120",
+            "M 60 0 L 50 30 L 70 60 L 55 100",
+            "M 80 10 L 90 50 L 75 90 L 88 130",
+            "M 0 50 L 30 55 L 55 45 L 90 52",
+            "M 5 80 L 40 85 L 65 75 L 95 82",
+          ].map((d, i) => (
+            <polyline key={i} points={d} fill="none" stroke="white" strokeWidth="0.6" opacity="0.7"/>
+          ))}
+        </svg>
 
-        {/* Shimmer highlight */}
-        <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-white/10 animate-pulse" />
+        {/* Drip effect at the bottom of the ice */}
+        <div style={{
+          position:   "absolute",
+          bottom:     -2,
+          left:       0,
+          right:      0,
+          height:     40,
+          background: "linear-gradient(180deg, transparent 0%, rgba(120,190,255,0.6) 100%)",
+          filter:     "url(#drip)",
+        }} />
 
-        {/* Melting edge */}
-        <div className="absolute top-0 left-0 right-0 h-20 -translate-y-10 z-10 pointer-events-none">
-          <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="w-full h-full drop-shadow-xl">
-            <path
-              d="M0,120 L0,40 Q100,0 200,60 Q300,120 400,40 Q500,0 600,60 Q700,120 800,40 Q900,0 1000,60 Q1100,120 1200,40 L1200,120 Z"
-              fill="rgba(255, 255, 255, 0.8)"
-            />
-          </svg>
-        </div>
-
-        {/* Floating snowflake particles */}
-        {snowflakes.map((flake) => (
-          <div
-            key={flake.id}
-            className="absolute animate-frost-pulse"
+        {/* Content: progress pill + snowflakes */}
+        <div style={{
+          position:   "absolute",
+          top:        "50%",
+          left:       "50%",
+          transform:  "translate(-50%, -50%)",
+          textAlign:  "center",
+          color:      "white",
+          userSelect: "none",
+        }}>
+          <Snowflake
             style={{
-              left: `${flake.x}%`,
-              top: `${(flake.id / snowflakes.length) * 100}%`,
-              animationDelay: `${flake.delay}s`,
-              opacity: 0.3 + Math.random() * 0.4,
+              width: 56, height: 56,
+              margin: "0 auto 12px",
+              opacity: 1 - progress * 0.7,
+              animation: "spin 8s linear infinite",
+              filter: "drop-shadow(0 0 12px rgba(255,255,255,0.8))",
             }}
-          >
-            <Snowflake
-              className="text-white/40"
-              style={{ width: flake.size, height: flake.size }}
-            />
-          </div>
-        ))}
+          />
+          <p style={{ fontSize:13, fontWeight:700, letterSpacing:2, opacity:0.85, marginBottom:8, textTransform:"uppercase" }}>
+            Frozen Products
+          </p>
 
-        {/* Ice texture overlays */}
-        <div className="absolute inset-0 opacity-20 pointer-events-none" 
-          style={{ 
-            background: 'radial-gradient(circle at 50% 50%, white, transparent)',
-            mixBlendMode: 'overlay'
-          }} 
-        />
+          {/* Progress bar */}
+          <div style={{
+            width: 200, height: 8,
+            background: "rgba(255,255,255,0.25)",
+            borderRadius: 4, overflow:"hidden",
+            margin: "0 auto 8px",
+          }}>
+            <div style={{
+              height:"100%",
+              width:`${meltPercent}%`,
+              background:"linear-gradient(90deg,#fff8,#fff)",
+              borderRadius:4,
+              transition:"width 0.5s ease",
+            }}/>
+          </div>
+
+          <p style={{ fontSize:12, opacity:0.8 }}>
+            {balloonPoints} / {FULLY_MELTED_PTS} pts
+            {!loading && balloonPoints === 0 && (
+              <span style={{ display:"block", marginTop:4, fontSize:11, opacity:0.7 }}>
+                🎈 Pop balloons to melt the ice!
+              </span>
+            )}
+          </p>
+        </div>
       </div>
 
-      {/* Sniper Reticle (Only in sniper mode) */}
-      {isSniperMode && (
-        <div className="fixed inset-0 z-[70] pointer-events-none flex items-center justify-center">
-          <div className="w-20 h-20 border-2 border-red-500 rounded-full flex items-center justify-center animate-pulse">
-            <div className="w-1 h-20 bg-red-500 absolute" />
-            <div className="h-1 w-20 bg-red-500 absolute" />
-          </div>
-        </div>
-      )}
+      {/* ── Floating HUD: always visible above the ice ──────────────────── */}
+      <div style={{
+        position:   "fixed",
+        top:        topOffset + 12,
+        right:      16,
+        zIndex:     55,
+        display:    "flex",
+        alignItems: "center",
+        gap:        8,
+        background: "rgba(10,30,60,0.75)",
+        backdropFilter: "blur(8px)",
+        borderRadius: 999,
+        padding:    "6px 14px",
+        boxShadow:  "0 2px 16px rgba(0,0,0,0.4)",
+        pointerEvents: "none",
+        userSelect: "none",
+      }}>
+        <Trophy style={{ width:16, height:16, color:"#fbbf24" }} />
+        <span style={{ color:"white", fontSize:13, fontWeight:700 }}>
+          {balloonPoints.toLocaleString()} pts
+        </span>
+        <Zap style={{ width:14, height:14, color:"#60a5fa" }} />
+      </div>
+
+      {/* Spinning animation keyframe */}
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </>
   );
+}
+
+/**
+ * Helper: call this from the balloon game when the user pops a balloon
+ * and selects an option. Sends the points to the server and dispatches
+ * a window event so the IceOverlay updates instantly.
+ *
+ * @param optionKey  "A" | "B" | "C" | "D"
+ */
+export async function registerBalloonPop(optionKey: string): Promise<void> {
+  const points = BALLOON_OPTION_POINTS[optionKey] ?? 0;
+  try {
+    const res = await fetch("/api/pebalaash/balloon/pop", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ points, optionKey }),
+    });
+    if (res.ok) {
+      const { newTotal } = await res.json();
+      window.dispatchEvent(new CustomEvent("balloon:points:update", {
+        detail: { newTotal, delta: points, optionKey },
+      }));
+    }
+  } catch {/* fail silently */}
 }
