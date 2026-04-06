@@ -566,25 +566,26 @@ router.post('/checkout', requireAuth, async (req, res) => {
     let deductResult
     if (paymentType === 'codes') {
       // Codes live in user_rewards.balance (the canonical ACC ledger)
+      // NOTE: $1 used twice → split into $1 (SET) and $3 (WHERE) to avoid Turso positional-param mismatch
       deductResult = await query(
         `UPDATE user_rewards
             SET balance = balance - $1, last_updated = CURRENT_TIMESTAMP
-          WHERE user_id=$2 AND balance >= $1`,
-        [priceInCurrency, userId]
+          WHERE user_id=$2 AND balance >= $3`,
+        [priceInCurrency, userId, priceInCurrency]
       )
     } else if (paymentType === 'silver') {
       deductResult = await query(
         `UPDATE balances
             SET silver_count = silver_count - $1
-          WHERE user_id=$2 AND COALESCE(silver_count, 0) >= $1`,
-        [priceInCurrency, userId]
+          WHERE user_id=$2 AND COALESCE(silver_count, 0) >= $3`,
+        [priceInCurrency, userId, priceInCurrency]
       )
     } else {
       deductResult = await query(
         `UPDATE balances
             SET gold_count = gold_count - $1
-          WHERE user_id=$2 AND COALESCE(gold_count, 0) >= $1`,
-        [priceInCurrency, userId]
+          WHERE user_id=$2 AND COALESCE(gold_count, 0) >= $3`,
+        [priceInCurrency, userId, priceInCurrency]
       )
     }
 
@@ -812,9 +813,9 @@ router.get('/users/search', requireAuth, async (req, res) => {
          LEFT JOIN users_profiles up ON up.user_id = u.id
         WHERE u.id != $1
           AND (LOWER(COALESCE(up.username,'')) LIKE LOWER($2)
-               OR LOWER(u.email) LIKE LOWER($2))
+               OR LOWER(u.email) LIKE LOWER($3))
         LIMIT 10`,
-      [selfId, `%${q}%`]
+      [selfId, `%${q}%`, `%${q}%`]
     )
     res.json(r.rows.map(row => ({
       id:        row.id,
