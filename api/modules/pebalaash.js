@@ -807,12 +807,12 @@ router.get('/users/search', requireAuth, async (req, res) => {
   if (q.length < 2) return res.json([])
   try {
     const r = await query(
-      `SELECT u.id, COALESCE(up.username, 'anonymous') AS username,
-              up.avatar_url
+      `SELECT u.id,
+              COALESCE(u.username, SUBSTR(u.email, 1, INSTR(u.email,'@')-1), 'anonymous') AS username,
+              NULL AS avatar_url
          FROM users u
-         LEFT JOIN users_profiles up ON up.user_id = u.id
         WHERE u.id != $1
-          AND (LOWER(COALESCE(up.username,'')) LIKE LOWER($2)
+          AND (LOWER(COALESCE(u.username,'')) LIKE LOWER($2)
                OR LOWER(u.email) LIKE LOWER($3))
         LIMIT 10`,
       [selfId, `%${q}%`, `%${q}%`]
