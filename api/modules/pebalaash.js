@@ -956,8 +956,8 @@ router.post('/admin/users/:userId/credit', requireAuth, async (req, res) => {
     await query(
       `INSERT INTO user_rewards (user_id, balance, last_updated)
        VALUES ($1, $2, CURRENT_TIMESTAMP)
-       ON CONFLICT (user_id) DO UPDATE SET balance = balance + $2, last_updated = CURRENT_TIMESTAMP`,
-      [userId, Number(amount)]
+       ON CONFLICT (user_id) DO UPDATE SET balance = balance + $3, last_updated = CURRENT_TIMESTAMP`,
+      [userId, Number(amount), Number(amount)]
     )
     const r = await query('SELECT balance FROM user_rewards WHERE user_id=$1', [userId])
     res.json({ ok: true, userId, newBalance: r.rows[0]?.balance ?? Number(amount) })
