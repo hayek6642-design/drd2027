@@ -283,18 +283,30 @@ router.get('/categories', async (_req, res) => {
 
 router.get('/products', async (req, res) => {
   try {
-    const categoryId = req.query.categoryId ? Number(req.query.categoryId) : undefined
-    const sql = categoryId
-      ? `SELECT p.*, COALESCE(AVG(r.rating),0) AS avg_rating, COUNT(r.id) AS rating_count
-           FROM products p
-           LEFT JOIN pebalaash_ratings r ON r.product_id = p.id
-          WHERE p.category_id=$1
-          GROUP BY p.id ORDER BY p.id DESC`
-      : `SELECT p.*, COALESCE(AVG(r.rating),0) AS avg_rating, COUNT(r.id) AS rating_count
-           FROM products p
-           LEFT JOIN pebalaash_ratings r ON r.product_id = p.id
-          GROUP BY p.id ORDER BY p.id DESC`
-    const r = categoryId ? await query(sql, [categoryId]) : await query(sql, [])
+    const categoryId  = req.query.categoryId  ? Number(req.query.categoryId) : undefined
+    const countryCode = req.query.countryCode  ? String(req.query.countryCode).toUpperCase() : undefined
+
+    // Build WHERE clauses dynamically
+    const conditions = []
+    const params     = []
+
+    if (categoryId) {
+      params.push(categoryId)
+      conditions.push(`p.category_id=$${params.length}`)
+    }
+    if (countryCode && countryCode !== 'ALL') {
+      params.push(countryCode)
+      conditions.push(`(p.country_code='ALL' OR p.country_code=$${params.length})`)
+    }
+
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+    const sql = `SELECT p.*, COALESCE(AVG(r.rating),0) AS avg_rating, COUNT(r.id) AS rating_count
+                   FROM products p
+                   LEFT JOIN pebalaash_ratings r ON r.product_id = p.id
+                 ${where}
+                 GROUP BY p.id ORDER BY p.id DESC`
+
+    const r = await query(sql, params)
     res.json(r.rows.map(mapProduct))
   } catch (e) {
     console.error('[PEBALAASH] products error:', e.message)

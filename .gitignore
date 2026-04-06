@@ -49,6 +49,9 @@ yarn-error.log*
 
 # Build outputs
 dist/
+# Keep pebalaash built SPA in repo so Render can serve it
+!codebank/pebalaash/dist/
+!codebank/pebalaash/dist/**
 build/
 .next/
 out/
