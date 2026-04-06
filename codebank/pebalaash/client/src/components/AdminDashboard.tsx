@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import {
   X, Plus, Pencil, Trash2, BarChart2, Package,
-  TrendingUp, AlertTriangle, Loader2, Globe, ShieldCheck,
+  TrendingUp, AlertTriangle, Loader2, Globe, ShieldCheck, Sparkles, Snowflake,
 } from "lucide-react";
 import { COUNTRIES } from "@shared/routes";
 
@@ -18,6 +18,15 @@ interface Product {
   stock: number; soldCount: number; avgRating: number | null; ratingCount: number;
 }
 interface Category { id: number; name: string; slug: string; }
+
+interface BalloonAdminStats {
+  totalEvents: number;
+  topUsers: { userId: string; totalPoints: number }[];
+  recentActivity: {
+    id: number; userId: string; amount: number;
+    optionKey: string | null; newTotal: number; createdAt: string;
+  }[];
+}
 
 const EMPTY_FORM = {
   name: "", description: "", priceCodes: "", priceSilver: "", priceGold: "",
@@ -47,7 +56,7 @@ export function AdminDashboard({ onClose }: { onClose: () => void }) {
   };
 
   // ── Tab state ─────────────────────────────────────────────────
-  const [tab, setTab] = useState<"products" | "stats">("products");
+  const [tab, setTab] = useState<"products" | "stats" | "balloon">("products");
   const [editing,    setEditing]    = useState<Product | null>(null);
   const [formData,   setFormData]   = useState(EMPTY_FORM);
   const [showForm,   setShowForm]   = useState(false);
@@ -79,6 +88,16 @@ export function AdminDashboard({ onClose }: { onClose: () => void }) {
     enabled: authed && tab === "stats",
     queryFn: async () => {
       const r = await fetch("/api/pebalaash/admin/stats", adminHeaders);
+      return r.json();
+    },
+  });
+
+  const { data: balloonStats, isLoading: loadingBalloon } = useQuery<BalloonAdminStats>({
+    queryKey: ["/api/pebalaash/admin/balloon-stats"],
+    enabled: authed && tab === "balloon",
+    refetchInterval: tab === "balloon" ? 30_000 : false,
+    queryFn: async () => {
+      const r = await fetch("/api/pebalaash/admin/balloon-stats", adminHeaders);
       return r.json();
     },
   });
@@ -168,9 +187,13 @@ export function AdminDashboard({ onClose }: { onClose: () => void }) {
         ) : (
           <>
             {/* Tabs */}
-            <div className="flex gap-2 p-4 border-b border-border/40 bg-black/20">
-              {([["products","Products",Package],["stats","Stats",BarChart2]] as any[]).map(([id,label,Icon]) => (
-                <button key={id} onClick={() => setTab(id)}
+            <div className="flex gap-2 p-4 border-b border-border/40 bg-black/20 flex-wrap">
+              {([
+                ["products", "Products",      Package],
+                ["stats",    "Stats",         BarChart2],
+                ["balloon",  "Balloon Points",Snowflake],
+              ] as [string, string, any][]).map(([id, label, Icon]) => (
+                <button key={id} onClick={() => setTab(id as any)}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${tab===id?"bg-blue-500/20 text-blue-300 border border-blue-500/40":"text-muted-foreground hover:text-foreground"}`}>
                   <Icon className="w-4 h-4"/>{label}
                 </button>
@@ -187,7 +210,6 @@ export function AdminDashboard({ onClose }: { onClose: () => void }) {
                   </Button>
                 </div>
 
-                {/* Inline form */}
                 {showForm && (
                   <div className="border border-blue-500/30 rounded-2xl bg-blue-500/5 p-5 space-y-4">
                     <h4 className="font-bold text-blue-300 flex items-center gap-2">
@@ -207,11 +229,11 @@ export function AdminDashboard({ onClose }: { onClose: () => void }) {
                         <Input type="number" min={1} value={formData.priceCodes} onChange={e => setField("priceCodes", e.target.value)}/>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs font-bold uppercase text-muted-foreground">Price (Silver) <span className="text-[10px] normal-case opacity-60">auto if blank</span></Label>
+                        <Label className="text-xs font-bold uppercase text-muted-foreground">Price (Silver)</Label>
                         <Input type="number" min={0} value={formData.priceSilver} onChange={e => setField("priceSilver", e.target.value)} placeholder="auto"/>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs font-bold uppercase text-muted-foreground">Price (Gold) <span className="text-[10px] normal-case opacity-60">auto if blank</span></Label>
+                        <Label className="text-xs font-bold uppercase text-muted-foreground">Price (Gold)</Label>
                         <Input type="number" min={0} value={formData.priceGold} onChange={e => setField("priceGold", e.target.value)} placeholder="auto"/>
                       </div>
                       <div className="space-y-1">
@@ -248,7 +270,6 @@ export function AdminDashboard({ onClose }: { onClose: () => void }) {
                   </div>
                 )}
 
-                {/* Product list */}
                 {loadingProducts ? (
                   <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-blue-400"/></div>
                 ) : (
@@ -274,8 +295,7 @@ export function AdminDashboard({ onClose }: { onClose: () => void }) {
                               <span className="text-yellow-300">🥇 {p.priceGold.toLocaleString()} gold</span>
                             </div>
                             <div className="mt-2 flex gap-3 text-[10px] text-muted-foreground">
-                              <span>📦 {p.stock} stock</span>
-                              <span>✅ {p.soldCount} sold</span>
+                              <span>📦 {p.stock} stock</span><span>✅ {p.soldCount} sold</span>
                               {p.avgRating ? <span>⭐ {p.avgRating.toFixed(1)}</span> : null}
                             </div>
                           </div>
@@ -304,7 +324,7 @@ export function AdminDashboard({ onClose }: { onClose: () => void }) {
                   <>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                       {[
-                        { label: "Total Orders",   value: stats.totalSold,          icon: Package,     color: "blue" },
+                        { label: "Total Orders",    value: stats.totalSold,          icon: Package,     color: "blue" },
                         { label: "Revenue (Codes)", value: stats.totalRevenueCodes.toLocaleString(), icon: TrendingUp, color: "green" },
                         { label: "Low Stock Items", value: stats.lowStockProducts.length, icon: AlertTriangle, color: "red" },
                         { label: "Products",        value: products.length,           icon: Globe,       color: "purple" },
@@ -341,6 +361,96 @@ export function AdminDashboard({ onClose }: { onClose: () => void }) {
                             <div className="text-right">
                               <p className="font-bold text-blue-300">{o.totalCodes} codes</p>
                               <p className="text-muted-foreground">{new Date(o.createdAt).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ── Balloon Points tab ───────────────────────────────────── */}
+            {tab === "balloon" && (
+              <div className="p-5 flex flex-col gap-5 flex-grow overflow-y-auto max-h-[75vh]">
+                {loadingBalloon ? (
+                  <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-blue-400"/></div>
+                ) : !balloonStats ? (
+                  <p className="text-center text-muted-foreground py-10">No balloon data yet.</p>
+                ) : (
+                  <>
+                    {/* Summary cards */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                      <div className="p-4 rounded-2xl border bg-cyan-500/5 border-cyan-500/20 space-y-1">
+                        <Snowflake className="w-5 h-5 text-cyan-400"/>
+                        <p className="text-2xl font-black">{balloonStats.totalEvents.toLocaleString()}</p>
+                        <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wide">Total Pops</p>
+                      </div>
+                      <div className="p-4 rounded-2xl border bg-yellow-500/5 border-yellow-500/20 space-y-1">
+                        <Sparkles className="w-5 h-5 text-yellow-400"/>
+                        <p className="text-2xl font-black">
+                          {balloonStats.topUsers.reduce((s, u) => s + u.totalPoints, 0).toLocaleString()}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wide">Total Points</p>
+                      </div>
+                      <div className="p-4 rounded-2xl border bg-green-500/5 border-green-500/20 space-y-1">
+                        <TrendingUp className="w-5 h-5 text-green-400"/>
+                        <p className="text-2xl font-black">{balloonStats.topUsers.length}</p>
+                        <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wide">Active Users</p>
+                      </div>
+                    </div>
+
+                    {/* Top users table */}
+                    <div>
+                      <h4 className="font-bold text-sm mb-3 flex items-center gap-2 text-cyan-300">
+                        <Snowflake className="w-4 h-4"/>Points Wallet — All Users
+                      </h4>
+                      <div className="rounded-2xl border border-border/40 overflow-hidden">
+                        <table className="w-full text-xs">
+                          <thead className="bg-black/30">
+                            <tr>
+                              <th className="text-left p-3 text-muted-foreground font-bold">#</th>
+                              <th className="text-left p-3 text-muted-foreground font-bold">User ID</th>
+                              <th className="text-right p-3 text-muted-foreground font-bold">Balloon Points</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {balloonStats.topUsers.length === 0 ? (
+                              <tr><td colSpan={3} className="p-6 text-center text-muted-foreground">No users yet</td></tr>
+                            ) : balloonStats.topUsers.map((u, i) => (
+                              <tr key={u.userId} className="border-t border-border/20 hover:bg-white/5">
+                                <td className="p-3 text-muted-foreground">{i + 1}</td>
+                                <td className="p-3 font-mono text-[10px] text-foreground">{u.userId.slice(0, 18)}…</td>
+                                <td className="p-3 text-right font-bold text-cyan-300">
+                                  ❄️ {u.totalPoints.toLocaleString()}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Recent activity feed */}
+                    <div>
+                      <h4 className="font-bold text-sm mb-3 flex items-center gap-2 text-muted-foreground">
+                        <TrendingUp className="w-4 h-4"/>Recent Balloon Activity
+                      </h4>
+                      <div className="space-y-2 max-h-72 overflow-y-auto">
+                        {balloonStats.recentActivity.length === 0 ? (
+                          <p className="text-center text-muted-foreground text-sm py-4">No activity yet</p>
+                        ) : balloonStats.recentActivity.map((log) => (
+                          <div key={log.id} className="flex justify-between items-center p-3 rounded-xl border border-border/40 bg-card/40 text-xs">
+                            <div>
+                              <p className="font-mono text-[10px] text-muted-foreground">{log.userId.slice(0,12)}…</p>
+                              <p className="text-muted-foreground mt-0.5">
+                                Option {log.optionKey ?? "?"} · {new Date(log.createdAt).toLocaleString()}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold text-green-400">+{log.amount} pts</p>
+                              <p className="text-muted-foreground">→ {log.newTotal} total</p>
                             </div>
                           </div>
                         ))}
