@@ -57,7 +57,13 @@
             const frame = document.getElementById('service-frame');
             const loader = document.getElementById('loader');
             const baseUrl = './pebalaash/dist/public/index.html';
+            // Safety net: hide spinner after 10s even if onload never fires
+            const loaderTimeout = setTimeout(() => {
+                loader.classList.add('hidden');
+                frame.classList.add('loaded');
+            }, 10000);
             frame.onload = () => {
+                clearTimeout(loaderTimeout);
                 setTimeout(() => {
                     if (frame.contentWindow) {
                         frame.contentWindow.postMessage({ type: 'auth:ready', source: 'pebalaash-loader', payload: authData?.payload || authData || {} }, '*');

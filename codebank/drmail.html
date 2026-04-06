@@ -683,6 +683,7 @@ async function openConv(id) {
 
   const url = IS_ADMIN ? `/api/drmail/admin/thread/${id}` : `/api/drmail/thread/${id}`
   const res = await apiFetch(url)
+  if (res.error === 'TIMEOUT') { panel.innerHTML = `<div style="padding:30px;color:var(--red)">⏱ Request timed out — check your connection and try again.</div>`; return }
   if (!res.ok) { panel.innerHTML = `<div style="padding:30px;color:var(--red)">Error loading thread.</div>`; return }
 
   const thread = res.thread
@@ -946,16 +947,25 @@ function pollUnread() {
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 async function apiFetch(url, method = 'GET', body = null) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 15000) // 15s timeout
   try {
     const opts = {
       method,
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal
     }
     if (body && method !== 'GET') opts.body = JSON.stringify(body)
     const r = await fetch(url, opts)
+    clearTimeout(timer)
     return await r.json()
   } catch (e) {
+    clearTimeout(timer)
+    if (e.name === 'AbortError') {
+      console.warn('[Dr.D-mail] request timed out:', url)
+      return { ok: false, error: 'TIMEOUT' }
+    }
     console.error('[Dr.D-mail] fetch error', url, e)
     return { ok: false, error: 'FETCH_ERROR' }
   }
