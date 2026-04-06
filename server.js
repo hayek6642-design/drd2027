@@ -331,7 +331,7 @@ cloudinary.v2.config({
 
 // [SECURITY] CRITICAL: CORS must be configured properly (from actly.md)
 app.use(cors({
-  origin: ['http://localhost:3001', 'http://127.0.0.1:3001', 'http://localhost:3000', 'http://127.0.0.1:3000'],
+  origin: function(origin, callback) { callback(null, true); }, // Allow all origins (Render + localhost)
   credentials: true,  // [SECURITY] CRITICAL: Allow cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
@@ -4954,7 +4954,7 @@ server.on('error', (e) => {
     setTimeout(() => {
       isRetrying = false;
       server.close();
-      server.listen(PORT);
+      server.listen(PORT, '0.0.0.0');
     }, 5000);
   } else {
     console.error('[CRASH] Server error:', e);
@@ -4963,7 +4963,7 @@ server.on('error', (e) => {
 
 // Port availability check & server start
 server.once('listening', async () => {
-  console.log(`[INFO] [SERVER] Ledger Absolutism active on http://localhost:${PORT}`);
+  console.log(`[INFO] [SERVER] Ledger Absolutism active on http://0.0.0.0:${PORT}`);
   
   // Apply DDL and start event processor
   try {
@@ -5013,7 +5013,7 @@ server.once('listening', async () => {
   }
 });
 
-server.listen(PORT);
+server.listen(PORT, '0.0.0.0');
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {

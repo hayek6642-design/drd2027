@@ -42,7 +42,7 @@ class AssetsCentralCore {
         this.startTransactionProcessor();
         
         const PORT = process.env.ACC_PORT || 3999;
-        this.server.listen(PORT, () => {
+        this.server.listen(PORT, '0.0.0.0', () => {
             console.log(`[ACC] Assets Central Core running on port ${PORT}`);
         });
     }
