@@ -928,7 +928,12 @@
                 
                 // Small delay then load
                 setTimeout(() => {
-                    modalIframe.src = serviceUrl;
+                    // 🔧 FIX: Append ?auth_origin= so iframe-auth-client.js detectParentOrigin()
+                    // Method 1 (URL param) always succeeds — prevents the about:blank referrer
+                    // poisoning that sets state.parentOrigin = 'null' and blocks AUTH_RESPONSE.
+                    const _svcUrl = new URL(serviceUrl, window.location.href);
+                    _svcUrl.searchParams.set('auth_origin', window.location.origin);
+                    modalIframe.src = _svcUrl.toString();
                     
                     // Setup load handler
                     modalIframe.onload = function() {
@@ -1039,7 +1044,11 @@
                     // 🔧 FIX: Comment out about:blank
                     // modalIframe.src = 'about:blank';
                     setTimeout(() => {
-                        modalIframe.src = currentServiceUrl;
+                        // 🔧 FIX: Append auth_origin on reload so iframe-auth-client.js
+                        // can always detect parent via URL param (prevents about:blank poisoning)
+                        const _reloadUrl = new URL(currentServiceUrl, window.location.href);
+                        _reloadUrl.searchParams.set('auth_origin', window.location.origin);
+                        modalIframe.src = _reloadUrl.toString();
                     }, 100);
                 }
             }
