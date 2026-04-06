@@ -15,8 +15,8 @@
 
 import { Router } from 'express'
 import { query } from '../config/db.js'
-import { authMiddleware } from '../middleware/auth.js'
-import { adminMiddleware } from '../middleware/admin.js'
+import { requireAuth } from '../middleware/auth.js'
+import { validateAdminSession } from '../middleware/admin.js'
 
 const router = Router()
 
@@ -126,7 +126,7 @@ function fmtBytes(b) {
 // ─── Routes ──────────────────────────────────────────────────────────────────
 
 // Full admin dashboard
-router.get('/', authMiddleware, adminMiddleware, async (req, res) => {
+router.get('/', validateAdminSession, async (req, res) => {
   try {
     maybeReset()
 
@@ -183,7 +183,7 @@ router.get('/', authMiddleware, adminMiddleware, async (req, res) => {
 })
 
 // Lightweight snapshot — use for health-check polling
-router.get('/snapshot', authMiddleware, adminMiddleware, (req, res) => {
+router.get('/snapshot', validateAdminSession, (req, res) => {
   maybeReset()
   const readPct  = (counters.reads  / PLAN.reads)  * 100
   const writePct = (counters.writes / PLAN.writes) * 100
