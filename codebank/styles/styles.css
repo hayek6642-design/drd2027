@@ -1290,3 +1290,69 @@ main {
 .btn:focus { outline: 2px solid #fff; outline-offset: 2px; }
 input:focus { outline: 2px solid #fff; outline-offset: 2px; }
 canvas:focus { outline: 2px solid #fff; outline-offset: 2px; }
+
+
+/* ============================================================
+   📱 PORTRAIT MOBILE — codebank styles.css responsive fixes
+============================================================ */
+
+/* Prevent horizontal overflow */
+html, body {
+    max-width: 100vw;
+    overflow-x: hidden;
+}
+
+/* Container: ensure no overflow on small screens */
+@media (max-width: 600px) {
+    .container {
+        padding: 0 10px !important;
+        max-width: 100vw !important;
+    }
+}
+
+/* Auth cards grid: stack vertically on mobile */
+@media (max-width: 768px) {
+    .auth-cards-grid {
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 1rem !important;
+    }
+    .auth-card {
+        width: 100% !important;
+        max-width: 360px !important;
+        height: auto !important;
+        min-height: unset !important;
+    }
+}
+
+/* Safe door: single column on all phones */
+@media (max-width: 600px) {
+    .safe-door {
+        grid-template-columns: 1fr !important;
+        grid-template-rows: auto auto !important;
+        width: 95% !important;
+    }
+    .safe-lock {
+        width: 240px !important;
+        height: 240px !important;
+        margin: 0 auto 10px !important;
+    }
+}
+
+/* e7ky chat layout: stack sidebar below on mobile */
+@media (max-width: 768px) {
+    #e7ky-contacts-sidebar {
+        width: 100% !important;
+    }
+}
+
+/* Fix any fixed-width elements that could overflow */
+@media (max-width: 480px) {
+    [style*="width: 520px"],
+    [style*="width:520px"] {
+        width: 95vw !important;
+        max-width: 95vw !important;
+    }
+}
+
+/* ============================================================ */

@@ -13,6 +13,9 @@
     "Keyboard": {
       "resize": "ionic",
       "style": "DARK"
+    },
+    "ScreenOrientation": {
+      "lockOrientation": "portrait"
     }
   },
   "server": {
@@ -34,10 +37,12 @@
     "allowMixedContent": true,
     "webContentsDebuggingEnabled": false,
     "backgroundColor": "#000000",
-    "appendUserAgent": "CodeBank-Android"
+    "appendUserAgent": "CodeBank-Android",
+    "screenOrientation": "portrait"
   },
   "ios": {
     "contentInset": "always",
-    "appendUserAgent": "CodeBank-iOS"
+    "appendUserAgent": "CodeBank-iOS",
+    "screenOrientation": "portrait"
   }
 }
