@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Coins, Package, ShoppingCart, Search, Menu,
-  Star, Zap, Clock, Flame, History, BadgeCheck, RefreshCw, Globe,
+  Star, Zap, Clock, Flame, History, BadgeCheck, RefreshCw, Globe, Gift,
 } from "lucide-react";
 import { AdminDashboard } from "@/components/AdminDashboard";
 import { IceOverlay } from "@/components/iceOverlay";
@@ -18,6 +18,7 @@ import { api, COUNTRIES } from "@shared/routes";
 import { CartPanel } from "@/components/CartPanel";
 import { MarqueeSection } from "@/components/MarqueeSection";
 import { z } from "zod";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -44,6 +45,13 @@ interface Order  {
   paymentType: PaymentType; amountPaid: number; priceCodes: number;
   status: string; createdAt: string;
 }
+interface WalletItem {
+  id: string; orderId: string; productId: number; productName: string;
+  imageUrl: string | null; status: string; fromGift: boolean;
+  gifterUsername: string | null; giftNote: string | null; acquiredAt: string;
+}
+interface UserSearchResult { id: string; username: string; avatarUrl: string | null; }
+
 interface CartItem      { product: Product; addedAt: Date; }
 interface PurchasedItem { id: number; productName: string; priceCodes: number; customerName: string; purchasedAt: Date; }
 interface FailedPurchase { productName: string; requiredCodes: number; availableCodes: number; attemptedAt: Date; }
@@ -107,6 +115,14 @@ export default function Pebalaash() {
   const [ratingValue,   setRatingValue]   = useState(0);
   const [ratingReview,  setRatingReview]  = useState("");
 
+  const [giftItem,          setGiftItem]          = useState<WalletItem | null>(null);
+  const [giftRecipientQ,    setGiftRecipientQ]    = useState("");
+  const [giftRecipient,     setGiftRecipient]     = useState<UserSearchResult | null>(null);
+  const [giftNote,          setGiftNote]          = useState("");
+  const [giftSearchResults, setGiftSearchResults] = useState<UserSearchResult[]>([]);
+  const [giftSearching,     setGiftSearching]     = useState(false);
+  const [giftSending,       setGiftSending]       = useState(false);
+
   const [cartItems,       setCartItems]       = useState<CartItem[]>([]);
   const [purchasedItems,  setPurchasedItems]  = useState<PurchasedItem[]>([]);
   const [failedPurchases, setFailedPurchases] = useState<FailedPurchase[]>([]);
@@ -159,6 +175,15 @@ export default function Pebalaash() {
     refetchInterval: 30_000,
   });
 
+  const { data: walletItems = [], isLoading: walletLoading, refetch: refetchWalletItems } = useQuery({
+    queryKey: ["/api/pebalaash/wallet-items"],
+    queryFn: async (): Promise<WalletItem[]> => {
+      const res = await fetch("/api/pebalaash/wallet-items", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch wallet items");
+      return res.json();
+    },
+  });
+
   const { data: ordersData, isLoading: isOrdersLoading } = useQuery({
     queryKey: ["/api/pebalaash/orders"],
     queryFn: async (): Promise<{ orders: Order[]; total: number }> => {
@@ -183,6 +208,42 @@ export default function Pebalaash() {
     setTitleClicks(next);
     if (next === 7) { setIsAdminOpen(true); setTitleClicks(0); }
     setTimeout(() => setTitleClicks(0), 2000);
+  };
+
+  // Gift search
+  const handleGiftSearch = async (q: string) => {
+    setGiftRecipientQ(q);
+    setGiftRecipient(null);
+    if (q.length < 2) { setGiftSearchResults([]); return; }
+    setGiftSearching(true);
+    try {
+      const res = await fetch(`/api/pebalaash/users/search?q=${encodeURIComponent(q)}`, { credentials: "include" });
+      if (res.ok) setGiftSearchResults(await res.json());
+    } catch (_) {}
+    finally { setGiftSearching(false); }
+  };
+
+  const handleSendGift = async () => {
+    if (!giftItem || !giftRecipient) return;
+    setGiftSending(true);
+    try {
+      const res = await fetch(`/api/pebalaash/wallet-items/${giftItem.id}/gift`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipientId: giftRecipient.id, giftNote: giftNote || undefined }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as any).message || "Gift failed");
+      }
+      const result = await res.json();
+      refetchWalletItems();
+      setGiftItem(null); setGiftRecipientQ(""); setGiftRecipient(null); setGiftNote(""); setGiftSearchResults([]);
+      toast({ title: "🎁 Gift Sent!", description: `${result.productName} was sent to ${giftRecipient.username}!` });
+    } catch (e) {
+      toast({ title: "Gift Failed", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+    } finally { setGiftSending(false); }
   };
 
   const handleAddToCart = (product: Product) => {
@@ -219,6 +280,7 @@ export default function Pebalaash() {
       setCartItems(prev => prev.filter(i => i.product.id !== selectedProduct.id));
       setIsSheetOpen(false); form.reset(); refetchWallet();
       queryClient.invalidateQueries({ queryKey: ["/api/pebalaash/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pebalaash/wallet-items"] });
       queryClient.invalidateQueries({ queryKey: [api.products.list.path, selectedCategoryId, selectedCountry] });
       toast({ title: "Purchase Successful!", description: `Bought ${selectedProduct.name} for ${result.amountPaid} ${PAYMENT_LABELS[paymentType]}.` });
       setTimeout(() => { setRatingProduct(selectedProduct); setRatingValue(0); setRatingReview(""); }, 1500);
@@ -555,11 +617,96 @@ export default function Pebalaash() {
             <SheetTitle className="font-display text-2xl gradient-text">Dashboard</SheetTitle>
             <SheetDescription>Orders &amp; Activity</SheetDescription>
           </SheetHeader>
-          <CartPanel cartItems={cartItems} purchasedItems={purchasedItems} failedPurchases={failedPurchases} onRemoveFromCart={handleRemoveFromCart} wallet={wallet}/>
+          <CartPanel
+            cartItems={cartItems}
+            purchasedItems={purchasedItems}
+            failedPurchases={failedPurchases}
+            walletItems={walletItems as WalletItem[]}
+            walletLoading={walletLoading}
+            onRemoveFromCart={handleRemoveFromCart}
+            onGiftItem={(item) => { setGiftItem(item); setGiftRecipientQ(""); setGiftRecipient(null); setGiftNote(""); setGiftSearchResults([]); }}
+            wallet={wallet}
+          />
         </SheetContent>
       </Sheet>
 
       {isAdminOpen && <AdminDashboard onClose={() => setIsAdminOpen(false)}/>}
+
+      {/* ── Gift Dialog ── */}
+      <Dialog open={!!giftItem} onOpenChange={(open) => { if (!open) setGiftItem(null); }}>
+        <DialogContent className="bg-card border border-pink-500/40 rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl font-bold text-pink-300 flex items-center gap-2">
+              <Gift className="w-5 h-5"/> Send as Gift 🎁
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground text-sm">
+              Gift <strong className="text-foreground">{giftItem?.productName}</strong> to another user
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            {/* Recipient search */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Recipient Username or Email</label>
+              <div className="relative">
+                <Input
+                  value={giftRecipientQ}
+                  onChange={e => handleGiftSearch(e.target.value)}
+                  placeholder="Search by username…"
+                  className="bg-background/50 border-border"
+                />
+                {giftSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground"/>}
+              </div>
+              {giftSearchResults.length > 0 && !giftRecipient && (
+                <div className="rounded-xl border border-border bg-card shadow-lg overflow-hidden">
+                  {giftSearchResults.map(u => (
+                    <button key={u.id} type="button"
+                      onClick={() => { setGiftRecipient(u); setGiftRecipientQ(u.username); setGiftSearchResults([]); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted/60 transition-colors text-left">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                        {u.avatarUrl
+                          ? <img src={u.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover"/>
+                          : u.username[0]?.toUpperCase()}
+                      </div>
+                      <span className="text-sm font-medium text-foreground">{u.username}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {giftRecipient && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-pink-500/10 border border-pink-500/30">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                    {giftRecipient.username[0]?.toUpperCase()}
+                  </div>
+                  <span className="text-sm font-bold text-pink-300">{giftRecipient.username}</span>
+                  <button type="button" onClick={() => { setGiftRecipient(null); setGiftRecipientQ(""); }} className="ml-auto text-muted-foreground hover:text-foreground text-xs">✕</button>
+                </div>
+              )}
+            </div>
+            {/* Gift note */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Gift Note (optional)</label>
+              <textarea
+                value={giftNote}
+                onChange={e => setGiftNote(e.target.value)}
+                placeholder="Write a short message…"
+                className="w-full min-h-20 bg-background/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:border-pink-500/50"
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button variant="ghost" className="flex-1" onClick={() => setGiftItem(null)} disabled={giftSending}>Cancel</Button>
+              <Button
+                className="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold border-0"
+                disabled={!giftRecipient || giftSending}
+                onClick={handleSendGift}
+              >
+                {giftSending ? <Loader2 className="w-4 h-4 mr-2 animate-spin"/> : <Gift className="w-4 h-4 mr-2"/>}
+                Send Gift
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <IceOverlay/>
     </div>
   );

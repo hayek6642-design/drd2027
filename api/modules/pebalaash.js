@@ -112,6 +112,26 @@ async function ensureSchema() {
     `, [])
   } catch (e) { console.error('[PEBALAASH] schema error (ratings):', e.message) }
 
+  // pebalaash_wallet_items — shipping wallet per user
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS pebalaash_wallet_items (
+        id           TEXT PRIMARY KEY,
+        user_id      TEXT NOT NULL,
+        order_id     TEXT NOT NULL,
+        product_id   INTEGER NOT NULL,
+        product_name TEXT NOT NULL,
+        image_url    TEXT,
+        status       TEXT NOT NULL DEFAULT 'pending',
+        from_gift    INTEGER NOT NULL DEFAULT 0,
+        gifted_from  TEXT,
+        gift_note    TEXT,
+        acquired_at  TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+        updated_at   TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+      )
+    `, [])
+  } catch (e) { console.error('[PEBALAASH] schema error (wallet_items):', e.message) }
+
   console.log('[PEBALAASH] Schema ready')
 }
 ensureSchema().catch(e => console.error('[PEBALAASH] schema init error:', e.message))
@@ -682,6 +702,19 @@ router.post('/checkout', requireAuth, async (req, res) => {
       return res.status(500).json({ message: 'Order registration failed — payment refunded' })
     }
 
+    // ── 6b. Insert into shipping wallet ────────────────────────────────────────
+    try {
+      const productImg = pr.rows[0]?.image_url || null
+      await query(
+        `INSERT INTO pebalaash_wallet_items
+           (id, user_id, order_id, product_id, product_name, image_url, status, from_gift, acquired_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,'pending',0,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`,
+        [crypto.randomUUID(), userId, orderId, Number(productId), product.name, productImg]
+      )
+    } catch (walletErr) {
+      console.warn('[PEBALAASH] wallet item insert failed (non-fatal):', walletErr.message)
+    }
+
     // ── 7. Fetch updated wallet for response ───────────────────────────────────
     let updatedWallet = { codes: 0, silver: 0, gold: 0 }
     try {
@@ -720,6 +753,159 @@ router.post('/checkout', requireAuth, async (req, res) => {
   } catch (e) {
     console.error('[PEBALAASH] checkout error:', e.message)
     res.status(500).json({ message: 'Transaction failed: ' + e.message })
+  }
+})
+
+// ─── Wallet Items ──────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/pebalaash/wallet-items
+ * Returns the authenticated user's items awaiting shipping (status=pending) + received gifts
+ */
+router.get('/wallet-items', requireAuth, async (req, res) => {
+  const userId = req.user.id
+  try {
+    const r = await query(
+      `SELECT w.id, w.user_id, w.order_id, w.product_id, w.product_name,
+              w.image_url, w.status, w.from_gift, w.gifted_from, w.gift_note, w.acquired_at,
+              up.username AS gifter_username
+         FROM pebalaash_wallet_items w
+         LEFT JOIN users_profiles up ON up.user_id = w.gifted_from
+        WHERE w.user_id=$1 AND w.status IN ('pending','received')
+        ORDER BY w.acquired_at DESC`,
+      [userId]
+    )
+    res.json(r.rows.map(row => ({
+      id:             row.id,
+      orderId:        row.order_id,
+      productId:      row.product_id,
+      productName:    row.product_name,
+      imageUrl:       row.image_url,
+      status:         row.status,
+      fromGift:       Number(row.from_gift) === 1,
+      gifterUsername: row.gifter_username || null,
+      giftNote:       row.gift_note || null,
+      acquiredAt:     row.acquired_at,
+    })))
+  } catch (e) {
+    console.error('[PEBALAASH] wallet-items GET error:', e.message)
+    res.status(500).json({ message: 'Failed to fetch wallet items' })
+  }
+})
+
+/**
+ * GET /api/pebalaash/users/search?q=
+ * Search users by username or email prefix for gift recipient lookup.
+ * Returns id + username + avatar — NO sensitive data.
+ */
+router.get('/users/search', requireAuth, async (req, res) => {
+  const q      = String(req.query.q || '').trim()
+  const selfId = req.user.id
+  if (q.length < 2) return res.json([])
+  try {
+    const r = await query(
+      `SELECT u.id, COALESCE(up.username, 'anonymous') AS username,
+              up.avatar_url
+         FROM users u
+         LEFT JOIN users_profiles up ON up.user_id = u.id
+        WHERE u.id != $1
+          AND (LOWER(COALESCE(up.username,'')) LIKE LOWER($2)
+               OR LOWER(u.email) LIKE LOWER($2))
+        LIMIT 10`,
+      [selfId, `%${q}%`]
+    )
+    res.json(r.rows.map(row => ({
+      id:        row.id,
+      username:  row.username,
+      avatarUrl: row.avatar_url || null,
+    })))
+  } catch (e) {
+    console.error('[PEBALAASH] users/search error:', e.message)
+    res.status(500).json({ message: 'Search failed' })
+  }
+})
+
+/**
+ * POST /api/pebalaash/wallet-items/:id/gift
+ * Body: { recipientId, giftNote? }
+ * Transfers a wallet item to another user's wallet.
+ */
+router.post('/wallet-items/:id/gift', requireAuth, async (req, res) => {
+  const itemId      = req.params.id
+  const senderId    = req.user.id
+  const { recipientId, giftNote } = req.body || {}
+
+  if (!recipientId) return res.status(400).json({ message: 'recipientId is required' })
+  if (recipientId === senderId) return res.status(400).json({ message: 'Cannot gift to yourself' })
+
+  try {
+    // 1. Verify the item belongs to sender and is pending
+    const itemRes = await query(
+      `SELECT * FROM pebalaash_wallet_items WHERE id=$1 AND user_id=$2 AND status='pending'`,
+      [itemId, senderId]
+    )
+    const item = itemRes.rows[0]
+    if (!item) return res.status(404).json({ message: 'Item not found or already shipped/gifted' })
+
+    // 2. Verify recipient exists
+    const recipRes = await query('SELECT id FROM users WHERE id=$1', [recipientId])
+    if (!recipRes.rows[0]) return res.status(404).json({ message: 'Recipient user not found' })
+
+    // 3. Mark sender's item as gifted
+    await query(
+      `UPDATE pebalaash_wallet_items
+          SET status='gifted', updated_at=CURRENT_TIMESTAMP
+        WHERE id=$1 AND user_id=$2`,
+      [itemId, senderId]
+    )
+
+    // 4. Insert new wallet item for recipient
+    const newItemId = crypto.randomUUID()
+    await query(
+      `INSERT INTO pebalaash_wallet_items
+         (id, user_id, order_id, product_id, product_name, image_url, status, from_gift, gifted_from, gift_note, acquired_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,'pending',1,$7,$8,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`,
+      [newItemId, recipientId, item.order_id, item.product_id, item.product_name, item.image_url, senderId, giftNote || null]
+    )
+
+    // 5. Get sender username for Dr.D-mail notification
+    let senderUsername = 'A user'
+    try {
+      const sr = await query('SELECT COALESCE(username,\'anonymous\') AS username FROM users_profiles WHERE user_id=$1', [senderId])
+      senderUsername = sr.rows[0]?.username || 'A user'
+    } catch (_) {}
+
+    // 6. Send Dr.D-mail notification to recipient (non-fatal)
+    try {
+      await query(
+        `INSERT INTO drmail_messages (id, sender_id, recipient_id, thread_id, subject, body, is_read, created_at)
+         VALUES ($1,'SYSTEM',$2,$3,$4,$5,0,CURRENT_TIMESTAMP)`,
+        [
+          crypto.randomUUID(),
+          recipientId,
+          crypto.randomUUID(),
+          '🎁 You received a Pebalaash gift!',
+          `${senderUsername} sent you **${item.product_name}** as a gift from Pebalaash!${giftNote ? `\n\n💌 Gift note: "${giftNote}"` : ''}\n\nCheck your Pebalaash Wallet to see your gift.`,
+        ]
+      )
+    } catch (mailErr) {
+      console.warn('[PEBALAASH] gift Dr.D-mail failed (non-fatal):', mailErr.message)
+    }
+
+    // 7. SSE notification (non-fatal)
+    try {
+      publishEvent('pebalaash', 'gift', {
+        recipientId,
+        senderId,
+        productName: item.product_name,
+        walletItemId: newItemId,
+      })
+    } catch (_) {}
+
+    res.json({ success: true, newWalletItemId: newItemId, productName: item.product_name })
+  } catch (e) {
+    console.error('[PEBALAASH] gift error:', e.message)
+    res.status(500).json({ message: 'Gift failed: ' + e.message })
   }
 })
 

@@ -78,6 +78,27 @@ export const api = {
       },
     },
   },
+  walletItems: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/pebalaash/wallet-items',
+      responses: { 200: z.array(z.any()) },
+    },
+    gift: {
+      method: 'POST' as const,
+      path: '/api/pebalaash/wallet-items/:id/gift',
+      input: z.object({ recipientId: z.string(), giftNote: z.string().optional() }),
+      responses: { 200: z.object({ success: z.boolean(), newWalletItemId: z.string(), productName: z.string() }) },
+    },
+  },
+  usersSearch: {
+    search: {
+      method: 'GET' as const,
+      path: '/api/pebalaash/users/search',
+      input: z.object({ q: z.string() }),
+      responses: { 200: z.array(z.any()) },
+    },
+  },
   admin: {
     stats: {
       method: 'GET' as const,

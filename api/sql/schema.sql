@@ -391,6 +391,24 @@ CREATE INDEX IF NOT EXISTS idx_drmail_sender     ON drmail_messages(sender_id);
 CREATE INDEX IF NOT EXISTS idx_drmail_thread     ON drmail_messages(thread_id);
 CREATE INDEX IF NOT EXISTS idx_drmail_read       ON drmail_messages(is_read);
 
+-- Pebalaash Wallet Items: tracks items pending shipping after purchase, and gifts
+CREATE TABLE IF NOT EXISTS pebalaash_wallet_items (
+  id           TEXT PRIMARY KEY,
+  user_id      TEXT NOT NULL,
+  order_id     TEXT NOT NULL,
+  product_id   INTEGER NOT NULL,
+  product_name TEXT NOT NULL,
+  image_url    TEXT,
+  status       TEXT NOT NULL DEFAULT 'pending',
+  from_gift    INTEGER NOT NULL DEFAULT 0,
+  gifted_from  TEXT,
+  gift_note    TEXT,
+  acquired_at  TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+  updated_at   TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+);
+CREATE INDEX IF NOT EXISTS idx_pb_wallet_user   ON pebalaash_wallet_items(user_id);
+CREATE INDEX IF NOT EXISTS idx_pb_wallet_status ON pebalaash_wallet_items(user_id, status);
+
 -- Pebalaash
 CREATE INDEX IF NOT EXISTS idx_pebalaash_orders_user ON pebalaash_orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_pebalaash_ratings_product ON pebalaash_ratings(product_id);
