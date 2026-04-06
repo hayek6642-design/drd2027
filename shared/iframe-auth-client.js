@@ -103,12 +103,19 @@
     }
 
     // Method 2: Referrer
-    if (document.referrer) {
+    // 🔧 FIX: Skip about:blank — its .origin is the string literal 'null', not a real origin.
+    // When an iframe is set from about:blank then src changes, document.referrer = 'about:blank'
+    // and new URL('about:blank').origin = 'null', poisoning state.parentOrigin with 'null'.
+    if (document.referrer && document.referrer !== 'about:blank') {
       try {
         const url = new URL(document.referrer);
-        state.parentOrigin = url.origin;
-        log('Parent origin from referrer:', state.parentOrigin);
-        return true;
+        const refOrigin = url.origin;
+        // Extra guard: skip the literal string 'null' (sandboxed/opaque origins)
+        if (refOrigin && refOrigin !== 'null') {
+          state.parentOrigin = refOrigin;
+          log('Parent origin from referrer:', state.parentOrigin);
+          return true;
+        }
       } catch(e) {
         warn('Invalid referrer:', document.referrer);
       }
@@ -145,7 +152,22 @@
   // ============================================
 
   function handleMessage(event) {
-    // SECURITY: Validate origin 
+    // 🔧 FIX: If parentOrigin is still unknown or was poisoned with the string 'null'
+    // (which happens when iframe starts as about:blank and referrer = 'about:blank'),
+    // learn the real parent origin from the first trusted auth message.
+    // This is the self-healing fallback so AUTH_RESPONSE is never silently ignored.
+    if ((!state.parentOrigin || state.parentOrigin === 'null') &&
+        event.origin && event.origin !== 'null') {
+      const _d = event.data;
+      if (_d && typeof _d === 'object' &&
+          (_d.type === 'AUTH_RESPONSE' || _d.type === 'AUTH_CHANGED' ||
+           _d.type === 'codebank:init'  || _d.type === 'auth:ready')) {
+        state.parentOrigin = event.origin;
+        log('Parent origin self-healed from first message:', state.parentOrigin);
+      }
+    }
+
+    // SECURITY: Validate origin
     if (event.origin !== state.parentOrigin) {
       // Silently ignore - could be messages from other origins
       return;
