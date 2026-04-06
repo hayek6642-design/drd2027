@@ -71,6 +71,17 @@
             return;
         }
 
+        // Guard: don't open a second connection while one is already open/connecting
+        if (_ws && (_ws.readyState === 0 /* CONNECTING */ || _ws.readyState === 1 /* OPEN */)) {
+            return;
+        }
+
+        // Clean up any stale socket before opening a new one
+        if (_ws) {
+            try { _ws.close(); } catch (_) {}
+            _ws = null;
+        }
+
         try {
             _ws = new WebSocket(_getWsUrl());
         } catch (e) {
@@ -138,8 +149,17 @@
                 break;
 
             case 'AUTH_FAILED':
-                _stopped = true;
                 console.warn('[ClientSM] Auth failed:', msg.reason);
+                // Don't permanently stop on first failure — server may have just restarted
+                // and briefly couldn't validate. Allow one delayed retry, then give up.
+                if (_reconnectCount < MAX_RECONNECT) {
+                    _reconnectCount = MAX_RECONNECT - 1; // one final attempt
+                    setTimeout(function() {
+                        if (!_stopped) { _reconnectCount = 0; _connect(); }
+                    }, 8000);
+                } else {
+                    _stopped = true;
+                }
                 break;
 
             case 'PING':
@@ -373,7 +393,11 @@
         // Re-connect on auth:changed (e.g. token refresh)
         window.addEventListener('auth:changed', function(e) {
             var d = (e && e.detail) || {};
-            if (d.authenticated && !_connected) _connect();
+            // Reset stopped state on auth:changed so a fresh connect can succeed
+            if (d.authenticated) {
+                if (_stopped) { _stopped = false; _reconnectCount = 0; }
+                if (!_connected) _connect();
+            }
         });
 
         // Clean up on page unload

@@ -210,13 +210,35 @@ const server = http.createServer(app);
 let wss = null;
 try {
   const { WebSocketServer } = await import('ws');
-  wss = new WebSocketServer({ server });
+  // Use noServer mode to manually route upgrades.
+  // This PREVENTS the raw WS server from intercepting Socket.IO connections
+  // at /ws, which caused corrupted frames → [WS-Session] errors → disconnects.
+  wss = new WebSocketServer({ noServer: true });
+
+  server.on('upgrade', (req, socket, head) => {
+    try {
+      const url = req.url || '/';
+      // Socket.IO uses /ws and /socket.io — let it handle those itself
+      if (url === '/ws' || url.startsWith('/ws/') || url.startsWith('/socket.io')) {
+        return; // Socket.IO will pick this up via its own upgrade listener
+      }
+      // All other WebSocket upgrades → session WS server
+      wss.handleUpgrade(req, socket, head, (ws) => {
+        wss.emit('connection', ws, req);
+      });
+    } catch (upgradeErr) {
+      console.error('[WS] Upgrade routing error:', upgradeErr && upgradeErr.message);
+      try { socket.destroy(); } catch (_) {}
+    }
+  });
+
   // Enhanced session-aware WebSocket handler
   setupSessionWebSocket(wss, {
     devSessions,
     query,
     sseEmit: __sseEmitToSession
   });
+  console.log('[WS] Session WebSocket server started (noServer mode, path-routed)');
 } catch (e) {
     try { console.warn('[WS] WebSocket unavailable:', e && e.message); } catch(err){ console.error('[WS] WebSocket error handling error:', err) }
   }
