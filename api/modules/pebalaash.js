@@ -1,16 +1,17 @@
 import { Router } from 'express'
 import crypto from 'crypto'
 import nodemailer from 'nodemailer'
-import { query, pool } from '../config/db.js'
+import { query } from '../config/db.js'
 import { requireRole } from '../middleware/admin.js'
 import { requireAuth } from '../middleware/auth.js'
+import { publishEvent } from './logicode.js'
 
 const router = Router()
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || 'dia201244@gmail.com'
 
-// Asset conversion rates (from bankode-core.js)
+// Asset conversion rates
 const CODES_PER_SILVER = 100    // 100 codes = 1 silver bar
 const CODES_PER_GOLD   = 10000  // 10,000 codes = 1 gold bar
 
@@ -23,48 +24,95 @@ const emailTransporter = nodemailer.createTransport({
   },
 })
 
-// ─── Startup: ensure all required columns & tables exist ──────────────────────
+// ─── Startup: ensure all required tables exist (Turso/libsql-compatible) ──────
 async function ensureSchema() {
-  // Silver / gold columns on balances.
-  // Turso/libsql does NOT support "ADD COLUMN IF NOT EXISTS" (PostgreSQL-only).
-  // We simply attempt the ALTER TABLE without IF NOT EXISTS and catch the
-  // "duplicate column" error silently on subsequent startups.
-  const alterCols = [
+  // categories
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS categories (
+        id         INTEGER PRIMARY KEY,
+        name       TEXT NOT NULL,
+        slug       TEXT NOT NULL UNIQUE,
+        created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+      )
+    `, [])
+  } catch (e) { console.error('[PEBALAASH] schema error (categories):', e.message) }
+
+  // products  ── TEXT timestamps, no PostgreSQL-specific types
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS products (
+        id           INTEGER PRIMARY KEY,
+        name         TEXT NOT NULL,
+        description  TEXT,
+        price_codes  INTEGER NOT NULL DEFAULT 0,
+        image_url    TEXT,
+        category_id  INTEGER,
+        stock        INTEGER NOT NULL DEFAULT 0,
+        sold_count   INTEGER NOT NULL DEFAULT 0,
+        avg_rating   REAL DEFAULT 0,
+        rating_count INTEGER DEFAULT 0,
+        country_code TEXT DEFAULT 'ALL',
+        created_at   TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+      )
+    `, [])
+  } catch (e) { console.error('[PEBALAASH] schema error (products):', e.message) }
+
+  // balances  ── stores silver/gold bars per user (codes live in user_rewards)
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS balances (
+        user_id      TEXT PRIMARY KEY,
+        codes_count  INTEGER NOT NULL DEFAULT 0,
+        silver_count INTEGER DEFAULT 0,
+        gold_count   INTEGER DEFAULT 0,
+        updated_at   TEXT DEFAULT (CURRENT_TIMESTAMP)
+      )
+    `, [])
+  } catch (e) { console.error('[PEBALAASH] schema error (balances):', e.message) }
+
+  // Add silver/gold columns if the table already existed without them
+  for (const sql of [
     `ALTER TABLE balances ADD COLUMN silver_count INTEGER DEFAULT 0`,
     `ALTER TABLE balances ADD COLUMN gold_count   INTEGER DEFAULT 0`,
-  ]
-  for (const sql of alterCols) {
-    try { await query(sql, [], { silent: true }) } catch (_) {}
+  ]) {
+    try { await query(sql, []) } catch (_) {} // silently ignore "column already exists"
   }
 
-  // Pebalaash orders table (stores full purchase history per user)
-  await query(`
-    CREATE TABLE IF NOT EXISTS pebalaash_orders (
-      id           TEXT PRIMARY KEY,
-      user_id      TEXT NOT NULL,
-      product_id   INTEGER NOT NULL,
-      product_name TEXT NOT NULL,
-      payment_type TEXT NOT NULL DEFAULT 'codes',
-      amount_paid  INTEGER NOT NULL,
-      price_codes  INTEGER NOT NULL,
-      status       TEXT NOT NULL DEFAULT 'completed',
-      customer_info JSONB,
-      created_at   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `, [])
+  // pebalaash_orders  ── TEXT instead of JSONB/TIMESTAMPTZ, INTEGER not SERIAL
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS pebalaash_orders (
+        id            TEXT PRIMARY KEY,
+        user_id       TEXT NOT NULL,
+        product_id    INTEGER NOT NULL,
+        product_name  TEXT NOT NULL,
+        payment_type  TEXT NOT NULL DEFAULT 'codes',
+        amount_paid   INTEGER NOT NULL,
+        price_codes   INTEGER NOT NULL,
+        status        TEXT NOT NULL DEFAULT 'completed',
+        customer_info TEXT,
+        created_at    TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+      )
+    `, [])
+  } catch (e) { console.error('[PEBALAASH] schema error (orders):', e.message) }
 
-  // Product ratings table
-  await query(`
-    CREATE TABLE IF NOT EXISTS pebalaash_ratings (
-      id         SERIAL PRIMARY KEY,
-      user_id    TEXT NOT NULL,
-      product_id INTEGER NOT NULL,
-      rating     INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
-      review     TEXT,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE (user_id, product_id)
-    )
-  `, [])
+  // pebalaash_ratings  ── INTEGER PRIMARY KEY (not SERIAL)
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS pebalaash_ratings (
+        id         INTEGER PRIMARY KEY,
+        user_id    TEXT NOT NULL,
+        product_id INTEGER NOT NULL,
+        rating     INTEGER NOT NULL,
+        review     TEXT,
+        created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+        UNIQUE (user_id, product_id)
+      )
+    `, [])
+  } catch (e) { console.error('[PEBALAASH] schema error (ratings):', e.message) }
+
+  console.log('[PEBALAASH] Schema ready')
 }
 ensureSchema().catch(e => console.error('[PEBALAASH] schema init error:', e.message))
 
@@ -275,7 +323,6 @@ router.get('/products/:id', async (req, res) => {
 
 // ─── Product Ratings ───────────────────────────────────────────────────────────
 
-/** GET /api/pebalaash/products/:id/ratings  — public */
 router.get('/products/:id/ratings', async (req, res) => {
   try {
     const productId = Number(req.params.id)
@@ -300,7 +347,6 @@ router.get('/products/:id/ratings', async (req, res) => {
   }
 })
 
-/** POST /api/pebalaash/products/:id/ratings  — authenticated */
 router.post('/products/:id/ratings', requireAuth, async (req, res) => {
   try {
     const productId = Number(req.params.id)
@@ -311,7 +357,6 @@ router.post('/products/:id/ratings', requireAuth, async (req, res) => {
       return res.status(400).json({ message: 'Rating must be between 1 and 5' })
     }
 
-    // Check the user actually bought this product
     const bought = await query(
       `SELECT 1 FROM pebalaash_orders WHERE user_id=$1 AND product_id=$2 AND status='completed' LIMIT 1`,
       [userId, productId]
@@ -320,12 +365,12 @@ router.post('/products/:id/ratings', requireAuth, async (req, res) => {
       return res.status(403).json({ message: 'You must purchase this product before rating it' })
     }
 
-    // Upsert rating
+    // Use EXCLUDED.* instead of numbered params in DO UPDATE (Turso-compatible)
     await query(
       `INSERT INTO pebalaash_ratings (user_id, product_id, rating, review)
        VALUES ($1, $2, $3, $4)
        ON CONFLICT (user_id, product_id)
-       DO UPDATE SET rating=$3, review=$4, created_at=CURRENT_TIMESTAMP`,
+       DO UPDATE SET rating=EXCLUDED.rating, review=EXCLUDED.review, created_at=CURRENT_TIMESTAMP`,
       [userId, productId, Number(rating), review || null]
     )
 
@@ -350,39 +395,48 @@ router.post('/products/:id/ratings', requireAuth, async (req, res) => {
 
 /**
  * GET /api/pebalaash/wallet
- * Returns all three asset balances: codes, silver, gold (ACC-linked).
+ * Codes come from user_rewards (the canonical ACC ledger).
+ * Silver & gold come from the balances table.
  */
 router.get('/wallet', requireAuth, async (req, res) => {
   const userId = req.user.id
   try {
-    const r = await query(
-      `SELECT codes_count,
-              COALESCE(silver_count, 0) AS silver_count,
-              COALESCE(gold_count,   0) AS gold_count
-         FROM balances WHERE user_id=$1`,
-      [userId]
-    )
-    const row = r.rows[0] || {}
-    res.json({
-      userId,
-      codes:  Number(row.codes_count)  || 0,
-      silver: Number(row.silver_count) || 0,
-      gold:   Number(row.gold_count)   || 0,
-    })
+    // DR.D Codes ── canonical balance in user_rewards (ACC-linked)
+    let codes = 0
+    try {
+      const r = await query('SELECT balance FROM user_rewards WHERE user_id=$1', [userId])
+      codes = Number(r.rows[0]?.balance) || 0
+    } catch (_) {
+      // Fallback: try balances.codes_count
+      try {
+        const r2 = await query('SELECT codes_count FROM balances WHERE user_id=$1', [userId])
+        codes = Number(r2.rows[0]?.codes_count) || 0
+      } catch (_) {}
+    }
+
+    // Silver & Gold bars
+    let silver = 0, gold = 0
+    try {
+      const r = await query(
+        `SELECT COALESCE(silver_count, 0) AS silver_count,
+                COALESCE(gold_count,   0) AS gold_count
+           FROM balances WHERE user_id=$1`,
+        [userId]
+      )
+      silver = Number(r.rows[0]?.silver_count) || 0
+      gold   = Number(r.rows[0]?.gold_count)   || 0
+    } catch (_) {}
+
+    res.json({ userId, codes, silver, gold })
   } catch (e) {
     console.error('[PEBALAASH] wallet error:', e.message)
-    try {
-      const r2 = await query('SELECT codes_count FROM balances WHERE user_id=$1', [userId])
-      res.json({ userId, codes: Number(r2.rows[0]?.codes_count) || 0, silver: 0, gold: 0 })
-    } catch {
-      res.status(500).json({ message: 'Failed to fetch wallet' })
-    }
+    res.status(500).json({ message: 'Failed to fetch wallet' })
   }
 })
 
 /**
  * GET /api/pebalaash/orders
- * Returns the authenticated user's order history (most recent first, paginated).
+ * Returns the authenticated user's order history.
  */
 router.get('/orders', requireAuth, async (req, res) => {
   const userId = req.user.id
@@ -427,11 +481,20 @@ router.get('/orders', requireAuth, async (req, res) => {
 
 /**
  * POST /api/pebalaash/checkout
+ *
  * Body: { productId, customerInfo, paymentType }
  *   paymentType: 'codes' | 'silver' | 'gold'  (default: 'codes')
+ *
+ * Flow:
+ *  1. Validate product & stock
+ *  2. Atomic balance deduction via WHERE balance >= price  (no pool/BEGIN/COMMIT)
+ *  3. Write audit record to reward_events  → Safe Code hears it
+ *  4. Fire SSE publishEvent('wealth','balance')  → ACC + all components hear it
+ *  5. Decrement stock
+ *  6. Insert pebalaash_orders with shipping info  → Turso persists it
+ *  7. Emails to admin + buyer
  */
 router.post('/checkout', requireAuth, async (req, res) => {
-  const client = await pool.connect()
   try {
     const { productId, customerInfo, paymentType = 'codes' } = req.body || {}
     const userId = req.user.id
@@ -443,91 +506,195 @@ router.post('/checkout', requireAuth, async (req, res) => {
       return res.status(400).json({ message: 'paymentType must be: codes, silver, or gold' })
     }
 
-    await client.query('BEGIN')
-
-    // 1. Fetch product
-    const pr = await client.query(
-      'SELECT id, name, price_codes, stock FROM products WHERE id=$1',
-      [productId]
-    )
+    // ── 1. Fetch product ────────────────────────────────────────────────────────
+    const pr = await query('SELECT id, name, price_codes, stock FROM products WHERE id=$1', [productId])
     const product = pr.rows[0]
-    if (!product) { await client.query('ROLLBACK'); return res.status(404).json({ message: 'Product not found' }) }
-    if (Number(product.stock) <= 0) { await client.query('ROLLBACK'); return res.status(400).json({ message: 'Out of stock' }) }
+    if (!product) return res.status(404).json({ message: 'Product not found' })
+    if (Number(product.stock) <= 0) return res.status(400).json({ message: 'Out of stock' })
 
-    // 2. Calculate price in chosen currency
     const priceCodes      = Number(product.price_codes)
     const priceInCurrency = getPriceInCurrency(priceCodes, paymentType)
+    const orderId         = crypto.randomUUID()
 
-    // 3. Fetch user balance
-    const balCol = paymentType === 'silver' ? 'COALESCE(silver_count,0)' :
-                   paymentType === 'gold'   ? 'COALESCE(gold_count,0)'   : 'codes_count'
-    const balRes = await client.query(
-      `SELECT ${balCol} AS balance FROM balances WHERE user_id=$1`,
-      [userId]
-    )
-    const currentBalance = Number(balRes.rows[0]?.balance) || 0
+    const spendMeta = {
+      type:        'pebalaash_purchase',
+      orderId,
+      productId:   Number(productId),
+      productName: product.name,
+      paymentType,
+      customerName: customerInfo?.name || '',
+    }
 
-    if (currentBalance < priceInCurrency) {
-      await client.query('ROLLBACK')
-      const typeLabel = paymentType === 'silver' ? 'Silver Bars' :
-                        paymentType === 'gold'   ? 'Gold Bars'   : 'DR.D Codes'
+    // ── 2. Atomic balance deduction ────────────────────────────────────────────
+    // Each DB engine (Turso/libsql, SQLite, PostgreSQL) processes a single UPDATE
+    // atomically.  We use "WHERE balance >= $1" as a compare-and-swap so the
+    // deduction only happens if funds are available — no BEGIN/COMMIT required.
+    let deductResult
+    if (paymentType === 'codes') {
+      // Codes live in user_rewards.balance (the canonical ACC ledger)
+      deductResult = await query(
+        `UPDATE user_rewards
+            SET balance = balance - $1, last_updated = CURRENT_TIMESTAMP
+          WHERE user_id=$2 AND balance >= $1`,
+        [priceInCurrency, userId]
+      )
+    } else if (paymentType === 'silver') {
+      deductResult = await query(
+        `UPDATE balances
+            SET silver_count = silver_count - $1
+          WHERE user_id=$2 AND COALESCE(silver_count, 0) >= $1`,
+        [priceInCurrency, userId]
+      )
+    } else {
+      deductResult = await query(
+        `UPDATE balances
+            SET gold_count = gold_count - $1
+          WHERE user_id=$2 AND COALESCE(gold_count, 0) >= $1`,
+        [priceInCurrency, userId]
+      )
+    }
+
+    // rowsAffected is 0 if the WHERE condition failed (insufficient balance)
+    const rowsAffected = deductResult?.rowsAffected ?? deductResult?.rowCount ?? (deductResult?.rows?.length ?? 1)
+    if (!rowsAffected || Number(rowsAffected) === 0) {
+      // Re-read actual balance for a helpful error message
+      let actualBalance = 0
+      try {
+        if (paymentType === 'codes') {
+          const r = await query('SELECT balance FROM user_rewards WHERE user_id=$1', [userId])
+          actualBalance = Number(r.rows[0]?.balance) || 0
+        } else {
+          const col = paymentType === 'silver' ? 'silver_count' : 'gold_count'
+          const r = await query(`SELECT COALESCE(${col}, 0) AS bal FROM balances WHERE user_id=$1`, [userId])
+          actualBalance = Number(r.rows[0]?.bal) || 0
+        }
+      } catch (_) {}
+      const typeLabel = paymentType === 'silver' ? 'Silver Bars' : paymentType === 'gold' ? 'Gold Bars' : 'DR.D Codes'
       return res.status(400).json({
-        message:     `Insufficient ${typeLabel} balance`,
-        required:    priceInCurrency,
-        available:   currentBalance,
+        message:   `Insufficient ${typeLabel} balance`,
+        required:  priceInCurrency,
+        available: actualBalance,
         paymentType,
       })
     }
 
-    // 4. Deduct balance
-    const balUpdateCol = paymentType === 'silver' ? 'silver_count' :
-                         paymentType === 'gold'   ? 'gold_count'   : 'codes_count'
-    await client.query(
-      `UPDATE balances SET ${balUpdateCol} = ${balUpdateCol} - $1 WHERE user_id=$2`,
-      [priceInCurrency, userId]
-    )
+    // ── 3. Audit trail in reward_events  (Safe Code reads this) ────────────────
+    try {
+      // Express amount in codes-equivalent for a uniform audit ledger
+      const codesEquivalent = paymentType === 'silver' ? priceInCurrency * CODES_PER_SILVER
+                            : paymentType === 'gold'   ? priceInCurrency * CODES_PER_GOLD
+                            : priceInCurrency
+      await query(
+        `INSERT INTO reward_events(id, user_id, amount, type, meta, created_at)
+         VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)`,
+        [
+          crypto.randomUUID(), userId, -codesEquivalent, 'asset',
+          JSON.stringify(spendMeta),
+        ]
+      )
+    } catch (auditErr) {
+      console.warn('[PEBALAASH] audit insert failed (non-fatal):', auditErr.message)
+    }
 
-    // 5. Decrement stock & increment sold_count
-    await client.query(
-      'UPDATE products SET stock = stock - 1, sold_count = sold_count + 1 WHERE id=$1',
-      [productId]
-    )
+    // ── 4. SSE broadcast  (ACC, Safe Code, and every subscribed component) ─────
+    try {
+      // Fetch the new balance for the event payload
+      let newBalance = 0
+      if (paymentType === 'codes') {
+        const r = await query('SELECT balance FROM user_rewards WHERE user_id=$1', [userId])
+        newBalance = Number(r.rows[0]?.balance) || 0
+      } else {
+        const col = paymentType === 'silver' ? 'silver_count' : 'gold_count'
+        const r = await query(`SELECT COALESCE(${col}, 0) AS bal FROM balances WHERE user_id=$1`, [userId])
+        newBalance = Number(r.rows[0]?.bal) || 0
+      }
+      publishEvent('wealth', 'balance', {
+        user_id:      userId,
+        delta:        -priceInCurrency,
+        source:       'pebalaash_purchase',
+        payment_type: paymentType,
+        order_id:     orderId,
+        product_name: product.name,
+        new_balance:  newBalance,
+      })
+    } catch (sseErr) {
+      console.warn('[PEBALAASH] SSE publish failed (non-fatal):', sseErr.message)
+    }
 
-    // 6. Create order record in pebalaash_orders
-    const orderId = crypto.randomUUID()
-    await client.query(
-      `INSERT INTO pebalaash_orders
-         (id, user_id, product_id, product_name, payment_type, amount_paid, price_codes, status, customer_info)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-      [
-        orderId, userId, productId, product.name,
-        paymentType, priceInCurrency, priceCodes,
-        'completed',
-        JSON.stringify(customerInfo),
-      ]
-    )
+    // ── 5. Decrement product stock ─────────────────────────────────────────────
+    try {
+      await query(
+        'UPDATE products SET stock = stock - 1, sold_count = sold_count + 1 WHERE id=$1',
+        [productId]
+      )
+    } catch (e) {
+      console.warn('[PEBALAASH] stock decrement failed (non-fatal):', e.message)
+    }
 
-    await client.query('COMMIT')
+    // ── 6. Register order in Turso with full shipping info ────────────────────
+    try {
+      await query(
+        `INSERT INTO pebalaash_orders
+           (id, user_id, product_id, product_name, payment_type,
+            amount_paid, price_codes, status, customer_info, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,CURRENT_TIMESTAMP)`,
+        [
+          orderId, userId, Number(productId), product.name, paymentType,
+          priceInCurrency, priceCodes, 'completed',
+          JSON.stringify(customerInfo),
+        ]
+      )
+    } catch (insertErr) {
+      console.error('[PEBALAASH] order record insert failed:', insertErr.message)
+      // Payment already deducted — attempt refund
+      try {
+        if (paymentType === 'codes') {
+          await query(
+            'UPDATE user_rewards SET balance = balance + $1 WHERE user_id=$2',
+            [priceInCurrency, userId]
+          )
+        } else {
+          const col = paymentType === 'silver' ? 'silver_count' : 'gold_count'
+          await query(
+            `UPDATE balances SET ${col} = ${col} + $1 WHERE user_id=$2`,
+            [priceInCurrency, userId]
+          )
+        }
+        // Fire refund SSE
+        try {
+          publishEvent('wealth', 'balance', {
+            user_id: userId, delta: priceInCurrency, source: 'pebalaash_refund', order_id: orderId,
+          })
+        } catch (_) {}
+      } catch (_) {}
+      return res.status(500).json({ message: 'Order registration failed — payment refunded' })
+    }
 
-    // 7. Fetch updated wallet
+    // ── 7. Fetch updated wallet for response ───────────────────────────────────
     let updatedWallet = { codes: 0, silver: 0, gold: 0 }
     try {
-      const upd = await query(
-        `SELECT codes_count, COALESCE(silver_count,0) AS silver_count, COALESCE(gold_count,0) AS gold_count
+      const cr = await query('SELECT balance FROM user_rewards WHERE user_id=$1', [userId])
+      updatedWallet.codes = Number(cr.rows[0]?.balance) || 0
+    } catch (_) {}
+    try {
+      const br = await query(
+        `SELECT COALESCE(silver_count,0) AS sc, COALESCE(gold_count,0) AS gc
            FROM balances WHERE user_id=$1`,
         [userId]
       )
-      const row = upd.rows[0] || {}
-      updatedWallet = {
-        codes:  Number(row.codes_count)  || 0,
-        silver: Number(row.silver_count) || 0,
-        gold:   Number(row.gold_count)   || 0,
-      }
-    } catch { /* non-fatal */ }
+      updatedWallet.silver = Number(br.rows[0]?.sc) || 0
+      updatedWallet.gold   = Number(br.rows[0]?.gc) || 0
+    } catch (_) {}
 
-    // 8. Send emails (non-blocking)
-    sendAdminOrderEmail({ orderId, userId, product: { name: product.name }, customer: customerInfo, paymentType, amountPaid: priceInCurrency })
-    sendBuyerConfirmationEmail({ orderId, product: { name: product.name }, customer: customerInfo, paymentType, amountPaid: priceInCurrency })
+    // ── 8. Emails (fire-and-forget) ────────────────────────────────────────────
+    sendAdminOrderEmail({
+      orderId, userId, product: { name: product.name },
+      customer: customerInfo, paymentType, amountPaid: priceInCurrency,
+    })
+    sendBuyerConfirmationEmail({
+      orderId, product: { name: product.name },
+      customer: customerInfo, paymentType, amountPaid: priceInCurrency,
+    })
 
     res.json({
       success:         true,
@@ -539,11 +706,8 @@ router.post('/checkout', requireAuth, async (req, res) => {
       remainingGold:   updatedWallet.gold,
     })
   } catch (e) {
-    await client.query('ROLLBACK')
     console.error('[PEBALAASH] checkout error:', e.message)
-    res.status(500).json({ message: 'Transaction failed' })
-  } finally {
-    client.release()
+    res.status(500).json({ message: 'Transaction failed: ' + e.message })
   }
 })
 
