@@ -85,7 +85,7 @@ export class DatabaseStorage implements IStorage {
     const payload = {
       ...product,
       priceSilver: product.priceSilver ?? Math.ceil((product.priceCodes ?? 0) / 100),
-      priceGold:   product.priceGold   ?? Math.ceil((product.priceCodes ?? 0) / 10000) || 1,
+      priceGold:   (product.priceGold   ?? Math.ceil((product.priceCodes ?? 0) / 10000)) || 1,
       countryCode: product.countryCode ?? "ALL",
     };
     const [p] = await db.insert(products).values(payload).returning();
