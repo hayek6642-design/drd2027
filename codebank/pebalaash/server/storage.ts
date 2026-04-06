@@ -1,10 +1,10 @@
 import { db } from "./db";
 import {
-  users, wallets, categories, products, orders, ratings,
-  type User, type Wallet, type Category, type Product, type Order,
-  type InsertProduct, type InsertCategory, type AdminStats
+  users, wallets, categories, products, orders, ratings, balloonLogs,
+  type User, type Wallet, type Category, type Product, type Order, type BalloonLog,
+  type InsertProduct, type InsertCategory, type AdminStats, type BalloonAdminStats,
 } from "@shared/schema";
-import { eq, sql, desc, and, isNull, or } from "drizzle-orm";
+import { eq, sql, desc, and, or } from "drizzle-orm";
 
 const GUEST_USER_ID = "550e8400-e29b-41d4-a716-446655440000";
 
@@ -12,7 +12,9 @@ export interface IStorage {
   getOrCreateGuestUser(): Promise<User>;
   getWallet(userId: string): Promise<Wallet | undefined>;
   updateWalletCodes(userId: string, newBalance: number): Promise<void>;
-  updateWalletField(userId: string, field: 'codes' | 'silver' | 'gold', newBalance: number): Promise<void>;
+  updateWalletField(userId: string, field: "codes"|"silver"|"gold"|"balloonPoints", newBalance: number): Promise<void>;
+  addBalloonPoints(userId: string, amount: number, optionKey?: string): Promise<number>;
+  getBalloonAdminStats(): Promise<BalloonAdminStats>;
   getCategories(): Promise<Category[]>;
   createCategory(category: InsertCategory): Promise<Category>;
   getProducts(categoryId?: number, countryCode?: string): Promise<Product[]>;
@@ -32,11 +34,10 @@ export class DatabaseStorage implements IStorage {
     let [user] = await db.select().from(users).where(eq(users.id, GUEST_USER_ID));
     if (!user) {
       [user] = await db.insert(users).values({ id: GUEST_USER_ID, username: "guest" }).returning();
-      await db.insert(wallets).values({ userId: GUEST_USER_ID, codes: 5000, silver: 0, gold: 0 });
+      await db.insert(wallets).values({ userId: GUEST_USER_ID, codes: 5000, silver: 0, gold: 0, balloonPoints: 0 });
     } else {
-      // ensure wallet exists
       const [w] = await db.select().from(wallets).where(eq(wallets.userId, GUEST_USER_ID));
-      if (!w) await db.insert(wallets).values({ userId: GUEST_USER_ID, codes: 5000, silver: 0, gold: 0 });
+      if (!w) await db.insert(wallets).values({ userId: GUEST_USER_ID, codes: 5000, silver: 0, gold: 0, balloonPoints: 0 });
     }
     return user;
   }
@@ -50,12 +51,70 @@ export class DatabaseStorage implements IStorage {
     await db.update(wallets).set({ codes: newBalance, updatedAt: new Date() }).where(eq(wallets.userId, userId));
   }
 
-  async updateWalletField(userId: string, field: 'codes' | 'silver' | 'gold', newBalance: number): Promise<void> {
+  async updateWalletField(userId: string, field: "codes"|"silver"|"gold"|"balloonPoints", newBalance: number): Promise<void> {
+    const colMap: Record<string,any> = {
+      codes:         wallets.codes,
+      silver:        wallets.silver,
+      gold:          wallets.gold,
+      balloonPoints: wallets.balloonPoints,
+    };
     const payload: any = { updatedAt: new Date() };
-    payload[field] = newBalance;
+    payload[field === "balloonPoints" ? "balloonPoints" : field] = newBalance;
     await db.update(wallets).set(payload).where(eq(wallets.userId, userId));
   }
 
+  // ── Balloon points ─────────────────────────────────────────────────────────
+  async addBalloonPoints(userId: string, amount: number, optionKey?: string): Promise<number> {
+    if (amount <= 0) {
+      const [w] = await db.select().from(wallets).where(eq(wallets.userId, userId));
+      return Number(w?.balloonPoints ?? 0);
+    }
+
+    // Atomically increment balloon_points
+    const [updated] = await db
+      .update(wallets)
+      .set({
+        balloonPoints: sql`${wallets.balloonPoints} + ${amount}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(wallets.userId, userId))
+      .returning({ balloonPoints: wallets.balloonPoints });
+
+    const newTotal = Number(updated?.balloonPoints ?? 0);
+
+    // Log the event
+    await db.insert(balloonLogs).values({ userId, amount, optionKey, newTotal });
+
+    return newTotal;
+  }
+
+  async getBalloonAdminStats(): Promise<BalloonAdminStats> {
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(balloonLogs);
+
+    // Top users by total points from wallets
+    const topUsers = await db
+      .select({ userId: wallets.userId, totalPoints: wallets.balloonPoints })
+      .from(wallets)
+      .orderBy(desc(wallets.balloonPoints))
+      .limit(20);
+
+    // Recent activity
+    const recentActivity = await db
+      .select()
+      .from(balloonLogs)
+      .orderBy(desc(balloonLogs.createdAt))
+      .limit(50);
+
+    return {
+      totalEvents: Number(count ?? 0),
+      topUsers: topUsers.map(u => ({ userId: u.userId, totalPoints: Number(u.totalPoints ?? 0) })),
+      recentActivity,
+    };
+  }
+
+  // ── Categories ─────────────────────────────────────────────────────────────
   async getCategories(): Promise<Category[]> {
     return await db.select().from(categories);
   }
@@ -65,6 +124,7 @@ export class DatabaseStorage implements IStorage {
     return c;
   }
 
+  // ── Products ───────────────────────────────────────────────────────────────
   async getProducts(categoryId?: number, countryCode?: string): Promise<Product[]> {
     let query = db.select().from(products).$dynamic();
     const conditions = [];
@@ -108,6 +168,7 @@ export class DatabaseStorage implements IStorage {
     }).where(eq(products.id, productId));
   }
 
+  // ── Orders ─────────────────────────────────────────────────────────────────
   async createOrder(orderData: any): Promise<Order> {
     const [o] = await db.insert(orders).values(orderData).returning();
     return o;
@@ -130,6 +191,7 @@ export class DatabaseStorage implements IStorage {
     .orderBy(desc(orders.createdAt));
   }
 
+  // ── Admin stats ────────────────────────────────────────────────────────────
   async getAdminStats(): Promise<AdminStats> {
     const allOrders = await db.select({
       id: orders.id, userId: orders.userId, productId: orders.productId,
@@ -139,9 +201,9 @@ export class DatabaseStorage implements IStorage {
     .from(orders).leftJoin(products, eq(orders.productId, products.id))
     .orderBy(desc(orders.createdAt)).limit(50);
 
-    const [{ count }]  = await db.select({ count: sql<number>`count(*)` }).from(orders);
-    const [{ sum }]    = await db.select({ sum: sql<number>`coalesce(sum(${orders.totalCodes}), 0)` }).from(orders);
-    const lowStock     = await db.select().from(products).where(sql`${products.stock} < 5`);
+    const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(orders);
+    const [{ sum }]   = await db.select({ sum: sql<number>`coalesce(sum(${orders.totalCodes}), 0)` }).from(orders);
+    const lowStock    = await db.select().from(products).where(sql`${products.stock} < 5`);
 
     return {
       totalSold: Number(count ?? 0),
@@ -151,11 +213,10 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
+  // ── Ratings ────────────────────────────────────────────────────────────────
   async addRating(productId: number, userId: string, rating: number, review?: string): Promise<void> {
-    // upsert: delete existing then insert
     await db.delete(ratings).where(and(eq(ratings.productId, productId), eq(ratings.userId, userId)));
     await db.insert(ratings).values({ productId, userId, rating, review });
-    // recalculate avg
     const [{ avg, cnt }] = await db.select({
       avg: sql<number>`avg(${ratings.rating})`,
       cnt: sql<number>`count(*)`,
