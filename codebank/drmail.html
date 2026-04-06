@@ -517,14 +517,33 @@
     ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 4px; }
+
+    /* ── Secret title click ───────────────────────────────────────── */
+    .topbar h1 {
+      cursor: default;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: color .12s;
+    }
+    .topbar h1.click-flash {
+      color: var(--accent);
+    }
+    @keyframes unlockPulse {
+      0%   { box-shadow: 0 0 0 0 rgba(99,102,241,0.6); }
+      70%  { box-shadow: 0 0 0 14px rgba(99,102,241,0); }
+      100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+    }
+    .topbar.unlocked {
+      animation: unlockPulse .5s ease-out;
+    }
   </style>
 </head>
 <body>
 
 <!-- TOP BAR -->
 <div class="topbar">
-  <span class="icon">✉️</span>
-  <h1>Dr.D-mail <span id="unread-badge" class="badge-dot">0</span></h1>
+  <span class="icon" onclick="handleTitleClick()" style="cursor:default;user-select:none">✉️</span>
+  <h1 id="mail-title" onclick="handleTitleClick()">Dr.D-mail <span id="unread-badge" class="badge-dot">0</span></h1>
   <span id="mode-tag" class="mode-tag user">User</span>
 </div>
 
@@ -582,18 +601,11 @@ async function init() {
     currentUser = me.user
     IS_ADMIN = (me.user.role === 'admin' || me.user.role === 'superadmin' || me.user.email?.toLowerCase() === 'dia201244@gmail.com')
 
+    // Always start in inbox view — admin mode requires the secret unlock
     const modeTag = document.getElementById('mode-tag')
-    if (IS_ADMIN) {
-      modeTag.textContent = 'Admin'
-      modeTag.className = 'mode-tag admin'
-      document.getElementById('compose-btn-wrap').style.display = 'flex'
-      document.getElementById('no-sel-text').textContent = 'Select a conversation or compose a new message'
-      await loadAdminData()
-    } else {
-      modeTag.textContent = 'Inbox'
-      modeTag.className = 'mode-tag user'
-      await loadUserInbox()
-    }
+    modeTag.textContent = 'Inbox'
+    modeTag.className = 'mode-tag user'
+    await loadUserInbox()
     pollUnread()
   } catch (e) {
     console.error('[Dr.D-mail] init error', e)
@@ -976,6 +988,64 @@ function timeAgo(iso) {
   if (diff < 86400) return `${Math.floor(diff/3600)}h ago`
   if (diff < 604800) return `${Math.floor(diff/86400)}d ago`
   return d.toLocaleDateString()
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Secret 7-click admin unlock on the mail title
+// ─────────────────────────────────────────────────────────────────────────────
+let _clickCount  = 0
+let _clickTimer  = null
+let _adminUnlocked = false
+
+function handleTitleClick() {
+  if (_adminUnlocked) return // already unlocked, ignore
+
+  _clickCount++
+
+  // Visual flash on each click
+  const title = document.getElementById('mail-title')
+  title.classList.add('click-flash')
+  setTimeout(() => title.classList.remove('click-flash'), 200)
+
+  // Reset window: clicks must be within 2.5 seconds of each other
+  if (_clickTimer) clearTimeout(_clickTimer)
+  _clickTimer = setTimeout(() => { _clickCount = 0 }, 2500)
+
+  if (_clickCount >= 7) {
+    _clickCount = 0
+    clearTimeout(_clickTimer)
+
+    if (IS_ADMIN) {
+      unlockAdminMode()
+    } else {
+      // Wrong user — silent denial, no hints
+      _clickCount = 0
+    }
+  }
+}
+
+async function unlockAdminMode() {
+  if (_adminUnlocked) return
+  _adminUnlocked = true
+
+  // Pulse the topbar
+  const bar = document.querySelector('.topbar')
+  bar.classList.add('unlocked')
+  setTimeout(() => bar.classList.remove('unlocked'), 600)
+
+  // Switch mode tag
+  const modeTag = document.getElementById('mode-tag')
+  modeTag.textContent = 'Admin'
+  modeTag.className = 'mode-tag admin'
+
+  // Show compose button
+  document.getElementById('compose-btn-wrap').style.display = 'flex'
+  document.getElementById('no-sel-text').textContent = 'Select a conversation or compose a new message'
+
+  showToast('🔓 Admin mode unlocked', 'success')
+
+  // Reload sidebar with all conversations
+  await loadAdminData()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
