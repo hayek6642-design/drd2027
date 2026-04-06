@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>لوحة إدارة النقاط — سري</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060d1a;
+    --card: #0d1e33;
+    --border: #1a3050;
+    --accent: #0072ff;
+    --accent2: #00c6ff;
+    --text: #e0eeff;
+    --muted: #5a7a9a;
+    --green: #00e676;
+    --red: #ff5252;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Cairo', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ── AUTH GATE ── */
+  #auth-gate {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh;
+    background: radial-gradient(ellipse at center, #0d1e33 0%, #060d1a 100%);
+  }
+  .auth-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px 36px;
+    width: 360px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  }
+  .auth-box h2 { font-size: 22px; font-weight: 900; margin-bottom: 6px; }
+  .auth-box p  { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+  .auth-box input {
+    width: 100%; padding: 12px 16px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: #0a1828;
+    color: var(--text); font-family: 'Cairo', sans-serif; font-size: 15px;
+    margin-bottom: 14px; outline: none;
+    transition: border-color .2s;
+  }
+  .auth-box input:focus { border-color: var(--accent); }
+  .auth-box button {
+    width: 100%; padding: 13px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff; font-family: 'Cairo', sans-serif; font-size: 16px;
+    font-weight: 700; border: none; cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0,114,255,.4);
+  }
+  #auth-error { color: var(--red); font-size: 13px; margin-top: 10px; }
+
+  /* ── DASHBOARD ── */
+  #dashboard { display: none; padding: 30px 20px 60px; max-width: 1100px; margin: 0 auto; }
+  .dash-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 30px; flex-wrap: wrap; gap: 12px;
+  }
+  .dash-header h1 { font-size: 26px; font-weight: 900; }
+  .dash-header h1 span { color: var(--accent2); }
+  #last-refresh { font-size: 12px; color: var(--muted); }
+
+  /* stat cards */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 16px; margin-bottom: 30px; }
+  .stat-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 20px 18px; text-align: center;
+  }
+  .stat-card .val { font-size: 34px; font-weight: 900; color: var(--accent2); }
+  .stat-card .lbl { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* table */
+  .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; }
+  .table-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px; border-bottom: 1px solid var(--border);
+  }
+  .table-header h3 { font-size: 16px; font-weight: 700; }
+  #searchInput {
+    padding: 8px 14px; border-radius: 8px; border: 1.5px solid var(--border);
+    background: #0a1828; color: var(--text); font-family: 'Cairo', sans-serif;
+    font-size: 13px; outline: none; width: 200px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { padding: 12px 16px; text-align: right; font-size: 12px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); }
+  td { padding: 13px 16px; border-bottom: 1px solid rgba(255,255,255,.04); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(0,114,255,.05); }
+  .pts-badge {
+    display: inline-block; padding: 4px 12px; border-radius: 50px;
+    background: linear-gradient(135deg, #003d80, #0060cc);
+    color: #fff; font-weight: 700; font-size: 13px;
+  }
+  .uid-cell { font-size: 11px; color: var(--muted); font-family: monospace; }
+  .no-data { text-align: center; padding: 40px; color: var(--muted); }
+
+  /* live dot */
+  .live-dot {
+    display: inline-block; width: 8px; height: 8px; background: var(--green);
+    border-radius: 50%; margin-left: 6px;
+    box-shadow: 0 0 6px var(--green);
+    animation: blink 1.5s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  /* recent events */
+  .events-section { margin-top: 28px; }
+  .events-section h3 { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
+  #eventsFeed { display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; }
+  .event-item {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 16px; display: flex; align-items: center; gap: 14px; font-size: 13px;
+  }
+  .event-pts { font-weight: 900; color: var(--green); min-width: 50px; }
+  .event-uid { color: var(--muted); font-size: 11px; font-family: monospace; flex: 1; }
+  .event-time { color: var(--muted); font-size: 11px; }
+
+  /* export btn */
+  #exportBtn {
+    padding: 9px 22px; border-radius: 10px;
+    background: var(--card); border: 1.5px solid var(--border);
+    color: var(--text); font-family: 'Cairo', sans-serif; font-size: 13px;
+    cursor: pointer; transition: border-color .2s;
+  }
+  #exportBtn:hover { border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- ── AUTH GATE ─────────────────────────────────────── -->
+<div id="auth-gate">
+  <div class="auth-box">
+    <h2>🔐 لوحة الإدارة السرية</h2>
+    <p>هذه الصفحة مخصصة للمدير فقط</p>
+    <input type="email" id="adminEmail" placeholder="البريد الإلكتروني" value="dia201244@gmail.com">
+    <input type="password" id="adminPass" placeholder="كلمة المرور" value="">
+    <button onclick="adminLogin()">دخول</button>
+    <p id="auth-error"></p>
+  </div>
+</div>
+
+<!-- ── DASHBOARD ──────────────────────────────────────── -->
+<div id="dashboard">
+  <div class="dash-header">
+    <h1>📊 إحصائيات النقاط <span>— بيبالاش</span> <span class="live-dot"></span></h1>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <span id="last-refresh">يتحدث تلقائياً</span>
+      <button id="exportBtn" onclick="exportCSV()">⬇ تصدير CSV</button>
+    </div>
+  </div>
+
+  <!-- Summary cards -->
+  <div class="stats-row">
+    <div class="stat-card"><div class="val" id="statUsers">—</div><div class="lbl">إجمالي المستخدمين</div></div>
+    <div class="stat-card"><div class="val" id="statTotalPts">—</div><div class="lbl">مجموع النقاط الكلي</div></div>
+    <div class="stat-card"><div class="val" id="statAvgPts">—</div><div class="lbl">متوسط النقاط</div></div>
+    <div class="stat-card"><div class="val" id="statEvents">—</div><div class="lbl">إجمالي العمليات</div></div>
+  </div>
+
+  <!-- Users table -->
+  <div class="table-wrap">
+    <div class="table-header">
+      <h3>محافظ نقاط المستخدمين</h3>
+      <input id="searchInput" placeholder="🔍 ابحث بـ UID..." oninput="filterTable()">
+    </div>
+    <table>
+      <thead><tr>
+        <th>#</th>
+        <th>معرف المستخدم (UID)</th>
+        <th>إجمالي النقاط</th>
+        <th>آخر تحديث</th>
+        <th>حالة الجليد</th>
+      </tr></thead>
+      <tbody id="usersTableBody"><tr><td colspan="5" class="no-data">جارٍ التحميل…</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- Recent events feed -->
+  <div class="events-section">
+    <h3>⚡ آخر العمليات (مباشر)</h3>
+    <div id="eventsFeed"><p class="no-data">لا توجد بيانات بعد</p></div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getAuth, signInWithEmailAndPassword, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import {
+    getFirestore, collectionGroup, collection,
+    query, orderBy, limit, onSnapshot, getDocs
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // ── Paste your Firebase config here (same as rest of project) ──
+  const firebaseConfig = window._firebaseConfig || {
+    // apiKey: "...",
+    // authDomain: "...",
+    // projectId: "...",
+  };
+
+  const app  = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  // ── Admin email (gate) ──────────────────────────────────────
+  const ADMIN_EMAIL = "dia201244@gmail.com";
+
+  window.adminLogin = async function() {
+    const email = document.getElementById("adminEmail").value.trim();
+    const pass  = document.getElementById("adminPass").value.trim();
+    const errEl = document.getElementById("auth-error");
+    errEl.textContent = "";
+    try {
+      const cred = await signInWithEmailAndPassword(auth, email, pass);
+      if (cred.user.email !== ADMIN_EMAIL) {
+        errEl.textContent = "⛔ غير مصرح لك بالدخول";
+        await auth.signOut();
+        return;
+      }
+      showDashboard();
+    } catch (e) {
+      errEl.textContent = "❌ بيانات خاطئة: " + e.message;
+    }
+  };
+
+  onAuthStateChanged(auth, (user) => {
+    if (user && user.email === ADMIN_EMAIL) showDashboard();
+  });
+
+  let allUsers = [];
+
+  async function showDashboard() {
+    document.getElementById("auth-gate").style.display = "none";
+    document.getElementById("dashboard").style.display = "block";
+    loadUsersWallets();
+    listenToRecentEvents();
+  }
+
+  // ── Load all users' wallets (collectionGroup query) ──────────
+  async function loadUsersWallets() {
+    try {
+      const snap = await getDocs(collectionGroup(db, "wallet"));
+      allUsers = [];
+      snap.forEach((doc) => {
+        if (doc.id === "points") {
+          const uid = doc.ref.parent.parent.id;
+          allUsers.push({ uid, ...doc.data() });
+        }
+      });
+      allUsers.sort((a, b) => (b.total || 0) - (a.total || 0));
+      renderTable(allUsers);
+      renderStats(allUsers);
+
+      // Auto-refresh every 60 s
+      setTimeout(loadUsersWallets, 60000);
+      document.getElementById("last-refresh").textContent =
+        "آخر تحديث: " + new Date().toLocaleTimeString("ar-EG");
+    } catch (e) {
+      console.error("loadUsersWallets:", e);
+    }
+  }
+
+  function iceLabel(pts) {
+    if (pts >= 300) return '<span style="color:#00e676">✅ ذاب الجليد</span>';
+    if (pts >= 225) return '<span style="color:#80ff80">🔥 75% ذوبان</span>';
+    if (pts >= 150) return '<span style="color:#ffcc00">💧 50% ذوبان</span>';
+    if (pts >= 75)  return '<span style="color:#80c4ff">❄ 25% ذوبان</span>';
+    return '<span style="color:#00c6ff">🧊 مجمّد</span>';
+  }
+
+  function renderTable(users) {
+    const tbody = document.getElementById("usersTableBody");
+    if (!users.length) { tbody.innerHTML = '<tr><td colspan="5" class="no-data">لا يوجد مستخدمون بعد</td></tr>'; return; }
+    tbody.innerHTML = users.map((u, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td class="uid-cell">${u.uid}</td>
+        <td><span class="pts-badge">${u.total || 0} نقطة</span></td>
+        <td>${u.lastUpdated?.toDate ? u.lastUpdated.toDate().toLocaleString("ar-EG") : "—"}</td>
+        <td>${iceLabel(u.total || 0)}</td>
+      </tr>
+    `).join("");
+  }
+
+  function renderStats(users) {
+    const totals = users.map(u => u.total || 0);
+    const sum    = totals.reduce((a, b) => a + b, 0);
+    document.getElementById("statUsers").textContent   = users.length;
+    document.getElementById("statTotalPts").textContent = sum.toLocaleString();
+    document.getElementById("statAvgPts").textContent  = users.length ? Math.round(sum / users.length) : 0;
+  }
+
+  // ── Live events feed ──────────────────────────────────────────
+  function listenToRecentEvents() {
+    const q = query(collection(db, "adminPointsStats"), orderBy("ts", "desc"), limit(30));
+    onSnapshot(q, (snap) => {
+      document.getElementById("statEvents").textContent = snap.size + "+";
+      const feed = document.getElementById("eventsFeed");
+      if (snap.empty) { feed.innerHTML = '<p class="no-data">لا توجد أحداث بعد</p>'; return; }
+      feed.innerHTML = snap.docs.map(doc => {
+        const d  = doc.data();
+        const ts = d.ts?.toDate ? d.ts.toDate().toLocaleTimeString("ar-EG") : "—";
+        return `<div class="event-item">
+          <span class="event-pts">+${d.amount}</span>
+          <span class="event-uid">${d.uid}</span>
+          <span style="color:var(--muted);font-size:12px">${d.reason}</span>
+          <span class="event-time">${ts}</span>
+        </div>`;
+      }).join("");
+    });
+  }
+
+  // ── Table search ──────────────────────────────────────────────
+  window.filterTable = function() {
+    const q = document.getElementById("searchInput").value.toLowerCase();
+    renderTable(allUsers.filter(u => u.uid.toLowerCase().includes(q)));
+  };
+
+  // ── CSV Export ────────────────────────────────────────────────
+  window.exportCSV = function() {
+    const rows = [["UID", "النقاط", "آخر تحديث"]];
+    allUsers.forEach(u => {
+      const ts = u.lastUpdated?.toDate ? u.lastUpdated.toDate().toISOString() : "";
+      rows.push([u.uid, u.total || 0, ts]);
+    });
+    const csv  = rows.map(r => r.join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const a    = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: "pebalaash_points.csv" });
+    a.click();
+  };
+</script>
+</body>
+</html>
