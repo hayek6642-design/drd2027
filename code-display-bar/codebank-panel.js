@@ -5,11 +5,7 @@
     'use strict';
     
     // CodeBank side panel functionality
-       // FIX: Track retry attempts to avoid infinite retries
-       var __cbPanelRetries = 0;
-       var __cbPanelMaxRetries = 5;
-       
-       function initCodeBankPanel() {
+    function initCodeBankPanel() {
         const panel = document.getElementById('codebank-panel');
         const toggleBtn = document.getElementById('codebank-toggle');
         const closeBtn = document.getElementById('codebank-close');
@@ -22,7 +18,6 @@
             // Panel elements not present on this page — skip silently
             return;
         }
-        __cbPanelRetries = 0; // Reset on success
         
         toggleBtn.addEventListener('click', () => {
             const willOpen = !panel.classList.contains('active');
