@@ -916,7 +916,11 @@ router.post('/wallet-items/:id/gift', requireAuth, async (req, res) => {
  * Create a new product (admin only)
  * Body: { name, description, price_codes, image_url, category_id, stock, country_code }
  */
-router.post('/admin/products', validateAdminSession, async (req, res) => {
+router.post('/admin/products', requireAuth, async (req, res) => {
+  // Allow only the owner account or any user with role=admin/superadmin
+  if (req.user.email !== 'dia201244@gmail.com' && !['admin','superadmin'].includes(req.user.role)) {
+    return res.status(403).json({ ok: false, error: 'FORBIDDEN' })
+  }
   try {
     const { name, description = '', price_codes, image_url = '', category_id = null, stock = 10, country_code = 'ALL' } = req.body || {}
     if (!name || price_codes == null) return res.status(400).json({ ok: false, error: 'name and price_codes required' })
@@ -938,7 +942,10 @@ router.post('/admin/products', validateAdminSession, async (req, res) => {
  * Add balance (codes) to a user for testing purposes (admin only)
  * Body: { amount }
  */
-router.post('/admin/users/:userId/credit', validateAdminSession, async (req, res) => {
+router.post('/admin/users/:userId/credit', requireAuth, async (req, res) => {
+  if (req.user.email !== 'dia201244@gmail.com' && !['admin','superadmin'].includes(req.user.role)) {
+    return res.status(403).json({ ok: false, error: 'FORBIDDEN' })
+  }
   try {
     const { userId } = req.params
     const { amount } = req.body || {}
