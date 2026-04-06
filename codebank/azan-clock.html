@@ -383,8 +383,11 @@
     <div class="container">
         <div class="header">
             <h1>Prayer Clock & Azan Alarm</h1>
-            <div class="date" id="date">--</div>
+            <div class="date" id="date-gregorian">📅 --</div>
+            <div class="date" id="date-hijri" style="color:#FFD700;font-size:0.95rem;">☽ --</div>
+            <div class="date" id="location-display" style="color:#aaa;font-size:0.85rem;margin-top:4px;">📍 Detecting location...</div>
             <div class="clock" id="clock">--:--:--</div>
+            <button id="gps-improve-btn" onclick="requestBrowserGPS()" style="display:none;margin-top:8px;padding:6px 16px;border-radius:20px;border:1px solid rgba(255,215,0,0.4);background:rgba(255,215,0,0.1);color:#FFD700;cursor:pointer;font-size:0.8rem;">📍 Improve accuracy with GPS</button>
         </div>
 
         <div class="alarm-section">
@@ -461,7 +464,22 @@
             const dateStr = now.toDateString();
             
             document.getElementById("clock").textContent = timeStr;
-            document.getElementById("date").textContent = dateStr;
+            // Gregorian date (locale-aware)
+            document.getElementById("date-gregorian").textContent = "📅 " + now.toLocaleDateString(undefined, {weekday:"long",year:"numeric",month:"long",day:"numeric"});
+            // Hijri date via Intl (no external lib needed)
+            try {
+                const hijri = new Intl.DateTimeFormat("en-TN-u-ca-islamic-umalqura", {
+                    day:"numeric", month:"long", year:"numeric"
+                }).format(now);
+                document.getElementById("date-hijri").textContent = "☽ " + hijri;
+            } catch(e) {
+                try {
+                    const hijri2 = new Intl.DateTimeFormat("en-u-ca-islamic", {
+                        day:"numeric", month:"long", year:"numeric"
+                    }).format(now);
+                    document.getElementById("date-hijri").textContent = "☽ " + hijri2;
+                } catch(e2) {}
+            }
         }
         setInterval(updateClock, 1000);
         updateClock();
@@ -743,57 +761,143 @@ document.querySelectorAll('.prayer-item').forEach((item, idx) => {
             }
         });
 
-        // Get location and handle prayer times
-function getLocationAndPrayerTimes() {
-    // Function to save coordinates
-    function saveCoordinates(lat, lng) {
-        localStorage.setItem('userLat', lat.toString());
-        localStorage.setItem('userLng', lng.toString());
-        localStorage.setItem('locationSaved', 'true');
+        // ── Location Engine ──────────────────────────────────────────────
+// Priority: 1) cached GPS  2) IP geolocation (instant)  3) browser GPS prompt
+// IP geo uses ip-api.com (free, ~300ms, no key needed)
+
+function saveLocation(lat, lng, city, country, source) {
+    localStorage.setItem('userLat', String(lat));
+    localStorage.setItem('userLng', String(lng));
+    localStorage.setItem('userCity', city || '');
+    localStorage.setItem('userCountry', country || '');
+    localStorage.setItem('locationSource', source || 'ip');
+    localStorage.setItem('locationSavedDate', new Date().toDateString());
+}
+
+function showLocation(city, country, source) {
+    const el = document.getElementById('location-display');
+    if (!el) return;
+    const src = source === 'gps' ? '🎯' : source === 'ip' ? '🌐' : '📍';
+    el.textContent = (city && country) ? `${src} ${city}, ${country}` :
+                     city ? `${src} ${city}` : `${src} Location detected`;
+}
+
+async function detectLocationByIP() {
+    // Try ip-api.com first (no HTTPS on free tier, use https version)
+    const apis = [
+        'https://ipwho.is/',
+        'https://ipapi.co/json/'
+    ];
+    for (const url of apis) {
+        try {
+            const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+            if (!res.ok) continue;
+            const d = await res.json();
+            // ipwho.is format
+            const lat  = d.latitude  ?? d.lat;
+            const lng  = d.longitude ?? d.lon;
+            const city = d.city;
+            const country = d.country_name ?? d.country;
+            if (lat && lng) return { lat, lng, city, country };
+        } catch(e) { /* try next */ }
     }
+    return null;
+}
 
-    // Check if location is already saved
-    const locationSaved = localStorage.getItem('locationSaved') === 'true';
-    const savedLat = localStorage.getItem('userLat');
-    const savedLng = localStorage.getItem('userLng');
+async function getLocationAndPrayerTimes() {
+    // 1) Use cached GPS coords if fresh (same day)
+    const cachedDate = localStorage.getItem('locationSavedDate');
+    const todayStr   = new Date().toDateString();
+    const src        = localStorage.getItem('locationSource');
+    const savedLat   = parseFloat(localStorage.getItem('userLat'));
+    const savedLng   = parseFloat(localStorage.getItem('userLng'));
+    const savedCity  = localStorage.getItem('userCity') || '';
+    const savedCntry = localStorage.getItem('userCountry') || '';
 
-    if (locationSaved && savedLat && savedLng) {
-        // Use saved coordinates without asking permission again
-        getPrayerTimes(parseFloat(savedLat), parseFloat(savedLng));
+    if (cachedDate === todayStr && savedLat && savedLng) {
+        showLocation(savedCity, savedCntry, src || 'cache');
+        // Show GPS improve button only if location came from IP
+        if (src !== 'gps') {
+            const btn = document.getElementById('gps-improve-btn');
+            if (btn) btn.style.display = 'inline-block';
+        }
+        getPrayerTimes(savedLat, savedLng);
         return;
     }
 
-    // Check URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const lat = urlParams.get('lat');
-    const lng = urlParams.get('lng');
-    if (lat && lng) {
-        saveCoordinates(lat, lng);
-        getPrayerTimes(parseFloat(lat), parseFloat(lng));
+    // 2) Try IP geolocation (instant, no permission popup)
+    document.getElementById('location-display').textContent = '🌐 Detecting location...';
+    const ipLoc = await detectLocationByIP();
+    if (ipLoc) {
+        saveLocation(ipLoc.lat, ipLoc.lng, ipLoc.city, ipLoc.country, 'ip');
+        showLocation(ipLoc.city, ipLoc.country, 'ip');
+        // Offer GPS upgrade silently
+        const btn = document.getElementById('gps-improve-btn');
+        if (btn) btn.style.display = 'inline-block';
+        getPrayerTimes(ipLoc.lat, ipLoc.lng);
         return;
     }
 
-    // Ask for geolocation only once if not already saved
+    // 3) Fallback: browser GPS prompt
     if (navigator.geolocation) {
+        document.getElementById('location-display').textContent = '📍 Requesting GPS...';
         navigator.geolocation.getCurrentPosition(
-            function(position) {
-                const { latitude, longitude } = position.coords;
-                saveCoordinates(latitude, longitude);
-                getPrayerTimes(latitude, longitude);
+            pos => {
+                const { latitude: lat, longitude: lng } = pos.coords;
+                saveLocation(lat, lng, '', '', 'gps');
+                reverseGeocode(lat, lng).then(loc => {
+                    saveLocation(lat, lng, loc.city, loc.country, 'gps');
+                    showLocation(loc.city, loc.country, 'gps');
+                });
+                getPrayerTimes(lat, lng);
             },
-            function(error) {
-                console.log('Geolocation error:', error);
-                // Save Mecca coordinates as fallback
-                saveCoordinates(21.4225, 39.8262);
+            () => {
+                // Ultimate fallback: Mecca
+                saveLocation(21.4225, 39.8262, 'Mecca', 'Saudi Arabia', 'default');
+                showLocation('Mecca', 'Saudi Arabia', 'default');
                 getPrayerTimes(21.4225, 39.8262);
             },
-            { maximumAge: Infinity } // Use cached position if available
+            { timeout: 10000, maximumAge: 60000 }
         );
     } else {
-        // Save Mecca coordinates as fallback
-        saveCoordinates(21.4225, 39.8262);
+        saveLocation(21.4225, 39.8262, 'Mecca', 'Saudi Arabia', 'default');
+        showLocation('Mecca', 'Saudi Arabia', 'default');
         getPrayerTimes(21.4225, 39.8262);
     }
+}
+
+async function reverseGeocode(lat, lng) {
+    try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`, {
+            signal: AbortSignal.timeout(5000),
+            headers: { 'Accept-Language': 'en' }
+        });
+        const d = await res.json();
+        return {
+            city: d.address?.city || d.address?.town || d.address?.village || d.address?.county || '',
+            country: d.address?.country || ''
+        };
+    } catch(e) { return { city: '', country: '' }; }
+}
+
+// GPS improve button handler
+function requestBrowserGPS() {
+    const btn = document.getElementById('gps-improve-btn');
+    if (btn) { btn.textContent = '⏳ Getting GPS...'; btn.disabled = true; }
+    if (!navigator.geolocation) { if (btn) { btn.style.display='none'; } return; }
+    navigator.geolocation.getCurrentPosition(
+        pos => {
+            const { latitude: lat, longitude: lng } = pos.coords;
+            if (btn) btn.style.display = 'none';
+            reverseGeocode(lat, lng).then(loc => {
+                saveLocation(lat, lng, loc.city, loc.country, 'gps');
+                showLocation(loc.city, loc.country, 'gps');
+                getPrayerTimes(lat, lng);
+            });
+        },
+        () => { if (btn) { btn.textContent = '📍 Improve accuracy with GPS'; btn.disabled = false; } },
+        { timeout: 10000, enableHighAccuracy: true }
+    );
 }
 
 // Initialize as soon as the page loads
