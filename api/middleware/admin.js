@@ -13,7 +13,7 @@ export async function validateAdminSession(req, res, next) {
     const token = authHeader.slice(7) // Remove 'Bearer ' prefix
     const session = await query('SELECT * FROM auth_sessions WHERE token = $1 AND expires_at > NOW()', [token])
 
-    if (session.rowCount === 0) {
+    if (!session.rows || session.rows.length === 0) {
       return res.status(401).json({ ok: false, error: 'INVALID_SESSION' })
     }
 
@@ -70,7 +70,7 @@ export function requireGateValid() {
       if (!req.user) return res.status(401).json({ ok: false, error: 'UNAUTHORIZED' })
       
       const r = await query('SELECT 1 FROM bankode_password_sessions WHERE user_id=$1 AND expires_at > now() ORDER BY created_at DESC LIMIT 1', [req.user.clerkUserId])
-      if (!r.rowCount) return res.status(403).json({ ok: false, error: 'GATE_REQUIRED' })
+      if (!r.rows || r.rows.length === 0) return res.status(403).json({ ok: false, error: 'GATE_REQUIRED' })
       next()
     } catch (e) {
       return res.status(500).json({ ok: false, error: 'ADMIN_INTERNAL_ERROR' })
