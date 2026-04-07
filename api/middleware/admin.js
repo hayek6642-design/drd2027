@@ -19,7 +19,8 @@ export async function validateAdminSession(req, res, next) {
     if (dotIdx > 0) {
       const ts = rawToken.slice(0, dotIdx)
       const sig = rawToken.slice(dotIdx + 1)
-      const expected = (await import('crypto')).default.createHmac('sha256', SECRET).update(ts).digest('hex')
+      const _cryptoMod = (await import('crypto')).default || (await import('crypto'))
+      const expected = _cryptoMod.createHmac('sha256', SECRET).update(ts).digest('hex')
       const age = Date.now() - parseInt(ts, 10)
       const TOKEN_TTL = 24 * 60 * 60 * 1000 // 24 hours
       if (expected === sig && age >= 0 && age < TOKEN_TTL) {

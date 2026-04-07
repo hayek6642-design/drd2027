@@ -606,9 +606,9 @@ router.post('/send-by-email', requireRole('admin'), async (req, res) => {
     return res.status(400).json({ ok: false, error: 'INVALID_ASSET' })
   }
   try {
-    const userRes = await query('SELECT id FROM users WHERE email=$1 LIMIT 1', [email])
+    const userRes = await query(`SELECT id FROM users WHERE LOWER(email)=LOWER($1) LIMIT 1`, [String(email).trim()])
     if (userRes.rowCount === 0) {
-      return res.status(404).json({ ok: false, error: 'USER_NOT_FOUND', message: `No user found with email: ${email}` })
+      return res.status(404).json({ ok: false, error: 'USER_NOT_FOUND', message: `No user found with email: ${email}. Check the email is correct and the user has signed up.` })
     }
     const userId = userRes.rows[0].id
     const col = assetType === 'codes' ? 'codes_count' : assetType === 'silver' ? 'silver_count' : 'gold_count'
