@@ -923,7 +923,18 @@ function openViewer(svc) {
 
   frame.onload = () => {
     loader.classList.add('hidden');
-    // If we landed on about:blank quickly it means blocked; check via error
+    clearTimeout(frameTimer);
+    // Smart blank-iframe detection:
+    // Blocked by X-Frame-Options → browser makes empty same-origin doc (accessible + empty)
+    // Embedding allowed         → cross-origin doc loads (SecurityError on access = content is OK)
+    try {
+      const doc = frame.contentDocument || frame.contentWindow?.document;
+      if (!doc?.body || !doc.body.innerHTML.trim()) {
+        blocked.classList.add('show');
+      }
+    } catch (_) {
+      // SecurityError = cross-origin content actually loaded = iframe is showing real content
+    }
   };
 
   frame.onerror = () => {
@@ -961,14 +972,27 @@ function reloadFrame() {
   blocked.classList.remove('show');
   loader.classList.remove('hidden');
   frame.src = 'about:blank';
-  setTimeout(() => { frame.src = currentSvc.url; }, 100);
+  frame.onload = null; // Reset onload before reload
+  setTimeout(() => {
+    frame.src = currentSvc.url;
+    frame.onload = () => {
+      loader.classList.add('hidden');
+      clearTimeout(frameTimer);
+      try {
+        const doc = frame.contentDocument || frame.contentWindow?.document;
+        if (!doc?.body || !doc.body.innerHTML.trim()) {
+          blocked.classList.add('show');
+        }
+      } catch (_) { /* cross-origin = content loaded fine */ }
+    };
+  }, 100);
   clearTimeout(frameTimer);
   frameTimer = setTimeout(() => {
     if (!loader.classList.contains('hidden')) {
       loader.classList.add('hidden');
       blocked.classList.add('show');
     }
-  }, 10000);
+  }, 8000);
 }
 
 function openExternal() {
@@ -1119,7 +1143,14 @@ async function openYacineLive(svc) {
     document.getElementById('loaderUrl').textContent = url;
     document.getElementById('blockedOpenBtn').href = url;
 
-    frame.onload = () => loader.classList.add('hidden');
+    frame.onload = () => {
+      loader.classList.add('hidden');
+      clearTimeout(frameTimer);
+      try {
+        const doc = frame.contentDocument || frame.contentWindow?.document;
+        if (!doc?.body || !doc.body.innerHTML.trim()) { blocked.classList.add('show'); }
+      } catch (_) { /* cross-origin = loaded fine */ }
+    };
     frame.onerror = () => { loader.classList.add('hidden'); blocked.classList.add('show'); };
     frame.src = url;
 
@@ -1235,7 +1266,14 @@ async function openMoviePlatform(svc) {
     document.getElementById('loaderUrl').textContent = url;
     document.getElementById('blockedOpenBtn').href = url;
 
-    frame.onload = () => loader.classList.add('hidden');
+    frame.onload = () => {
+      loader.classList.add('hidden');
+      clearTimeout(frameTimer);
+      try {
+        const doc = frame.contentDocument || frame.contentWindow?.document;
+        if (!doc?.body || !doc.body.innerHTML.trim()) { blocked.classList.add('show'); }
+      } catch (_) { /* cross-origin = loaded fine */ }
+    };
     frame.onerror = () => { loader.classList.add('hidden'); blocked.classList.add('show'); };
     frame.src = url;
 
