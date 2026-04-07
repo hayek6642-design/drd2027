@@ -1,0 +1,20 @@
+# Render Blueprint — DR.D / AI-Hub
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: drd2027
+    runtime: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: DISABLE_CSRF
+        value: "true"
+    healthCheckPath: /ping
+    autoDeploy: true
