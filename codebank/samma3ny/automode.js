@@ -407,25 +407,19 @@
 
   // ── API calls ────────────────────────────────────────────────
   async function apiCall(path, method = 'GET', body = null) {
-    // 🔧 FIX: Use session token from iframe-auth-client.js (window.Auth)
-    // instead of relying solely on cookies, which may be blocked in iframes
-    // due to third-party cookie restrictions.
-    const sessionToken = (window.Auth && typeof window.Auth.getToken === 'function')
-      ? window.Auth.getToken()
-      : (localStorage.getItem('session_token') || '');
-    const csrfToken =
-      (document.cookie.match(/XSRF-TOKEN=([^;]*)/) || [])[1] ||
-      (document.cookie.match(/csrf_token=([^;]*)/) || [])[1] || '';
+    // 🔧 FIX: Same-origin iframe shares localStorage with parent.
+    // Read the session token directly — no postMessage/cookie dance needed.
+    const sessionToken =
+      localStorage.getItem('session_token') ||
+      localStorage.getItem('__cached_session_id__') ||
+      '';
     const headers = { 'Content-Type': 'application/json' };
     if (sessionToken) {
       headers['Authorization'] = `Bearer ${sessionToken}`;
     }
-    if (csrfToken) {
-      headers['X-CSRF-TOKEN'] = csrfToken;
-    }
     const opts = {
       method,
-      credentials: 'include',  // keep cookies as fallback
+      credentials: 'include',
       headers
     };
     if (body) opts.body = JSON.stringify(body);
@@ -508,13 +502,6 @@
 
   // ── Enable / Disable ─────────────────────────────────────────
   async function enableAutoMode() {
-    // 🔧 FIX: Wait for iframe auth to be ready before starting session
-    if (window.Auth && typeof window.Auth.waitForAuth === 'function') {
-      const authenticated = await window.Auth.waitForAuth(5000);
-      if (!authenticated) {
-        console.warn('[AutoMode] Auth not ready after 5s, trying anyway...');
-      }
-    }
     const ok = await startSession();
     if (!ok) {
       alert('Could not start auto-mode. Please make sure you are logged in.');
