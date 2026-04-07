@@ -17,7 +17,7 @@ router.use(adminLimiter)
 // Called by indexCB.html after correct 7-click password entry
 router.post('/bankode-login', async (req, res) => {
   const { password } = req.body || {}
-  const ADMIN_PW = process.env.ADMIN_BANKODE_PASSWORD || 'doitasap2025'
+  const ADMIN_PW = process.env.ADMIN_BANKODE_PASSWORD || process.env.BANKODE_ADMIN_PW || 'doitasap2025'
 
   if (!password || password !== ADMIN_PW) {
     // Small delay to prevent brute-force timing attacks
@@ -26,12 +26,12 @@ router.post('/bankode-login', async (req, res) => {
   }
 
   try {
-    const token = crypto.randomUUID()
-    const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() // 2h session
-    await query(
-      'INSERT INTO auth_sessions (id, token, expires_at, created_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP)',
-      [crypto.randomUUID(), token, expiresAt]
-    )
+    // ── HMAC-signed stateless token — zero DB dependency ────────────────────
+    const SECRET = process.env.BANKODE_TOKEN_SECRET || ADMIN_PW
+    const ts = Date.now().toString()
+    const sig = crypto.createHmac('sha256', SECRET).update(ts).digest('hex')
+    const token = `${ts}.${sig}`
+    console.log('[BANKODE LOGIN] HMAC admin session issued')
     res.json({ ok: true, token })
   } catch (e) {
     console.error('[BANKODE LOGIN ERROR]', e.message)

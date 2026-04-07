@@ -10,20 +10,36 @@ export async function validateAdminSession(req, res, next) {
       return res.status(401).json({ ok: false, error: 'UNAUTHORIZED' })
     }
 
-    const token = authHeader.slice(7) // Remove 'Bearer ' prefix
-    const session = await query('SELECT * FROM auth_sessions WHERE token = $1 AND expires_at > NOW()', [token])
+    const rawToken = authHeader.slice(7) // Remove 'Bearer ' prefix
 
-    if (!session.rows || session.rows.length === 0) {
-      return res.status(401).json({ ok: false, error: 'INVALID_SESSION' })
+    // ── HMAC-signed token: no DB needed ──────────────────────────────────────
+    // Token format: "<timestamp>.<hmac_hex>"
+    const SECRET = process.env.BANKODE_TOKEN_SECRET || process.env.BANKODE_ADMIN_PW || process.env.ADMIN_BANKODE_PASSWORD || 'doitasap2025'
+    const dotIdx = rawToken.lastIndexOf('.')
+    if (dotIdx > 0) {
+      const ts = rawToken.slice(0, dotIdx)
+      const sig = rawToken.slice(dotIdx + 1)
+      const expected = (await import('crypto')).default.createHmac('sha256', SECRET).update(ts).digest('hex')
+      const age = Date.now() - parseInt(ts, 10)
+      const TOKEN_TTL = 24 * 60 * 60 * 1000 // 24 hours
+      if (expected === sig && age >= 0 && age < TOKEN_TTL) {
+        req.user = { id: 'admin', role: 'admin' }
+        return next()
+      }
     }
 
-    // Attach admin user to request
-    req.user = {
-      id: 'admin',
-      role: 'admin'
+    // ── Fallback: legacy UUID tokens stored in auth_sessions (DB) ────────────
+    try {
+      const session = await query('SELECT * FROM auth_sessions WHERE token = $1 AND expires_at > NOW()', [rawToken])
+      if (session.rows && session.rows.length > 0) {
+        req.user = { id: 'admin', role: 'admin' }
+        return next()
+      }
+    } catch (_dbErr) {
+      // DB unavailable or schema mismatch — HMAC path is the source of truth
     }
 
-    next()
+    return res.status(401).json({ ok: false, error: 'INVALID_SESSION' })
   } catch (err) {
     console.error('[SESSION VALIDATION ERROR]', err.message)
     return res.status(500).json({ ok: false, error: 'SESSION_VALIDATION_FAILED' })
