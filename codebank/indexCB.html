@@ -1223,6 +1223,8 @@
             }
 
             function updateProgressBar(count) {
+                // Guard: elements may not exist on this page
+                if (!progressFill || !currentCountEl || !targetCountEl || !targetLabelEl || !multiplierEl) return;
                 let target = 1000;
                 let tier = 'grey';
                 let multiplier = 1.0;
@@ -1455,15 +1457,18 @@
                 }
             });
 
-            // Load on start and poll
-            setTimeout(function() {
-                loadDrmailUnread();
-                loadDrmailUnreadAdmin();
-                setInterval(function() {
+            // Load on start and poll — only when a user session exists (avoids 401 spam in console)
+            const _cbSessionActive = localStorage.getItem('session_token') || localStorage.getItem('__cached_session_id__');
+            if (_cbSessionActive) {
+                setTimeout(function() {
                     loadDrmailUnread();
                     loadDrmailUnreadAdmin();
-                }, 60000);
-            }, 2000);
+                    setInterval(function() {
+                        loadDrmailUnread();
+                        loadDrmailUnreadAdmin();
+                    }, 60000);
+                }, 2000);
+            }
         })();
     </script>
 
