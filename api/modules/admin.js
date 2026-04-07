@@ -12,6 +12,33 @@ const router = Router()
 router.use(adminLimiter)
 
 // Session validation middleware for admin routes
+
+// ─── Bankode Admin Login: exchange hardened password for a session token ──────
+// Called by indexCB.html after correct 7-click password entry
+router.post('/bankode-login', async (req, res) => {
+  const { password } = req.body || {}
+  const ADMIN_PW = process.env.ADMIN_BANKODE_PASSWORD || 'doitasap2025'
+
+  if (!password || password !== ADMIN_PW) {
+    // Small delay to prevent brute-force timing attacks
+    await new Promise(r => setTimeout(r, 400))
+    return res.status(401).json({ ok: false, error: 'INVALID_PASSWORD' })
+  }
+
+  try {
+    const token = crypto.randomUUID()
+    const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() // 2h session
+    await query(
+      'INSERT INTO auth_sessions (id, token, expires_at, created_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP)',
+      [crypto.randomUUID(), token, expiresAt]
+    )
+    res.json({ ok: true, token })
+  } catch (e) {
+    console.error('[BANKODE LOGIN ERROR]', e.message)
+    res.status(500).json({ ok: false, error: 'LOGIN_FAILED' })
+  }
+})
+
 router.use(['/mint', '/audit', '/users', '/flags', '/bankode/verify', '/vault'], validateAdminSession)
 
 /**
