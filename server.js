@@ -5344,7 +5344,67 @@ async function applyNeonCompressionDDL(){
       ended_at     DATETIME
     )`,
     `CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id, is_active)`,
-    `CREATE INDEX IF NOT EXISTS idx_user_sessions_session ON user_sessions(session_id)`
+    `CREATE INDEX IF NOT EXISTS idx_user_sessions_session ON user_sessions(session_id)`,
+    // ── Admin tables ────────────────────────────────────────────────────────
+    `CREATE TABLE IF NOT EXISTS audit_logs (
+      id TEXT PRIMARY KEY,
+      actor_user_id TEXT,
+      actor_role TEXT DEFAULT 'admin',
+      action TEXT NOT NULL,
+      target_type TEXT,
+      target_id TEXT,
+      metadata TEXT,
+      ip_address TEXT,
+      user_agent TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at DESC)`,
+    `CREATE TABLE IF NOT EXISTS admin_vault (
+      id TEXT PRIMARY KEY,
+      admin_id TEXT UNIQUE NOT NULL,
+      allowance INTEGER DEFAULT 0,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS admin_vault_cycles (
+      id TEXT PRIMARY KEY,
+      admin_id TEXT NOT NULL,
+      cycle_month TEXT NOT NULL,
+      amount INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(admin_id, cycle_month)
+    )`,
+    `CREATE TABLE IF NOT EXISTS admin_otps (
+      otp_id TEXT PRIMARY KEY,
+      otp_code TEXT NOT NULL,
+      expires_at INTEGER NOT NULL,
+      used INTEGER DEFAULT 0,
+      ip_address TEXT,
+      user_agent TEXT,
+      admin_email TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS admin_otp_attempts (
+      ip_address TEXT PRIMARY KEY,
+      attempts INTEGER DEFAULT 0,
+      last_attempt DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS bankode_password_sessions (
+      id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      user_id TEXT NOT NULL,
+      expires_at DATETIME NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS qarsan_steal_log (
+      id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      actor_id TEXT,
+      target_id TEXT,
+      codes_stolen INTEGER DEFAULT 0,
+      silver_stolen INTEGER DEFAULT 0,
+      gold_stolen INTEGER DEFAULT 0,
+      wallet_stolen INTEGER DEFAULT 0,
+      total_stolen INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`
   ];
   
   try {
