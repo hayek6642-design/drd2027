@@ -543,19 +543,33 @@ router.delete('/farragna/:id', requireGateValid(), requireRole('admin'), async (
 // ─── Bankode Admin: Users with full balance ───────────────────────────────────
 router.get('/users/full', requireRole('admin'), async (_req, res) => {
   try {
-    const r = await query(`
-      SELECT u.id, u.email, u.user_type, u.disabled, u.created_at,
-             COALESCE(b.codes_count,  0) AS codes,
-             COALESCE(b.silver_count, 0) AS silver,
-             COALESCE(b.gold_count,   0) AS gold
-      FROM users u
-      LEFT JOIN balances b ON b.user_id = u.id
-      ORDER BY u.created_at DESC
-      LIMIT 500
-    `, [])
+    // Try the join query first; fall back to users-only if balances table is missing/different
+    let r
+    try {
+      r = await query(`
+        SELECT u.id, u.email, u.user_type, u.disabled, u.created_at,
+               COALESCE(b.codes_count,  0) AS codes,
+               COALESCE(b.silver_count, 0) AS silver,
+               COALESCE(b.gold_count,   0) AS gold
+        FROM users u
+        LEFT JOIN balances b ON b.user_id = u.id
+        ORDER BY u.created_at DESC
+        LIMIT 500
+      `, [])
+    } catch (_joinErr) {
+      console.warn('[ADMIN users/full] join failed, falling back to users-only:', _joinErr.message)
+      r = await query(`
+        SELECT id, email, user_type, disabled, created_at,
+               0 AS codes, 0 AS silver, 0 AS gold
+        FROM users
+        ORDER BY created_at DESC
+        LIMIT 500
+      `, [])
+    }
     res.json({ ok: true, users: r.rows })
   } catch (e) {
-    res.status(500).json({ ok: false, error: 'ADMIN_USERS_FULL_FAILED' })
+    console.error('[ADMIN users/full ERROR]', e.message)
+    res.status(500).json({ ok: false, error: 'ADMIN_USERS_FULL_FAILED', detail: e.message })
   }
 })
 
