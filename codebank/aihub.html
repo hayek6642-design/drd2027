@@ -402,6 +402,9 @@
     }
 
   </style>
+  <link rel="stylesheet" href="css/yacine-hub.css">
+  <script src="../services/yacine-service.js" defer></script>
+  <script src="components/yacine-hub.js" defer></script>
   <script src="../src/native-phone-actions.js" defer></script>
 </head>
 <body>
@@ -623,6 +626,11 @@ const SERVICES = [
   { id:'youtube_ai',  name:'YouTube Studio',cat:'media', emoji:'🎬', logo:'https://studio.youtube.com/favicon.ico',                                url:'https://studio.youtube.com',       desc:'Create & manage videos' },
   { id:'vimeo',       name:'Vimeo AI',      cat:'media', emoji:'🎞️', logo:'https://vimeo.com/favicon.ico',                                         url:'https://vimeo.com/create',         desc:'AI video creation' },
 
+
+  /* ── Sports Live ────────────────────────────────────────── */
+  { id:'yacine_live', name:'Yacine Live',    cat:'sports', emoji:'⚽', logo:'', url:'https://yacinelive.tv',  desc:'Live football matches', badge:'hot', isYacine:true, gradient:'linear-gradient(135deg,#00d4ff,#0099cc)' },
+  { id:'yacine_hub',  name:'Yacine Hub',     cat:'sports', emoji:'📺', logo:'', url:'yacine:hub',             desc:'Match schedule & streams', badge:'new', isYacineHub:true, gradient:'linear-gradient(135deg,#1a1a2e,#00d4ff)' },
+
   /* ── Phone Native Actions ──────────────────────────────── */
   { id:'native_call',     name:'Phone',       cat:'phone', emoji:'📞', logo:'', url:'native:call',     desc:'Make phone calls',      badge:'ai', nativeAction:'call',     gradient:'linear-gradient(135deg,#00d4ff,#0099cc)' },
   { id:'native_sms',      name:'Messages',    cat:'phone', emoji:'💬', logo:'', url:'native:sms',      desc:'Send SMS messages',     badge:'ai', nativeAction:'sms',      gradient:'linear-gradient(135deg,#25d366,#128c7e)' },
@@ -648,6 +656,7 @@ const CATS = [
   { id:'search',      label:'Search',        icon:'🔍' },
   { id:'agent',       label:'Agents',        icon:'⛓️' },
   { id:'media',       label:'Media',         icon:'▶️' },
+  { id:'sports',      label:'Sports Live', icon:'⚽' },
   { id:'phone',       label:'Phone',       icon:'📱' },
 ];
 
@@ -745,12 +754,15 @@ function buildCard(svc) {
   const isFav = favorites.includes(svc.id);
   const card  = document.createElement('div');
   const isNativeAction = !!svc.nativeAction;
+  const isYacineSport  = !!svc.isYacine || !!svc.isYacineHub;
   card.className = 'service-card' + (svc.creator ? ' is-creator' : '') + (isNativeAction ? ' phone-action-card' : '');
   card.style.setProperty('--c', svc.color || '#7c3aed');
 
   let badgeHtml = '';
   if (isNativeAction) {
     badgeHtml = '<span class="native-tag">NATIVE</span>';
+  } else if (isYacineSport) {
+    badgeHtml = '<span class="svc-badge" style="background:rgba(0,212,255,0.2);color:#00d4ff;border:1px solid rgba(0,212,255,0.3);font-size:8px;padding:2px 6px;border-radius:10px;font-weight:800;text-transform:uppercase;">SPORTS</span>';
   } else if (svc.badge) {
     const cls = {hot:'badge-hot', new:'badge-new', free:'badge-free', ai:'badge-ai', open:'badge-open', creator:'badge-creator'}[svc.badge] || 'badge-ai';
     badgeHtml = `<span class="svc-badge ${cls}">${svc.badge}</span>`;
@@ -758,7 +770,7 @@ function buildCard(svc) {
 
   // For native actions, show emoji with gradient bg instead of logo img
   let logoHtml;
-  if (isNativeAction) {
+  if (isNativeAction || isYacineSport) {
     logoHtml = `<div class="svc-logo" style="background:${svc.gradient || 'var(--accent)'};border:none;"><span style="font-size:26px;">${svc.emoji}</span></div>`;
   } else {
     logoHtml = `<div class="svc-logo" id="logo-${svc.id}"><img src="${svc.logo}" alt="${svc.name}" onerror="this.parentElement.textContent='${svc.emoji}'" loading="lazy"></div>`;
@@ -773,7 +785,11 @@ function buildCard(svc) {
 
   card.onclick = (e) => {
     if (e.target.classList.contains('fav-star')) { toggleFav(svc.id); return; }
-    if (isNativeAction) {
+    if (svc.isYacineHub) {
+      openYacineHub();
+    } else if (svc.isYacine) {
+      openYacineLive(svc);
+    } else if (isNativeAction) {
       handleNativeAction(svc.nativeAction);
     } else {
       openViewer(svc);
@@ -1007,6 +1023,125 @@ function loadScript(src) {
   });
 }
 
+
+
+/* ═══════════════════════════════════════════════════════════
+   YACINE LIVE — SMART DOMAIN ROTATION
+   ═══════════════════════════════════════════════════════════ */
+
+/**
+ * Open Yacine Live via domain rotator in the viewer overlay
+ */
+async function openYacineLive(svc) {
+  currentSvc = svc;
+  const overlay = document.getElementById('viewerOverlay');
+  const frame   = document.getElementById('viewerFrame');
+  const loader  = document.getElementById('frameLoader');
+  const blocked = document.getElementById('frameBlocked');
+
+  // Reset
+  blocked.classList.remove('show');
+  loader.classList.remove('hidden');
+  frame.src = 'about:blank';
+
+  // Header
+  const logoEl = document.getElementById('viewerLogo');
+  logoEl.innerHTML = '<span style="font-size:22px;">⚽</span>';
+  document.getElementById('viewerTitle').textContent = 'Yacine Live';
+  document.getElementById('viewerUrlBar').textContent = 'Finding best server…';
+  document.getElementById('loaderName').textContent = 'Yacine Live';
+  document.getElementById('loaderUrl').textContent = 'Checking mirrors…';
+
+  // Blocked fallback
+  document.getElementById('blockedIcon').textContent = '⚽';
+  document.getElementById('blockedTitle').textContent = 'Yacine Live — Opens in new tab';
+  document.getElementById('blockedDesc').textContent = 'Yacine Live may not allow embedding. Click below to open it externally.';
+  document.getElementById('blockedOpenName').textContent = 'Yacine Live';
+  document.getElementById('blockedOpenBtn').href = 'https://yacinelive.tv';
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Use domain rotator if available
+  try {
+    const url = window.yacineService
+      ? await window.yacineService.getWorkingUrl()
+      : 'https://yacinelive.tv';
+
+    currentSvc = { ...svc, url };
+    document.getElementById('viewerUrlBar').textContent = url;
+    document.getElementById('loaderUrl').textContent = url;
+    document.getElementById('blockedOpenBtn').href = url;
+
+    frame.onload = () => loader.classList.add('hidden');
+    frame.onerror = () => { loader.classList.add('hidden'); blocked.classList.add('show'); };
+    frame.src = url;
+
+    clearTimeout(frameTimer);
+    frameTimer = setTimeout(() => {
+      if (!loader.classList.contains('hidden')) {
+        loader.classList.add('hidden');
+        blocked.classList.add('show');
+      }
+    }, 10000);
+
+  } catch (err) {
+    console.error('[YacineLive]', err);
+    loader.classList.add('hidden');
+    blocked.classList.add('show');
+  }
+}
+
+/**
+ * Open full Yacine Hub (match list + player)
+ */
+function openYacineHub() {
+  if (!window.yacineHub) {
+    alert('Yacine Hub module not loaded.');
+    return;
+  }
+
+  const overlay = document.getElementById('viewerOverlay');
+  const frame   = document.getElementById('viewerFrame');
+  const loader  = document.getElementById('frameLoader');
+  const blocked = document.getElementById('frameBlocked');
+
+  // Reset
+  blocked.classList.remove('show');
+  loader.classList.add('hidden');
+  frame.src = 'about:blank';
+  frame.style.display = 'none';
+
+  // Header
+  const logoEl = document.getElementById('viewerLogo');
+  logoEl.innerHTML = '<span style="font-size:22px;">📺</span>';
+  document.getElementById('viewerTitle').textContent = 'Yacine Hub — Live Matches';
+  document.getElementById('viewerUrlBar').textContent = 'Yacine Live Match Center';
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Create hub container inside the frame wrapper
+  const wrap = document.querySelector('.viewer-frame-wrap');
+  let hubDiv = document.getElementById('yacine-hub-overlay');
+  if (!hubDiv) {
+    hubDiv = document.createElement('div');
+    hubDiv.id = 'yacine-hub-overlay';
+    hubDiv.style.cssText = 'position:absolute;inset:0;overflow-y:auto;z-index:10;';
+    wrap.appendChild(hubDiv);
+  }
+  hubDiv.style.display = 'block';
+  window.yacineHub.render(hubDiv);
+
+  // Override close to clean up
+  const origClose = closeViewer;
+  closeViewer = function() {
+    if (hubDiv) { hubDiv.style.display = 'none'; hubDiv.innerHTML = ''; }
+    frame.style.display = '';
+    closeViewer = origClose;
+    origClose();
+  };
+}
 
 init();
 </script>
