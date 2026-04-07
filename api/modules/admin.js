@@ -39,7 +39,12 @@ router.post('/bankode-login', async (req, res) => {
   }
 })
 
-router.use(['/mint', '/audit', '/users', '/flags', '/bankode/verify', '/vault'], validateAdminSession)
+// Apply session validation to ALL admin routes except login itself
+router.use((req, res, next) => {
+  // Skip auth for the login endpoint — it issues tokens
+  if (req.path === '/bankode-login') return next()
+  validateAdminSession(req, res, next)
+})
 
 /**
  * 🏦 Admin Vault & Monthly Allowance System
@@ -607,11 +612,9 @@ router.post('/send-by-email', requireRole('admin'), async (req, res) => {
     }
     const userId = userRes.rows[0].id
     const col = assetType === 'codes' ? 'codes_count' : assetType === 'silver' ? 'silver_count' : 'gold_count'
+    // Update balance directly on the users table (balance columns live there)
     await query(`
-      INSERT INTO balances (user_id, ${col})
-      VALUES ($1, $2)
-      ON CONFLICT (user_id)
-      DO UPDATE SET ${col} = balances.${col} + $2, updated_at = CURRENT_TIMESTAMP
+      UPDATE users SET ${col} = COALESCE(${col}, 0) + $2 WHERE id = $1
     `, [userId, Number(amount)])
     await audit(req, {
       action: 'ADMIN_SEND_ASSETS_BY_EMAIL',
