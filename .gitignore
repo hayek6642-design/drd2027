@@ -91,3 +91,26 @@ Thumbs.db
 .trae-cookie.txt
 *-dump.sql
 FARRAGNA_API_DOCS.md
+
+# Gradle (local caches only)
+.gradle/
+android/.gradle/
+android/app/build/
+android/build/
+*.apk
+
+# Capacitor temp
+www/
+
+# Node
+node_modules/
+
+# Android project (keep tracked for CI builds)
+!android/**/*.png
+!android/**/*.xml
+!android/**/*.java
+!android/**/*.kt
+!android/**/*.gradle
+!android/**/*.properties
+!android/gradlew
+!android/gradlew.bat

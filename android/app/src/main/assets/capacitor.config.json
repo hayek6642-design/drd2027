@@ -1,0 +1,53 @@
+{
+	"appId": "com.codebank.app",
+	"appName": "CodeBank",
+	"bundledWebRuntime": false,
+	"webDir": "dist",
+	"plugins": {
+		"SplashScreen": {
+			"launchShowDuration": 0
+		},
+		"StatusBar": {
+			"style": "DARK"
+		},
+		"Keyboard": {
+			"resize": "ionic",
+			"style": "DARK"
+		},
+		"ScreenOrientation": {
+			"lockOrientation": "portrait"
+		},
+		"NativeBiometric": {
+			"useFallback": true,
+			"biometryType": "FINGERPRINT",
+			"maxAttempts": 3
+		}
+	},
+	"server": {
+		"url": "https://drd2027.onrender.com",
+		"cleartext": true,
+		"allowNavigation": [
+			"localhost",
+			"127.0.0.1",
+			"drd2027.onrender.com",
+			"*.onrender.com",
+			"*.codebank.app",
+			"*.googleapis.com",
+			"*.youtube.com",
+			"*.google.com",
+			"*.gstatic.com"
+		]
+	},
+	"android": {
+		"allowMixedContent": true,
+		"webContentsDebuggingEnabled": true,
+		"backgroundColor": "#0d1117",
+		"appendUserAgent": "CodeBank-Android",
+		"screenOrientation": "portrait"
+	},
+	"ios": {
+		"contentInset": "always",
+		"appendUserAgent": "CodeBank-iOS",
+		"screenOrientation": "portrait"
+	}
+}

@@ -16,6 +16,11 @@
     },
     "ScreenOrientation": {
       "lockOrientation": "portrait"
+    },
+    "NativeBiometric": {
+      "useFallback": true,
+      "biometryType": "FINGERPRINT",
+      "maxAttempts": 3
     }
   },
   "server": {
@@ -35,8 +40,8 @@
   },
   "android": {
     "allowMixedContent": true,
-    "webContentsDebuggingEnabled": false,
-    "backgroundColor": "#000000",
+    "webContentsDebuggingEnabled": true,
+    "backgroundColor": "#0d1117",
     "appendUserAgent": "CodeBank-Android",
     "screenOrientation": "portrait"
   },
