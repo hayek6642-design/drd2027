@@ -254,6 +254,12 @@ class AssetsCentralCore {
     }
 
     async getAssets(userId) {
+        // 🔧 FIX: Validate userId to prevent creating ghost zero-balance rows
+        if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+            console.error('[ACC] getAssets called with invalid userId:', userId);
+            throw new Error('[ACC] getAssets requires a valid userId');
+        }
+
         // Check cache first
         if (this.assetsCache.has(userId)) {
             const cached = this.assetsCache.get(userId);
@@ -269,7 +275,8 @@ class AssetsCentralCore {
         });
 
         if (result.rows.length === 0) {
-            // Create new user assets
+            // 🔧 FIX: Log loudly when auto-creating zero-balance rows
+            console.warn('[ACC] No assets found for userId=' + userId + '. Creating new zero-balance record.');
             const newAssets = {
                 user_id: userId,
                 codes_count: 0,

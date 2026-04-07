@@ -105,6 +105,10 @@ connect() {
                 this.assets = message.data;
                 this.emit('assetsUpdated', this.assets);
                 this.updateAllBridges();
+                // 🔧 FIX: Sync state to AssetBusV2 so dashboard.getState() works
+                if (window.AssetBusV2 && typeof window.AssetBusV2.setState === 'function') {
+                    window.AssetBusV2.setState(message.data);
+                }
                 break;
 
             case 'transaction_result':
@@ -277,6 +281,22 @@ connect() {
 
     static getInstance() {
         return ACCClient.instance;
+    }
+
+    /**
+     * 🔧 FIX: Reset singleton on logout so re-login creates a fresh instance
+     * with the new userId and reconnects WebSocket.
+     */
+    static reset() {
+        if (ACCClient.instance) {
+            try { ACCClient.instance.ws?.close(); } catch(_) {}
+            if (ACCClient.instance.pollInterval) clearInterval(ACCClient.instance.pollInterval);
+            ACCClient.instance.listeners.clear();
+            ACCClient.instance.serviceBridges.clear();
+            ACCClient.instance.assets = null;
+            ACCClient.instance.connected = false;
+            ACCClient.instance = null;
+        }
     }
 
     // Fallback to HTTP polling when WebSocket fails

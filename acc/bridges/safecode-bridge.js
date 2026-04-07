@@ -18,6 +18,9 @@ class SafeCodeBridge extends ServiceBridgeBase {
     onACCConnected() {
         super.onACCConnected();
         this.setupSafeCodeIntegration();
+
+        // 🔧 FIX: Request assets immediately on (re-)connect — don't wait for interval
+        this.requestSyncFromSafeCode();
         
         if (this.config.autoSync) {
             this.startAutoSync();
@@ -151,10 +154,13 @@ class SafeCodeBridge extends ServiceBridgeBase {
     }
 
     startAutoSync() {
+        // 🔧 FIX: Clear any existing interval to prevent duplicates on re-connect
+        if (this.syncInterval) clearInterval(this.syncInterval);
+
         this.syncInterval = setInterval(() => {
-            if (this.assets) {
-                this.requestSyncFromSafeCode();
-            }
+            // 🔧 FIX: Removed 'if (this.assets)' guard — it blocked first sync
+            // after re-login when assets is still null
+            this.requestSyncFromSafeCode();
         }, this.config.syncInterval);
     }
 

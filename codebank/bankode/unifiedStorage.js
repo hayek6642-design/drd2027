@@ -5,8 +5,17 @@
 
 import { rpc, getSupabaseClient } from '/services/yt-clear/shared/supabase-client.js';
 
-let supa = null;
-try{ supa = await getSupabaseClient() }catch(e){ supa = null }
+// 🔧 FIX: Lazy-get Supabase client on each call instead of caching at module load.
+// The old top-level `await getSupabaseClient()` froze the reference at import time,
+// so after logout + re-login the client still held the old/anon session.
+async function getFreshClient() {
+  try {
+    return await getSupabaseClient();
+  } catch (e) {
+    console.error('[unifiedStorage] Failed to get Supabase client:', e);
+    return null;
+  }
+}
 
 // low-level fetch wrapper to call Supabase REST RPC endpoints if needed
 // BUT we'll prefer supabase.rpc; we use this only where custom headers needed.

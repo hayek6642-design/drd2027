@@ -21,6 +21,43 @@
         window.AssetBus = window.parent.AssetBus;
     }
 
+    // 🔧 FIX: Update trusted user ID when auth state changes (re-login)
+    window.addEventListener('auth:ready', function(e) {
+        if (e.detail && e.detail.authenticated && e.detail.userId) {
+            window.CODEBANK_TRUSTED_USER_ID = e.detail.userId;
+            window.CODEBANK_TRUSTED_USER_EMAIL = e.detail.user?.email || null;
+            console.log('[Bankode] Updated CODEBANK_TRUSTED_USER_ID from auth:ready:', e.detail.userId);
+            if (window.BankodeDashboard && window.BankodeDashboard.init) {
+                window.BankodeDashboard.init();
+            }
+            // Also refresh RPC instance's supabase ref
+            if (window.BankodeRPC) {
+                window.BankodeRPC.supabase = window.supabase;
+            }
+        }
+    });
+    window.addEventListener('auth:changed', function(e) {
+        if (e.detail && e.detail.authenticated && e.detail.userId) {
+            window.CODEBANK_TRUSTED_USER_ID = e.detail.userId;
+            window.CODEBANK_TRUSTED_USER_EMAIL = e.detail.user?.email || null;
+            console.log('[Bankode] Updated CODEBANK_TRUSTED_USER_ID from auth:changed:', e.detail.userId);
+            if (window.BankodeDashboard && window.BankodeDashboard.init) {
+                window.BankodeDashboard.init();
+            }
+        }
+    });
+    // Listen for AUTH_SYNC postMessage from parent iframe
+    window.addEventListener('message', function(event) {
+        if (event.data && event.data.type === 'AUTH_SYNC' && event.data.authenticated && event.data.userId) {
+            window.CODEBANK_TRUSTED_USER_ID = event.data.userId;
+            window.CODEBANK_TRUSTED_USER_EMAIL = event.data.user?.email || null;
+            console.log('[Bankode] Updated CODEBANK_TRUSTED_USER_ID from AUTH_SYNC postMessage:', event.data.userId);
+            if (window.BankodeDashboard && window.BankodeDashboard.init) {
+                window.BankodeDashboard.init();
+            }
+        }
+    });
+
     // 🛡️ Prevent auto-close
     window.onbeforeunload = function(e) {
         console.log('[SafeCode] Blocked unload attempt');

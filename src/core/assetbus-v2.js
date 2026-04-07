@@ -16,6 +16,9 @@ class AssetBusV2 {
     
     this.batchQueue = [];
     this.batchTimer = null;
+
+    // 🔧 FIX: Asset state cache so dashboard.js getState() works
+    this.state = {};
     
     // Capacitor bridge
     this.nativeBridge = null;
@@ -180,6 +183,21 @@ class AssetBusV2 {
     }
   }
 
+  // 🔧 FIX: State management for dashboard sync
+  getState() {
+    return { ...this.state };
+  }
+
+  setState(newState) {
+    if (!newState || typeof newState !== 'object') return;
+    this.state = { ...this.state, ...newState };
+    this.publish('state:updated', this.state);
+  }
+
+  clearState() {
+    this.state = {};
+  }
+
   // Memory cleanup
   cleanup() {
     // Remove dead weak refs
@@ -235,3 +253,5 @@ setInterval(() => assetBus.cleanup(), 120000);
 
 // Legacy compatibility
 window.AssetBusV2 = assetBus;
+// 🔧 FIX: dashboard.js checks window.AssetBus.getState(), so alias it
+window.AssetBus = assetBus;

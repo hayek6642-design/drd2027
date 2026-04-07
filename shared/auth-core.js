@@ -514,8 +514,49 @@
       this._status = 'unauthenticated';
       this._userId = null;
       this._user = null;
+      this._sessionId = null;
+      this._locked = false;
+      this._authInitialized = false;
+      this._initTriggered = false;
+      this._initPromise = null;
+      this._lastSyncedState = null;
+
+      // 🔧 FIX: Allow re-initialization after logout
+      window.__AUTH_CORE_LOADED__ = false;
+      window.__AUTH_INIT_DONE__ = false;
+
       this._syncAuthState();
       
+      // 🔧 FIX: Reset ACCClient singleton so re-login creates a fresh instance
+      if (typeof ACCClient !== 'undefined' && ACCClient.reset) {
+        try { ACCClient.reset(); } catch(_) {}
+      }
+      if (window.ACCClient && window.ACCClient.reset) {
+        try { window.ACCClient.reset(); } catch(_) {}
+      }
+      
+      // 🔧 FIX: Clear AssetBusV2 state
+      if (window.AssetBusV2 && typeof window.AssetBusV2.clearState === 'function') {
+        try { window.AssetBusV2.clearState(); } catch(_) {}
+      }
+      if (window.AssetBus && typeof window.AssetBus.clearState === 'function') {
+        try { window.AssetBus.clearState(); } catch(_) {}
+      }
+      
+      // 🔧 FIX: Clear Bankode trusted user globals
+      window.CODEBANK_TRUSTED_USER_ID = null;
+      window.CODEBANK_TRUSTED_USER_EMAIL = null;
+      
+      // 🔧 FIX: Clear IndexedDB auth state
+      try { this._clearIDB(); } catch(_) {}
+      
+      // 🔧 FIX: Clear Bankode safe local storage
+      try {
+        localStorage.removeItem('asset_safe_password');
+        localStorage.removeItem('asset_safe_salt');
+        localStorage.removeItem('bankode_safe_state');
+      } catch(_) {}
+
       // Notify all iframes
       if (window.AuthBridge) {
         window.AuthBridge.broadcast({
