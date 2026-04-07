@@ -102,4 +102,98 @@
     });
 
     if (window.DEBUG_MODE) console.log("[AssetBridge] Global Provider is ACTIVE.");
+
+    // ==========================================
+    // ASSET SNAPSHOT + SYNC (injected onto AssetBus)
+    // ==========================================
+    let _snapshotCache = null;
+
+    // Try to restore from localStorage immediately so initialRender() can use it
+    try {
+        const raw = localStorage.getItem('codebank_assets');
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && (
+                (Array.isArray(parsed.codes)  && parsed.codes.length  > 0) ||
+                (Array.isArray(parsed.silver) && parsed.silver.length > 0) ||
+                (Array.isArray(parsed.gold)   && parsed.gold.length   > 0)
+            )) {
+                _snapshotCache = parsed;
+                if (window.DEBUG_MODE) console.log('[AssetBridge] Restored snapshot from localStorage');
+            }
+        }
+    } catch(_) {}
+
+    /**
+     * Fetch assets from server and update _snapshotCache.
+     * Dispatches 'sqlite:snapshot' and 'assets:updated' so safe-asset-list.js re-renders.
+     */
+    async function _syncAssets() {
+        try {
+            const res = await bridgeFetch('/api/codes/list', { credentials: 'include' });
+            if (!res.ok) return null;
+            const data = await res.json();
+            if (!data.success) return null;
+
+            const rows = Array.isArray(data.codes) ? data.codes : [];
+            const codeRows   = rows.filter(r => !r.type || r.type === 'codes' || r.type === 'normal');
+            const silverRows = rows.filter(r => r.type === 'silver');
+            const goldRows   = rows.filter(r => r.type === 'gold');
+
+            _snapshotCache = {
+                codes:  codeRows.map(r  => (typeof r === 'string' ? r : r.code)),
+                silver: silverRows.map(r => (typeof r === 'string' ? r : r.code)),
+                gold:   goldRows.map(r   => (typeof r === 'string' ? r : r.code)),
+                authoritative: true,
+                status: 'success',
+                synced: true,
+                timestamp: Date.now()
+            };
+
+            // Persist for offline fallback
+            try { localStorage.setItem('codebank_assets', JSON.stringify(_snapshotCache)); } catch(_) {}
+
+            // Notify listeners
+            window.dispatchEvent(new CustomEvent('sqlite:snapshot', { detail: _snapshotCache }));
+            window.dispatchEvent(new CustomEvent('assets:updated',  { detail: _snapshotCache }));
+
+            if (window.DEBUG_MODE) console.log(`[AssetBridge] Synced: ${_snapshotCache.codes.length} codes, ${_snapshotCache.silver.length} silver, ${_snapshotCache.gold.length} gold`);
+            return _snapshotCache;
+        } catch(e) {
+            console.error('[AssetBridge] Sync failed:', e);
+            return null;
+        }
+    }
+
+    /**
+     * Inject snapshot() and sync() onto window.AssetBus once it is available.
+     */
+    function _injectAssetBusMethods() {
+        if (!window.AssetBus) {
+            setTimeout(_injectAssetBusMethods, 100);
+            return;
+        }
+
+        // snapshot() — returns cached asset data
+        window.AssetBus.snapshot = function() {
+            return _snapshotCache;
+        };
+
+        // sync() — fetches from server and updates snapshot cache
+        window.AssetBus.sync = _syncAssets;
+
+        console.log('[AssetBridge] snapshot() and sync() injected onto AssetBus');
+
+        // Auto-sync immediately so data is available for initialRender()
+        _syncAssets();
+
+        // Periodic refresh every 30 s
+        setInterval(_syncAssets, 30000);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _injectAssetBusMethods);
+    } else {
+        _injectAssetBusMethods();
+    }
 })(window);

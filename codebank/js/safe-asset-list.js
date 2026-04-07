@@ -1741,8 +1741,13 @@
                    window.top.GET_AUTHORITATIVE_ASSETS() : 
                    ((window.AssetBus && typeof window.AssetBus.snapshot === 'function') ? window.AssetBus.snapshot() : null);
 
-      if (data && data.codes && data.codes.length > 0) {
-          console.log('[SafeCode] Initial render using authoritative data:', data.codes.length);
+      const _hasAnyAssets = (d) => d && (
+          (Array.isArray(d.codes)  && d.codes.length  > 0) ||
+          (Array.isArray(d.silver) && d.silver.length > 0) ||
+          (Array.isArray(d.gold)   && d.gold.length   > 0)
+      );
+      if (_hasAnyAssets(data)) {
+          console.log('[SafeCode] Initial render using authoritative data:', (data.codes||[]).length, 'codes', (data.silver||[]).length, 'silver', (data.gold||[]).length, 'gold');
           renderSafeAssets(window.ACTIVE_ASSET_TAB || 'codes', cont, data);
       } else {
           // 2. Check local storage fallback before mock
@@ -1750,8 +1755,8 @@
               const raw = localStorage.getItem('codebank_assets');
               if (raw) {
                   const localData = JSON.parse(raw);
-                  if (localData && localData.codes && localData.codes.length > 0) {
-                      console.log('[SafeCode] Initial render using local storage fallback:', localData.codes.length);
+                  if (_hasAnyAssets(localData)) {
+                      console.log('[SafeCode] Initial render using local storage fallback:', (localData.codes||[]).length, 'codes', (localData.silver||[]).length, 'silver');
                       renderSafeAssets(window.ACTIVE_ASSET_TAB || 'codes', cont, localData);
                       return;
                   }
@@ -1779,9 +1784,9 @@
                     ? window.AssetBus.snapshot()
                     : null;
 
-            if (retryData && retryData.codes && retryData.codes.length > 0) {
+            if (_hasAnyAssets(retryData)) {
               clearInterval(_retryTimer);
-              console.log('[SafeCode] Retry #' + _retries + ' — real data arrived:', retryData.codes.length, 'codes');
+              console.log('[SafeCode] Retry #' + _retries + ' — real data arrived:', (retryData.codes||[]).length, 'codes', (retryData.silver||[]).length, 'silver');
               renderSafeAssets(window.ACTIVE_ASSET_TAB || 'codes', cont, retryData);
               return;
             }
@@ -1792,9 +1797,9 @@
                 const raw = localStorage.getItem('codebank_assets');
                 if (raw) {
                   const lsData = JSON.parse(raw);
-                  if (lsData && lsData.codes && lsData.codes.length > 0) {
+                  if (_hasAnyAssets(lsData)) {
                     clearInterval(_retryTimer);
-                    console.log('[SafeCode] Retry #' + _retries + ' — localStorage fallback:', lsData.codes.length, 'codes');
+                    console.log('[SafeCode] Retry #' + _retries + ' — localStorage fallback:', (lsData.codes||[]).length, 'codes', (lsData.silver||[]).length, 'silver');
                     renderSafeAssets(window.ACTIVE_ASSET_TAB || 'codes', cont, lsData);
                     return;
                   }

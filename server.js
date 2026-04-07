@@ -2718,8 +2718,15 @@ app.get('/api/codes/list', requireAuth, async (req, res) => {
       [userId]
     );
     
-    const CODE_PATTERN = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-P[0-9]$/;
-    const validRows = codesRes.rows.filter(r => CODE_PATTERN.test(r.code));
+    const CODE_PATTERN   = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-P[0-9]$/;
+    const SILVER_PATTERN = /^[A-Z0-9]{24}S1$/;
+    const GOLD_PATTERN   = /^[A-Z0-9]{24}G1$/;
+    // [FIX] Apply the right pattern per type — silver/gold bars have a different format (no dashes, ends S1/G1)
+    const validRows = codesRes.rows.filter(r => {
+      if (r.type === 'silver') return SILVER_PATTERN.test(r.code) || r.code.length > 0; // accept all silver bar records
+      if (r.type === 'gold')   return GOLD_PATTERN.test(r.code)   || r.code.length > 0; // accept all gold bar records
+      return CODE_PATTERN.test(r.code); // strict validation for regular codes
+    });
     const allCodes = validRows.map(r => r.code);
     const silverCodes = validRows.filter(r => r.type === 'silver').map(r => r.code);
     const goldCodes = validRows.filter(r => r.type === 'gold').map(r => r.code);
@@ -2854,6 +2861,18 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
           [toUserId]
         );
         receiverPre = parseInt(receiverCountRes.rows[0]?.cnt || 0, 10);
+      } else if (assetType === 'silver' || assetType === 'gold') {
+        // [FIX] For bars: count actual bar records in codes table (not the denormalized users counter)
+        const senderCountRes = await client.query(
+          "SELECT COUNT(*) AS cnt FROM codes WHERE user_id = $1 AND type = $2 AND spent = 0",
+          [fromUserId, assetType]
+        );
+        senderPre = parseInt(senderCountRes.rows[0]?.cnt || 0, 10);
+        const receiverCountRes = await client.query(
+          "SELECT COUNT(*) AS cnt FROM codes WHERE user_id = $1 AND type = $2 AND spent = 0",
+          [toUserId, assetType]
+        );
+        receiverPre = parseInt(receiverCountRes.rows[0]?.cnt || 0, 10);
       } else {
         const preSnapshot = await client.query(
           `SELECT id, ${balanceField} FROM users WHERE id IN ($1, $2)`,
@@ -2885,15 +2904,44 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
         if (transferredCount !== amount) {
           throw new Error(`TRANSFER_COUNT_MISMATCH: Expected ${amount}, got ${transferredCount}`);
         }
+      } else if (assetType === 'silver' || assetType === 'gold') {
+        // [FIX] Transfer the ACTUAL bar records (rows in codes table with type='silver'/'gold')
+        const barsRes = await client.query(
+          "SELECT id FROM codes WHERE user_id = $1 AND type = $2 AND spent = 0 ORDER BY created_at ASC LIMIT $3",
+          [fromUserId, assetType, amount]
+        );
+        if (barsRes.rows.length < amount) {
+          throw new Error(`INSUFFICIENT_BAR_RECORDS: found ${barsRes.rows.length}, need ${amount}`);
+        }
+        let transferredBars = 0;
+        for (const bar of barsRes.rows.slice(0, amount)) {
+          const updateRes = await client.query(
+            "UPDATE codes SET user_id = $1 WHERE id = $2 AND user_id = $3 AND spent = 0",
+            [toUserId, bar.id, fromUserId]
+          );
+          if (updateRes.rowCount === 0) {
+            throw new Error(`BAR_RECORD_TRANSFER_FAILED: ${bar.id}`);
+          }
+          transferredBars++;
+        }
+        if (transferredBars !== amount) {
+          throw new Error(`BAR_TRANSFER_COUNT_MISMATCH: Expected ${amount}, got ${transferredBars}`);
+        }
+        console.log(`[TRANSFER] Moved ${transferredBars} ${assetType} bar records from ${fromUserId} → ${toUserId}`);
       }
 
       // [SECURITY] STEP 4: BALANCE UPDATES
-      // FIX: For 'codes' type, recount from codes table (STEP 3 already transferred ownership rows)
+      // FIX: For 'codes' AND 'silver'/'gold', recount from codes table (STEP 3 already transferred ownership rows)
       let senderBalanceRes;
       if (assetType === 'codes') {
         senderBalanceRes = await client.query(
-          "UPDATE users SET codes_count = (SELECT COUNT(*) FROM codes WHERE user_id = $1 AND spent = 0) WHERE id = $2 RETURNING codes_count",
+          "UPDATE users SET codes_count = (SELECT COUNT(*) FROM codes WHERE user_id = $1 AND spent = 0 AND (type = 'codes' OR type = 'normal')) WHERE id = $2 RETURNING codes_count",
           [fromUserId, fromUserId]
+        );
+      } else if (assetType === 'silver' || assetType === 'gold') {
+        senderBalanceRes = await client.query(
+          `UPDATE users SET ${balanceField} = (SELECT COUNT(*) FROM codes WHERE user_id = $1 AND type = $2 AND spent = 0) WHERE id = $3 RETURNING ${balanceField}`,
+          [fromUserId, assetType, fromUserId]
         );
       } else {
         senderBalanceRes = await client.query(
@@ -2909,8 +2957,13 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
       let receiverUpdateRes;
       if (assetType === 'codes') {
         receiverUpdateRes = await client.query(
-          "UPDATE users SET codes_count = (SELECT COUNT(*) FROM codes WHERE user_id = $1 AND spent = 0) WHERE id = $2",
+          "UPDATE users SET codes_count = (SELECT COUNT(*) FROM codes WHERE user_id = $1 AND spent = 0 AND (type = 'codes' OR type = 'normal')) WHERE id = $2",
           [toUserId, toUserId]
+        );
+      } else if (assetType === 'silver' || assetType === 'gold') {
+        receiverUpdateRes = await client.query(
+          `UPDATE users SET ${balanceField} = (SELECT COUNT(*) FROM codes WHERE user_id = $1 AND type = $2 AND spent = 0) WHERE id = $3`,
+          [toUserId, assetType, toUserId]
         );
       } else {
         receiverUpdateRes = await client.query(
@@ -2924,7 +2977,7 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
       }
 
       // [SECURITY] STEP 5: POST-TRANSACTION SNAPSHOT VERIFICATION
-      // FIX: For 'codes' type, verify using live COUNT from codes table
+      // FIX: For 'codes' AND 'silver'/'gold', verify using live COUNT from codes table
       let senderPost, receiverPost;
       if (assetType === 'codes') {
         const senderPostRes = await client.query(
@@ -2935,6 +2988,17 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
         const receiverPostRes = await client.query(
           "SELECT COUNT(*) AS cnt FROM codes WHERE user_id = $1 AND spent = 0",
           [toUserId]
+        );
+        receiverPost = parseInt(receiverPostRes.rows[0]?.cnt || 0, 10);
+      } else if (assetType === 'silver' || assetType === 'gold') {
+        const senderPostRes = await client.query(
+          "SELECT COUNT(*) AS cnt FROM codes WHERE user_id = $1 AND type = $2 AND spent = 0",
+          [fromUserId, assetType]
+        );
+        senderPost = parseInt(senderPostRes.rows[0]?.cnt || 0, 10);
+        const receiverPostRes = await client.query(
+          "SELECT COUNT(*) AS cnt FROM codes WHERE user_id = $1 AND type = $2 AND spent = 0",
+          [toUserId, assetType]
         );
         receiverPost = parseInt(receiverPostRes.rows[0]?.cnt || 0, 10);
       } else {
