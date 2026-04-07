@@ -220,6 +220,7 @@
   }
 </style>
 <script src="https://unpkg.com/@simplewebauthn/browser@10/dist/bundle/index.umd.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 <!-- Single-Session Kickout Banner -->
@@ -267,6 +268,17 @@
 
   <!-- SIGNUP FORM -->
     <div id="signupForm">
+
+    <!-- Google Sign-In (signup) -->
+    <div id="google-signup-wrapper" style="display:none;margin-bottom:10px;">
+      <div id="google-signin-signup" style="display:flex;justify-content:center;"></div>
+    </div>
+    <div id="google-divider-signup" style="display:none;align-items:center;gap:10px;margin:16px 0 20px;">
+      <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
+      <span style="color:#666;font-size:12px;white-space:nowrap;">or sign up with email</span>
+      <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
+    </div>
+
     <div class="form-group">
       <label>Email Address</label>
       <div style="display:flex;gap:8px;align-items:center;">
@@ -342,6 +354,17 @@
 
   <!-- LOGIN FORM -->
   <div id="loginForm" style="display: none;">
+
+    <!-- Google Sign-In -->
+    <div id="google-login-wrapper" style="display:none;margin-bottom:10px;">
+      <div id="google-signin-login" style="display:flex;justify-content:center;"></div>
+    </div>
+    <div id="google-divider-login" style="display:none;align-items:center;gap:10px;margin:16px 0 20px;">
+      <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
+      <span style="color:#666;font-size:12px;white-space:nowrap;">or sign in with email</span>
+      <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
+    </div>
+
     <div class="form-group">
       <label>Email Address</label>
       <input type="email" id="loginEmail" placeholder="your@email.com" required>
@@ -1099,5 +1122,128 @@ async function registerBiometric() {
 }
 
 </script>
+
+<script>
+// ── Google Sign-In Integration ──────────────────────────────────────────────
+async function initGoogleSignIn() {
+  try {
+    const res = await fetch('/api/auth/google-client-id');
+    const data = await res.json();
+    if (!data.clientId) {
+      console.log('[Google] No GOOGLE_CLIENT_ID configured — Google Sign-In hidden');
+      return;
+    }
+
+    google.accounts.id.initialize({
+      client_id: data.clientId,
+      callback: handleGoogleCredential,
+      auto_select: false,
+      context: 'signin'
+    });
+
+    // Render in login form
+    const loginBtn = document.getElementById('google-signin-login');
+    if (loginBtn) {
+      google.accounts.id.renderButton(loginBtn, {
+        theme: 'filled_blue',
+        size: 'large',
+        width: 440,
+        text: 'signin_with',
+        shape: 'pill',
+        logo_alignment: 'left'
+      });
+      document.getElementById('google-login-wrapper').style.display = 'block';
+      document.getElementById('google-divider-login').style.display = 'flex';
+    }
+
+    // Render in signup form
+    const signupBtn = document.getElementById('google-signin-signup');
+    if (signupBtn) {
+      google.accounts.id.renderButton(signupBtn, {
+        theme: 'filled_blue',
+        size: 'large',
+        width: 440,
+        text: 'continue_with',
+        shape: 'pill',
+        logo_alignment: 'left'
+      });
+      document.getElementById('google-signup-wrapper').style.display = 'block';
+      document.getElementById('google-divider-signup').style.display = 'flex';
+    }
+
+    console.log('[Google] Sign-In buttons rendered');
+  } catch (e) {
+    console.warn('[Google] Init failed:', e);
+  }
+}
+
+async function handleGoogleCredential(response) {
+  const statusEl = document.getElementById('statusMessage');
+  try {
+    if (statusEl) {
+      statusEl.textContent = 'Signing in with Google...';
+      statusEl.className = 'status-message success';
+      statusEl.style.display = 'block';
+    }
+
+    const res = await fetch('/api/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ credential: response.credential })
+    });
+
+    const data = await res.json();
+
+    if (data.status === 'success') {
+      localStorage.setItem('session_token', data.sessionId);
+      if (data.user) localStorage.setItem('user_data', JSON.stringify(data.user));
+      localStorage.setItem('session_active', 'true');
+      if (data.user && data.user.email) localStorage.setItem('last_login_email', data.user.email);
+
+      if (window.AuthCore && typeof window.AuthCore._setState === 'function') {
+        window.AuthCore._setState({
+          authenticated: true,
+          status: 'active',
+          userId: data.userId,
+          sessionId: data.sessionId,
+          user: data.user
+        });
+      }
+
+      if (statusEl) {
+        statusEl.textContent = '✅ Signed in with Google! Redirecting...';
+        statusEl.className = 'status-message success';
+      }
+
+      setTimeout(function() { window.location.href = '/yt-new-clear.html'; }, 1000);
+    } else {
+      if (statusEl) {
+        statusEl.textContent = data.error || 'Google sign-in failed';
+        statusEl.className = 'status-message error';
+      }
+    }
+  } catch (e) {
+    console.error('[Google Auth Error]', e);
+    if (statusEl) {
+      statusEl.textContent = 'Network error during Google sign-in';
+      statusEl.className = 'status-message error';
+    }
+  }
+}
+
+// Wait for Google library to load, then initialize
+function _tryInitGoogle() {
+  if (window.google && window.google.accounts) {
+    initGoogleSignIn();
+  } else {
+    setTimeout(_tryInitGoogle, 300);
+  }
+}
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(_tryInitGoogle, 200);
+});
+</script>
+
 </body>
 </html>
