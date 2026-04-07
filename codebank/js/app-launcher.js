@@ -220,6 +220,9 @@ export function initLauncher() {
 
     // Set up modal controls if not already done
     setupModalControls();
+
+    // 🌐 Notify translate.js that app tiles are rendered
+    window.dispatchEvent(new CustomEvent('cb:apps-rendered'));
 }
 
 function setupModalControls() {
