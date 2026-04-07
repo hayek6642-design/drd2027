@@ -512,3 +512,78 @@ router.delete('/farragna/:id', requireGateValid(), requireRole('admin'), async (
     res.status(500).json({ ok: false, error: 'ADMIN_FARRAGNA_DELETE_FAILED' })
   }
 })
+
+// ─── Bankode Admin: Users with full balance ───────────────────────────────────
+router.get('/users/full', requireRole('admin'), async (_req, res) => {
+  try {
+    const r = await query(`
+      SELECT u.id, u.email, u.user_type, u.disabled, u.created_at,
+             COALESCE(b.codes_count,  0) AS codes,
+             COALESCE(b.silver_count, 0) AS silver,
+             COALESCE(b.gold_count,   0) AS gold
+      FROM users u
+      LEFT JOIN balances b ON b.user_id = u.id
+      ORDER BY u.created_at DESC
+      LIMIT 500
+    `, [])
+    res.json({ ok: true, users: r.rows })
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'ADMIN_USERS_FULL_FAILED' })
+  }
+})
+
+// ─── Bankode Admin: Qarsan steal log ─────────────────────────────────────────
+router.get('/qarsan/steals', requireRole('admin'), async (_req, res) => {
+  try {
+    const r = await query(`
+      SELECT sl.id,
+             sl.codes_stolen, sl.silver_stolen, sl.gold_stolen,
+             sl.wallet_stolen, sl.total_stolen, sl.created_at,
+             a.email AS actor_email,
+             t.email AS target_email
+      FROM qarsan_steal_log sl
+      LEFT JOIN users a ON a.id = sl.actor_id
+      LEFT JOIN users t ON t.id = sl.target_id
+      ORDER BY sl.created_at DESC
+      LIMIT 200
+    `, [])
+    res.json({ ok: true, steals: r.rows })
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'ADMIN_QARSAN_STEALS_FAILED' })
+  }
+})
+
+// ─── Bankode Admin: Send assets to user by email ─────────────────────────────
+router.post('/send-by-email', requireRole('admin'), async (req, res) => {
+  const { email, assetType, amount } = req.body || {}
+  if (!email || !assetType || !amount || Number(amount) <= 0) {
+    return res.status(400).json({ ok: false, error: 'INVALID_INPUT' })
+  }
+  const validAssets = ['codes', 'silver', 'gold']
+  if (!validAssets.includes(assetType)) {
+    return res.status(400).json({ ok: false, error: 'INVALID_ASSET' })
+  }
+  try {
+    const userRes = await query('SELECT id FROM users WHERE email=$1 LIMIT 1', [email])
+    if (userRes.rowCount === 0) {
+      return res.status(404).json({ ok: false, error: 'USER_NOT_FOUND', message: `No user found with email: ${email}` })
+    }
+    const userId = userRes.rows[0].id
+    const col = assetType === 'codes' ? 'codes_count' : assetType === 'silver' ? 'silver_count' : 'gold_count'
+    await query(`
+      INSERT INTO balances (user_id, ${col})
+      VALUES ($1, $2)
+      ON CONFLICT (user_id)
+      DO UPDATE SET ${col} = balances.${col} + $2, updated_at = CURRENT_TIMESTAMP
+    `, [userId, Number(amount)])
+    await audit(req, {
+      action: 'ADMIN_SEND_ASSETS_BY_EMAIL',
+      target_type: 'user',
+      target_id: userId,
+      metadata: { email, assetType, amount: Number(amount) }
+    })
+    res.json({ ok: true, message: `${amount} ${assetType} deposited to ${email} instantly ✅` })
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'ADMIN_SEND_FAILED', detail: e.message })
+  }
+})
