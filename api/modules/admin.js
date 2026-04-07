@@ -543,28 +543,24 @@ router.delete('/farragna/:id', requireGateValid(), requireRole('admin'), async (
 // ─── Bankode Admin: Users with full balance ───────────────────────────────────
 router.get('/users/full', requireRole('admin'), async (_req, res) => {
   try {
-    // Try the join query first; fall back to users-only if balances table is missing/different
+    // Users table has balance columns directly (codes_count, silver_count, gold_count)
+    // No need to join balances; disabled column may not exist — use COALESCE fallback
     let r
     try {
       r = await query(`
-        SELECT u.id, u.email, u.user_type, u.disabled, u.created_at,
-               COALESCE(b.codes_count,  0) AS codes,
-               COALESCE(b.silver_count, 0) AS silver,
-               COALESCE(b.gold_count,   0) AS gold
-        FROM users u
-        LEFT JOIN balances b ON b.user_id = u.id
-        ORDER BY u.created_at DESC
-        LIMIT 500
-      `, [])
-    } catch (_joinErr) {
-      console.warn('[ADMIN users/full] join failed, falling back to users-only:', _joinErr.message)
-      r = await query(`
-        SELECT id, email, user_type, disabled, created_at,
-               0 AS codes, 0 AS silver, 0 AS gold
+        SELECT id, email, user_type,
+               COALESCE(codes_count,  0) AS codes,
+               COALESCE(silver_count, 0) AS silver,
+               COALESCE(gold_count,   0) AS gold,
+               last_sync_at AS created_at
         FROM users
-        ORDER BY created_at DESC
+        ORDER BY last_sync_at DESC NULLS LAST
         LIMIT 500
       `, [])
+    } catch (_primaryErr) {
+      console.warn('[ADMIN users/full] primary query failed:', _primaryErr.message)
+      // Absolute minimum fallback
+      r = await query('SELECT id, email FROM users LIMIT 500', [])
     }
     res.json({ ok: true, users: r.rows })
   } catch (e) {
