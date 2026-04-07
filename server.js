@@ -1743,7 +1743,7 @@ app.use('/codebank', express.static(path.join(__dirname, 'codebank'), {
     etag: true,
     lastModified: true,
     setHeaders: (res, filePath) => {
-        if (filePath.endsWith('.html')) {
+        if (filePath.endsWith('.html') || filePath.endsWith('.js')) {
             res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
             res.setHeader('Pragma', 'no-cache');
             res.setHeader('Expires', '0');
@@ -1777,7 +1777,7 @@ try {
 app.use('/shared', express.static(path.join(__dirname, 'shared'), {
   maxAge: '1d', etag: true, lastModified: true,
   setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.html')) {
+    if (filePath.endsWith('.html') || filePath.endsWith('.js')) {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
