@@ -364,7 +364,45 @@
       border-color: rgba(255,0,0,0.7) !important;
       box-shadow: 0 8px 30px rgba(255,0,0,0.15) !important;
     }
+
+    /* ── Phone Actions Section ─────────────────────────────── */
+    .phone-action-card {
+      position: relative;
+    }
+    .phone-action-card .svc-logo {
+      border: none !important;
+    }
+    .phone-action-card .native-tag {
+      position: absolute;
+      top: 7px;
+      right: 7px;
+      font-size: 8px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: rgba(0,212,255,0.15);
+      color: #00d4ff;
+      border: 1px solid rgba(0,212,255,0.3);
+    }
+    .phone-action-card:active {
+      transform: scale(0.95) !important;
+    }
+
+    /* In-app dialer overlay (from PhoneActions) */
+    .phone-actions-dialer,
+    .phone-actions-contacts,
+    .phone-actions-preview {
+      animation: fadeInOverlay 0.2s ease;
+    }
+    @keyframes fadeInOverlay {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
   </style>
+  <script src="../src/native-phone-actions.js" defer></script>
 </head>
 <body>
 
@@ -584,6 +622,14 @@ const SERVICES = [
   { id:'youtube',     name:'YouTube',       cat:'media', emoji:'▶️', logo:'https://www.youtube.com/favicon.ico',                                   url:'https://www.youtube.com',          desc:'AI video search & watch', badge:'free' },
   { id:'youtube_ai',  name:'YouTube Studio',cat:'media', emoji:'🎬', logo:'https://studio.youtube.com/favicon.ico',                                url:'https://studio.youtube.com',       desc:'Create & manage videos' },
   { id:'vimeo',       name:'Vimeo AI',      cat:'media', emoji:'🎞️', logo:'https://vimeo.com/favicon.ico',                                         url:'https://vimeo.com/create',         desc:'AI video creation' },
+
+  /* ── Phone Native Actions ──────────────────────────────── */
+  { id:'native_call',     name:'Phone',       cat:'phone', emoji:'📞', logo:'', url:'native:call',     desc:'Make phone calls',      badge:'ai', nativeAction:'call',     gradient:'linear-gradient(135deg,#00d4ff,#0099cc)' },
+  { id:'native_sms',      name:'Messages',    cat:'phone', emoji:'💬', logo:'', url:'native:sms',      desc:'Send SMS messages',     badge:'ai', nativeAction:'sms',      gradient:'linear-gradient(135deg,#25d366,#128c7e)' },
+  { id:'native_email',    name:'Email',       cat:'phone', emoji:'📧', logo:'', url:'native:email',    desc:'Send email',            badge:'ai', nativeAction:'email',    gradient:'linear-gradient(135deg,#ea4335,#c5221f)' },
+  { id:'native_contacts', name:'Contacts',    cat:'phone', emoji:'👥', logo:'', url:'native:contacts', desc:'Device contacts',       badge:'ai', nativeAction:'contacts', gradient:'linear-gradient(135deg,#fbbc05,#f57f17)' },
+  { id:'native_whatsapp', name:'WhatsApp',    cat:'phone', emoji:'💚', logo:'', url:'native:whatsapp', desc:'Quick WhatsApp chat',   badge:'ai', nativeAction:'whatsapp', gradient:'linear-gradient(135deg,#25d366,#075e54)' },
+  { id:'native_camera',   name:'Camera',      cat:'phone', emoji:'📷', logo:'', url:'native:camera',   desc:'Take photo / gallery',  badge:'ai', nativeAction:'camera',   gradient:'linear-gradient(135deg,#9c27b0,#7b1fa2)' },
 ];
 
 /* ═══════════════════════════════════════════════════════════
@@ -602,6 +648,7 @@ const CATS = [
   { id:'search',      label:'Search',        icon:'🔍' },
   { id:'agent',       label:'Agents',        icon:'⛓️' },
   { id:'media',       label:'Media',         icon:'▶️' },
+  { id:'phone',       label:'Phone',       icon:'📱' },
 ];
 
 const CAT_LABELS = {};
@@ -697,30 +744,43 @@ function renderAll() {
 function buildCard(svc) {
   const isFav = favorites.includes(svc.id);
   const card  = document.createElement('div');
-  card.className = 'service-card' + (svc.creator ? ' is-creator' : '');
+  const isNativeAction = !!svc.nativeAction;
+  card.className = 'service-card' + (svc.creator ? ' is-creator' : '') + (isNativeAction ? ' phone-action-card' : '');
   card.style.setProperty('--c', svc.color || '#7c3aed');
 
   let badgeHtml = '';
-  if (svc.badge) {
-    const cls = {hot:'badge-hot', new:'badge-new', free:'badge-free', ai:'badge-ai', open:'badge-open'}[svc.badge] || 'badge-ai';
+  if (isNativeAction) {
+    badgeHtml = '<span class="native-tag">NATIVE</span>';
+  } else if (svc.badge) {
+    const cls = {hot:'badge-hot', new:'badge-new', free:'badge-free', ai:'badge-ai', open:'badge-open', creator:'badge-creator'}[svc.badge] || 'badge-ai';
     badgeHtml = `<span class="svc-badge ${cls}">${svc.badge}</span>`;
+  }
+
+  // For native actions, show emoji with gradient bg instead of logo img
+  let logoHtml;
+  if (isNativeAction) {
+    logoHtml = `<div class="svc-logo" style="background:${svc.gradient || 'var(--accent)'};border:none;"><span style="font-size:26px;">${svc.emoji}</span></div>`;
+  } else {
+    logoHtml = `<div class="svc-logo" id="logo-${svc.id}"><img src="${svc.logo}" alt="${svc.name}" onerror="this.parentElement.textContent='${svc.emoji}'" loading="lazy"></div>`;
   }
 
   card.innerHTML = `
     ${badgeHtml}
-    <div class="svc-logo" id="logo-${svc.id}">
-      <img src="${svc.logo}" alt="${svc.name}" onerror="this.parentElement.textContent='${svc.emoji}'" loading="lazy">
-    </div>
+    ${logoHtml}
     <div class="svc-name">${svc.name}</div>
     <div class="svc-desc">${svc.desc}</div>
   `;
 
   card.onclick = (e) => {
     if (e.target.classList.contains('fav-star')) { toggleFav(svc.id); return; }
-    openViewer(svc);
+    if (isNativeAction) {
+      handleNativeAction(svc.nativeAction);
+    } else {
+      openViewer(svc);
+    }
   };
   card.ondblclick = () => toggleFav(svc.id);
-  card.title = 'Click to open · Double-click to favorite';
+  card.title = isNativeAction ? 'Tap to use · Double-click to favorite' : 'Click to open · Double-click to favorite';
 
   return card;
 }
@@ -858,6 +918,95 @@ function openExternal() {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeViewer();
 });
+
+/* ═══════════════════════════════════════════════════════════
+   NATIVE PHONE ACTIONS HANDLER
+   ═══════════════════════════════════════════════════════════ */
+
+async function handleNativeAction(action) {
+  // Ensure PhoneActions is loaded
+  if (!window.PhoneActions) {
+    console.warn('[AIHub] PhoneActions not loaded — loading dynamically');
+    await loadScript('../src/native-phone-actions.js');
+  }
+
+  const PA = window.PhoneActions;
+  if (!PA) { alert('Phone actions module not available.'); return; }
+
+  switch (action) {
+    case 'call': {
+      if (PA.isNative()) {
+        const num = prompt('Enter phone number to call:');
+        if (!num) return;
+        if (!PA.isValidPhone(num)) { alert('Invalid phone number.'); return; }
+        await PA.call(num);
+      } else {
+        PA.showInAppDialer();
+      }
+      break;
+    }
+    case 'sms': {
+      const num = prompt('Enter phone number for SMS:');
+      if (!num) return;
+      if (!PA.isValidPhone(num)) { alert('Invalid phone number.'); return; }
+      const msg = prompt('Message (optional):') || '';
+      await PA.sms(num, msg);
+      break;
+    }
+    case 'email': {
+      const to = prompt('To (email):');
+      if (!to) return;
+      const subject = prompt('Subject:') || '';
+      const body = prompt('Body:') || '';
+      await PA.email({ to, subject, body });
+      break;
+    }
+    case 'contacts': {
+      if (PA.isNative()) {
+        await PA.showContactPicker((contact) => {
+          const name = contact.name?.display || 'Unknown';
+          const phone = contact.phones?.[0]?.number || '';
+          const choice = prompt(`${name}\n${phone}\n\n1) Call  2) SMS  3) WhatsApp`);
+          if (choice === '1' && phone) PA.call(phone);
+          else if (choice === '2' && phone) PA.sms(phone);
+          else if (choice === '3' && phone) PA.whatsapp(phone);
+        });
+      } else {
+        alert('Contacts require the mobile app.');
+      }
+      break;
+    }
+    case 'whatsapp': {
+      const num = prompt('Enter WhatsApp number:');
+      if (!num) return;
+      const text = prompt('Pre-filled message (optional):') || '';
+      await PA.whatsapp(num, text);
+      break;
+    }
+    case 'camera': {
+      try {
+        const result = await PA.camera({ source: 'PROMPT' });
+        if (result.success && result.image) {
+          PA.showImagePreview(result.image);
+        }
+      } catch (err) {
+        if (!PA.isNative()) alert('Camera works best in the mobile app.');
+      }
+      break;
+    }
+  }
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
 
 init();
 </script>
