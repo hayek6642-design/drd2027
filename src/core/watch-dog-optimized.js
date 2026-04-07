@@ -67,23 +67,33 @@ class WatchDogGuardianV2 {
 
   setupMutationObserver() {
     // Watch for DOM changes that might indicate issues
+    let _debounceTimer = null;
+
     const observer = new MutationObserver((mutations) => {
+      // ⚡ Skip when tab is hidden — no need to track DOM changes in background
+      if (document.hidden) return;
+
       const significantChanges = mutations.filter(m => 
         m.type === 'childList' && 
         m.addedNodes.length > 10
       );
       
       if (significantChanges.length > 0) {
-        this.queueEvent('dom-bulk-change', {
-          count: significantChanges.length,
-          timestamp: Date.now()
-        });
+        // ⚡ Debounce: collapse rapid mutations into one event per second
+        if (_debounceTimer) return;
+        _debounceTimer = setTimeout(() => {
+          _debounceTimer = null;
+          this.queueEvent('dom-bulk-change', {
+            count: significantChanges.length,
+            timestamp: Date.now()
+          });
+        }, 1000);
       }
     });
     
     observer.observe(document.body, {
       childList: true,
-      subtree: true
+      subtree: true  // subtree kept so deep component changes are still detected
     });
   }
 

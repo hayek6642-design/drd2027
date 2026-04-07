@@ -217,6 +217,9 @@ AppLifecycleManager.register("watchdog", {
     if (window.DEBUG_MODE) console.log("[WatchDog] start");
 
     setInterval(async () => {
+      // ⚡ Skip entirely when app is in background (screen off or minimized)
+      if (document.hidden) return;
+
       if (window.DEBUG_MODE) console.log("🐶 AI WatchDog scanning...");
       
       // Run AI Brain cycle
@@ -234,7 +237,7 @@ AppLifecycleManager.register("watchdog", {
       if (issues.length) {
         console.warn("⚠️ WatchDog passive alerts:", issues);
       }
-    }, 8000); // Scans every 8 seconds
+    }, 30000); // ⚡ Raised from 8s → 30s to reduce CPU wake-ups
   }
 });
 
@@ -248,7 +251,8 @@ AppLifecycleManager.register("bankode", {
 
     let isFetching = false;
     setInterval(async () => {
-      if (isFetching) return;
+      // ⚡ Skip when tab/app is in background to avoid background network drain
+      if (document.hidden || isFetching) return;
       isFetching = true;
 
       try {
@@ -264,7 +268,7 @@ AppLifecycleManager.register("bankode", {
       } finally {
         isFetching = false;
       }
-    }, 8000);
+    }, 30000); // ⚡ Raised from 8s → 30s to reduce background network requests
   }
 }, ["auth"]);
 

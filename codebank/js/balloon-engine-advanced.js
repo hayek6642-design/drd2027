@@ -21,6 +21,17 @@ class AdvancedBalloonEngine {
     this.spawnCount = 0;
     this.lastInteraction = Date.now();
     
+    this._isRendering = false;
+    this._physicsRunning = false;
+
+    // Pause/resume render loop on visibility change
+    this._visibilityHandler = () => {
+      if (!document.hidden && this.balloons.length > 0) {
+        this.startRendering();
+      }
+    };
+    document.addEventListener('visibilitychange', this._visibilityHandler);
+
     this.setupCanvas();
     this.startPhysics();
     // 🚫 DISABLED: spawning handled by standalone system only
@@ -44,12 +55,33 @@ class AdvancedBalloonEngine {
   }
 
   startPhysics() {
-    this.runner = Matter.Runner.create(); 
-    Matter.Runner.run(this.runner, this.engine);
+    this.runner = Matter.Runner.create();
+    // Runner and render loop are started lazily in startRendering()
+    // to avoid spinning CPU/GPU when there are no balloons.
+  }
+
+  // Call this whenever a balloon is spawned. Safe to call multiple times.
+  startRendering() {
+    if (this._isRendering) return;
+    this._isRendering = true;
+    if (!this._physicsRunning) {
+      this._physicsRunning = true;
+      Matter.Runner.run(this.runner, this.engine);
+    }
     this.render();
   }
 
+  stopRendering() {
+    this._isRendering = false;
+  }
+
   render() {
+    // ⚡ Stop rendering when no longer needed
+    if (!this._isRendering || document.hidden) {
+      this._isRendering = false;
+      return;
+    }
+
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     let hasBalloons = false;
@@ -60,14 +92,15 @@ class AdvancedBalloonEngine {
       }
     });
 
-    // 🔹 Optimization: Only capture clicks if there are balloons
     if (hasBalloons) {
       this.canvas.style.pointerEvents = 'auto';
+      // Continue loop only while balloons exist
+      requestAnimationFrame(() => this.render());
     } else {
+      // ⚡ No balloons — stop the loop. Will restart next time a balloon spawns.
       this.canvas.style.pointerEvents = 'none';
+      this._isRendering = false;
     }
-
-    requestAnimationFrame(() => this.render());
   }
 
   drawBalloon(body) {
@@ -113,6 +146,7 @@ class AdvancedBalloonEngine {
 
     World.add(this.world, balloon);
     this.balloons.push(balloon);
+    this.startRendering(); // ⚡ Start loop when first balloon spawns
     this.spawnCount++;
     console.log(`🎈 Created balloon at (${x}, ${y}) with color ${color}. Total: ${this.spawnCount}`);
     
