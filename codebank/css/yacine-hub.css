@@ -1,0 +1,282 @@
+/* ═══════════════════════════════════════════════════════════
+   YACINE HUB — Football Live Matches
+   Part of AI-Hub / CodeBank
+   ═══════════════════════════════════════════════════════════ */
+
+.yacine-hub {
+    background: #0a0a0f;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ── Header ─────────────────────────────────────── */
+
+.yacine-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: linear-gradient(90deg, #1a1a2e 0%, #16213e 100%);
+    border-bottom: 2px solid #00d4ff;
+}
+.yacine-header__logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 24px;
+    font-weight: bold;
+}
+.yacine-header__icon  { font-size: 32px; }
+.yacine-header__title {
+    background: linear-gradient(135deg, #00d4ff, #0099cc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.yacine-header__live {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #ff4444;
+    font-weight: bold;
+    font-size: 14px;
+}
+.yacine-pulse {
+    width: 10px; height: 10px;
+    background: #ff4444;
+    border-radius: 50%;
+    animation: yacine-pulse 2s infinite;
+}
+@keyframes yacine-pulse {
+    0%, 100% { opacity: 1; transform: scale(1);   }
+    50%      { opacity: .5; transform: scale(1.2); }
+}
+
+/* ── Filters ────────────────────────────────────── */
+
+.yacine-filters {
+    display: flex;
+    gap: 10px;
+    padding: 15px 20px;
+    background: rgba(0,0,0,0.3);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.yacine-filters::-webkit-scrollbar { display: none; }
+
+.yacine-filter {
+    padding: 8px 16px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid transparent;
+    border-radius: 20px;
+    color: #fff;
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+.yacine-filter.active,
+.yacine-filter:hover {
+    background: rgba(0,212,255,0.2);
+    border-color: #00d4ff;
+}
+
+/* ── Main content grid ──────────────────────────── */
+
+.yacine-content {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 20px;
+    padding: 20px;
+    flex: 1;
+}
+
+/* ── Match list ─────────────────────────────────── */
+
+.yacine-match-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: #222 transparent;
+}
+
+.yacine-match {
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 15px;
+    border-left: 4px solid transparent;
+    transition: all 0.3s;
+    cursor: pointer;
+}
+.yacine-match:hover {
+    background: rgba(255,255,255,0.1);
+    transform: translateX(5px);
+}
+.yacine-match--live     { border-left-color: #ff4444; background: rgba(255,68,68,0.1); }
+.yacine-match--upcoming { border-left-color: #fbbc05; }
+.yacine-match--finished { border-left-color: #34a853; opacity: 0.7; }
+
+.yacine-match__league {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.yacine-match__teams {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-weight: bold;
+    font-size: 14px;
+}
+.yacine-match__score {
+    background: rgba(0,212,255,0.2);
+    padding: 5px 12px;
+    border-radius: 6px;
+    color: #00d4ff;
+    font-size: 15px;
+    min-width: 42px;
+    text-align: center;
+}
+.yacine-match__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.yacine-match__time {
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+.yacine-match__time--live {
+    background: #ff4444;
+    color: #fff;
+    animation: yacine-pulse 2s infinite;
+}
+.yacine-match__time--upcoming { color: #fbbc05; }
+.yacine-match__time--finished { color: #34a853; }
+
+.yacine-match__watch {
+    padding: 6px 14px;
+    background: #00d4ff;
+    border: none;
+    border-radius: 6px;
+    color: #000;
+    font-weight: bold;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.yacine-match__watch:hover {
+    background: #00b8d9;
+    transform: scale(1.05);
+}
+
+/* ── Player area ────────────────────────────────── */
+
+.yacine-player {
+    background: #000;
+    border-radius: 12px;
+    min-height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.yacine-empty {
+    text-align: center;
+    color: #666;
+}
+.yacine-empty__icon {
+    font-size: 64px;
+    display: block;
+    margin-bottom: 20px;
+}
+.yacine-empty p { font-size: 15px; }
+
+.yacine-loading {
+    text-align: center;
+    color: #888;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.yacine-spinner {
+    width: 48px; height: 48px;
+    border: 3px solid rgba(255,255,255,0.1);
+    border-top-color: #00d4ff;
+    border-radius: 50%;
+    animation: yacine-spin 0.8s linear infinite;
+}
+@keyframes yacine-spin { to { transform: rotate(360deg); } }
+
+.yacine-error {
+    text-align: center;
+    color: #ff4444;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+/* ── Quick links bar ────────────────────────────── */
+
+.yacine-quick {
+    padding: 20px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+.yacine-quick__btn {
+    padding: 14px 30px;
+    background: linear-gradient(135deg, #00d4ff, #0099cc);
+    border: none;
+    border-radius: 10px;
+    color: #000;
+    font-weight: bold;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.yacine-quick__btn:hover {
+    transform: scale(1.03);
+    opacity: 0.92;
+}
+.yacine-quick__mirrors {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+}
+
+/* ── Responsive ─────────────────────────────────── */
+
+@media (max-width: 768px) {
+    .yacine-content {
+        grid-template-columns: 1fr;
+    }
+    .yacine-match-list {
+        max-height: 40vh;
+    }
+    .yacine-header {
+        padding: 14px 16px;
+    }
+    .yacine-header__logo { font-size: 20px; }
+    .yacine-header__icon  { font-size: 26px; }
+}
