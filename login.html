@@ -219,7 +219,51 @@
     font-size: 14px;
   }
 </style>
-<script src="https://unpkg.com/@simplewebauthn/browser@10/dist/bundle/index.umd.min.js"></script>
+<script>
+// ── NativeBiometric + NativeStorage helpers for Capacitor ──────────────
+window._NativeBio = {
+  isNative: () => !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()),
+  plugin: () => window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.NativeBiometric,
+  prefs: () => window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Preferences,
+
+  async isAvailable() {
+    const p = this.plugin();
+    if (!p) return false;
+    try { const r = await p.isAvailable(); return r.isAvailable === true; } catch(_) { return false; }
+  },
+
+  // Persist session to BOTH localStorage AND Capacitor Preferences
+  async saveSession(sessionId, userData) {
+    localStorage.setItem('session_active', 'true');
+    if (sessionId) localStorage.setItem('session_token', sessionId);
+    if (userData) localStorage.setItem('user_data', typeof userData === 'string' ? userData : JSON.stringify(userData));
+    const pr = this.prefs();
+    if (pr) {
+      try {
+        await pr.set({ key: 'session_active', value: 'true' });
+        if (sessionId) await pr.set({ key: 'session_token', value: sessionId });
+        if (userData) await pr.set({ key: 'user_data', value: typeof userData === 'string' ? userData : JSON.stringify(userData) });
+      } catch(e) { console.warn('[NativeBio] saveSession error:', e); }
+    }
+  },
+
+  // Restore session from Capacitor Preferences → localStorage
+  async restoreSession() {
+    const pr = this.prefs();
+    if (!pr) return false;
+    try {
+      const r = await pr.get({ key: 'session_active' });
+      if (r.value !== 'true') return false;
+      const t = await pr.get({ key: 'session_token' });
+      const u = await pr.get({ key: 'user_data' });
+      if (t.value) localStorage.setItem('session_token', t.value);
+      if (u.value) localStorage.setItem('user_data', u.value);
+      localStorage.setItem('session_active', 'true');
+      return true;
+    } catch(e) { return false; }
+  }
+};
+</script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -427,39 +471,60 @@ console.log('🔥 Window origin:', window.location.origin);
 
   // 🧠 Auth Flow Control: Auto-redirect if session is ACTUALLY active
   // 🛡️ FIX: Don't blindly trust localStorage — validate with server first
-  //   Old code caused infinite redirect loop after Render redeploy:
-  //   login.html → yt-new-clear.html → server rejects → login.html → ∞
-  if (localStorage.getItem("session_active") === "true") {
-    // Quick gate: if the cookie is already gone, no point asking the server
-    if (!document.cookie.includes('session_token=')) {
-      localStorage.removeItem("session_active");
-      localStorage.removeItem("session_token");
-      localStorage.removeItem("user_data");
-      localStorage.removeItem("__cached_user__");
-      localStorage.removeItem("__cached_session_id__");
-    } else {
-      // Cookie exists — ask the server if it's still valid
-      fetch('/api/auth/me', { credentials: 'include' })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (data.success || data.authenticated || data.ok) {
-            window.location.href = "/yt-new-clear.html";
-          } else {
-            // Server says NO — nuke stale client state
-            localStorage.removeItem("session_active");
-            localStorage.removeItem("session_token");
-            localStorage.removeItem("user_data");
-            localStorage.removeItem("__cached_user__");
-            localStorage.removeItem("__cached_session_id__");
-            document.cookie = "session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-          }
-        })
-        .catch(function() {
-          // Network error — clear stale flag so user isn't stuck
-          localStorage.removeItem("session_active");
-        });
+  //   Also check Capacitor Preferences (native storage) for persisted sessions.
+  (async function checkExistingSession() {
+    // First: try to restore from Capacitor Preferences (survives app kill on Android)
+    const localActive = localStorage.getItem("session_active") === "true";
+    if (!localActive && window._NativeBio && window._NativeBio.isNative()) {
+      await window._NativeBio.restoreSession();
     }
-  }
+
+    if (localStorage.getItem("session_active") === "true") {
+      // Quick gate: if the cookie is already gone, no point asking the server
+      if (!document.cookie.includes('session_token=')) {
+        localStorage.removeItem("session_active");
+        localStorage.removeItem("session_token");
+        localStorage.removeItem("user_data");
+        localStorage.removeItem("__cached_user__");
+        localStorage.removeItem("__cached_session_id__");
+      } else {
+        // Cookie exists — ask the server if it's still valid
+        fetch('/api/auth/me', { credentials: 'include' })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.success || data.authenticated || data.ok) {
+              window.location.href = "/yt-new-clear.html";
+            } else {
+              // Server says NO — nuke stale client state
+              localStorage.removeItem("session_active");
+              localStorage.removeItem("session_token");
+              localStorage.removeItem("user_data");
+              localStorage.removeItem("__cached_user__");
+              localStorage.removeItem("__cached_session_id__");
+              document.cookie = "session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            }
+          })
+          .catch(function() {
+            // Network error — clear stale flag so user isn't stuck
+            localStorage.removeItem("session_active");
+          });
+      }
+    } else {
+      // No session in either storage — also check if biometric can auto-login
+      if (window._NativeBio && window._NativeBio.isNative()) {
+        const bioAvailable = await window._NativeBio.isAvailable();
+        const prefs = window._NativeBio.prefs();
+        if (bioAvailable && prefs) {
+          try {
+            const t = await prefs.get({ key: 'session_token' });
+            if (t.value) {
+              document.getElementById('biometricSection').style.display = 'block';
+            }
+          } catch(_) {}
+        }
+      }
+    }
+  })();
 
   let sessionId = null;
 let verificationStatus = { email: false, phone: false };
@@ -899,6 +964,9 @@ async function handleSignup() {
       
       // 🧠 Auth Flow Control
       localStorage.setItem('session_active', 'true');
+
+      // 📱 NATIVE: Persist to Capacitor Preferences so session survives app kill
+      if (window._NativeBio) window._NativeBio.saveSession(data.sessionId, data.user);
       
       // FIXED: Update auth state to authenticated in AuthCore
       if (window.AuthCore && typeof window.AuthCore._setState === 'function') {
@@ -960,6 +1028,9 @@ async function handleLogin() {
       
       // 🧠 Auth Flow Control
       localStorage.setItem('session_active', 'true');
+
+      // 📱 NATIVE: Persist to Capacitor Preferences so session survives app kill
+      if (window._NativeBio) window._NativeBio.saveSession(data.sessionId, data.user);
       
       // FIXED: Update auth state to authenticated in AuthCore
       if (window.AuthCore && typeof window.AuthCore._setState === 'function') {
@@ -973,10 +1044,16 @@ async function handleLogin() {
       }
       
       localStorage.setItem('last_login_email', email);
-      // Offer biometric registration if device supports it
-      if (window.SimpleWebAuthnBrowser && window.SimpleWebAuthnBrowser.browserSupportsWebAuthn()) {
-        document.getElementById('registerBiometricSection').style.display = 'block';
-        setTimeout(() => { window.location.href = '/yt-new-clear.html'; }, 4000);
+      // Offer biometric registration if device supports it (native only)
+      if (window._NativeBio && window._NativeBio.isNative()) {
+        window._NativeBio.isAvailable().then(bioOk => {
+          if (bioOk) {
+            document.getElementById('registerBiometricSection').style.display = 'block';
+            setTimeout(() => { window.location.href = '/yt-new-clear.html'; }, 3000);
+            return;
+          }
+          window.location.href = '/yt-new-clear.html';
+        });
       } else {
         setTimeout(() => { window.location.href = '/yt-new-clear.html'; }, 1500);
       }
@@ -990,80 +1067,90 @@ async function handleLogin() {
 
 
 // ══════════════════════════════════════════════════════
-//  BIOMETRIC / WEBAUTHN
+//  BIOMETRIC — Uses capacitor-native-biometric plugin
 // ══════════════════════════════════════════════════════
-const { startRegistration, startAuthentication, browserSupportsWebAuthn } =
-  window.SimpleWebAuthnBrowser || {};
 
-// On page load: check if biometric is available + email known
-document.addEventListener('DOMContentLoaded', () => {
-  if (browserSupportsWebAuthn && browserSupportsWebAuthn()) {
-    const storedEmail = localStorage.getItem('last_login_email');
-    if (storedEmail) {
-      document.getElementById('loginEmail').value = storedEmail;
-      document.getElementById('biometricSection').style.display = 'block';
+// On page load: check if native biometric is available + stored session exists
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!window._NativeBio || !window._NativeBio.isNative()) return;
+  try {
+    const bioAvailable = await window._NativeBio.isAvailable();
+    const prefs = window._NativeBio.prefs();
+    if (bioAvailable && prefs) {
+      const t = await prefs.get({ key: 'session_token' });
+      if (t.value) {
+        // Restore last known email to the input
+        const emailResult = await prefs.get({ key: 'user_data' });
+        if (emailResult.value) {
+          try {
+            const u = JSON.parse(emailResult.value);
+            const emailInput = document.getElementById('loginEmail');
+            if (emailInput && u.email) emailInput.value = u.email;
+          } catch(_) {}
+        }
+        document.getElementById('biometricSection').style.display = 'block';
+      }
     }
-  }
-});
-
-// Called when user types in email field — show fingerprint button if biometric available
-document.addEventListener('DOMContentLoaded', () => {
-  const emailInput = document.getElementById('loginEmail');
-  if (!emailInput) return;
-  emailInput.addEventListener('input', () => {
-    const bio = document.getElementById('biometricSection');
-    if (bio && browserSupportsWebAuthn && browserSupportsWebAuthn()) {
-      bio.style.display = emailInput.value.includes('@') ? 'block' : 'none';
-    }
-  });
+  } catch(e) { console.warn('[Biometric] init error:', e); }
 });
 
 async function handleBiometricLogin() {
-  const email = document.getElementById('loginEmail').value.trim();
-  if (!email) { showStatus('Enter your email first', 'error'); return; }
-
   const btn = document.getElementById('bioAuthBtn');
   btn.disabled = true;
   btn.innerHTML = '<span class="loading"></span> Verifying biometric...';
 
   try {
-    // Step 1: Get auth options from server
-    const beginRes = await fetch('/api/auth/biometric/auth-begin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+    if (!window._NativeBio || !window._NativeBio.isNative()) {
+      throw new Error('Biometric login is only available on the mobile app');
+    }
+
+    // Step 1: Trigger native biometric prompt (fingerprint / face)
+    const NativeBiometric = window.Capacitor.Plugins.NativeBiometric;
+    await NativeBiometric.verifyIdentity({
+      reason: 'Sign in to CodeBank',
+      title: 'Biometric Login',
+      subtitle: 'Use fingerprint or face to sign in',
+      negativeButtonText: 'Use Password Instead'
     });
-    const beginData = await beginRes.json();
-    if (!beginData.success) throw new Error(beginData.error || 'Could not start biometric auth');
 
-    // Step 2: Prompt native biometric (fingerprint / Face ID)
-    const assertion = await startAuthentication({ optionsJSON: beginData.options });
+    // Step 2: Biometric passed — restore session from Capacitor Preferences
+    const prefs = window._NativeBio.prefs();
+    if (!prefs) throw new Error('Storage unavailable');
 
-    // Step 3: Verify with server
-    const finishRes = await fetch('/api/auth/biometric/auth-finish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ userId: beginData.userId, response: assertion }),
-    });
-    const finishData = await finishRes.json();
+    const tokenResult = await prefs.get({ key: 'session_token' });
+    if (!tokenResult.value) {
+      throw new Error('No saved session. Please log in with your password first.');
+    }
 
-    if (finishData.status === 'success') {
-      localStorage.setItem('session_token', finishData.sessionId);
-      localStorage.setItem('user_data', JSON.stringify(finishData.user));
-      localStorage.setItem('session_active', 'true');
-      localStorage.setItem('last_login_email', email);
-      showStatus('✅ Biometric verified! Redirecting...', 'success');
-      setTimeout(() => { window.location.href = '/yt-new-clear.html'; }, 1000);
+    // Restore to localStorage
+    localStorage.setItem('session_token', tokenResult.value);
+    const userData = await prefs.get({ key: 'user_data' });
+    if (userData.value) localStorage.setItem('user_data', userData.value);
+    localStorage.setItem('session_active', 'true');
+
+    // Step 3: Validate the restored session with the server
+    showStatus('Verifying session...', 'info');
+    const resp = await fetch('/api/auth/me', { credentials: 'include' });
+    const data = await resp.json();
+
+    if (data.success || data.authenticated || data.ok) {
+      showStatus('✅ Welcome back!', 'success');
+      setTimeout(() => { window.location.href = '/yt-new-clear.html'; }, 800);
     } else {
-      throw new Error(finishData.error || 'Biometric authentication failed');
+      // Session expired — clear it
+      localStorage.removeItem('session_active');
+      localStorage.removeItem('session_token');
+      await prefs.remove({ key: 'session_active' });
+      await prefs.remove({ key: 'session_token' });
+      throw new Error('Session expired. Please log in with your password.');
     }
   } catch (err) {
     console.error('[BIOMETRIC]', err);
-    if (err.name === 'NotAllowedError') {
-      showStatus('Biometric cancelled — please try again or use password', 'error');
+    const msg = err.message || '';
+    if (msg.includes('cancel') || msg.includes('Cancel') || err.code === 10 || err.code === 'BIOMETRIC_DISMISSED') {
+      showStatus('Biometric cancelled — use your password below', 'error');
     } else {
-      showStatus(err.message || 'Biometric failed', 'error');
+      showStatus(msg || 'Biometric failed', 'error');
     }
     btn.disabled = false;
     btn.innerHTML = '<span style="font-size:22px">🪪</span> Sign in with Fingerprint / Face ID';
@@ -1071,51 +1158,49 @@ async function handleBiometricLogin() {
 }
 
 async function registerBiometric() {
-  if (!browserSupportsWebAuthn || !browserSupportsWebAuthn()) {
-    showStatus('Your device / browser does not support biometric login', 'error');
+  const section = document.getElementById('registerBiometricSection');
+  if (!window._NativeBio || !window._NativeBio.isNative()) {
+    section.innerHTML = '<div style="text-align:center;padding:10px;color:#aaa">Biometric login is only available on the mobile app.</div>';
     return;
   }
-  const section = document.getElementById('registerBiometricSection');
+
   try {
-    section.innerHTML = '<div style="text-align:center;padding:10px"><span class="loading"></span> Setting up biometric...</div>';
+    section.innerHTML = '<div style="text-align:center;padding:10px"><span class="loading"></span> Checking biometric...</div>';
 
-    // Step 1: Get registration options
-    const beginRes = await fetch('/api/auth/biometric/register-begin', {
-      credentials: 'include',
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    // Verify biometric is available
+    const available = await window._NativeBio.isAvailable();
+    if (!available) throw new Error('No biometric hardware found on this device');
+
+    // Test that biometric works (optional prompt)
+    const NativeBiometric = window.Capacitor.Plugins.NativeBiometric;
+    await NativeBiometric.verifyIdentity({
+      reason: 'Enable biometric login for CodeBank',
+      title: 'Enable Biometric',
+      subtitle: 'Confirm your identity to enable fast login',
+      negativeButtonText: 'Cancel'
     });
-    const beginData = await beginRes.json();
-    if (!beginData.success) throw new Error(beginData.error);
 
-    // Step 2: Native biometric prompt
-    const attResp = await startRegistration({ optionsJSON: beginData.options });
+    // Session data is already saved to Capacitor Preferences after login.
+    // Biometric is now "registered" — just mark it
+    localStorage.setItem('biometric_registered', '1');
+    const prefs = window._NativeBio.prefs();
+    if (prefs) await prefs.set({ key: 'biometric_registered', value: '1' });
 
-    // Step 3: Verify with server
-    const finishRes = await fetch('/api/auth/biometric/register-finish', {
-      credentials: 'include',
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ response: attResp }),
-    });
-    const finishData = await finishRes.json();
-
-    if (finishData.success) {
-      section.innerHTML = `
-        <div style="text-align:center;padding:10px;color:#00ff88">
-          🎉 Fingerprint / Face ID enabled!<br>
-          <small style="color:#aaa">Next login, just tap the fingerprint button.</small>
-        </div>`;
-      // Show fingerprint button on login form for next visit
-      localStorage.setItem('biometric_registered', '1');
-    } else {
-      throw new Error(finishData.error);
-    }
+    section.innerHTML = `
+      <div style="text-align:center;padding:10px;color:#00ff88">
+        🎉 Fingerprint / Face ID enabled!<br>
+        <small style="color:#aaa">Next login, just tap the fingerprint button.</small>
+      </div>`;
   } catch (err) {
     console.error('[BIOMETRIC REG]', err);
+    const msg = err.message || '';
+    if (msg.includes('cancel') || msg.includes('Cancel')) {
+      section.innerHTML = '<div style="text-align:center;padding:10px;color:#aaa">Setup cancelled.</div>';
+      return;
+    }
     section.innerHTML = `
       <div style="text-align:center;padding:10px;color:#ff6b6b">
-        ❌ ${err.message || 'Biometric registration failed'}<br>
+        ❌ ${err.message || 'Biometric setup failed'}<br>
         <small style="color:#aaa">You can try again from your profile settings.</small>
       </div>`;
   }
@@ -1200,6 +1285,11 @@ async function handleGoogleCredential(response) {
       if (data.user) localStorage.setItem('user_data', JSON.stringify(data.user));
       localStorage.setItem('session_active', 'true');
       if (data.user && data.user.email) localStorage.setItem('last_login_email', data.user.email);
+      // 📱 NATIVE: Persist to Capacitor Preferences so session survives app kill
+      if (window._NativeBio) window._NativeBio.saveSession(data.sessionId, data.user);
+
+      // 📱 NATIVE: Persist to Capacitor Preferences so session survives app kill
+      if (window._NativeBio) window._NativeBio.saveSession(data.sessionId, data.user);
 
       if (window.AuthCore && typeof window.AuthCore._setState === 'function') {
         window.AuthCore._setState({

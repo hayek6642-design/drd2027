@@ -598,10 +598,12 @@
             }
         }
 
-        /* ── Settings panel: full width on small screens ── */
-        @media (max-width: 360px) {
+        /* ── Settings panel: full width on ALL phone screens ── */
+        @media (max-width: 768px) {
             #settings-panel {
-                width: 100% !important;
+                width: 100vw !important;
+                max-width: 100vw !important;
+                right: 0 !important;
             }
         }
 

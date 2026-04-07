@@ -125,10 +125,15 @@
         }
     }
 
-    // Initialize on load
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => new PerformanceMonitor());
-    } else {
-        new PerformanceMonitor();
+    // Initialize on load — disabled on native (production) platform
+    const _isNativeApp = () => {
+        try { return window.Capacitor && window.Capacitor.isNativePlatform(); } catch(_) { return false; }
+    };
+    if (!_isNativeApp()) {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => new PerformanceMonitor());
+        } else {
+            new PerformanceMonitor();
+        }
     }
 })();

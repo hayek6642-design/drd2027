@@ -2495,6 +2495,23 @@
             (async function checkAuth() {
                 if (window.location.pathname.includes('login.html')) return;
                 try {
+                    // [FIX NATIVE] Restore session from Capacitor Preferences FIRST (survives app kill on Android)
+                    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+                        const pr = window.Capacitor.Plugins && window.Capacitor.Plugins.Preferences;
+                        if (pr && !localStorage.getItem('session_token')) {
+                            try {
+                                const t = await pr.get({ key: 'session_token' });
+                                const u = await pr.get({ key: 'user_data' });
+                                if (t && t.value) {
+                                    localStorage.setItem('session_token', t.value);
+                                    if (u && u.value) localStorage.setItem('user_data', u.value);
+                                    localStorage.setItem('session_active', 'true');
+                                    document.cookie = `session_token=${t.value}; path=/; max-age=${7*24*60*60}; SameSite=Lax`;
+                                    console.log('[AUTH] Session restored from Capacitor Preferences');
+                                }
+                            } catch(nativeErr) { console.warn('[AUTH] Capacitor Preferences restore failed:', nativeErr); }
+                        }
+                    }
                     // [FIX] Restore session token from localStorage to cookie BEFORE server check
                     // This ensures the cookie is present even after mobile browser restarts
                     const localToken = localStorage.getItem('session_token');
