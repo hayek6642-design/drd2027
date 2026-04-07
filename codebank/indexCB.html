@@ -1597,11 +1597,53 @@
             });
         })();
 
-        function bankodeCheckPassword() {
+        // ── Helper: read XSRF-TOKEN cookie (for CSRF header) ──────────────────
+        function baCsrfToken() {
+            var match = document.cookie.match(/(?:^|;)\s*XSRF-TOKEN=([^;]+)/);
+            return match ? decodeURIComponent(match[1]) : '';
+        }
+
+        // ── Helper: fetch wrapper that adds Auth + CSRF headers automatically ──
+        async function baFetch(url, opts) {
+            opts = opts || {};
+            opts.credentials = 'include';
+            opts.headers = Object.assign({}, opts.headers || {});
+            // Bearer token (obtained after bankode-login)
+            if (window.__baToken) {
+                opts.headers['Authorization'] = 'Bearer ' + window.__baToken;
+            }
+            // CSRF token for unsafe methods
+            var method = (opts.method || 'GET').toUpperCase();
+            if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
+                var csrf = baCsrfToken();
+                if (csrf) opts.headers['x-csrf-token'] = csrf;
+            }
+            return fetch(url, opts);
+        }
+
+        async function bankodeCheckPassword() {
             var inp = document.getElementById('bankode-pw-input');
             var errEl = document.getElementById('bankode-pw-error');
             var pw = inp ? inp.value : '';
             if (pw === 'doitasap2025') {
+                // Exchange password for a real server-side session token
+                try {
+                    var csrf = baCsrfToken();
+                    var headers = { 'Content-Type': 'application/json' };
+                    if (csrf) headers['x-csrf-token'] = csrf;
+                    var r = await fetch('/api/admin/bankode-login', {
+                        method: 'POST', credentials: 'include',
+                        headers: headers,
+                        body: JSON.stringify({ password: pw })
+                    });
+                    var data = await r.json();
+                    if (data.ok && data.token) {
+                        window.__baToken = data.token;
+                        window.__baPw = pw; // keep for pebalaash x-admin-password
+                    }
+                } catch(e) {
+                    console.warn('[bankode] token exchange failed, admin API calls may fail:', e.message);
+                }
                 document.getElementById('bankode-pw-modal').style.display = 'none';
                 inp.value = ''; errEl.textContent = '';
                 var overlay = document.getElementById('bankode-admin-overlay');
@@ -1647,7 +1689,7 @@
             var el = document.getElementById('ba-users-body');
             el.innerHTML = '<div style="color:#6b7280;text-align:center;padding:32px;">⏳ Loading...</div>';
             try {
-                var r = await fetch('/api/admin/users/full', { credentials: 'include' });
+                var r = await baFetch('/api/admin/users/full');
                 var data = await r.json();
                 if (!data.ok) { el.innerHTML = '<div style="color:#f87171;padding:20px;">Error: '+data.error+'</div>'; return; }
                 var rows = (data.users||[]).map(function(u){ return [
@@ -1668,7 +1710,9 @@
             var body = document.getElementById('ba-pebalaash-body');
             body.innerHTML = '<div style="color:#6b7280;text-align:center;padding:32px;">⏳ Loading...</div>';
             try {
-                var r = await fetch('/api/pebalaash/admin/stats', { credentials: 'include' });
+                var r = await baFetch('/api/pebalaash/admin/stats', {
+                    headers: window.__baPw ? { 'x-admin-password': window.__baPw } : {}
+                });
                 var data = await r.json();
                 summary.innerHTML = [
                     ['🛒 Total Sold', data.totalSold||0, '#38bdf8'],
@@ -1691,7 +1735,7 @@
             var el = document.getElementById('ba-qarsan-body');
             el.innerHTML = '<div style="color:#6b7280;text-align:center;padding:32px;">⏳ Loading...</div>';
             try {
-                var r = await fetch('/api/admin/qarsan/steals', { credentials: 'include' });
+                var r = await baFetch('/api/admin/qarsan/steals');
                 var data = await r.json();
                 if (!data.ok) { el.innerHTML = '<div style="color:#f87171;padding:20px;">Error: '+data.error+'</div>'; return; }
                 var rows = (data.steals||[]).map(function(s){ return [
@@ -1730,8 +1774,8 @@
             confBtn.disabled = true; confBtn.textContent = 'Sending...';
             status.style.color='#94a3b8'; status.textContent='Processing...';
             try {
-                var r = await fetch('/api/admin/send-by-email', {
-                    method:'POST', credentials:'include',
+                var r = await baFetch('/api/admin/send-by-email', {
+                    method:'POST',
                     headers:{'Content-Type':'application/json'},
                     body:JSON.stringify({email:email, assetType:type, amount:amt})
                 });
