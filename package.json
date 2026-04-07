@@ -77,7 +77,10 @@
         "@capacitor/clipboard": "^6.0.0",
         "@capacitor/device": "^6.0.0",
         "@simplewebauthn/server": "^10.0.0",
-        "capacitor-native-biometric": "^4.2.2"
+        "capacitor-native-biometric": "^4.2.2",
+        "@capacitor/app-launcher": "^6.0.0",
+        "@capacitor/camera": "^6.0.0",
+        "@capacitor-community/contacts": "^6.0.0"
     },
     "devDependencies": {
         "pm2": "^6.0.14",

@@ -21,6 +21,21 @@
       "useFallback": true,
       "biometryType": "FINGERPRINT",
       "maxAttempts": 3
+    },
+    "Camera": {
+      "quality": 90,
+      "allowEditing": true,
+      "resultType": "uri",
+      "saveToGallery": true,
+      "promptLabelHeader": "Photo",
+      "promptLabelPhoto": "From Gallery",
+      "promptLabelPicture": "Take Photo"
+    },
+    "Contacts": {
+      "permissions": [
+        "READ_CONTACTS",
+        "WRITE_CONTACTS"
+      ]
     }
   },
   "server": {
@@ -35,7 +50,9 @@
       "*.googleapis.com",
       "*.youtube.com",
       "*.google.com",
-      "*.gstatic.com"
+      "*.gstatic.com",
+      "wa.me",
+      "*.whatsapp.com"
     ]
   },
   "android": {
