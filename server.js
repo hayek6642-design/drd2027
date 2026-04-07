@@ -1494,6 +1494,102 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // Dev auth: whoami
+
+// ── Google Sign-In ──────────────────────────────────────────────────────────
+app.get('/api/auth/google-client-id', (req, res) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID || '';
+  res.json({ clientId });
+});
+
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) return res.status(400).json({ status: 'failed', error: 'Missing Google credential' });
+
+    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+    if (!GOOGLE_CLIENT_ID) return res.status(500).json({ status: 'failed', error: 'Google Sign-In not configured on server' });
+
+    // Verify the ID token with Google
+    const googleRes = await fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(credential));
+    if (!googleRes.ok) return res.status(401).json({ status: 'failed', error: 'Invalid Google token' });
+
+    const gUser = await googleRes.json();
+
+    // Verify audience matches our client ID
+    if (gUser.aud !== GOOGLE_CLIENT_ID) {
+      return res.status(401).json({ status: 'failed', error: 'Token audience mismatch' });
+    }
+    if (!gUser.email) {
+      return res.status(401).json({ status: 'failed', error: 'No email in Google token' });
+    }
+
+    const email = gUser.email.toLowerCase().trim();
+    const displayName = gUser.name || email.split('@')[0];
+
+    // Find existing user
+    let user = process.env.DATABASE_URL ? await sqliteFindUserByEmail(email) : memFindUserByEmail(email);
+
+    if (!user) {
+      // Auto-create account for Google users (no password needed for Google-only login)
+      const randomPassword = crypto.randomUUID();
+      const created = await memCreateUser(email, displayName, randomPassword, {
+        emailVerified: true,
+        googleId: gUser.sub,
+        avatar: gUser.picture || null
+      });
+      if (!created || !created.id) throw new Error('User creation failed');
+      user = { id: created.id, email, username: displayName, user_type: 'user' };
+      console.log('[GOOGLE AUTH] New user created:', user.id, email);
+    }
+
+    // Create session
+    const token = signJwt(user.id, email);
+    const sessionId = crypto.randomUUID();
+
+    devSessions.set(sessionId, {
+      userId: user.id,
+      role: user.user_type || 'user',
+      sessionId,
+      email,
+      isUntrusted: user.is_untrusted || false
+    });
+
+    // Persist session to DB
+    try {
+      await query(
+        "INSERT INTO auth_sessions (token, user_id, expires_at) VALUES ($1, $2, datetime('now', '+7 days')) ON CONFLICT (token) DO NOTHING",
+        [sessionId, user.id]
+      );
+    } catch(dbErr) { console.warn('[SESSION] DB persist failed on Google login:', dbErr.message); }
+
+    // Set cookie
+    res.cookie('session_token', sessionId, {
+      httpOnly: false,
+      path: '/',
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    console.log('[AUTH] Google login success - userId:', user.id, 'email:', email);
+    return res.json({
+      status: 'success',
+      userId: user.id,
+      token,
+      sessionId,
+      user: {
+        id: user.id,
+        email,
+        username: user.username || displayName,
+        verified: true
+      }
+    });
+  } catch (err) {
+    console.error('[GOOGLE AUTH ERROR]:', err);
+    return res.status(500).json({ status: 'failed', error: 'Google authentication failed' });
+  }
+});
+
 app.get('/api/auth/me', requireAuth, (req, res) => {
   try {
     return res.json({ 
