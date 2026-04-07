@@ -1497,8 +1497,10 @@ app.post('/api/auth/login', async (req, res) => {
 
 // ── Google Sign-In ──────────────────────────────────────────────────────────
 app.get('/api/auth/google-client-id', (req, res) => {
-  const clientId = process.env.GOOGLE_CLIENT_ID || '';
-  res.json({ clientId });
+  const raw = process.env.GOOGLE_CLIENT_ID || '';
+  // Return empty if placeholder not replaced
+  const isValid = raw && raw !== 'your_google_client_id.apps.googleusercontent.com' && /\.apps\.googleusercontent\.com$/.test(raw);
+  res.json({ clientId: isValid ? raw : '' });
 });
 
 app.post('/api/auth/google', async (req, res) => {

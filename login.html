@@ -1214,8 +1214,16 @@ async function initGoogleSignIn() {
   try {
     const res = await fetch('/api/auth/google-client-id');
     const data = await res.json();
-    if (!data.clientId) {
-      console.log('[Google] No GOOGLE_CLIENT_ID configured — Google Sign-In hidden');
+    // Validate it's a real Google client ID (not empty or placeholder)
+    const isValidClientId = data.clientId &&
+      data.clientId !== 'your_google_client_id.apps.googleusercontent.com' &&
+      /^\d+(-\w+)?\.apps\.googleusercontent\.com$/.test(data.clientId);
+
+    if (!isValidClientId) {
+      console.log('[Google] GOOGLE_CLIENT_ID not configured — hiding Google Sign-In buttons');
+      document.querySelectorAll('.google-login-wrapper, #google-login-wrapper, #google-signup-wrapper, #google-divider-login, #google-divider-signup').forEach(el => {
+        if (el) el.style.display = 'none';
+      });
       return;
     }
 
