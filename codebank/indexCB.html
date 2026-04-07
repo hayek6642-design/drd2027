@@ -682,27 +682,27 @@
             <!-- App Sections (Injected by app-launcher.js) -->
             <div id="launcher-grid">
                 <section class="launcher-section">
-                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">Core Services</h2>
+                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6" data-i18n="core_services">Core Services</h2>
                     <div class="app-grid" id="core-apps"></div>
                 </section>
 
                 <section class="launcher-section">
-                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">Media & Entertainment</h2>
+                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6" data-i18n="media_entertainment">Media & Entertainment</h2>
                     <div class="app-grid" id="media-apps"></div>
                 </section>
 
                 <section class="launcher-section">
-                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">Finance & Trading</h2>
+                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6" data-i18n="finance_trading">Finance & Trading</h2>
                     <div class="app-grid" id="finance-apps"></div>
                 </section>
 
                 <section class="launcher-section">
-                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">Games & Fun</h2>
+                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6" data-i18n="games_fun">Games & Fun</h2>
                     <div class="app-grid" id="games-apps"></div>
                 </section>
 
                 <section class="launcher-section">
-                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">Tools & AI</h2>
+                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6" data-i18n="tools_ai">Tools & AI</h2>
                     <div class="app-grid" id="tools-apps"></div>
                 </section>
             </div>
@@ -749,7 +749,7 @@
             <div class="service-iframe-container">
                 <div id="service-modal-loading" class="service-loading">
                     <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
-                    <span>Loading Service...</span>
+                    <span data-i18n="loading_service">Loading Service...</span>
                 </div>
                 <iframe id="service-modal-iframe" src="about:blank" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-top-navigation-by-user-activation"></iframe>
             </div>
@@ -767,32 +767,32 @@
         <aside id="settings-panel" class="fixed top-0 right-0 h-full w-80 bg-slate-900 shadow-2xl transform translate-x-full transition-transform duration-300">
             <div class="p-6">
                 <div class="flex items-center justify-between mb-8">
-                    <h2 class="text-xl font-bold">My Room</h2>
+                    <h2 class="text-xl font-bold" data-i18n="my_room">My Room</h2>
                     <button id="settings-close" class="text-2xl">&times;</button>
                 </div>
                 <div class="space-y-6">
                     <section>
-                        <h3 class="text-xs font-bold text-gray-500 uppercase mb-4">Appearance</h3>
+                        <h3 class="text-xs font-bold text-gray-500 uppercase mb-4" data-i18n="appearance">Appearance</h3>
                         <div class="bg-white/5 rounded-xl p-4 flex items-center justify-between">
-                            <span>Dark Mode</span>
+                            <span data-i18n="dark_mode">Dark Mode</span>
                             <input type="checkbox" id="theme-toggle" checked>
                         </div>
                     </section>
 
                     <section>
-                        <h3 class="text-xs font-bold text-gray-500 uppercase mb-4">Account</h3>
+                        <h3 class="text-xs font-bold text-gray-500 uppercase mb-4" data-i18n="account">Account</h3>
                         <button id="signOutBtn" class="w-full p-4 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl transition-colors flex items-center justify-between">
-                            <span>Sign Out</span>
+                            <span data-i18n="sign_out">Sign Out</span>
                             <i class="fas fa-sign-out-alt"></i>
                         </button>
                     </section>
 
                     <section>
-                        <h3 class="text-xs font-bold text-gray-500 uppercase mb-4">Messages</h3>
+                        <h3 class="text-xs font-bold text-gray-500 uppercase mb-4" data-i18n="messages">Messages</h3>
                         <button id="drmailBtn" class="w-full p-4 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-xl transition-colors flex items-center justify-between" style="position:relative;">
                             <span style="display:flex;align-items:center;gap:8px;">
                                 <i class="fas fa-envelope"></i>
-                                Dr.D-mail
+                                <span data-i18n="drmail">Dr.D-mail</span>
                                 <span id="drmail-sidebar-badge" style="display:none;background:#ef4444;color:#fff;font-size:0.62rem;font-weight:700;padding:1px 6px;border-radius:99px;line-height:1.5;">0</span>
                             </span>
                             <i class="fas fa-chevron-right" style="font-size:0.75rem;"></i>
@@ -1793,5 +1793,8 @@
             confBtn.disabled=false; confBtn.textContent='✓ Confirm Send';
         }
     </script>
+
+    <!-- 🌐 CodeBank Multi-Language Support -->
+    <script src="/codebank/translate.js?v=1"></script>
 </body>
 </html>
