@@ -612,9 +612,18 @@ router.post('/send-by-email', requireRole('admin'), async (req, res) => {
     }
     const userId = userRes.rows[0].id
     const col = assetType === 'codes' ? 'codes_count' : assetType === 'silver' ? 'silver_count' : 'gold_count'
-    // Update balance directly on the users table (balance columns live there)
+    // Update balance on users table
     await query(`
       UPDATE users SET ${col} = COALESCE(${col}, 0) + $2 WHERE id = $1
+    `, [userId, Number(amount)])
+    // Also ensure the balances table is in sync (user-facing balance reads from here)
+    await query(`
+      INSERT INTO balances (user_id, codes_count, silver_count, gold_count)
+      VALUES ($1, 0, 0, 0)
+      ON CONFLICT (user_id) DO NOTHING
+    `, [userId])
+    await query(`
+      UPDATE balances SET ${col} = COALESCE(${col}, 0) + $2 WHERE user_id = $1
     `, [userId, Number(amount)])
     await audit(req, {
       action: 'ADMIN_SEND_ASSETS_BY_EMAIL',
