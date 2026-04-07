@@ -1,9 +1,9 @@
-// CodeBank Service Worker — v1.0.0
+// CodeBank Service Worker — v2.0.0
 // Handles: offline caching, background sync, push notifications, install lifecycle
 
-const CACHE_NAME = 'codebank-v1';
-const STATIC_CACHE = 'codebank-static-v1';
-const DYNAMIC_CACHE = 'codebank-dynamic-v1';
+const CACHE_NAME = 'codebank-v2';
+const STATIC_CACHE = 'codebank-static-v2';
+const DYNAMIC_CACHE = 'codebank-dynamic-v2';
 
 // Core app shell to cache on install
 const APP_SHELL = [
@@ -70,6 +70,15 @@ self.addEventListener('fetch', event => {
   // API calls — network first, no caching
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/socket')) {
     event.respondWith(networkFirst(request));
+    return;
+  }
+
+  // Critical shared/auth JS — always fetch latest from network
+  if (
+    url.pathname.startsWith('/shared/') && url.pathname.endsWith('.js') ||
+    url.pathname.startsWith('/codebank/js/') && url.pathname.endsWith('.js')
+  ) {
+    event.respondWith(staleWhileRevalidate(request));
     return;
   }
 
@@ -210,4 +219,4 @@ self.addEventListener('message', event => {
   }
 });
 
-console.log('[SW] CodeBank service worker loaded — v1.0.0');
+console.log('[SW] CodeBank service worker loaded — v2.0.0');
