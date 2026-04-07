@@ -5048,22 +5048,34 @@ apiRouter.post('/admin/bankode-login', async (req, res) => {
   const { password } = req.body || {};
   const ADMIN_PW = process.env.BANKODE_ADMIN_PW || 'doitasap2025';
   if (!password || password !== ADMIN_PW) {
+    await new Promise(r => setTimeout(r, 400)); // brute-force delay
     return res.status(401).json({ ok: false, error: 'INVALID_PASSWORD' });
   }
   try {
     const crypto = (await import('crypto')).default || (await import('crypto'));
+    const { query } = await import('./api/config/db.js');
+
+    // 🔧 Self-healing schema: add columns if they don't exist yet
+    try {
+      await query(`ALTER TABLE auth_sessions ADD COLUMN IF NOT EXISTS token TEXT`);
+      await query(`ALTER TABLE auth_sessions ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`);
+      await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_auth_sessions_token ON auth_sessions(token) WHERE token IS NOT NULL`);
+    } catch (_schemaErr) {
+      // Already exists or cannot alter — continue anyway
+    }
+
     const token = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24h
-    // Insert into auth_sessions (same table validateAdminSession reads from)
-    const { query } = await import('./api/config/db.js');
+
     await query(
       'INSERT INTO auth_sessions (id, token, expires_at, created_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP)',
       [crypto.randomUUID(), token, expiresAt]
     );
+    console.log('[BANKODE-LOGIN] Admin session issued');
     return res.json({ ok: true, token });
   } catch (e) {
     console.error('[BANKODE-LOGIN ERROR]', e.message);
-    return res.status(500).json({ ok: false, error: 'SESSION_CREATE_FAILED' });
+    return res.status(500).json({ ok: false, error: 'SESSION_CREATE_FAILED', detail: e.message });
   }
 });
 
