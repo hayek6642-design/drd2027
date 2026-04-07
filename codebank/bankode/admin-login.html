@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Login – Bankode</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background: #f0f4f8;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; margin: 0;
+  }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.1);
+    padding: 2rem 2.5rem;
+    width: 100%; max-width: 380px;
+  }
+  h1 { margin: 0 0 1.5rem; font-size: 1.4rem; text-align: center; color: #1a1a2e; }
+  label { display: block; margin-bottom: .35rem; font-weight: 600; font-size: .9rem; color: #444; }
+  input[type=password] {
+    width: 100%; padding: .65rem .85rem;
+    border: 1px solid #ccc; border-radius: 6px;
+    font-size: 1rem; margin-bottom: 1.25rem;
+    transition: border-color .2s;
+  }
+  input[type=password]:focus { outline: none; border-color: #007bff; }
+  button {
+    width: 100%; padding: .75rem;
+    background: #007bff; color: #fff;
+    border: none; border-radius: 6px;
+    font-size: 1rem; font-weight: 700;
+    cursor: pointer; transition: background .2s;
+  }
+  button:hover { background: #0056b3; }
+  button:disabled { background: #aaa; cursor: not-allowed; }
+  #errMsg {
+    color: #c0392b; font-size: .88rem;
+    text-align: center; margin-top: .75rem;
+    min-height: 1.2em;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🔐 لوحة تحكم المشرف</h1>
+  <label for="pw">كلمة المرور</label>
+  <input type="password" id="pw" placeholder="أدخل كلمة المرور" autofocus>
+  <button id="loginBtn" onclick="doLogin()">دخول</button>
+  <p id="errMsg"></p>
+</div>
+
+<script type="module">
+import { setAdminToken } from './jwt-auth.js';
+
+window.doLogin = async function() {
+  const pw   = document.getElementById('pw').value.trim();
+  const btn  = document.getElementById('loginBtn');
+  const err  = document.getElementById('errMsg');
+
+  if (!pw) { err.textContent = 'الرجاء إدخال كلمة المرور'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'جاري التحقق…';
+  err.textContent = '';
+
+  try {
+    const res  = await fetch('/api/admin/bankode-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw }),
+      credentials: 'include'
+    });
+    const data = await res.json();
+
+    if (data.ok && data.token) {
+      setAdminToken(data.token);
+      window.location.href = 'bankode-admin-dashboard.html';
+    } else {
+      err.textContent = 'كلمة المرور غير صحيحة';
+    }
+  } catch (e) {
+    err.textContent = 'خطأ في الاتصال بالخادم: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'دخول';
+  }
+};
+
+// Allow Enter key
+document.getElementById('pw').addEventListener('keydown', e => {
+  if (e.key === 'Enter') window.doLogin();
+});
+</script>
+</body>
+</html>

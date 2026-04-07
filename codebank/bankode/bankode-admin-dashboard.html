@@ -30,7 +30,7 @@
 </header>
 
 <div id="adminBanner" class="admin-banner" style="display:none;">
-  <span><i class="fas fa-check-circle"></i> تم التحقق من صلاحيات المشرف</span>
+  <span>✅ تم التحقق من صلاحيات المشرف</span>
 </div>
 
 <div id="vaultStatus" class="vault-status" style="display:none;">
@@ -77,42 +77,59 @@
 <script src="./config.js"></script>
 <script type="module">
 import { getAllUsers, getUserBalances, getAdminOverview } from './dashboard.js';
-import { logoutUser } from './jwt-auth.js';
+import { getAdminToken, setAdminToken, logoutUser, getCookie } from './jwt-auth.js';
 
-const statusEl = document.getElementById('status');
-const usersContainer = document.getElementById('usersContainer');
+const statusEl        = document.getElementById('status');
+const usersContainer  = document.getElementById('usersContainer');
 const ledgerContainer = document.getElementById('ledgerContainer');
+
+/** Helper: build fetch headers with Authorization + CSRF token */
+function authHeaders(extra = {}) {
+  const token     = getAdminToken();
+  const csrfToken = getCookie('XSRF-TOKEN');
+  const headers = {
+    'Authorization': `Bearer ${token}`,
+    ...extra
+  };
+  if (csrfToken) headers['x-csrf-token'] = csrfToken;
+  return headers;
+}
 
 // 1. Verify Admin Session
 async function checkAdmin() {
   try {
-    // 🛡️ Get token from URL or Memory
+    // Load persisted token (URL param → localStorage → window global)
     const urlParams = new URLSearchParams(window.location.search);
-    const urlToken = urlParams.get('at') ? atob(urlParams.get('at')) : null;
-    window.__ADMIN_JWT__ = urlToken || window.__ADMIN_JWT__;
-    
-    // Clean URL
+    const urlToken  = urlParams.get('at') ? atob(urlParams.get('at')) : null;
     if (urlToken) {
+      setAdminToken(urlToken);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    if (!window.__ADMIN_JWT__) {
-      throw new Error('Unauthorized');
-    }
+    const token = getAdminToken();
+    if (!token) throw new Error('Unauthorized – no token');
 
     // Fetch Vault Status
     const vRes = await fetch('/api/admin/vault/status', {
-      headers: { 'Authorization': `Bearer ${window.__ADMIN_JWT__}` }
+      headers: authHeaders(),
+      credentials: 'include'
     });
+
+    if (!vRes.ok) {
+      const body = await vRes.json().catch(() => ({}));
+      throw new Error(body.error || `HTTP ${vRes.status}`);
+    }
+
     const vaultData = await vRes.json();
-    
+
     if (vaultData.ok) {
-      document.getElementById('adminBanner').style.display = 'flex';
-      document.getElementById('vaultStatus').style.display = 'flex';
+      document.getElementById('adminBanner').style.display  = 'flex';
+      document.getElementById('vaultStatus').style.display  = 'flex';
       document.getElementById('vaultAllowance').textContent = vaultData.allowance.toLocaleString();
-      document.getElementById('monthlyLimit').textContent = vaultData.monthly_limit.toLocaleString();
+      document.getElementById('monthlyLimit').textContent   = vaultData.monthly_limit.toLocaleString();
     }
   } catch (e) {
+    console.error('[Admin] Session check failed:', e.message);
     window.location.href = 'admin-login.html';
   }
 }
@@ -121,7 +138,7 @@ checkAdmin();
 // 2. Load Users
 document.getElementById('loadUsersBtn').addEventListener('click', async () => {
   try {
-    statusEl.textContent = 'جاري التحميل...';
+    statusEl.textContent   = 'جاري التحميل...';
     usersContainer.innerHTML = '';
     const overview = await getAdminOverview();
     statusEl.textContent = `إجمالي المستخدمين: ${overview?.usersCount ?? '-'} | المعاملات: ${overview?.txCount ?? '-'} | سكّ: ${JSON.stringify(overview?.minted ?? {})}`;
@@ -140,53 +157,43 @@ document.getElementById('loadUsersBtn').addEventListener('click', async () => {
 
 // 3. Minting Execution
 document.getElementById('mintBtn').addEventListener('click', async () => {
-  const userId = document.getElementById('targetUserId').value;
+  const userId   = document.getElementById('targetUserId').value;
   const assetType = document.getElementById('assetType').value;
-  const amount = parseInt(document.getElementById('mintAmount').value, 10);
-  const reason = document.getElementById('mintReason').value;
+  const amount   = parseInt(document.getElementById('mintAmount').value, 10);
+  const reason   = document.getElementById('mintReason').value;
 
   if (!userId || isNaN(amount) || amount <= 0) {
     alert('الرجاء إدخال بيانات صحيحة');
     return;
   }
 
-  if (!confirm(`هل أنت متأكد من سكّ ${amount} من ${assetType} للمستخدم ${userId}؟`)) {
-    return;
-  }
+  if (!confirm(`هل أنت متأكد من سكّ ${amount} من ${assetType} للمستخدم ${userId}؟`)) return;
 
   try {
     statusEl.textContent = 'جاري تنفيذ العملية من الخزنة...';
-    
-    // 🛡️ VAULT MINT CALL: Deducts from allowance and updates ledger
+
+    // 🛡️ VAULT MINT – includes CSRF token header to satisfy production middleware
     const response = await fetch('/api/admin/mint-from-vault', {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${window.__ADMIN_JWT__}`
-      },
-      body: JSON.stringify({
-        userId,
-        assetId: assetType,
-        amount,
-        reason
-      })
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      credentials: 'include',
+      body: JSON.stringify({ userId, assetId: assetType, amount, reason })
     });
 
     const result = await response.json();
 
     if (result.ok) {
       alert(`نجاح: تم السك من الخزنة\nTX ID: ${result.txId}`);
-      
+
       // Refresh Vault Balance
       checkAdmin();
-      
+
       // Add to local audit view
       const txDiv = document.createElement('div');
       txDiv.className = 'tx-item';
-      txDiv.innerHTML = `[${new Date().toLocaleTimeString()}] MINT: ${amount} ${assetType} to ${userId} | ID: ${result.txId.slice(0,8)} | Hash: ${result.txHash.slice(0,16)}...`;
+      txDiv.innerHTML = `[${new Date().toLocaleTimeString()}] MINT: ${amount} ${assetType} to ${userId} | ID: ${result.txId.slice(0,8)}`;
       ledgerContainer.prepend(txDiv);
 
-      // 🧠 Real-time Sync: AssetBus will reflect this on next sync/poll
       if (window.AssetBus && typeof window.AssetBus.sync === 'function') {
         window.AssetBus.sync();
       }
@@ -199,6 +206,7 @@ document.getElementById('mintBtn').addEventListener('click', async () => {
   }
 });
 
+// 4. Logout
 document.getElementById('logoutBtn').addEventListener('click', () => {
   logoutUser();
   window.location.href = 'admin-login.html';
