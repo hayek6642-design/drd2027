@@ -403,8 +403,11 @@
 
   </style>
   <link rel="stylesheet" href="css/yacine-hub.css">
+  <link rel="stylesheet" href="css/movie-hub.css">
   <script src="../services/yacine-service.js" defer></script>
   <script src="components/yacine-hub.js" defer></script>
+  <script src="../services/movie-platforms-service.js" defer></script>
+  <script src="components/movie-hub.js" defer></script>
   <script src="../src/native-phone-actions.js" defer></script>
 </head>
 <body>
@@ -631,6 +634,28 @@ const SERVICES = [
   { id:'yacine_live', name:'Yacine Live',    cat:'sports', emoji:'⚽', logo:'', url:'https://yacinelive.tv',  desc:'Live football matches', badge:'hot', isYacine:true, gradient:'linear-gradient(135deg,#00d4ff,#0099cc)' },
   { id:'yacine_hub',  name:'Yacine Hub',     cat:'sports', emoji:'📺', logo:'', url:'yacine:hub',             desc:'Match schedule & streams', badge:'new', isYacineHub:true, gradient:'linear-gradient(135deg,#1a1a2e,#00d4ff)' },
 
+  /* ── Cinema Hub (Movies & TV) ──────────────────────────── */
+  { id:'cinema_hub',   name:'Cinema Hub',   cat:'movies', emoji:'🎬', logo:'', url:'cinema:hub',            desc:'All streaming in one place', badge:'new', isCinemaHub:true, gradient:'linear-gradient(135deg,#e50914,#ff6b6b)' },
+  { id:'netflix',      name:'Netflix',      cat:'movies', emoji:'🎬', logo:'', url:'https://www.netflix.com',     desc:'Premium movies & series', badge:'hot', isMovie:true, movieId:'netflix', gradient:'linear-gradient(135deg,#e50914,#b20710)' },
+  { id:'alostoora',    name:'Alostoora',    cat:'movies', emoji:'📺', logo:'', url:'https://alostoora.tv',        desc:'Arabic movies & series', badge:'hot', isMovie:true, movieId:'alostoora', gradient:'linear-gradient(135deg,#00d4ff,#0099cc)' },
+  { id:'mediaon',      name:'MediaOn',      cat:'movies', emoji:'📡', logo:'', url:'https://mediaon.tv',          desc:'Arabic live TV & movies', badge:'free', isMovie:true, movieId:'mediaon', gradient:'linear-gradient(135deg,#00d4ff,#006699)' },
+  { id:'shahid',       name:'Shahid',       cat:'movies', emoji:'🎭', logo:'', url:'https://shahid.mbc.net',      desc:'MBC Arabic content', badge:'hot', isMovie:true, movieId:'shahid', gradient:'linear-gradient(135deg,#ff8c00,#cc6600)' },
+  { id:'wetv',         name:'WeTV',         cat:'movies', emoji:'🎪', logo:'', url:'https://wetv.vip',            desc:'Tencent Asian dramas', badge:'free', isMovie:true, movieId:'wetv', gradient:'linear-gradient(135deg,#ff6b6b,#cc3333)' },
+  { id:'iqiyi',        name:'iQIYI',        cat:'movies', emoji:'🎋', logo:'', url:'https://iq.com',              desc:'Chinese movies & shows', badge:'free', isMovie:true, movieId:'iqiyi', gradient:'linear-gradient(135deg,#00c853,#009624)' },
+  { id:'tubi',         name:'Tubi',         cat:'movies', emoji:'🍿', logo:'', url:'https://tubitv.com',          desc:'Free movies with ads', badge:'free', isMovie:true, movieId:'tubi', gradient:'linear-gradient(135deg,#ff5722,#d84315)' },
+  { id:'plutotv',      name:'Pluto TV',     cat:'movies', emoji:'🪐', logo:'', url:'https://pluto.tv',            desc:'Free live TV channels', badge:'free', isMovie:true, movieId:'plutotv', gradient:'linear-gradient(135deg,#1565c0,#0d47a1)' },
+  { id:'crackle',      name:'Crackle',      cat:'movies', emoji:'💥', logo:'', url:'https://www.crackle.com',     desc:'Free Sony movies', badge:'free', isMovie:true, movieId:'crackle', gradient:'linear-gradient(135deg,#ffc107,#ff8f00)' },
+  { id:'popcornflix',  name:'Popcornflix',   cat:'movies', emoji:'🍿', logo:'', url:'https://www.popcornflix.com', desc:'Free indie movies', badge:'free', isMovie:true, movieId:'popcornflix', gradient:'linear-gradient(135deg,#e91e63,#c2185b)' },
+  { id:'vudu',         name:'Vudu',         cat:'movies', emoji:'💿', logo:'', url:'https://www.vudu.com',        desc:'Free + rental movies', badge:'free', isMovie:true, movieId:'vudu', gradient:'linear-gradient(135deg,#2196f3,#1565c0)' },
+  { id:'plex',         name:'Plex',         cat:'movies', emoji:'📼', logo:'', url:'https://app.plex.tv',         desc:'Free movies & your library', badge:'free', isMovie:true, movieId:'plex', gradient:'linear-gradient(135deg,#e5a00d,#cc8400)' },
+  { id:'imdbtv',       name:'IMDb TV',      cat:'movies', emoji:'⭐', logo:'', url:'https://www.imdb.com/tv',     desc:'Free Amazon movies', badge:'free', isMovie:true, movieId:'imdbtv', gradient:'linear-gradient(135deg,#f5c518,#dba800)' },
+  { id:'peacock',      name:'Peacock',      cat:'movies', emoji:'🦚', logo:'', url:'https://www.peacocktv.com',   desc:'NBC & Universal content', badge:'free', isMovie:true, movieId:'peacock', gradient:'linear-gradient(135deg,#000,#333)' },
+  { id:'crunchyroll',  name:'Crunchyroll',  cat:'movies', emoji:'🍥', logo:'', url:'https://www.crunchyroll.com', desc:'Anime streaming', badge:'hot', isMovie:true, movieId:'crunchyroll', gradient:'linear-gradient(135deg,#ff8c00,#f57c00)' },
+  { id:'funimation',   name:'Funimation',   cat:'movies', emoji:'⛩️', logo:'', url:'https://www.funimation.com',  desc:'Dubbed anime', badge:'free', isMovie:true, movieId:'funimation', gradient:'linear-gradient(135deg,#5c0099,#41006e)' },
+  { id:'xumo',         name:'Xumo',         cat:'movies', emoji:'📺', logo:'', url:'https://www.xumo.tv',         desc:'Free live TV & movies', badge:'free', isMovie:true, movieId:'xumo', gradient:'linear-gradient(135deg,#00bcd4,#0097a7)' },
+  { id:'rokuchannel',  name:'Roku Channel', cat:'movies', emoji:'🔴', logo:'', url:'https://therokuchannel.roku.com', desc:'Free Roku movies', badge:'free', isMovie:true, movieId:'rokuchannel', gradient:'linear-gradient(135deg,#6c3baa,#4a1f80)' },
+
+
   /* ── Phone Native Actions ──────────────────────────────── */
   { id:'native_call',     name:'Phone',       cat:'phone', emoji:'📞', logo:'', url:'native:call',     desc:'Make phone calls',      badge:'ai', nativeAction:'call',     gradient:'linear-gradient(135deg,#00d4ff,#0099cc)' },
   { id:'native_sms',      name:'Messages',    cat:'phone', emoji:'💬', logo:'', url:'native:sms',      desc:'Send SMS messages',     badge:'ai', nativeAction:'sms',      gradient:'linear-gradient(135deg,#25d366,#128c7e)' },
@@ -657,6 +682,7 @@ const CATS = [
   { id:'agent',       label:'Agents',        icon:'⛓️' },
   { id:'media',       label:'Media',         icon:'▶️' },
   { id:'sports',      label:'Sports Live', icon:'⚽' },
+  { id:'movies',      label:'Movies & TV', icon:'🎬' },
   { id:'phone',       label:'Phone',       icon:'📱' },
 ];
 
@@ -755,6 +781,7 @@ function buildCard(svc) {
   const card  = document.createElement('div');
   const isNativeAction = !!svc.nativeAction;
   const isYacineSport  = !!svc.isYacine || !!svc.isYacineHub;
+  const isMovieCard    = !!svc.isMovie || !!svc.isCinemaHub;
   card.className = 'service-card' + (svc.creator ? ' is-creator' : '') + (isNativeAction ? ' phone-action-card' : '');
   card.style.setProperty('--c', svc.color || '#7c3aed');
 
@@ -763,6 +790,8 @@ function buildCard(svc) {
     badgeHtml = '<span class="native-tag">NATIVE</span>';
   } else if (isYacineSport) {
     badgeHtml = '<span class="svc-badge" style="background:rgba(0,212,255,0.2);color:#00d4ff;border:1px solid rgba(0,212,255,0.3);font-size:8px;padding:2px 6px;border-radius:10px;font-weight:800;text-transform:uppercase;">SPORTS</span>';
+  } else if (isMovieCard) {
+    badgeHtml = '<span class="svc-badge" style="background:rgba(229,9,20,0.2);color:#ff6b6b;border:1px solid rgba(229,9,20,0.3);font-size:8px;padding:2px 6px;border-radius:10px;font-weight:800;text-transform:uppercase;">CINEMA</span>';
   } else if (svc.badge) {
     const cls = {hot:'badge-hot', new:'badge-new', free:'badge-free', ai:'badge-ai', open:'badge-open', creator:'badge-creator'}[svc.badge] || 'badge-ai';
     badgeHtml = `<span class="svc-badge ${cls}">${svc.badge}</span>`;
@@ -770,7 +799,7 @@ function buildCard(svc) {
 
   // For native actions, show emoji with gradient bg instead of logo img
   let logoHtml;
-  if (isNativeAction || isYacineSport) {
+  if (isNativeAction || isYacineSport || isMovieCard) {
     logoHtml = `<div class="svc-logo" style="background:${svc.gradient || 'var(--accent)'};border:none;"><span style="font-size:26px;">${svc.emoji}</span></div>`;
   } else {
     logoHtml = `<div class="svc-logo" id="logo-${svc.id}"><img src="${svc.logo}" alt="${svc.name}" onerror="this.parentElement.textContent='${svc.emoji}'" loading="lazy"></div>`;
@@ -785,7 +814,11 @@ function buildCard(svc) {
 
   card.onclick = (e) => {
     if (e.target.classList.contains('fav-star')) { toggleFav(svc.id); return; }
-    if (svc.isYacineHub) {
+    if (svc.isCinemaHub) {
+      openCinemaHub();
+    } else if (svc.isMovie) {
+      openMoviePlatform(svc);
+    } else if (svc.isYacineHub) {
       openYacineHub();
     } else if (svc.isYacine) {
       openYacineLive(svc);
@@ -1134,6 +1167,118 @@ function openYacineHub() {
   window.yacineHub.render(hubDiv);
 
   // Override close to clean up
+  const origClose = closeViewer;
+  closeViewer = function() {
+    if (hubDiv) { hubDiv.style.display = 'none'; hubDiv.innerHTML = ''; }
+    frame.style.display = '';
+    closeViewer = origClose;
+    origClose();
+  };
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   CINEMA HUB — MOVIE PLATFORMS INTEGRATION
+   ═══════════════════════════════════════════════════════════ */
+
+/**
+ * Open a movie platform via domain rotator in the viewer overlay
+ */
+async function openMoviePlatform(svc) {
+  currentSvc = svc;
+  const overlay = document.getElementById('viewerOverlay');
+  const frame   = document.getElementById('viewerFrame');
+  const loader  = document.getElementById('frameLoader');
+  const blocked = document.getElementById('frameBlocked');
+
+  blocked.classList.remove('show');
+  loader.classList.remove('hidden');
+  frame.src = 'about:blank';
+
+  const logoEl = document.getElementById('viewerLogo');
+  logoEl.innerHTML = '<span style="font-size:22px;">' + svc.emoji + '</span>';
+  document.getElementById('viewerTitle').textContent = svc.name;
+  document.getElementById('viewerUrlBar').textContent = 'Finding best server…';
+  document.getElementById('loaderName').textContent = svc.name;
+  document.getElementById('loaderUrl').textContent = 'Checking mirrors…';
+
+  document.getElementById('blockedIcon').textContent = svc.emoji;
+  document.getElementById('blockedTitle').textContent = svc.name + ' — Opens in new tab';
+  document.getElementById('blockedDesc').textContent = svc.name + ' may not allow embedding. Click below to open it externally.';
+  document.getElementById('blockedOpenName').textContent = svc.name;
+  document.getElementById('blockedOpenBtn').href = svc.url;
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  try {
+    let url = svc.url;
+    if (window.moviePlatforms && svc.movieId) {
+      url = await window.moviePlatforms.getWorkingUrl(svc.movieId) || svc.url;
+    }
+
+    currentSvc = { ...svc, url };
+    document.getElementById('viewerUrlBar').textContent = url;
+    document.getElementById('loaderUrl').textContent = url;
+    document.getElementById('blockedOpenBtn').href = url;
+
+    frame.onload = () => loader.classList.add('hidden');
+    frame.onerror = () => { loader.classList.add('hidden'); blocked.classList.add('show'); };
+    frame.src = url;
+
+    clearTimeout(frameTimer);
+    frameTimer = setTimeout(() => {
+      if (!loader.classList.contains('hidden')) {
+        loader.classList.add('hidden');
+        blocked.classList.add('show');
+      }
+    }, 10000);
+
+  } catch (err) {
+    console.error('[MoviePlatform]', err);
+    loader.classList.add('hidden');
+    blocked.classList.add('show');
+  }
+}
+
+/**
+ * Open full Cinema Hub (all platforms browser)
+ */
+function openCinemaHub() {
+  if (!window.movieHub) {
+    alert('Cinema Hub module not loaded.');
+    return;
+  }
+
+  const overlay = document.getElementById('viewerOverlay');
+  const frame   = document.getElementById('viewerFrame');
+  const loader  = document.getElementById('frameLoader');
+  const blocked = document.getElementById('frameBlocked');
+
+  blocked.classList.remove('show');
+  loader.classList.add('hidden');
+  frame.src = 'about:blank';
+  frame.style.display = 'none';
+
+  const logoEl = document.getElementById('viewerLogo');
+  logoEl.innerHTML = '<span style="font-size:22px;">🎬</span>';
+  document.getElementById('viewerTitle').textContent = 'Cinema Hub — Movies & TV';
+  document.getElementById('viewerUrlBar').textContent = 'All streaming platforms in one place';
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  const wrap = document.querySelector('.viewer-frame-wrap');
+  let hubDiv = document.getElementById('cinema-hub-overlay');
+  if (!hubDiv) {
+    hubDiv = document.createElement('div');
+    hubDiv.id = 'cinema-hub-overlay';
+    hubDiv.style.cssText = 'position:absolute;inset:0;overflow-y:auto;z-index:10;background:#0a0a0f;';
+    wrap.appendChild(hubDiv);
+  }
+  hubDiv.style.display = 'block';
+  window.movieHub.render(hubDiv);
+
   const origClose = closeViewer;
   closeViewer = function() {
     if (hubDiv) { hubDiv.style.display = 'none'; hubDiv.innerHTML = ''; }
