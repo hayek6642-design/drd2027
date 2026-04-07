@@ -1,4 +1,16 @@
 {
+  "services": [
+    {
+      "name": "yahood",
+      "label": "Yahood! Mining World",
+      "icon": "🗺️",
+      "description": "Geo-based treasure mining & PvP",
+      "path": "/codebank/yahood.html",
+      "external": true,
+      "badge": "New",
+      "category": "adventure"
+    }
+  ],
   "vanilla": [
     { "name": "snake", "path": "games/vanilla/snake/index.html" },
     { "name": "tertis-classic", "path": "games/vanilla/tertis-classic/index.html" },

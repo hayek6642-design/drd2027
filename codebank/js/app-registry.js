@@ -144,6 +144,17 @@ export const AppRegistry = {
             badge: null
         },
         {
+            id: 'yahood',
+            name: 'Yahood!',
+            category: 'games',
+            icon: 'fa-map-marked-alt',
+            color: '#10b981',
+            url: './yahood.html',
+            status: 'online',
+            description: 'Geo-based treasure mining & PvP world',
+            badge: 'New'
+        },
+        {
             id: 'piston',
             name: 'Piston',
             category: 'games',

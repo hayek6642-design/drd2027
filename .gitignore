@@ -107,6 +107,8 @@ node_modules/
 
 # Android project (keep tracked for CI builds)
 !android/**/*.png
+!codebank/assets/images/dr.dc.png
+!codebank/bankode/assets/images/dr.dc.png
 !android/**/*.xml
 !android/**/*.java
 !android/**/*.kt
