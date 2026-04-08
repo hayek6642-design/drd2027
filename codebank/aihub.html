@@ -223,14 +223,16 @@
     .blocked-icon { font-size: 64px; }
     .blocked-title { font-size: 22px; font-weight: 900; color: var(--text); }
     .blocked-desc  { font-size: 14px; color: var(--muted); max-width: 400px; line-height: 1.7; }
+    .blocked-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
     .open-btn {
       background: linear-gradient(135deg, var(--accent), var(--accent2));
       color: #fff; border: none; border-radius: 12px;
-      padding: 14px 32px; font-size: 15px; font-weight: 800;
+      padding: 14px 28px; font-size: 15px; font-weight: 800;
       cursor: pointer; transition: transform 0.2s, opacity 0.2s;
       display: flex; align-items: center; gap: 10px;
       text-decoration: none;
     }
+    .open-btn.alt { background: var(--surface2); border: 1px solid var(--border); }
     .open-btn:hover { transform: scale(1.04); opacity: 0.92; }
 
     /* ── Favorites strip ─────────────────────────────────── */
@@ -476,7 +478,8 @@
     <span class="viewer-title" id="viewerTitle"></span>
     <div class="viewer-url-bar" id="viewerUrlBar"></div>
     <button class="viewer-btn" id="refreshBtn" onclick="reloadFrame()"><i class="fa fa-rotate-right"></i> Reload</button>
-    <button class="viewer-btn" id="openExtBtn" onclick="openExternal()"><i class="fa fa-arrow-up-right-from-square"></i> Open</button>
+    <button class="viewer-btn" id="navigateBtn" onclick="navigateInApp()"><i class="fa fa-compass"></i> Navigate</button>
+    <button class="viewer-btn" id="openExtBtn" onclick="openExternal()"><i class="fa fa-arrow-up-right-from-square"></i> External</button>
     <button class="viewer-btn close-btn" onclick="closeViewer()"><i class="fa fa-xmark"></i> Close</button>
   </div>
   <div class="viewer-frame-wrap">
@@ -487,11 +490,16 @@
     </div>
     <div class="frame-blocked" id="frameBlocked">
       <div class="blocked-icon" id="blockedIcon"></div>
-      <div class="blocked-title" id="blockedTitle">Opens in a new tab</div>
-      <div class="blocked-desc" id="blockedDesc">This service doesn't allow embedding. Click below to open it just like a browser would.</div>
-      <a class="open-btn" id="blockedOpenBtn" href="#" target="_blank" rel="noopener">
-        <i class="fa fa-arrow-up-right-from-square"></i> Open <span id="blockedOpenName"></span>
-      </a>
+      <div class="blocked-title" id="blockedTitle">Embedded View Unavailable</div>
+      <div class="blocked-desc" id="blockedDesc">This service has security restrictions that prevent embedding. Use the Navigate button to browse within the app.</div>
+      <div class="blocked-actions">
+        <button class="open-btn" id="navigateBtn2" onclick="navigateInApp()">
+          <i class="fa fa-compass"></i> Navigate In-App
+        </button>
+        <button class="open-btn alt" id="blockedOpenBtn" onclick="openExternal()">
+          <i class="fa fa-arrow-up-right-from-square"></i> Open External
+        </button>
+      </div>
     </div>
     <iframe id="viewerFrame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-modals allow-downloads" allow="camera; microphone; clipboard-read; clipboard-write; payment; fullscreen"></iframe>
   </div>
@@ -910,10 +918,14 @@ function openViewer(svc) {
 
   // Blocked fallback elements
   document.getElementById('blockedIcon').textContent = svc.emoji;
-  document.getElementById('blockedTitle').textContent = `${svc.name} — Opens in new tab`;
-  document.getElementById('blockedDesc').textContent = `${svc.name} doesn't allow embedding (security policy), but click below to open it just like a normal browser tab.`;
-  document.getElementById('blockedOpenName').textContent = svc.name;
-  document.getElementById('blockedOpenBtn').href = svc.url;
+  document.getElementById('blockedTitle').textContent = `${svc.name} — Embedded View Blocked`;
+  document.getElementById('blockedDesc').textContent = `${svc.name} has security restrictions that prevent embedding. Use "Navigate" to browse within the app or "External" to open in a new tab.`;
+  
+  // Hide the old single button references
+  const openBtn = document.getElementById('blockedOpenBtn');
+  if (openBtn) {
+    openBtn.style.display = 'none';
+  }
 
   overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -998,6 +1010,65 @@ function reloadFrame() {
 function openExternal() {
   if (!currentSvc) return;
   window.open(currentSvc.url, '_blank', 'noopener');
+}
+
+// Navigate in-app using a full-page overlay (keeps user in app)
+function navigateInApp() {
+  if (!currentSvc) return;
+  
+  // Open a full-screen overlay with address bar for navigation
+  const overlay = document.getElementById('viewerOverlay');
+  const frame = document.getElementById('viewerFrame');
+  const urlBar = document.getElementById('viewerUrlBar');
+  const title = document.getElementById('viewerTitle');
+  const loader = document.getElementById('frameLoader');
+  const blocked = document.getElementById('frameBlocked');
+  
+  // Create a simple address bar for input if not exists
+  let navInput = document.getElementById('navUrlInput');
+  if (!navInput) {
+    navInput = document.createElement('input');
+    navInput.id = 'navUrlInput';
+    navInput.type = 'text';
+    navInput.placeholder = 'Enter URL...';
+    navInput.className = 'nav-url-input';
+    navInput.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:20px;color:var(--text);padding:8px 16px;font-size:13px;outline:none;width:300px;';
+    navInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        let url = navInput.value.trim();
+        if (url && !url.startsWith('http')) url = 'https://' + url;
+        if (url) {
+          currentSvc = { url: url, name: new URL(url).hostname };
+          frame.src = url;
+          loader.classList.remove('hidden');
+          blocked.classList.remove('show');
+        }
+      }
+    });
+  }
+  
+  // Update UI for navigation mode
+  title.textContent = 'Navigate';
+  urlBar.innerHTML = '';
+  urlBar.appendChild(navInput);
+  navInput.value = currentSvc.url;
+  navInput.style.display = 'inline-block';
+  
+  // Show the frame with the URL
+  loader.classList.remove('hidden');
+  blocked.classList.remove('show');
+  frame.src = currentSvc.url;
+  
+  // Re-enable onload detection for navigation
+  frame.onload = () => {
+    loader.classList.add('hidden');
+    try {
+      const doc = frame.contentDocument || frame.contentWindow?.document;
+      if (!doc?.body || !doc.body.innerHTML.trim()) {
+        blocked.classList.add('show');
+      }
+    } catch (_) {}
+  };
 }
 
 // Close on ESC
