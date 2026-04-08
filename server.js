@@ -368,6 +368,210 @@ app.get('/ping', (req, res) => {
 });
 
 
+// ============================================
+// AI Chat API - Multi-Provider Integration
+// ============================================
+
+// AI Provider configurations (free tier models)
+const AI_PROVIDERS = {
+    openrouter: {
+        name: 'OpenRouter',
+        baseUrl: 'https://openrouter.ai/api/v1/chat/completions',
+        models: [
+            { id: 'mistralai/mistral-7b-instruct', name: 'Mistral 7B (Free)', free: true },
+            { id: 'openchat/openchat-7b', name: 'OpenChat 7B (Free)', free: true },
+            { id: 'meta-llama/llama-3.2-90b-vision-instruct', name: 'Llama 3.2 90B', free: false },
+            { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', free: false }
+        ]
+    },
+    huggingface: {
+        name: 'HuggingFace',
+        baseUrl: 'https://api-inference.huggingface.co',
+        models: [
+            { id: 'google/flan-t5-large', name: 'FLAN-T5 Large', free: true },
+            { id: 'mistralai/Mistral-7B-Instruct-v0.2', name: 'Mistral 7B', free: true }
+        ]
+    },
+    groq: {
+        name: 'Groq',
+        baseUrl: 'https://api.groq.com/openai/v1/chat/completions',
+        models: [
+            { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B (Fast)', free: true },
+            { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B', free: true }
+        ]
+    }
+};
+
+// Get available models
+app.get('/api/chat/models', (req, res) => {
+    const models = [];
+    for (const [providerId, provider] of Object.entries(AI_PROVIDERS)) {
+        for (const model of provider.models) {
+            models.push({
+                id: model.id,
+                name: model.name,
+                provider: providerId,
+                providerName: provider.name,
+                free: model.free
+            });
+        }
+    }
+    res.json({ models });
+});
+
+
+// Chat completion endpoint
+app.post('/api/chat', async (req, res) => {
+    try {
+        const { message, modelId, provider, history } = req.body;
+        
+        if (!message) {
+            return res.status(400).json({ error: 'Message is required' });
+        }
+
+        // Determine provider and model
+        let selectedProvider = provider || 'openrouter';
+        let selectedModel = modelId || 'mistralai/mistral-7b-instruct';
+        
+        // Override if modelId specifies provider
+        if (modelId && modelId.includes('/') && !provider) {
+            // Try to detect provider from model ID
+            if (modelId.startsWith('mistral') || modelId.startsWith('openchat') || modelId.startsWith('meta')) {
+                selectedProvider = 'openrouter';
+            } else if (modelId.startsWith('google') || modelId.startsWith('mistralai')) {
+                selectedProvider = 'huggingface';
+            } else if (modelId.startsWith('llama') || modelId.startsWith('mixtral')) {
+                selectedProvider = 'groq';
+            }
+        }
+
+        const providerConfig = AI_PROVIDERS[selectedProvider];
+        if (!providerConfig) {
+            return res.status(400).json({ error: 'Invalid provider' });
+        }
+
+        // Build conversation history
+        const messages = [];
+        if (history && Array.isArray(history)) {
+            for (const msg of history.slice(-5)) { // Last 5 messages
+                messages.push({ role: msg.role, content: msg.content });
+            }
+        }
+        messages.push({ role: 'user', content: message });
+
+        let responseData;
+
+        if (selectedProvider === 'openrouter') {
+            // OpenRouter API
+            const apiKey = process.env.OPENROUTER_API_KEY;
+            if (!apiKey) {
+                return res.status(503).json({ error: 'OpenRouter API key not configured' });
+            }
+            
+            const response = await fetch(providerConfig.baseUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`,
+                    'HTTP-Referer': 'https://drd2027.onrender.com',
+                    'X-Title': 'DRD2027 AI Hub'
+                },
+                body: JSON.stringify({
+                    model: selectedModel,
+                    messages: messages,
+                    temperature: 0.7,
+                    max_tokens: 2048
+                })
+            });
+            
+            if (!response.ok) {
+                const err = await response.text();
+                return res.status(500).json({ error: `OpenRouter error: ${err}` });
+            }
+            
+            responseData = await response.json();
+            const reply = responseData.choices?.[0]?.message?.content || 'No response';
+            res.json({ reply, model: selectedModel, provider: selectedProvider });
+            
+        } else if (selectedProvider === 'groq') {
+            // Groq API
+            const apiKey = process.env.GROQ_API_KEY;
+            if (!apiKey) {
+                return res.status(503).json({ error: 'Groq API key not configured' });
+            }
+            
+            const response = await fetch(providerConfig.baseUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: selectedModel,
+                    messages: messages,
+                    temperature: 0.7,
+                    max_tokens: 2048
+                })
+            });
+            
+            if (!response.ok) {
+                const err = await response.text();
+                return res.status(500).json({ error: `Groq error: ${err}` });
+            }
+            
+            responseData = await response.json();
+            const reply = responseData.choices?.[0]?.message?.content || 'No response';
+            res.json({ reply, model: selectedModel, provider: selectedProvider });
+            
+        } else if (selectedProvider === 'huggingface') {
+            // HuggingFace Inference API
+            const apiKey = process.env.HUGGINGFACE_API_KEY;
+            if (!apiKey) {
+                return res.status(503).json({ error: 'HuggingFace API key not configured' });
+            }
+            
+            const hfModel = selectedModel.replace('google/', '').replace('mistralai/', '');
+            const response = await fetch(`${providerConfig.baseUrl}/models/${selectedModel}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    inputs: message,
+                    parameters: {
+                        max_new_tokens: 512,
+                        temperature: 0.7
+                    }
+                })
+            });
+            
+            if (!response.ok) {
+                const err = await response.text();
+                return res.status(500).json({ error: `HuggingFace error: ${err}` });
+            }
+            
+            responseData = await response.json();
+            let reply = '';
+            if (Array.isArray(responseData) && responseData[0]?.generated_text) {
+                reply = responseData[0].generated_text;
+            } else if (responseData?.generated_text) {
+                reply = responseData.generated_text;
+            } else {
+                reply = 'No response from model';
+            }
+            res.json({ reply, model: selectedModel, provider: selectedProvider });
+        } else {
+            res.status(400).json({ error: 'Provider not supported' });
+        }
+        
+    } catch (error) {
+        console.error('Chat API error:', error);
+        res.status(500).json({ error: error.message || 'Internal error' });
+    }
+});
+
+
 // Static files will be served later to allow custom route overrides
 app.use('/node_modules', express.static(path.join(__dirname, 'node_modules')));
 // Note: upload.any() is applied only to specific upload routes below
