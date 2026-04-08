@@ -1,0 +1,121 @@
+/* ==== BROWSER PROFILE ==== */
+if (window.__DISABLE_STORAGE_LORD__) {
+    console.warn("🛑 StorageLord DISABLED (Browser Mode)");
+    window.StorageLord = {
+        get: k => JSON.parse(localStorage.getItem(k)),
+        set: (k,v) => localStorage.setItem(k, JSON.stringify(v)),
+        remove: k => localStorage.removeItem(k),
+        clear: ()=> localStorage.clear()
+    };
+    throw new Error("StorageLord bypassed for browser");
+}
+
+const listeners = new Set();
+let owner = null;
+let timer = null;
+const key = '__STORAGE_LORD__';
+const defaults = {
+  codes: 0,
+  silverBars: 0,
+  goldBars: 0,
+  lastCode: null,
+  updatedAt: Date.now(),
+  version: 0,
+  __ui__: {
+    theme: 'dark',
+    language: 'en',
+    panels: { codebankOpen: false, sidebarOpen: false },
+    lastTab: null
+  }
+};
+
+const LS = (()=>{ try{ return window.localStorage }catch(_){ return { getItem(){}, setItem(){}, removeItem(){} } } })();
+const SI = (()=>{ try{ const orig = window.__ORIG_SET_INTERVAL__ || window.setInterval; return orig.bind(window) }catch(_){ return function(){} } })();
+const ST = (()=>{ try{ return window.clearInterval.bind(window) }catch(_){ return function(){} } })();
+
+function freezeDeep(x){
+  if (!x || typeof x !== 'object') return x;
+  Object.getOwnPropertyNames(x).forEach(k => {
+    const v = x[k];
+    if (v && typeof v === 'object') freezeDeep(v);
+  });
+  try{ Object.freeze(x) }catch(_){}
+  return x;
+}
+
+function load(){
+  try{
+    const s = LS.getItem(key);
+    const base = s ? JSON.parse(s) : { ...defaults };
+    if (!base.__ui__) base.__ui__ = { ...defaults.__ui__ };
+    // ensure shape
+    base.__ui__.theme = base.__ui__.theme === 'light' ? 'light' : 'dark';
+    base.__ui__.language = base.__ui__.language === 'ar' ? 'ar' : 'en';
+    const p = base.__ui__.panels || {}; base.__ui__.panels = { codebankOpen: !!p.codebankOpen, sidebarOpen: !!p.sidebarOpen };
+    base.__ui__.lastTab = typeof base.__ui__.lastTab === 'string' ? base.__ui__.lastTab : null;
+    return base;
+  } catch(_){
+    return { ...defaults };
+  }
+}
+
+let state = load();
+
+function persist(){
+  try{
+    window.__ALLOW_STORAGE__ = true;
+    LS.setItem(key, JSON.stringify(state));
+  } catch(_){}
+  finally { try{ window.__ALLOW_STORAGE__ = false }catch(_){} }
+}
+
+function readFrozen(){
+  const snapshot = { ...state, __ui__: JSON.parse(JSON.stringify(state.__ui__||{})) };
+  return freezeDeep(snapshot);
+}
+
+function validateUIPatch(patch){
+  if (!patch || typeof patch !== 'object') throw new Error('Invalid UI patch');
+  const out = {};
+  if ('theme' in patch){ const t = patch.theme; if (t!=='dark' && t!=='light') throw new Error('Invalid theme'); out.theme = t; }
+  if ('language' in patch){ const l = patch.language; if (l!=='en' && l!=='ar') throw new Error('Invalid language'); out.language = l; }
+  if ('panels' in patch){ const panels = patch.panels||{}; const pn = {}; if ('codebankOpen' in panels) pn.codebankOpen = !!panels.codebankOpen; if ('sidebarOpen' in panels) pn.sidebarOpen = !!panels.sidebarOpen; out.panels = pn; }
+  if ('lastTab' in patch){ const lt = patch.lastTab; out.lastTab = (lt===null || typeof lt==='string') ? lt : null; }
+  return out;
+}
+
+const StorageLord = {
+  claimOwnership(name){ if(!owner){ owner=name } return owner===name },
+  canWrite(source){ return owner===source && source==='yt-new' },
+  read(){ return readFrozen() },
+  subscribe(fn){ listeners.add(fn); try{ fn(this.read()) }catch(_){} return ()=>listeners.delete(fn) },
+  update(patch, source){
+    if (!patch || typeof patch !== 'object') return;
+    if ('__ui__' in patch && !window.__UPDATING_UI__) { throw new Error('UI state must be updated via UI Adapter') }
+    if(!this.canWrite(source)) return;
+    state = { ...state, ...patch, updatedAt: Date.now(), version: (state.version||0)+1 };
+    freezeDeep(state.__ui__);
+    persist();
+    listeners.forEach(fn=>{ try{ fn(this.read()) }catch(_){} })
+  },
+  increment(key, amount=1, source){ if(!this.canWrite(source)) return; const v = Number(state[key]||0)+Number(amount||0); this.update({ [key]: v }, source); this._compress(source) },
+  _compress(source){ const s = Number(state.codes||0); const silver = Math.floor(s/100); if(silver>0){ state.codes = s%100; state.silverBars = Number(state.silverBars||0)+silver } const g = Math.floor(Number(state.silverBars||0)/10); if(g>0){ state.silverBars = Number(state.silverBars||0)%10; state.goldBars = Number(state.goldBars||0)+g } persist(); listeners.forEach(fn=>{ try{ fn(this.read()) }catch(_){}}) },
+  startGenerator(source, intervalMs=60000){ if(!this.canWrite(source)) return; if(timer) return; if (window.__STORAGE_LORD_STARTED__) { throw new Error('Multiple StorageLord instances detected') } window.__STORAGE_LORD_STARTED__ = true; try { window.__ALLOW_INTERVAL__ = true } catch(_){ } timer = SI(()=>{ try{ const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let s=''; for(let i=0;i<22;i++){ s+=chars[Math.floor(Math.random()*chars.length)]; if((i+1)%4===0 && i<21) s+='-' } this.update({ lastCode: s }, source); this.increment('codes',1,source) }catch(_){} }, intervalMs); try { window.__ALLOW_INTERVAL__ = false } catch(_){ } },
+  stopGenerator(){ if(timer){ ST(timer); timer=null } },
+  _unsafeInitUI(initialUI){
+    const ui = validateUIPatch({ ...defaults.__ui__, ...(initialUI||{}) });
+    state.__ui__ = { ...state.__ui__, ...ui };
+    freezeDeep(state.__ui__);
+    listeners.forEach(fn=>{ try{ fn(this.read()) }catch(_){} })
+  },
+  _unsafeUpdateUI(patch){
+    const next = validateUIPatch(patch);
+    const merged = { ...state.__ui__, ...next, panels: { ...(state.__ui__?.panels||{}), ...(next.panels||{}) } };
+    window.__UPDATING_UI__ = true;
+    state.__ui__ = merged;
+    freezeDeep(state.__ui__);
+    try { this.update({ __ui__: state.__ui__ }, owner||'yt-new') } finally { try{ window.__UPDATING_UI__ = false }catch(_){} }
+  }
+};
+
+export { StorageLord };

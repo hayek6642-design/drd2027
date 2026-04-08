@@ -1,0 +1,51 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2024-03-19",
+  "songs": [
+    {
+      "id": "song_001",
+      "title": "أغنية الفرح الكبير",
+      "artist": "فنان 1",
+      "url": "https://res.cloudinary.com/your-cloud/video/upload/v1/afra7/song1.mp3",
+      "duration": "3:45",
+      "category": "wedding",
+      "tags": ["فرح", "رقص", "traditional"]
+    },
+    {
+      "id": "song_002", 
+      "title": "ليلة العمر",
+      "artist": "فنان 2",
+      "url": "https://res.cloudinary.com/your-cloud/video/upload/v1/afra7/song2.mp3",
+      "duration": "4:20",
+      "category": "wedding",
+      "tags": ["romantic", "slow"]
+    },
+    {
+      "id": "song_003",
+      "title": "رقصة العرسان",
+      "artist": "فنان 3",
+      "url": "https://res.cloudinary.com/your-cloud/video/upload/v1/afra7/song3.mp3",
+      "duration": "3:15",
+      "category": "wedding",
+      "tags": ["رقص", "زفة"]
+    },
+    {
+      "id": "song_004",
+      "title": "فرحة القلب",
+      "artist": "فنان 4",
+      "url": "https://res.cloudinary.com/your-cloud/video/upload/v1/afra7/song4.mp3",
+      "duration": "4:00",
+      "category": "celebration",
+      "tags": ["فرح", "احتفال"]
+    },
+    {
+      "id": "song_005",
+      "title": "أغنية الحب",
+      "artist": "فنان 5",
+      "url": "https://res.cloudinary.com/your-cloud/video/upload/v1/afra7/song5.mp3",
+      "duration": "3:30",
+      "category": "romantic",
+      "tags": ["حب", "رومانسية"]
+    }
+  ]
+}

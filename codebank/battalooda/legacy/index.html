@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battalooda - التسجيل الصوتي</title>
+    
+    <!-- Auth client (REQUIRED for iframe integration) -->
+    <script src="/shared/iframe-auth-client.js"></script>
+    
+    <!-- WaveSurfer for studio (CDN) -->
+    <script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="/battalooda/battalooda-studio.css">
+</head>
+<body style="margin:0; background:#0f0f0f; font-family: system-ui, -apple-system, sans-serif;">
+    
+    <div id="battalooda-app">
+        <!-- Normal Recorder -->
+        <div id="normal-recorder">
+            <h2>🎙️ Battalooda</h2>
+            
+            <div class="recording-timer" id="recording-timer">0:00</div>
+            
+            <div class="recording-status" id="recording-status">اضغط للتسجيل</div>
+            
+            <button id="record-btn">🔴 تسجيل</button>
+            
+            <audio id="playback-audio" controls style="display:none;"></audio>
+            
+            <button id="upload-btn" disabled>⬆️ رفع التسجيل</button>
+            <button id="studio-btn">🎛️ فتح الاستوديو</button>
+            
+            <div class="error-message" id="recorder-error"></div>
+            <div class="success-message" id="recorder-success"></div>
+        </div>
+        
+        <!-- Studio Container (hidden initially) -->
+        <div id="studio-container" style="display:none;"></div>
+    </div>
+    
+    <!-- Recorder Script -->
+    <script src="/battalooda/battalooda-recorder.js"></script>
+    
+    <script>
+        // Configure with your endpoint
+        if (window.BattaloodaRecorder) {
+            window.BattaloodaRecorder.init({
+                uploadEndpoint: '/api/battalooda/upload',
+                studioEnabled: true
+            });
+        }
+        
+        // Debug helper
+        window.debugBattalooda = function() {
+            console.log('Battalooda State:', {
+                isRecording: BattaloodaRecorder.isRecording,
+                hasBlob: !!BattaloodaRecorder.recordedBlob,
+                blobSize: BattaloodaRecorder.recordedBlob?.size,
+                blobType: BattaloodaRecorder.recordedBlob?.type,
+                isStudioMode: BattaloodaRecorder.isStudioMode
+            });
+        };
+    </script>
+</body>
+</html>

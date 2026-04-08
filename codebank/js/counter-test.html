@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Counter Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        #counter {
+            font-size: 48px;
+            margin: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Counter Test</h1>
+    <div id="counter">0</div>
+    <button id="toggleExtraMode">Toggle Extra Mode</button>
+    <button id="stopCounter">Stop Counter</button>
+    <button id="resumeCounter">Resume Counter</button>
+    <script type="module">
+        import Counter from './Counter.js';
+        
+        const counter = new Counter();
+        
+        document.getElementById('toggleExtraMode').addEventListener('click', () => {
+            counter.toggleExtraMode();
+            alert(`Extra Mode is now ${counter.extraMode ? 'ON' : 'OFF'}`);
+        });
+        
+        document.getElementById('stopCounter').addEventListener('click', () => {
+            counter.stop();
+            alert('Counter stopped');
+        });
+        
+        document.getElementById('resumeCounter').addEventListener('click', () => {
+            counter.resume();
+            alert('Counter resumed');
+        });
+    </script>
+</body>
+</html>

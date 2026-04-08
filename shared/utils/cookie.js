@@ -1,0 +1,2 @@
+export function setAuthCookies(res, access, refresh){ res.cookie('access_token', access, { httpOnly:true, secure:true, sameSite:'Strict', path:'/' }); res.cookie('refresh_token', refresh, { httpOnly:true, secure:true, sameSite:'Strict', path:'/' }) }
+export function clearAuthCookies(res){ res.clearCookie('access_token', { path:'/' }); res.clearCookie('refresh_token', { path:'/' }) }

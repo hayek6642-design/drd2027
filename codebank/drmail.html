@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dr.D-mail ✉️</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f172a;
+      --surface:   #1e293b;
+      --surface2:  #293548;
+      --surface3:  #334155;
+      --accent:    #6366f1;
+      --accent-dim:rgba(99,102,241,0.15);
+      --green:     #22c55e;
+      --green-dim: rgba(34,197,94,0.15);
+      --red:       #ef4444;
+      --amber:     #f59e0b;
+      --text:      #f1f5f9;
+      --muted:     #94a3b8;
+      --border:    rgba(255,255,255,0.07);
+      --radius:    12px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Top Bar ─────────────────────────────────────────────────── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .topbar h1 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .topbar h1 .icon { font-size: 1.3rem; }
+    .badge-dot {
+      background: var(--red);
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 99px;
+      display: none;
+    }
+    .badge-dot.show { display: inline-block; }
+    .topbar .mode-tag {
+      margin-left: auto;
+      font-size: 0.72rem;
+      padding: 3px 10px;
+      border-radius: 99px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+    .mode-tag.admin { background: var(--accent-dim); color: var(--accent); }
+    .mode-tag.user  { background: var(--green-dim);  color: var(--green);  }
+
+    /* ── Layout ──────────────────────────────────────────────────── */
+    .layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────────────────── */
+    .sidebar {
+      width: 260px;
+      min-width: 220px;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .sidebar-header {
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-compose {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 9px 14px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-weight: 600;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    .btn-compose:hover { opacity: .85; }
+    .sidebar-search {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-search input {
+      width: 100%;
+      padding: 8px 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.83rem;
+      outline: none;
+    }
+    .sidebar-search input::placeholder { color: var(--muted); }
+    .sidebar-search input:focus { border-color: var(--accent); }
+    .conv-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+    .conv-list::-webkit-scrollbar { width: 4px; }
+    .conv-list::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 4px; }
+    .conv-item {
+      padding: 11px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background .12s;
+      position: relative;
+    }
+    .conv-item:hover { background: var(--surface2); }
+    .conv-item.active { background: var(--accent-dim); }
+    .conv-item .conv-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .conv-item .conv-subject {
+      font-size: 0.78rem;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+    .conv-item .conv-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 4px;
+    }
+    .conv-item .conv-time {
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+    .conv-item .unread-pill {
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 99px;
+    }
+    .conv-item .unread-dot {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    .empty-state i { font-size: 2rem; margin-bottom: 10px; display: block; opacity: .4; }
+
+    /* ── Main Panel ──────────────────────────────────────────────── */
+    .main-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Compose View ────────────────────────────────────────────── */
+    .compose-view {
+      padding: 24px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .compose-view h2 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 6px;
+    }
+    .form-group select,
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 0.88rem;
+      outline: none;
+      font-family: inherit;
+      transition: border-color .15s;
+    }
+    .form-group select:focus,
+    .form-group input:focus,
+    .form-group textarea:focus { border-color: var(--accent); }
+    .form-group textarea { resize: vertical; min-height: 140px; }
+    .form-group select option { background: var(--surface); }
+    .user-search-box {
+      position: relative;
+    }
+    .user-search-box input {
+      padding-right: 36px;
+    }
+    .user-search-box .search-icon {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 0.8rem;
+      pointer-events: none;
+    }
+    .user-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+    }
+    .user-dropdown.show { display: block; }
+    .user-dropdown-item {
+      padding: 9px 14px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background .1s;
+    }
+    .user-dropdown-item:hover { background: var(--surface3); }
+    .user-dropdown-item .user-email {
+      font-size: 0.73rem;
+      color: var(--muted);
+    }
+
+    .btn-send {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 22px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .15s;
+      margin-top: 4px;
+    }
+    .btn-send:hover { opacity: .85; }
+    .btn-send:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── Thread View ─────────────────────────────────────────────── */
+    .thread-view {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+    .thread-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .thread-header h3 {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+    .thread-header .thread-meta {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .thread-header .btn-back {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.82rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 10px;
+      padding: 0;
+    }
+    .thread-header .btn-back:hover { color: var(--text); }
+    .thread-header-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .messages-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+    }
+    .messages-area::-webkit-scrollbar { width: 4px; }
+    .messages-area::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 4px; }
+
+    .message-bubble {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .message-bubble.from-admin { flex-direction: row; }
+    .message-bubble.from-user  { flex-direction: row-reverse; }
+    .bubble-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .from-admin .bubble-avatar { background: var(--accent-dim); color: var(--accent); }
+    .from-user  .bubble-avatar { background: var(--green-dim);  color: var(--green); }
+
+    .bubble-content {
+      max-width: 75%;
+    }
+    .bubble-sender {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .from-user .bubble-sender { text-align: right; }
+    .bubble-body {
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 0.87rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .from-admin .bubble-body { background: var(--surface2); border-top-left-radius: 3px; }
+    .from-user  .bubble-body { background: var(--accent); color: #fff; border-top-right-radius: 3px; }
+    .bubble-time {
+      font-size: 0.68rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .from-user .bubble-time { text-align: right; }
+
+    /* ── Reply Box ───────────────────────────────────────────────── */
+    .reply-box {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+    .reply-box textarea {
+      flex: 1;
+      padding: 10px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 0.88rem;
+      resize: none;
+      height: 74px;
+      outline: none;
+      font-family: inherit;
+      transition: border-color .15s;
+    }
+    .reply-box textarea:focus { border-color: var(--accent); }
+    .reply-box textarea::placeholder { color: var(--muted); }
+    .btn-reply-send {
+      padding: 10px 18px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      height: 74px;
+    }
+    .btn-reply-send:hover { opacity: .85; }
+    .btn-reply-send:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── Placeholder ─────────────────────────────────────────────── */
+    .no-selection {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+    }
+    .no-selection i {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      opacity: .3;
+    }
+    .no-selection p { font-size: 0.9rem; }
+
+    /* ── Toast ───────────────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 10px 18px;
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #fff;
+      z-index: 9999;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all .25s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { background: var(--green); }
+    .toast.error   { background: var(--red); }
+
+    /* ── Loading ─────────────────────────────────────────────────── */
+    .loading-spin {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Delete button ───────────────────────────────────────────── */
+    .btn-delete {
+      background: rgba(239,68,68,.12);
+      border: none;
+      color: var(--red);
+      padding: 5px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: background .15s;
+    }
+    .btn-delete:hover { background: rgba(239,68,68,.25); }
+
+    /* ── Scrollbar global ────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 4px; }
+
+    /* ── Secret title click ───────────────────────────────────────── */
+    .topbar h1 {
+      cursor: default;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: color .12s;
+    }
+    .topbar h1.click-flash {
+      color: var(--accent);
+    }
+    @keyframes unlockPulse {
+      0%   { box-shadow: 0 0 0 0 rgba(99,102,241,0.6); }
+      70%  { box-shadow: 0 0 0 14px rgba(99,102,241,0); }
+      100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+    }
+    .topbar.unlocked {
+      animation: unlockPulse .5s ease-out;
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <span class="icon" onclick="handleTitleClick()" style="cursor:default;user-select:none">✉️</span>
+  <h1 id="mail-title" onclick="handleTitleClick()">Dr.D-mail <span id="unread-badge" class="badge-dot">0</span></h1>
+  <span id="mode-tag" class="mode-tag user">User</span>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-header" id="compose-btn-wrap" style="display:none;">
+      <button class="btn-compose" onclick="showCompose()">
+        <i class="fa fa-pen"></i> Compose
+      </button>
+    </div>
+    <div class="sidebar-search">
+      <input type="text" id="search-input" placeholder="Search…" oninput="filterList(this.value)">
+    </div>
+    <div class="conv-list" id="conv-list">
+      <div class="empty-state"><i class="fa fa-inbox"></i>Loading…</div>
+    </div>
+  </div>
+
+  <!-- MAIN PANEL -->
+  <div class="main-panel" id="main-panel">
+    <div class="no-selection" id="no-selection">
+      <i class="fa fa-envelope-open-text"></i>
+      <p id="no-sel-text">Select a message to read</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────────────────────
+let IS_ADMIN = false
+let currentUser = null
+let allUsers = []      // admin only: list of users
+let allConvs = []      // conversations / inbox items
+let activeConvId = null
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Init
+// ─────────────────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const me = await apiFetch('/api/me')
+    if (!me.success || !me.user) {
+      showPanel('<div style="padding:40px;text-align:center;color:var(--muted)"><i class="fa fa-lock" style="font-size:2rem;margin-bottom:12px;display:block;opacity:.4"></i>Please log in to access Dr.D-mail.</div>')
+      return
+    }
+    currentUser = me.user
+    IS_ADMIN = (me.user.role === 'admin' || me.user.role === 'superadmin' || me.user.email?.toLowerCase() === 'dia201244@gmail.com')
+
+    // Always start in inbox view — admin mode requires the secret unlock
+    const modeTag = document.getElementById('mode-tag')
+    modeTag.textContent = 'Inbox'
+    modeTag.className = 'mode-tag user'
+    await loadUserInbox()
+    pollUnread()
+  } catch (e) {
+    console.error('[Dr.D-mail] init error', e)
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin: load data
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadAdminData() {
+  const [convRes, usersRes] = await Promise.all([
+    apiFetch('/api/drmail/admin/conversations'),
+    apiFetch('/api/drmail/admin/users')
+  ])
+  if (usersRes.ok) allUsers = usersRes.users
+  if (convRes.ok)  { allConvs = convRes.conversations; renderConvList() }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// User: load inbox
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadUserInbox() {
+  const res = await apiFetch('/api/drmail/inbox')
+  if (res.ok) { allConvs = res.messages; renderConvList() }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Render sidebar conversation list
+// ─────────────────────────────────────────────────────────────────────────────
+function renderConvList(filter = '') {
+  const list = document.getElementById('conv-list')
+  const q = filter.toLowerCase()
+  const items = allConvs.filter(c => {
+    const name = IS_ADMIN ? (c.username || c.email || '') : (c.subject || '')
+    const subj = c.subject || ''
+    return (name + subj + (c.body || '')).toLowerCase().includes(q)
+  })
+
+  if (items.length === 0) {
+    list.innerHTML = `<div class="empty-state"><i class="fa fa-inbox"></i>${filter ? 'No results' : (IS_ADMIN ? 'No conversations yet' : 'Your inbox is empty')}</div>`
+    return
+  }
+
+  list.innerHTML = items.map(c => {
+    const unread = IS_ADMIN
+      ? (parseInt(c.unread_replies) || 0)
+      : (parseInt(c.new_from_admin) || (!c.is_read ? 1 : 0))
+    const name = IS_ADMIN ? (c.username || c.email || 'User') : (c.subject || '(no subject)')
+    const sub  = IS_ADMIN ? c.subject : timeAgo(c.last_activity || c.created_at)
+    const active = activeConvId === c.id ? 'active' : ''
+    return `
+      <div class="conv-item ${active}" onclick="openConv('${c.id}')">
+        ${unread > 0 ? '<div class="unread-dot"></div>' : ''}
+        <div class="conv-name">${escHtml(name)}</div>
+        <div class="conv-subject">${escHtml(IS_ADMIN ? sub : (c.body || '').slice(0, 60))}</div>
+        <div class="conv-meta">
+          <span class="conv-time">${timeAgo(c.last_activity || c.created_at)}</span>
+          ${unread > 0 ? `<span class="unread-pill">${unread}</span>` : ''}
+        </div>
+      </div>
+    `
+  }).join('')
+}
+
+function filterList(v) { renderConvList(v) }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Open conversation / thread
+// ─────────────────────────────────────────────────────────────────────────────
+async function openConv(id) {
+  activeConvId = id
+  renderConvList(document.getElementById('search-input').value)
+  const panel = document.getElementById('main-panel')
+  panel.innerHTML = `<div style="padding:30px;text-align:center;color:var(--muted)"><span class="loading-spin"></span> Loading…</div>`
+
+  const url = IS_ADMIN ? `/api/drmail/admin/thread/${id}` : `/api/drmail/thread/${id}`
+  const res = await apiFetch(url)
+  if (res.error === 'TIMEOUT') { panel.innerHTML = `<div style="padding:30px;color:var(--red)">⏱ Request timed out — check your connection and try again.</div>`; return }
+  if (!res.ok) { panel.innerHTML = `<div style="padding:30px;color:var(--red)">Error loading thread.</div>`; return }
+
+  const thread = res.thread
+  const root = thread[0]
+  const conv = allConvs.find(c => c.id === id) || {}
+
+  // Find the "other" username
+  const userName = IS_ADMIN ? (conv.username || conv.email || 'User') : 'Dr.D (Admin)'
+
+  panel.innerHTML = `
+    <div class="thread-view">
+      <div class="thread-header">
+        <div class="thread-header-actions">
+          <div>
+            <div style="font-size:.78rem;color:var(--muted);margin-bottom:6px">
+              ${IS_ADMIN ? `<b style="color:var(--text)">${escHtml(conv.email || '')}</b>` : 'From: <b style="color:var(--text)">Dr.D (Admin)</b>'}
+            </div>
+            <h3>${escHtml(root?.subject || '(no subject)')}</h3>
+            <div class="thread-meta">${timeAgo(root?.created_at)}</div>
+          </div>
+          ${IS_ADMIN ? `<button class="btn-delete" onclick="deleteThread('${id}')"><i class="fa fa-trash"></i> Delete</button>` : ''}
+        </div>
+      </div>
+
+      <div class="messages-area" id="messages-area">
+        ${thread.map(msg => renderBubble(msg)).join('')}
+      </div>
+
+      <div class="reply-box">
+        <textarea id="reply-input" placeholder="Write a reply…"></textarea>
+        <button class="btn-reply-send" onclick="sendReply('${id}')">
+          <i class="fa fa-paper-plane"></i><span style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:.7rem">Send</span>
+        </button>
+      </div>
+    </div>
+  `
+
+  // Scroll to bottom
+  const area = document.getElementById('messages-area')
+  if (area) area.scrollTop = area.scrollHeight
+
+  // Refresh unread badge
+  refreshUnread()
+}
+
+function renderBubble(msg) {
+  const fromAdmin = msg.sender_is_admin
+  const cls = fromAdmin ? 'from-admin' : 'from-user'
+  const avatar = fromAdmin ? '<i class="fa fa-d"></i>' : '<i class="fa fa-user"></i>'
+  const senderLabel = fromAdmin ? 'Dr.D (Admin)' : 'You'
+  return `
+    <div class="message-bubble ${cls}">
+      <div class="bubble-avatar">${avatar}</div>
+      <div class="bubble-content">
+        <div class="bubble-sender">${senderLabel}</div>
+        <div class="bubble-body">${escHtml(msg.body)}</div>
+        <div class="bubble-time">${timeAgo(msg.created_at)}</div>
+      </div>
+    </div>
+  `
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Send reply
+// ─────────────────────────────────────────────────────────────────────────────
+async function sendReply(rootId) {
+  const input = document.getElementById('reply-input')
+  const body = (input?.value || '').trim()
+  if (!body) return
+
+  const btn = document.querySelector('.btn-reply-send')
+  if (btn) btn.disabled = true
+
+  const url = IS_ADMIN ? '/api/drmail/admin/reply' : '/api/drmail/reply'
+  const res = await apiFetch(url, 'POST', { rootId, body })
+  if (btn) btn.disabled = false
+
+  if (res.ok) {
+    input.value = ''
+    await openConv(rootId) // Reload thread
+    showToast('Reply sent!', 'success')
+  } else {
+    showToast('Failed to send reply', 'error')
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin compose
+// ─────────────────────────────────────────────────────────────────────────────
+function showCompose() {
+  activeConvId = null
+  renderConvList(document.getElementById('search-input').value)
+  const panel = document.getElementById('main-panel')
+
+  const userOptions = allUsers.map(u =>
+    `<option value="${escAttr(u.id)}">${escHtml(u.username || u.email)} — ${escHtml(u.email)}</option>`
+  ).join('')
+
+  panel.innerHTML = `
+    <div class="compose-view">
+      <h2><i class="fa fa-pen-to-square"></i> New Message</h2>
+
+      <div class="form-group">
+        <label>To (Recipient)</label>
+        <select id="compose-recipient" style="width:100%">
+          <option value="">— Select a user —</option>
+          ${userOptions}
+        </select>
+      </div>
+
+      <div class="form-group" id="search-user-wrap">
+        <label>Or Search User</label>
+        <div class="user-search-box">
+          <input type="text" id="user-search" placeholder="Type name or email…" oninput="filterUserDropdown(this.value)" autocomplete="off">
+          <i class="fa fa-search search-icon"></i>
+          <div class="user-dropdown" id="user-dropdown"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Subject</label>
+        <input type="text" id="compose-subject" placeholder="e.g. Shipping details confirmation">
+      </div>
+
+      <div class="form-group">
+        <label>Message</label>
+        <textarea id="compose-body" placeholder="Write your message here…"></textarea>
+      </div>
+
+      <button class="btn-send" onclick="sendMessage()">
+        <i class="fa fa-paper-plane"></i> Send Message
+      </button>
+    </div>
+  `
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', closeDropdownOutside, { once: false })
+}
+
+function filterUserDropdown(q) {
+  const dd = document.getElementById('user-dropdown')
+  if (!dd) return
+  const term = q.toLowerCase().trim()
+  if (!term) { dd.classList.remove('show'); return }
+
+  const matches = allUsers.filter(u =>
+    (u.email || '').toLowerCase().includes(term) ||
+    (u.username || '').toLowerCase().includes(term)
+  ).slice(0, 8)
+
+  if (matches.length === 0) { dd.classList.remove('show'); return }
+
+  dd.innerHTML = matches.map(u => `
+    <div class="user-dropdown-item" onclick="selectUser('${escAttr(u.id)}', '${escAttr(u.username || u.email)}')">
+      <div>${escHtml(u.username || u.email)}</div>
+      <div class="user-email">${escHtml(u.email)}</div>
+    </div>
+  `).join('')
+  dd.classList.add('show')
+}
+
+function selectUser(id, name) {
+  const sel = document.getElementById('compose-recipient')
+  if (sel) sel.value = id
+  const inp = document.getElementById('user-search')
+  if (inp) inp.value = name
+  const dd = document.getElementById('user-dropdown')
+  if (dd) dd.classList.remove('show')
+}
+
+function closeDropdownOutside(e) {
+  const dd = document.getElementById('user-dropdown')
+  if (dd && !dd.contains(e.target)) dd.classList.remove('show')
+}
+
+async function sendMessage() {
+  const recipientId = document.getElementById('compose-recipient')?.value
+  const subject = document.getElementById('compose-subject')?.value?.trim()
+  const body = document.getElementById('compose-body')?.value?.trim()
+
+  if (!recipientId) { showToast('Please select a recipient', 'error'); return }
+  if (!body)        { showToast('Message body is required', 'error'); return }
+
+  const btn = document.querySelector('.btn-send')
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading-spin"></span> Sending…' }
+
+  const res = await apiFetch('/api/drmail/admin/send', 'POST', { recipientId, subject, body })
+
+  if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-paper-plane"></i> Send Message' }
+
+  if (res.ok) {
+    showToast('Message sent successfully!', 'success')
+    await loadAdminData()
+    // Open the new conversation
+    if (res.message?.id) {
+      // Reload full conv list then open
+      setTimeout(() => {
+        const newConv = allConvs.find(c => c.id === res.message.id)
+        if (newConv) openConv(res.message.id)
+      }, 300)
+    } else {
+      showCompose()
+    }
+  } else {
+    showToast(res.error || 'Failed to send', 'error')
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin: Delete thread
+// ─────────────────────────────────────────────────────────────────────────────
+async function deleteThread(id) {
+  if (!confirm('Delete this entire conversation?')) return
+  const res = await apiFetch(`/api/drmail/admin/message/${id}`, 'DELETE')
+  if (res.ok) {
+    showToast('Conversation deleted', 'success')
+    activeConvId = null
+    await loadAdminData()
+    document.getElementById('main-panel').innerHTML = `
+      <div class="no-selection">
+        <i class="fa fa-envelope-open-text"></i>
+        <p>Select a conversation or compose a new message</p>
+      </div>
+    `
+  } else {
+    showToast('Failed to delete', 'error')
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Unread badge polling
+// ─────────────────────────────────────────────────────────────────────────────
+async function refreshUnread() {
+  try {
+    const url = IS_ADMIN ? '/api/drmail/admin/unread-count' : '/api/drmail/unread-count'
+    const res = await apiFetch(url)
+    const badge = document.getElementById('unread-badge')
+    if (res.ok && badge) {
+      if (res.count > 0) {
+        badge.textContent = res.count
+        badge.classList.add('show')
+      } else {
+        badge.classList.remove('show')
+      }
+    }
+    // Also update parent window badge if available
+    try {
+      if (window.top !== window && res.count > 0) {
+        window.top.postMessage({ type: 'drmail-unread', count: res.count }, '*')
+      }
+    } catch(_) {}
+  } catch(_) {}
+}
+
+function pollUnread() {
+  refreshUnread()
+  setInterval(refreshUnread, 30000) // every 30s
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+async function apiFetch(url, method = 'GET', body = null) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 15000) // 15s timeout
+  try {
+    const opts = {
+      method,
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal
+    }
+    if (body && method !== 'GET') opts.body = JSON.stringify(body)
+    const r = await fetch(url, opts)
+    clearTimeout(timer)
+    return await r.json()
+  } catch (e) {
+    clearTimeout(timer)
+    if (e.name === 'AbortError') {
+      console.warn('[Dr.D-mail] request timed out:', url)
+      return { ok: false, error: 'TIMEOUT' }
+    }
+    console.error('[Dr.D-mail] fetch error', url, e)
+    return { ok: false, error: 'FETCH_ERROR' }
+  }
+}
+
+function showPanel(html) {
+  document.getElementById('main-panel').innerHTML = html
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast')
+  t.textContent = msg
+  t.className = `toast ${type} show`
+  setTimeout(() => { t.className = 'toast' }, 3000)
+}
+
+function escHtml(s) {
+  return String(s || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;')
+}
+function escAttr(s) { return escHtml(s) }
+
+function timeAgo(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const diff = Math.floor((Date.now() - d.getTime()) / 1000)
+  if (diff < 60)   return 'just now'
+  if (diff < 3600) return `${Math.floor(diff/60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff/3600)}h ago`
+  if (diff < 604800) return `${Math.floor(diff/86400)}d ago`
+  return d.toLocaleDateString()
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Secret 7-click admin unlock on the mail title
+// ─────────────────────────────────────────────────────────────────────────────
+let _clickCount  = 0
+let _clickTimer  = null
+let _adminUnlocked = false
+
+function handleTitleClick() {
+  if (_adminUnlocked) return // already unlocked, ignore
+
+  _clickCount++
+
+  // Visual flash on each click
+  const title = document.getElementById('mail-title')
+  title.classList.add('click-flash')
+  setTimeout(() => title.classList.remove('click-flash'), 200)
+
+  // Reset window: clicks must be within 2.5 seconds of each other
+  if (_clickTimer) clearTimeout(_clickTimer)
+  _clickTimer = setTimeout(() => { _clickCount = 0 }, 2500)
+
+  if (_clickCount >= 7) {
+    _clickCount = 0
+    clearTimeout(_clickTimer)
+
+    if (IS_ADMIN) {
+      unlockAdminMode()
+    } else {
+      // Wrong user — silent denial, no hints
+      _clickCount = 0
+    }
+  }
+}
+
+async function unlockAdminMode() {
+  if (_adminUnlocked) return
+  _adminUnlocked = true
+
+  // Pulse the topbar
+  const bar = document.querySelector('.topbar')
+  bar.classList.add('unlocked')
+  setTimeout(() => bar.classList.remove('unlocked'), 600)
+
+  // Switch mode tag
+  const modeTag = document.getElementById('mode-tag')
+  modeTag.textContent = 'Admin'
+  modeTag.className = 'mode-tag admin'
+
+  // Show compose button
+  document.getElementById('compose-btn-wrap').style.display = 'flex'
+  document.getElementById('no-sel-text').textContent = 'Select a conversation or compose a new message'
+
+  showToast('🔓 Admin mode unlocked', 'success')
+
+  // Reload sidebar with all conversations
+  await loadAdminData()
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Boot
+// ─────────────────────────────────────────────────────────────────────────────
+init()
+</script>
+</body>
+</html>

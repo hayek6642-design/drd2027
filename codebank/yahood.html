@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yahood! — Mining World</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #0f172a;
+            color: #f8fafc;
+            font-family: 'Poppins', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Loading Screen ── */
+        #yahood-loading {
+            position: fixed; inset: 0; background: #0f172a;
+            display: flex; align-items: center; justify-content: center;
+            flex-direction: column; gap: 20px; z-index: 9999;
+            transition: opacity 0.5s ease, visibility 0.5s;
+        }
+        #yahood-loading.hidden { opacity: 0; visibility: hidden; }
+
+        .spinner {
+            width: 60px; height: 60px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top-color: #f59e0b;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading-logo {
+            width: 80px; height: 80px;
+            object-fit: contain; border-radius: 16px;
+            margin-bottom: 8px;
+        }
+
+        /* ── Service Frame ── */
+        #yahood-frame {
+            flex: 1; width: 100%; border: none;
+            opacity: 0; transition: opacity 0.5s ease;
+        }
+        #yahood-frame.ready { opacity: 1; }
+
+        /* ── Error State ── */
+        #yahood-error {
+            display: none; text-align: center; padding: 24px; max-width: 500px;
+        }
+        #yahood-error.visible { display: block; }
+        .retry-btn {
+            margin-top: 16px; padding: 12px 24px;
+            background: #f59e0b; color: white; border: none;
+            border-radius: 8px; cursor: pointer; font-size: 15px;
+            transition: background 0.2s;
+        }
+        .retry-btn:hover { background: #d97706; }
+    </style>
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div id="yahood-loading">
+    <img src="./assets/images/dr.dc.png" alt="Yahood" class="loading-logo" onerror="this.style.display='none'">
+    <div class="spinner"></div>
+    <p style="color:#94a3b8;font-size:14px">Loading Yahood! Mining World…</p>
+    <div id="yahood-error">
+        <i class="fas fa-exclamation-triangle" style="font-size:48px;color:#f59e0b;margin-bottom:12px"></i>
+        <h2 style="color:#f8fafc;margin-bottom:8px">Failed to Load Yahood!</h2>
+        <p id="yahood-error-msg" style="color:#94a3b8;font-size:14px">Unknown error occurred</p>
+        <button class="retry-btn" onclick="location.reload()"><i class="fas fa-redo mr-2"></i>Retry</button>
+    </div>
+</div>
+
+<!-- Service Iframe -->
+<iframe
+    id="yahood-frame"
+    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-top-navigation-by-user-activation"
+    allow="geolocation; microphone; camera"
+    title="Yahood! Mining World"
+></iframe>
+
+<!-- ACC Assets Bridge (parent-side handler) -->
+<script src="/shared/assets-service-bridge.js" onerror="console.warn('[Yahood] assets-service-bridge.js not found – running standalone')"></script>
+
+<script>
+/* ─────────────────────────────────────────
+   Yahood Loader — CodeBank Integration
+   Communicates with CodeBank parent and
+   relays ACC asset messages to the Yahood
+   iframe via postMessage.
+───────────────────────────────────────── */
+
+const YAHOOD_SRC = './yahood/index.html';
+const MAX_WAIT_MS = 8000;
+
+const frame   = document.getElementById('yahood-frame');
+const loading = document.getElementById('yahood-loading');
+const errBox  = document.getElementById('yahood-error');
+const errMsg  = document.getElementById('yahood-error-msg');
+
+let loaded = false;
+let accAssets = { codes: 0, silver: 0, gold: 0 };
+
+// ── Communicate with CodeBank parent ──
+const ParentBridge = {
+    send(data) {
+        if (window.parent !== window) {
+            window.parent.postMessage({ source: 'YAHOOD_LOADER', ...data, timestamp: Date.now() }, '*');
+        }
+    },
+    listen(cb) {
+        window.addEventListener('message', (e) => {
+            if (e.data?.type === 'auth:ready' || e.data?.type === 'codebank:init' ||
+                e.data?.type === 'ACC_ASSETS_UPDATE' || e.data?.source === 'ACC') {
+                cb(e.data);
+            }
+        });
+    }
+};
+
+// ── Relay ACC messages to Yahood iframe ──
+window.addEventListener('message', (e) => {
+    if (!e.data) return;
+
+    // Relay ACC asset updates to the inner Yahood frame
+    if (e.data.source === 'ACC' && e.data.type === 'ACC_ASSETS_UPDATE') {
+        accAssets = e.data.payload || accAssets;
+        frame.contentWindow?.postMessage({ source: 'ACC', type: 'ACC_ASSETS_UPDATE', payload: accAssets }, '*');
+    }
+
+    // Relay Yahood earnings/spending back up to CodeBank ACC
+    if (e.data.source === 'YAHOOD') {
+        window.parent.postMessage({ ...e.data }, '*');
+    }
+});
+
+// ── Load the service ──
+function loadYahood(authData) {
+    loaded = true;
+    const src = authData?.token
+        ? `${YAHOOD_SRC}?token=${encodeURIComponent(authData.token)}`
+        : YAHOOD_SRC;
+
+    frame.src = src;
+    frame.onload = () => {
+        loading.classList.add('hidden');
+        frame.classList.add('ready');
+        // Send initial assets once frame is ready
+        setTimeout(() => {
+            frame.contentWindow?.postMessage({ source: 'ACC', type: 'ACC_ASSETS_UPDATE', payload: accAssets }, '*');
+        }, 500);
+    };
+    frame.onerror = () => showError('Failed to load game resources.');
+}
+
+function showError(msg) {
+    loading.classList.remove('hidden');
+    errMsg.textContent = msg || 'An error occurred.';
+    errBox.classList.add('visible');
+}
+
+// ── Boot sequence ──
+ParentBridge.send({ status: 'yahood-loader-ready' });
+ParentBridge.listen((data) => { if (!loaded) loadYahood(data); });
+
+// Fallback: load without auth after timeout
+setTimeout(() => { if (!loaded) loadYahood(null); }, MAX_WAIT_MS / 2);
+
+// Hard error timeout
+setTimeout(() => {
+    if (!loaded) showError('Connection timed out. Check your internet and retry.');
+}, MAX_WAIT_MS);
+</script>
+
+</body>
+</html>

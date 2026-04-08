@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeBank Exchange</title>
+  <link rel="icon" type="image/png" href="/codebank/assets/images/dr.dc.png">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    :root {
+      --primary-color: #FF6B35;
+      --secondary-color: #8B5CF6;
+      --accent-color: #58a6ff;
+      --bg-gradient-start: #87CEEB;
+      --bg-gradient-end: #B0E0E6;
+      --text-color: #E0E0E0;
+      --text-muted: #8b949e;
+      --text-bright: #ffffff;
+      --card-bg: rgba(22, 27, 34, 0.8);
+      --border-color: #30363d;
+      --hover-bg: #21262d;
+      --success-color: #00ff88;
+      --error-color: #f85149;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+      background-attachment: fixed;
+      color: var(--text-color);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .tab-navigation {
+      background: rgba(22, 27, 34, 0.6);
+      backdrop-filter: blur(20px);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 8px;
+      margin-bottom: 24px;
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 12px 20px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-color);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      color: white;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .safe-container {
+      padding: 20px;
+      min-height: 300px;
+    }
+
+    .safe-header {
+      margin-bottom: 20px;
+    }
+
+    .safe-title-group {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .safe-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .safe-tab-button {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: var(--text-color);
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .safe-tab-button:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .safe-tab-button.active {
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      border-color: transparent;
+    }
+
+    .safe-item {
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+
+    .safe-empty {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-muted);
+    }
+
+    .btn {
+      background: linear-gradient(135deg, rgba(176, 67, 255, 0.15), rgba(255, 119, 233, 0.15));
+      border: 1px solid rgba(176, 67, 255, 0.3);
+      color: var(--text-color);
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 500;
+    }
+
+    .btn:hover {
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      color: white;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .compact-header {
+      padding: 16px 24px;
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .header-balance {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 8px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 10000;
+    }
+
+    .toast {
+      background: rgba(22, 27, 34, 0.95);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      animation: toastSlideIn 0.3s ease-out;
+      max-width: 400px;
+    }
+
+    @keyframes toastSlideIn {
+      from { opacity: 0; transform: translateX(100%); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .settings-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      height: 100%;
+      width: 320px;
+      background: linear-gradient(180deg, #1e293b, #0f172a);
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      z-index: 1000;
+      box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .settings-panel.active {
+      transform: translateX(0);
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 24px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.2);
+      transition: 0.3s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background: white;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+
+    .form-input, .form-select {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      color: var(--text-color);
+      padding: 10px 14px;
+      width: 100%;
+      transition: all 0.3s ease;
+    }
+
+    .form-input:focus, .form-select:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
+    }
+
+    .loading-spinner {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px;
+    }
+
+    .spinner {
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      border-top: 4px solid var(--primary-color);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Header -->
+  <header class="compact-header">
+    <div class="container mx-auto">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+          <div class="flex items-center space-x-3">
+            <div class="rounded-xl shadow-lg overflow-hidden" style="background:transparent;height:48px;width:48px">
+              <img src="/codebank/assets/images/dr.dc.png" alt="Dr.DC" style="height:48px;width:48px;object-fit:contain;border-radius:12px" onerror="this.parentElement.innerHTML='<div class=\'p-3 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-xl\'><i class=\'fas fa-money-bill-wave text-xl text-white\'></i></div>'">
+            </div>
+            <div>
+              <h1 class="text-2xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">CodeBank Exchange</h1>
+              <p class="text-blue-300 text-sm font-medium">Professional Banking Services</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="flex items-center space-x-3">
+          <!-- Premium Status -->
+          <button class="flex items-center bg-gradient-to-r from-yellow-400 to-yellow-600 px-3 py-1 rounded-full border border-yellow-300 text-sm">
+            <i class="fas fa-crown text-white mr-1"></i>
+            <span class="font-medium text-white">Premium</span>
+          </button>
+
+          <!-- Security Badge -->
+          <div class="flex items-center bg-green-500/20 px-2 py-1 rounded-full border border-green-500/30 text-sm">
+            <i class="fas fa-shield-check text-green-400 mr-1"></i>
+            <span class="font-medium">Secure</span>
+          </div>
+          
+          <!-- User Balance -->
+          <div class="header-balance cursor-pointer" title="CodeBank Balance">
+            <div class="font-semibold text-sm">CodeBank</div>
+            <div class="text-blue-200 text-xs">
+              Codes: <span id="header-codes-count">0</span>
+            </div>
+          </div>
+
+          <!-- Settings Button -->
+          <button id="settings-btn" class="px-3 py-2 bg-blue-700 hover:bg-blue-800 rounded-lg transition-colors flex items-center text-sm">
+            <i class="fas fa-cog mr-2"></i>
+            <span>Settings</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Settings Panel -->
+  <aside id="settings-panel" class="settings-panel" aria-hidden="true">
+    <div class="p-6 h-full flex flex-col">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-semibold text-white">Settings</h2>
+        <button id="settings-close" class="text-white text-2xl hover:bg-white/10 rounded-full w-10 h-10 flex items-center justify-center transition-colors">
+          &times;
+        </button>
+      </div>
+
+      <div class="overflow-auto flex-1 space-y-6">
+        <!-- Appearance -->
+        <section>
+          <h3 class="text-sm text-gray-400 mb-3 uppercase tracking-wider">Appearance</h3>
+          <div class="p-4 bg-white/5 rounded-xl space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="font-medium text-white">Dark Mode</div>
+                <div class="text-xs text-gray-400">Toggle dark/light theme</div>
+              </div>
+              <label class="switch">
+                <input id="theme-toggle" type="checkbox" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <!-- Debug -->
+        <section>
+          <h3 class="text-sm text-gray-400 mb-3 uppercase tracking-wider">Debug</h3>
+          <div class="p-4 bg-white/5 rounded-xl space-y-3">
+            <label class="flex items-center justify-between cursor-pointer">
+              <span class="text-white">Debug Mode</span>
+              <input id="debug-toggle" type="checkbox">
+            </label>
+          </div>
+        </section>
+      </div>
+
+      <div class="text-xs text-gray-500 mt-4 pt-4 border-t border-white/10">
+        CodeBank v1.0 • SafeAssetList Enabled
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="container mx-auto py-8 px-4">
+    <!-- Tab Navigation -->
+    <div class="tab-navigation">
+      <nav class="flex space-x-2">
+        <button class="tab-btn active" data-tab="overview">
+          <i class="fas fa-chart-line mr-2"></i>Overview
+        </button>
+        <button class="tab-btn" data-tab="assets">
+          <i class="fas fa-box mr-2"></i>Assets
+        </button>
+        <button class="tab-btn" data-tab="codes">
+          <i class="fas fa-key mr-2"></i>Codes
+        </button>
+      </nav>
+    </div>
+
+    <!-- Tab Content -->
+    <div id="tab-content">
+      <!-- Overview Tab -->
+      <div id="overview-tab" class="tab-content active">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- Stats Cards -->
+          <div class="card p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold text-white">Total Codes</h3>
+              <i class="fas fa-key text-2xl text-blue-400"></i>
+            </div>
+            <p class="text-3xl font-bold text-white" id="overview-codes-count">0</p>
+            <p class="text-sm text-gray-400 mt-2">Generated codes</p>
+          </div>
+
+          <div class="card p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold text-white">Silver Bars</h3>
+              <i class="fas fa-coins text-2xl text-gray-400"></i>
+            </div>
+            <p class="text-3xl font-bold text-white" id="overview-silver-count">0</p>
+            <p class="text-sm text-gray-400 mt-2">Silver assets</p>
+          </div>
+
+          <div class="card p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold text-white">Gold Bars</h3>
+              <i class="fas fa-gem text-2xl text-yellow-400"></i>
+            </div>
+            <p class="text-3xl font-bold text-white" id="overview-gold-count">0</p>
+            <p class="text-sm text-gray-400 mt-2">Gold assets</p>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card mt-6 p-6">
+          <h3 class="text-lg font-semibold text-white mb-4">Quick Actions</h3>
+          <div class="flex flex-wrap gap-4">
+            <button id="generate-code-btn" class="btn">
+              <i class="fas fa-plus mr-2"></i>Generate Code
+            </button>
+            <button id="generate-silver-btn" class="btn">
+              <i class="fas fa-coins mr-2"></i>Generate Silver
+            </button>
+            <button id="generate-gold-btn" class="btn">
+              <i class="fas fa-gem mr-2"></i>Generate Gold
+            </button>
+            <button id="refresh-assets-btn" class="btn">
+              <i class="fas fa-sync-alt mr-2"></i>Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Assets Tab -->
+      <div id="assets-tab" class="tab-content">
+        <div class="card">
+          <div class="p-6 border-b border-white/10 flex justify-between items-center">
+            <h3 class="text-xl font-semibold text-white">Safe Assets</h3>
+            <button id="safe-refresh-btn" class="btn btn-secondary">
+              <i class="fas fa-sync-alt mr-2"></i>Refresh
+            </button>
+          </div>
+          <div class="p-6">
+            <!-- SafeAssetList Container - THIS IS THE KEY ELEMENT -->
+            <div id="codebank-assets-tab">
+              <div class="safe-container">
+                <!-- SafeAssetList will render here -->
+                <div class="loading-spinner">
+                  <div class="spinner"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Codes Tab -->
+      <div id="codes-tab" class="tab-content">
+        <div class="card">
+          <div class="p-6 border-b border-white/10">
+            <h3 class="text-xl font-semibold text-white">Generated Codes</h3>
+          </div>
+          <div class="p-6">
+            <div id="codes-list" class="space-y-2">
+              <div class="safe-empty">
+                <i class="fas fa-inbox text-4xl mb-4 text-gray-500"></i>
+                <p>No codes generated yet</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script src="safe-storage.js"></script>
+  <script src="bankode-core.js"></script>
+  <script src="local-asset-bus.js" type="module"></script>
+  <script src="safe-asset-list.js"></script>
+  <script src="safe-code-bridge.js"></script>
+  <script src="index.js"></script>
+
+  <script>
+    // Global toast function
+    window.showToast = function(message, type = 'info', duration = 3500) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      
+      const colors = {
+        success: '#28a745',
+        error: '#dc3545',
+        warning: '#ffc107',
+        info: '#17a2b8'
+      };
+      
+      toast.style.cssText = `
+        background: ${colors[type] || colors.info};
+        color: ${type === 'warning' ? '#000' : '#fff'};
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      `;
+      toast.textContent = message;
+      
+      container.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+    };
+
+    // Settings Panel
+    document.addEventListener('DOMContentLoaded', function() {
+      const panel = document.getElementById('settings-panel');
+      const openBtn = document.getElementById('settings-btn');
+      const closeBtn = document.getElementById('settings-close');
+
+      function openPanel() {
+        panel.classList.add('active');
+        panel.setAttribute('aria-hidden', 'false');
+      }
+
+      function closePanel() {
+        panel.classList.remove('active');
+        panel.setAttribute('aria-hidden', 'true');
+      }
+
+      if (openBtn) openBtn.addEventListener('click', openPanel);
+      if (closeBtn) closeBtn.addEventListener('click', closePanel);
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closePanel();
+      });
+
+      // Tab switching
+      const tabBtns = document.querySelectorAll('.tab-btn');
+      const tabContents = document.querySelectorAll('.tab-content');
+
+      tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tabId = btn.dataset.tab;
+          
+          // Update active states
+          tabBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          
+          tabContents.forEach(c => {
+            c.classList.remove('active');
+            if (c.id === `${tabId}-tab`) {
+              c.classList.add('active');
+            }
+          });
+
+          // Trigger SafeAssetList render when assets tab is opened
+          if (tabId === 'assets' && window.SafeAssetList) {
+            setTimeout(() => {
+              const container = document.querySelector('#codebank-assets-tab .safe-container');
+              if (container) {
+                window.SafeAssetList.render(window.ACTIVE_ASSET_TAB || 'codes', container);
+              }
+            }, 100);
+          }
+        });
+      });
+
+      // Debug toggle
+      const debugToggle = document.getElementById('debug-toggle');
+      if (debugToggle) {
+        debugToggle.addEventListener('change', () => {
+          window.CODEBANK_DEBUG = debugToggle.checked;
+          console.log('[CodeBank] Debug mode:', window.CODEBANK_DEBUG ? 'ON' : 'OFF');
+        });
+      }
+
+      // Quick action buttons
+      document.getElementById('generate-code-btn')?.addEventListener('click', () => {
+        if (window.Bankode) {
+          const payload = window.Bankode.generateIfDue();
+          if (payload) {
+            window.showToast('Code generated: ' + payload.code.substring(0, 10) + '...', 'success');
+          }
+        }
+      });
+
+      document.getElementById('refresh-assets-btn')?.addEventListener('click', () => {
+        window.dispatchEvent(new CustomEvent('assets:updated', { 
+          detail: { source: 'manual-refresh' } 
+        }));
+        window.showToast('Assets refreshed', 'info');
+      });
+
+      // Initialize
+      console.log('[CodeBank] Page initialized successfully');
+      window.showToast('CodeBank loaded successfully!', 'success', 2000);
+    });
+  </script>
+</body>
+</html>

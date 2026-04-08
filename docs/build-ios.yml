@@ -1,0 +1,135 @@
+name: Build iOS IPA (Capacitor)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'codebank/**'
+      - 'public/**'
+      - 'index.html'
+      - 'capacitor.config.json'
+      - 'package.json'
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Build type (debug or release)'
+        required: false
+        default: 'debug'
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      # ── 1. Checkout ─────────────────────────────────────────────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── 2. Node.js ──────────────────────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ── 3. Install dependencies ─────────────────────────────────────────────
+      - name: Install npm dependencies
+        run: npm ci --legacy-peer-deps
+
+      # ── 4. Build web assets ─────────────────────────────────────────────────
+      # If you have a Vite build step, uncomment:
+      # - name: Build web app
+      #   run: npm run build
+
+      # Copy web files to dist (for Capacitor webDir)
+      - name: Prepare web dist
+        run: |
+          mkdir -p dist
+          cp -r index.html login.html manifest.json sw.js icons public codebank src dist/ 2>/dev/null || true
+          cp -r *.html dist/ 2>/dev/null || true
+          echo "dist prepared"
+
+      # ── 5. Capacitor sync ───────────────────────────────────────────────────
+      - name: Capacitor sync iOS
+        run: |
+          npx cap sync ios
+          echo "Capacitor synced"
+
+      # ── 6. Xcode build ──────────────────────────────────────────────────────
+      - name: Select Xcode
+        run: sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      # Build unsigned IPA (for AltStore / sideloading)
+      - name: Build unsigned IPA
+        run: |
+          cd ios/App
+          # Build for generic iOS device (no signing required for debug export)
+          xcodebuild \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Debug \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath DerivedData \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build | xcpretty || true
+
+          # Package as IPA
+          mkdir -p ../../artifacts
+          if [ -d "DerivedData/Build/Products/Debug-iphonesimulator/App.app" ]; then
+            mkdir -p Payload
+            cp -r "DerivedData/Build/Products/Debug-iphonesimulator/App.app" Payload/
+            zip -r "../../artifacts/CodeBank-iOS-simulator.ipa" Payload
+            echo "IPA created (simulator build)"
+          fi
+
+      # ── 7. Real device unsigned build (for AltStore) ────────────────────────
+      - name: Build for real device (unsigned - AltStore compatible)
+        run: |
+          cd ios/App
+          xcodebuild \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Debug \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath DerivedDataDevice \
+            DEVELOPMENT_TEAM="" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build 2>/dev/null | xcpretty || echo "Device build may need signing — see artifacts note"
+        continue-on-error: true
+
+      # ── 8. Upload artifacts ─────────────────────────────────────────────────
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CodeBank-iOS-Build
+          path: artifacts/
+          retention-days: 30
+          if-no-files-found: warn
+
+      # ── 9. Summary ──────────────────────────────────────────────────────────
+      - name: Build summary
+        run: |
+          echo "## iOS Build Complete 🍎" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Installation Options:" >> $GITHUB_STEP_SUMMARY
+          echo "**Option 1 — PWA (Recommended, no setup):**" >> $GITHUB_STEP_SUMMARY
+          echo "- Open https://drd2027.onrender.com in Safari on iPhone" >> $GITHUB_STEP_SUMMARY
+          echo "- Tap Share ⬆️ → Add to Home Screen ➕ → Add" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Option 2 — AltStore (sideload the .ipa):**" >> $GITHUB_STEP_SUMMARY
+          echo "1. Install [AltStore](https://altstore.io) on your Mac & iPhone" >> $GITHUB_STEP_SUMMARY
+          echo "2. Download the IPA from GitHub Actions Artifacts above" >> $GITHUB_STEP_SUMMARY
+          echo "3. Open AltStore on iPhone → tap + → select the IPA" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Option 3 — TestFlight (requires Apple Developer account):**" >> $GITHUB_STEP_SUMMARY
+          echo "- Add APPLE_TEAM_ID, CERTIFICATE_P12, PROVISIONING_PROFILE secrets" >> $GITHUB_STEP_SUMMARY
+          echo "- Then upload to TestFlight via App Store Connect API" >> $GITHUB_STEP_SUMMARY

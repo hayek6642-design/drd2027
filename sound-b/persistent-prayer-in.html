@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Persistent Prayer System - Integration</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+        .status-card {
+            background: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #3498db;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 30px 0;
+        }
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #219a52;
+        }
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+        .btn-warning:hover {
+            background: #e67e22;
+        }
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        .info-box {
+            background: #d5dbdb;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        .feature-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        .feature-list li:before {
+            content: "✅ ";
+            margin-right: 8px;
+        }
+        .logs {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-active { background: #27ae60; }
+        .status-inactive { background: #e74c3c; }
+        .status-pending { background: #f39c12; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🕌 Enhanced Persistent Prayer System</h1>
+            <p>Prayer timings and alarms that work even when your device is off</p>
+        </div>
+
+        <div class="status-card">
+            <h3>System Status</h3>
+            <div id="system-status">
+                <p><span class="status-indicator status-inactive" id="sw-status"></span>Service Worker: <span id="sw-text">Not Registered</span></p>
+                <p><span class="status-indicator status-inactive" id="push-status"></span>Push Notifications: <span id="push-text">Not Enabled</span></p>
+                <p><span class="status-indicator status-inactive" id="location-status"></span>Location: <span id="location-text">Not Set</span></p>
+                <p><span class="status-indicator status-inactive" id="prayers-status"></span>Prayer Times: <span id="prayers-text">Not Loaded</span></p>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" onclick="initializeSystem()">🚀 Initialize System</button>
+            <button class="btn btn-success" onclick="requestNotifications()">🔔 Enable Notifications</button>
+            <button class="btn btn-success" onclick="getLocation()">📍 Get Location</button>
+            <button class="btn btn-warning" onclick="loadPrayerTimes()">⏰ Load Prayer Times</button>
+            <button class="btn btn-primary" onclick="schedulePrayers()">📅 Schedule Prayers</button>
+            <button class="btn btn-warning" onclick="testNotification()">🧪 Test Notification</button>
+            <button class="btn btn-danger" onclick="clearAll()">🗑️ Clear All</button>
+        </div>
+
+        <div class="info-box">
+            <h4>🌟 Features</h4>
+            <ul class="feature-list">
+                <li>Works even when device is off or app is closed</li>
+                <li>Persistent background notifications</li>
+                <li>Automatic prayer time calculation</li>
+                <li>Multi-language support</li>
+                <li>Regional azan preferences</li>
+                <li>Advance prayer notifications (10min, 5min, 1min before)</li>
+                <li>Snooze and dismiss options</li>
+                <li>Offline prayer time storage</li>
+                <li>Cross-platform compatibility</li>
+            </ul>
+        </div>
+
+        <div class="info-box">
+            <h4>📱 How It Works</h4>
+            <p><strong>1. Service Worker:</strong> Runs in the background to handle notifications even when the browser is closed.</p>
+            <p><strong>2. Push Notifications:</strong> Sends notifications through the browser's notification system.</p>
+            <p><strong>3. Local Storage:</strong> Saves prayer times and settings locally for offline access.</p>
+            <p><strong>4. Background Sync:</strong> Automatically updates prayer times and schedules notifications.</p>
+        </div>
+
+        <div class="logs" id="logs">
+            <div>🕌 Enhanced Persistent Prayer System Logs</div>
+            <div>=======================================</div>
+        </div>
+    </div>
+
+    <script src="enhanced-persistent-prayer-system.js"></script>
+    <script>
+        let systemLogs = [];
+
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            systemLogs.push(logEntry);
+            
+            const logsDiv = document.getElementById('logs');
+            const logElement = document.createElement('div');
+            logElement.textContent = logEntry;
+            logElement.style.color = type === 'error' ? '#e74c3c' : type === 'success' ? '#27ae60' : '#ecf0f1';
+            logsDiv.appendChild(logElement);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+            
+            console.log(logEntry);
+        }
+
+        async function initializeSystem() {
+            addLog('🚀 Initializing Enhanced Persistent Prayer System...', 'info');
+            
+            try {
+                // Check Service Worker support
+                if (!('serviceWorker' in navigator)) {
+                    throw new Error('Service Workers not supported in this browser');
+                }
+
+                // Register Service Worker
+                const registration = await navigator.serviceWorker.register('/yt-coder/enhanced-persistent-service-worker.js');
+                addLog('✅ Service Worker registered successfully', 'success');
+                
+                updateStatus('sw-status', 'sw-text', 'Active', 'active');
+                
+                // Wait for service worker to be ready
+                await navigator.serviceWorker.ready;
+                addLog('✅ Service Worker is ready', 'success');
+                
+                // Initialize the persistent prayer system
+                if (window.EnhancedPersistentPrayerSystem) {
+                    await window.EnhancedPersistentPrayerSystem.initialize();
+                    addLog('✅ Persistent prayer system initialized', 'success');
+                }
+                
+            } catch (error) {
+                addLog(`❌ Initialization failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function requestNotifications() {
+            addLog('🔔 Requesting notification permission...', 'info');
+            
+            try {
+                const permission = await Notification.requestPermission();
+                
+                if (permission === 'granted') {
+                    addLog('✅ Notifications enabled successfully', 'success');
+                    updateStatus('push-status', 'push-text', 'Active', 'active');
+                    
+                    // Test notification
+                    setTimeout(() => {
+                        new Notification('🕌 Prayer System', {
+                            body: 'Notifications are now active!',
+                            icon: '/yt-coder/assets/icons/prayer-icon.png'
+                        });
+                    }, 1000);
+                    
+                } else {
+                    addLog('⚠️ Notification permission denied', 'error');
+                    updateStatus('push-status', 'push-text', 'Denied', 'inactive');
+                }
+                
+            } catch (error) {
+                addLog(`❌ Error requesting notifications: ${error.message}`, 'error');
+            }
+        }
+
+        async function getLocation() {
+            addLog('📍 Getting current location...', 'info');
+            
+            try {
+                const position = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 300000
+                    });
+                });
+                
+                const location = {
+                    lat: position.coords.latitude,
+                    lon: position.coords.longitude
+                };
+                
+                localStorage.setItem('prayerLocation', JSON.stringify(location));
+                addLog(`✅ Location obtained: ${location.lat.toFixed(4)}, ${location.lon.toFixed(4)}`, 'success');
+                updateStatus('location-status', 'location-text', 'Active', 'active');
+                
+            } catch (error) {
+                addLog(`⚠️ Could not get location: ${error.message}`, 'error');
+                addLog('📍 Using default location (Mecca, Saudi Arabia)', 'info');
+                const defaultLocation = { lat: 21.4225, lon: 39.8262 };
+                localStorage.setItem('prayerLocation', JSON.stringify(defaultLocation));
+                updateStatus('location-status', 'location-text', 'Default (Mecca)', 'active');
+            }
+        }
+
+        async function loadPrayerTimes() {
+            addLog('⏰ Loading prayer times...', 'info');
+            
+            try {
+                const location = JSON.parse(localStorage.getItem('prayerLocation') || '{"lat": 21.4225, "lon": 39.8262}');
+                
+                // Fetch prayer times from API
+                const today = new Date();
+                const dateStr = today.toISOString().split('T')[0];
+                const url = `https://api.aladhan.com/v1/timings/${dateStr}?latitude=${location.lat}&longitude=${location.lon}&method=2`;
+                
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                const timings = data.data.timings;
+                
+                // Store prayer times
+                localStorage.setItem('prayerTimes', JSON.stringify({
+                    timings: timings,
+                    date: dateStr,
+                    location: location,
+                    lastUpdated: Date.now()
+                }));
+                
+                // Display prayer times
+                addLog('✅ Prayer times loaded successfully', 'success');
+                addLog(`📅 Fajr: ${timings.Fajr}`, 'info');
+                addLog(`📅 Dhuhr: ${timings.Dhuhr}`, 'info');
+                addLog(`📅 Asr: ${timings.Asr}`, 'info');
+                addLog(`📅 Maghrib: ${timings.Maghrib}`, 'info');
+                addLog(`📅 Isha: ${timings.Isha}`, 'info');
+                
+                updateStatus('prayers-status', 'prayers-text', 'Loaded', 'active');
+                
+            } catch (error) {
+                addLog(`❌ Error loading prayer times: ${error.message}`, 'error');
+                updateStatus('prayers-status', 'prayers-text', 'Failed', 'inactive');
+            }
+        }
+
+        async function schedulePrayers() {
+            addLog('📅 Scheduling prayer notifications...', 'info');
+            
+            try {
+                const prayerData = localStorage.getItem('prayerTimes');
+                if (!prayerData) {
+                    throw new Error('No prayer times available. Load prayer times first.');
+                }
+                
+                const { timings } = JSON.parse(prayerData);
+                const location = JSON.parse(localStorage.getItem('prayerLocation') || '{"lat": 21.4225, "lon": 39.8262}');
+                
+                // Schedule each prayer
+                const prayers = [
+                    { name: 'Fajr', key: 'fajr', time: timings.Fajr },
+                    { name: 'Dhuhr', key: 'dhuhr', time: timings.Dhuhr },
+                    { name: 'Asr', key: 'asr', time: timings.Asr },
+                    { name: 'Maghrib', key: 'maghrib', time: timings.Maghrib },
+                    { name: 'Isha', key: 'isha', time: timings.Isha }
+                ];
+                
+                for (const prayer of prayers) {
+                    const [hours, minutes] = prayer.time.split(':').map(Number);
+                    const prayerTime = new Date();
+                    prayerTime.setHours(hours, minutes, 0, 0);
+                    
+                    // If prayer time has passed today, schedule for tomorrow
+                    if (prayerTime <= new Date()) {
+                        prayerTime.setDate(prayerTime.getDate() + 1);
+                    }
+                    
+                    // Send to service worker
+                    if (navigator.serviceWorker.controller) {
+                        navigator.serviceWorker.controller.postMessage({
+                            type: 'SCHEDULE_PRAYER_NOTIFICATION',
+                            data: {
+                                prayerId: `prayer-${prayer.name.toLowerCase()}`,
+                                prayerName: prayer.name,
+                                prayerTime: prayer.time,
+                                prayerKey: prayer.key,
+                                language: 'en',
+                                region: 'mecca',
+                                timestamp: prayerTime.getTime()
+                            }
+                        });
+                    }
+                    
+                    addLog(`📅 Scheduled ${prayer.name} at ${prayerTime.toLocaleString()}`, 'success');
+                }
+                
+                addLog('✅ All prayer notifications scheduled', 'success');
+                
+            } catch (error) {
+                addLog(`❌ Error scheduling prayers: ${error.message}`, 'error');
+            }
+        }
+
+        function testNotification() {
+            addLog('🧪 Sending test notification...', 'info');
+            
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'TEST_NOTIFICATION'
+                });
+                addLog('✅ Test notification sent via Service Worker', 'success');
+            } else if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('🕌 Prayer System Test', {
+                    body: 'This is a test notification from the Enhanced Persistent Prayer System',
+                    icon: '/yt-coder/assets/icons/prayer-icon.png',
+                    tag: 'test-prayer'
+                });
+                addLog('✅ Test notification sent directly', 'success');
+            } else {
+                addLog('❌ Cannot send test notification. Enable notifications first.', 'error');
+            }
+        }
+
+        function clearAll() {
+            if (confirm('Are you sure you want to clear all scheduled notifications and data?')) {
+                localStorage.removeItem('prayerTimes');
+                localStorage.removeItem('prayerLocation');
+                localStorage.removeItem('persistentPrayerSettings');
+                
+                if (navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({
+                        type: 'CLEAR_ALL_NOTIFICATIONS'
+                    });
+                }
+                
+                // Reset status indicators
+                updateStatus('push-status', 'push-text', 'Not Enabled', 'inactive');
+                updateStatus('location-status', 'location-text', 'Not Set', 'inactive');
+                updateStatus('prayers-status', 'prayers-text', 'Not Loaded', 'inactive');
+                
+                addLog('🗑️ All data cleared', 'success');
+            }
+        }
+
+        function updateStatus(statusId, textId, text, status) {
+            const statusEl = document.getElementById(statusId);
+            const textEl = document.getElementById(textId);
+            
+            statusEl.className = `status-indicator status-${status}`;
+            textEl.textContent = text;
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            addLog('🕌 Enhanced Persistent Prayer System Integration Page Loaded', 'info');
+            
+            // Check if service worker is already registered
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    if (registrations.length > 0) {
+                        addLog('✅ Service Worker already registered', 'success');
+                        updateStatus('sw-status', 'sw-text', 'Active', 'active');
+                    }
+                });
+            }
+            
+            // Check notification permission
+            if ('Notification' in window) {
+                if (Notification.permission === 'granted') {
+                    updateStatus('push-status', 'push-text', 'Active', 'active');
+                } else if (Notification.permission === 'denied') {
+                    updateStatus('push-status', 'push-text', 'Denied', 'inactive');
+                }
+            }
+            
+            // Check if we have saved data
+            if (localStorage.getItem('prayerLocation')) {
+                updateStatus('location-status', 'location-text', 'Saved', 'active');
+            }
+            
+            if (localStorage.getItem('prayerTimes')) {
+                updateStatus('prayers-status', 'prayers-text', 'Available', 'active');
+            }
+        });
+
+        // Auto-refresh status every 10 seconds
+        setInterval(() => {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    const isRegistered = registrations.length > 0;
+                    const status = isRegistered ? 'active' : 'inactive';
+                    const text = isRegistered ? 'Active' : 'Not Registered';
+                    updateStatus('sw-status', 'sw-text', text, status);
+                });
+            }
+        }, 10000);
+    </script>
+</body>
+</html>

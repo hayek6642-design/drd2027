@@ -1,0 +1,10 @@
+let watchTime=0;let timerInterval=null;window.__COUNTER_READY__=false;
+function sanitizeWatchTime(v){const n=Number(v);return isNaN(n)||n<0?0:n}
+window.formatTime=function(milliseconds){const totalSeconds=Math.floor(sanitizeWatchTime(milliseconds)/1000);const seconds=totalSeconds%60;const minutes=Math.floor(totalSeconds/60)%60;const hours=Math.floor(totalSeconds/3600)%24;const days=Math.floor(totalSeconds/(3600*24))%365;const years=Math.floor(totalSeconds/(3600*24*365));const s=String(seconds).padStart(2,'0');const m=String(minutes).padStart(2,'0');const h=String(hours).padStart(2,'0');const d=String(days).padStart(3,'0');const y=String(years).padStart(1,'0');return `${s}:${m}:${h}:${d}:${y}`}
+function updateCounterDisplay(){const el=document.getElementById('counter');if(!el)return;const time=window.formatTime(sanitizeWatchTime(watchTime));const digits=time.split('').map(d=>`<span>${d}<span class="shine"></span></span>`).join('');el.innerHTML=digits}
+let __lastPersist=0;function tickCounter(){watchTime=sanitizeWatchTime(watchTime+1000);const now=Date.now();if(now-__lastPersist>=5000){try{localStorage.setItem('watchTime',String(watchTime))}catch(_){ }__lastPersist=now}updateCounterDisplay()}
+function startCounter(){if(timerInterval)return;try{const stored=parseInt(localStorage.getItem('watchTime')||'0')||0;watchTime=sanitizeWatchTime(stored)}catch(_){watchTime=0}updateCounterDisplay();timerInterval=setInterval(tickCounter,1000);window.__COUNTER_READY__=true}
+function stopCounter(){if(timerInterval){clearInterval(timerInterval);timerInterval=null}}
+function resetCounter(){watchTime=0;try{localStorage.setItem('watchTime','0')}catch(_){}updateCounterDisplay()}
+window.startCounter=startCounter;window.stopCounter=stopCounter;window.resetCounter=resetCounter;window.updateCounterDisplay=updateCounterDisplay;
+if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',()=>{updateCounterDisplay();startCounter()})}else{updateCounterDisplay();startCounter()}

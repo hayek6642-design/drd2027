@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Battalooda - Talent Studio</title>
+  <link rel="stylesheet" href="./css/battalooda.css">
+  <style>
+    #studio-wrapper { 
+      width: 100%; 
+      height: calc(100vh - 60px); 
+      position: relative;
+    }
+    #studio-frame { 
+      width: 100%; 
+      height: 100%; 
+      border: none; 
+    }
+    /* 🛡️ FIX: Add overlay to capture clicks when needed */
+    #studio-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none; /* Allow clicks to pass through to iframe */
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <nav id="battalooda-nav">
+    <a href="./index.html">Home</a>
+    <a href="./music-library.html">Library</a>
+    <a href="./talent-studio.html" class="active">Studio</a>
+    <a href="./social.html">Social</a>
+  </nav>
+  
+  <div id="studio-wrapper">
+    <!-- 🛡️ FIXED: Added allow-top-navigation and allow-top-navigation-by-user-activation -->
+    <iframe 
+      id="studio-frame"
+      src="./studio/dist/index.html"
+      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-top-navigation allow-top-navigation-by-user-activation"
+    ></iframe>
+    <div id="studio-overlay"></div>
+  </div>
+
+  <script src="./js/battalooda-core.js"></script>
+  <script src="./js/audio-engine.js"></script>
+  <script src="./js/music-library.js"></script>
+  <!-- 🛡️ FIXED: Load bridge with defer to ensure DOM is ready -->
+  <script src="./js/studio-bridge.js" defer></script>
+</body>
+</html>

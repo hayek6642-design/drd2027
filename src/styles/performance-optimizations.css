@@ -1,0 +1,178 @@
+/* src/styles/performance-optimizations.css */
+
+/* 1. Respect user preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 2. GPU Acceleration hints */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* 3. Containment for heavy components */
+.service-container {
+  contain: layout style paint;
+  content-visibility: auto;
+  contain-intrinsic-size: 0 500px;
+}
+
+/* 4. Optimize paint operations */
+.will-animate {
+  will-change: transform;
+}
+
+.will-animate-done {
+  will-change: auto;
+}
+
+/* 5. Reduce expensive effects */
+@media (prefers-reduced-transparency: reduce) {
+  .glass-effect {
+    background: rgba(30, 30, 30, 0.95) !important;
+    backdrop-filter: none !important;
+  }
+}
+
+/* 6. Efficient scrolling */
+.scroll-container {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* 7. Lazy image loading */
+img {
+  content-visibility: auto;
+}
+
+/* 8. Debounce hover effects on mobile */
+@media (hover: none) {
+  .hover-effect:hover {
+    transform: none !important;
+  }
+}
+
+/* 9. Optimize fonts */
+@font-face {
+  font-family: 'System';
+  src: local('-apple-system'), local('BlinkMacSystemFont'), local('Segoe UI');
+  font-display: swap;
+}
+
+/* 10. Critical CSS inline, async load rest */
+.non-critical-css {
+  loading: lazy;
+}
+
+/* 11. Performance-focused utility classes */
+.performance-container {
+  contain: strict;
+  content-visibility: auto;
+  will-change: auto;
+}
+
+.performance-card {
+  contain: layout style;
+  content-visibility: auto;
+  will-change: transform;
+}
+
+.performance-text {
+  text-rendering: optimizeSpeed;
+  font-smooth: never;
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: auto;
+}
+
+/* 12. Animation optimizations */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.performance-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.performance-slide-up {
+  animation: slide-up 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* 13. Scroll performance */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  overscroll-behavior: none;
+}
+
+/* 14. Image performance */
+img[loading="lazy"] {
+  content-visibility: auto;
+  contain-intrinsic-size: 100px 100px;
+}
+
+/* 15. Background performance */
+.no-background-attachment {
+  background-attachment: scroll !important;
+}
+
+/* 16. Text performance */
+.text-performance {
+  text-rendering: optimizeSpeed;
+  font-feature-settings: "kern" 0;
+  font-variant-ligatures: no-common-ligatures;
+}
+
+/* 17. Layout performance */
+.layout-performance {
+  contain: layout style;
+  will-change: auto;
+}
+
+/* 18. Mobile-specific optimizations */
+@media (max-width: 768px) {
+  .mobile-performance {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+  
+  .mobile-no-hover {
+    pointer-events: none;
+  }
+}
+
+/* 19. Dark mode performance */
+@media (prefers-color-scheme: dark) {
+  .dark-performance {
+    color-scheme: dark;
+  }
+}
+
+/* 20. Print optimizations */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-performance {
+    background: white !important;
+    color: black !important;
+  }
+}

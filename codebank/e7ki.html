@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; font-src * data: 'self'; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src * data: blob:; media-src *; frame-src *;">
+    <title>E7ki Messenger</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #0a0a0f; 
+            color: #fff; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* Auth State Containers */
+        .auth-state-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            text-align: center;
+            background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .error-icon, .lock-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+        
+        .retry-btn {
+            margin-top: 20px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .retry-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .error-details {
+            margin-top: 20px;
+            padding: 10px;
+            background: rgba(255,0,0,0.1);
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            max-width: 100%;
+            overflow: auto;
+        }
+        
+        #root { width: 100%; height: 100%; display: none; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Loading State -->
+        <div id="auth-loading" class="auth-state-container">
+            <div class="spinner"></div>
+            <p>جاري الاتصال بالنظام...</p>
+        </div>
+        
+        <!-- Auth Error State -->
+        <div id="auth-error" class="auth-state-container" style="display:none;">
+            <div class="error-icon">⚠️</div>
+            <h3>فشل الاتصال بالمصادقة</h3>
+            <p>Could not connect to CodeBank authentication</p>
+            <button onclick="IframeAuthClient.reconnect()" class="retry-btn">
+                إعادة المحاولة
+            </button>
+            <div class="error-details" id="error-details"></div>
+        </div>
+        
+        <!-- Not Authenticated State -->
+        <div id="auth-required" class="auth-state-container" style="display:none;">
+            <div class="lock-icon">🔒</div>
+            <h3>يرجى تسجيل الدخول</h3>
+            <p>هذه الخدمة تتطلب تسجيل الدخول إلى CodeBank</p>
+        </div>
+        
+        <!-- Main App (shown when authenticated) -->
+        <div id="root" style="display:none;">
+            <!-- Your E7ki app content here -->
+            <header>
+                <h1>E7ki</h1>
+                <span id="user-info"></span>
+            </header>
+            <main>
+                <!-- Chat interface, etc. -->
+            </main>
+        </div>
+    </div>
+
+    <!-- 1. iframe-auth-client.js MUST be first -->
+    <script src="/shared/iframe-auth-client.js"></script>
+    
+    <!-- 2. Auth-ready component (optional but recommended) -->
+    <script src="/shared/auth-ready-component.js"></script>
+
+    <script>
+        // E7ki Application
+        class E7kiApp extends AuthReadyComponent {
+            constructor() {
+                super({
+                    requireAuth: true,
+                    onAuthReady: (state) => this.initialize(state),
+                    onAuthError: (error) => this.showError(error),
+                    onNoAuth: () => this.showAuthRequired()
+                });
+            }
+            
+            initialize(state) {
+                console.log('[E7ki] Initializing with auth:', state);
+                
+                // Hide loading, show app
+                document.getElementById('auth-loading').style.display = 'none';
+                document.getElementById('auth-error').style.display = 'none';
+                document.getElementById('auth-required').style.display = 'none';
+                document.getElementById('root').style.display = 'block';
+                
+                // Show user info
+                const user = state.user;
+                document.getElementById('user-info').textContent = 
+                    user?.name || user?.id || 'مستخدم';
+                
+                // Initialize your chat service
+                this.initChatService(state);
+            }
+            
+            initChatService(state) {
+                // Your chat initialization logic
+                // Use state.user.id for user identification
+                // Use window.Auth?.getToken?.() for API calls
+                
+                // Dispatch to React app
+                window.dispatchEvent(new CustomEvent('e7ki:auth-ready', {
+                    detail: {
+                        authenticated: true,
+                        user: state.user,
+                        token: window.Auth?.getToken?.() || null
+                    }
+                }));
+            }
+            
+            showError(error) {
+                console.error('[E7ki] Auth error:', error);
+                document.getElementById('auth-loading').style.display = 'none';
+                document.getElementById('auth-error').style.display = 'block';
+                document.getElementById('error-details').textContent = 
+                    JSON.stringify(error, null, 2);
+            }
+            
+            showAuthRequired() {
+                document.getElementById('auth-loading').style.display = 'none';
+                document.getElementById('auth-required').style.display = 'block';
+            }
+            
+            onAuthChanged(state) {
+                console.log('[E7ki] Auth changed:', state);
+                if (!state.authenticated) {
+                    // User logged out, reload or show auth required
+                    location.reload();
+                }
+            }
+            
+            onAuthLogout() {
+                console.log('[E7ki] User logged out');
+                location.reload();
+            }
+        }
+        
+        // Start app when DOM ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => new E7kiApp());
+        } else {
+            new E7kiApp();
+        }
+    </script>
+    
+    <!-- React App - ensure this path is correct after build -->
+    <script type="module" src="./e7ki/client/dist/index.js"></script>
+</body>
+</html>

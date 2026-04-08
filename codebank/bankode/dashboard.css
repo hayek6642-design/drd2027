@@ -1,0 +1,212 @@
+/* Bankode Dashboard - Main Styles */
+:root {
+    --primary-color: #3b82f6;
+    --secondary-color: #6b7280;
+    --success-color: #10b981;
+    --danger-color: #ef4444;
+    --warning-color: #f59e0b;
+    --bg-dark: #111827;
+    --bg-darker: #0f172a;
+    --text-primary: #f9fafb;
+    --text-secondary: #9ca3af;
+    --border-color: #374151;
+}
+
+body {
+    background-color: var(--bg-dark);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Header Styles */
+header {
+    background-color: var(--bg-darker);
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Sidebar Navigation */
+aside nav button {
+    transition: all 0.2s ease;
+}
+
+aside nav button:hover {
+    background-color: rgba(55, 65, 81, 0.5);
+}
+
+aside nav button.active {
+    background-color: var(--primary-color);
+}
+
+/* Balance Cards */
+#balanceCards .bg-gradient-to-br {
+    background-size: 200% auto;
+    transition: background-position 0.5s ease;
+}
+
+#balanceCards .bg-gradient-to-br:hover {
+    background-position: right center;
+}
+
+/* Transaction Table */
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+table thead th {
+    padding: 0.75rem 0.5rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+table tbody td {
+    padding: 0.75rem 0.5rem;
+    border-bottom: 1px solid rgba(55, 65, 81, 0.5);
+}
+
+table tbody tr:hover {
+    background-color: rgba(55, 65, 81, 0.3);
+}
+
+/* Modal Styles */
+.fixed.inset-0 {
+    transition: opacity 0.3s ease;
+}
+
+.bg-opacity-75 {
+    backdrop-filter: blur(4px);
+}
+
+/* SafeDoor 3D Modal */
+#safeDoorModal {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* SafeDoor 3D Container */
+#safeDoor3D {
+    perspective: 1000px;
+    transform-style: preserve-3d;
+}
+
+/* SafeDoor Animation Classes */
+.safe-door {
+    transition: all 0.3s ease;
+}
+
+.safe-door.unlocked {
+    transform: rotateY(-15deg) scale(1.05);
+}
+
+.safe-door.locked {
+    transform: rotateY(0deg) scale(1.0);
+}
+
+/* Shake Animation for Wrong Password */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+    20%, 40%, 60%, 80% { transform: translateX(10px); }
+}
+
+.shake-animation {
+    animation: shake 0.5s ease-in-out;
+}
+
+/* Button Styles */
+button {
+    transition: all 0.2s ease;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    border: 2px solid var(--text-secondary);
+    border-top: 2px solid var(--primary-color);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    main {
+        flex-direction: column !important;
+    }
+
+    aside {
+        width: 100% !important;
+        border-right: none !important;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    #balanceCards {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Admin Panel Styles */
+#adminPanelModal {
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(50px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Status Messages */
+.status-success {
+    color: var(--success-color);
+}
+
+.status-error {
+    color: var(--danger-color);
+}
+
+.status-info {
+    color: var(--primary-color);
+}
+
+/* Tooltip */
+.tooltip {
+    position: relative;
+}
+
+.tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--bg-darker);
+    color: var(--text-primary);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    margin-bottom: 0.5rem;
+}
+
+.tooltip:hover::after {
+    opacity: 1;
+}

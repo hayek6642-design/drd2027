@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Bankode Admin Integration Test</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+  <h1 class="text-2xl font-bold mb-4">Bankode Admin Integration Test</h1>
+
+  <div id="testResults" class="bg-white p-4 rounded-lg shadow mb-4">
+    <h2 class="text-lg font-semibold mb-2">Test Results:</h2>
+    <pre id="results" class="bg-gray-50 p-3 rounded text-sm overflow-auto"></pre>
+  </div>
+
+  <div id="dashboardTest" class="bg-white p-4 rounded-lg shadow">
+    <h2 class="text-lg font-semibold mb-2">Dashboard Test:</h2>
+    <button id="testDashboardBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+      Test Dashboard Initialization
+    </button>
+    <pre id="dashboardResults" class="bg-gray-50 p-3 rounded text-sm overflow-auto mt-2"></pre>
+  </div>
+
+  <!-- Load the unifiedStorage first -->
+  <script src="unifiedStorage.js"></script>
+  <!-- Load the dashboard -->
+  <script src="dashboard.js"></script>
+  <!-- Load the test script -->
+  <script src="test-admin-integration.js"></script>
+
+  <script>
+    // Capture console output for display
+    const originalConsoleLog = console.log;
+    const originalConsoleError = console.error;
+    const originalConsoleWarn = console.warn;
+
+    const resultsElement = document.getElementById('results');
+    const dashboardResultsElement = document.getElementById('dashboardResults');
+
+    console.log = function(...args) {
+      originalConsoleLog(...args);
+      const message = args.map(arg => {
+        if (arg instanceof Error) {
+          return arg.message;
+        } else if (typeof arg === 'object') {
+          return JSON.stringify(arg, null, 2);
+        }
+        return arg;
+      }).join(' ');
+
+      const messageElement = document.createElement('div');
+      if (message.includes('✅')) {
+        messageElement.className = 'text-green-600';
+      } else if (message.includes('❌')) {
+        messageElement.className = 'text-red-600';
+      } else if (message.includes('⚠️')) {
+        messageElement.className = 'text-yellow-600';
+      } else {
+        messageElement.className = 'text-gray-800';
+      }
+      messageElement.textContent = message;
+      resultsElement.appendChild(messageElement);
+    };
+
+    console.error = function(...args) {
+      originalConsoleError(...args);
+      const message = args.map(arg => {
+        if (arg instanceof Error) {
+          return arg.message;
+        } else if (typeof arg === 'object') {
+          return JSON.stringify(arg, null, 2);
+        }
+        return arg;
+      }).join(' ');
+
+      const messageElement = document.createElement('div');
+      messageElement.className = 'text-red-600 font-semibold';
+      messageElement.textContent = 'ERROR: ' + message;
+      resultsElement.appendChild(messageElement);
+    };
+
+    console.warn = function(...args) {
+      originalConsoleWarn(...args);
+      const message = args.map(arg => {
+        if (arg instanceof Error) {
+          return arg.message;
+        } else if (typeof arg === 'object') {
+          return JSON.stringify(arg, null, 2);
+        }
+        return arg;
+      }).join(' ');
+
+      const messageElement = document.createElement('div');
+      messageElement.className = 'text-yellow-600';
+      messageElement.textContent = 'WARNING: ' + message;
+      resultsElement.appendChild(messageElement);
+    };
+
+    // Test dashboard button
+    document.getElementById('testDashboardBtn').addEventListener('click', async () => {
+      try {
+        dashboardResultsElement.innerHTML = '';
+        const startTime = Date.now();
+
+        // Test dashboard methods
+        const testMethods = [
+          'loadBalances',
+          'loadTransactions',
+          'loadAuditLogs',
+          'loadAdminActions'
+        ];
+
+        for (const method of testMethods) {
+          if (window.BankodeDashboard && typeof window.BankodeDashboard[method] === 'function') {
+            const methodElement = document.createElement('div');
+            methodElement.className = 'text-green-600';
+            methodElement.textContent = `✅ ${method} method available`;
+            dashboardResultsElement.appendChild(methodElement);
+          } else {
+            const methodElement = document.createElement('div');
+            methodElement.className = 'text-red-600';
+            methodElement.textContent = `❌ ${method} method not available`;
+            dashboardResultsElement.appendChild(methodElement);
+          }
+        }
+
+        const endTime = Date.now();
+        const durationElement = document.createElement('div');
+        durationElement.className = 'text-blue-600 mt-2';
+        durationElement.textContent = `Test completed in ${endTime - startTime}ms`;
+        dashboardResultsElement.appendChild(durationElement);
+
+      } catch (error) {
+        const errorElement = document.createElement('div');
+        errorElement.className = 'text-red-600 font-semibold';
+        errorElement.textContent = 'Dashboard test failed: ' + error.message;
+        dashboardResultsElement.appendChild(errorElement);
+      }
+    });
+  </script>
+</body>
+</html>

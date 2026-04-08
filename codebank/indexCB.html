@@ -1,0 +1,1805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <base href="/codebank/">
+    <title>CodeBank Exchange - Professional Banking Services</title>
+    
+    <!-- 2️⃣ FIXED CSP Policy -->
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; font-src * data: 'self'; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src * data: blob:; media-src *; frame-src *;">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAABILAAASCwAAAAAAAAAAAAD///8A////AP///wA=">
+    
+    <!-- ✅ Prevent service iframes from triggering "Leave site?" dialog -->
+    <script>
+      (function suppressBeforeunload() {
+        // Intercept addEventListener to block beforeunload registrations
+        var _origAEL = EventTarget.prototype.addEventListener;
+        EventTarget.prototype.addEventListener = function(type, handler, opts) {
+          if (this === window && type === 'beforeunload') return; // silently discard
+          return _origAEL.call(this, type, handler, opts);
+        };
+        // Also block onbeforeunload property assignment
+        try {
+          Object.defineProperty(window, 'onbeforeunload', {
+            get: function() { return null; },
+            set: function() { /* silently discard */ },
+            configurable: false
+          });
+        } catch(e) {}
+      })();
+    </script>
+    <!-- ⚡ EMERGENCY PERFORMANCE FIXES (Phase 1) -->
+    <script src="./js/performance-monitor.js?v=3"></script>
+    <script>
+        // 1. Reduce Watch-Dog polling frequency immediately
+        window.WATCH_DOG_INTERVAL = 30000; // 30s instead of 1s
+        
+        // 2. Performance-oriented CSS optimizations
+        const perfStyle = document.createElement('style');
+        perfStyle.textContent = `
+            /* Reduce CPU/GPU load from heavy effects */
+            * {
+                box-shadow: none !important;
+                text-shadow: none !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+            }
+            
+            /* Simplify animations */
+            .animate-spin {
+                animation: spin 2s linear infinite !important;
+            }
+            
+            /* Disable transitions globally for instant feel & zero CPU during idle */
+            * {
+                transition: none !important;
+            }
+            
+            /* Optimize will-change usage */
+            .app-card, .btn, .tab-btn {
+                will-change: auto !important;
+            }
+            
+            .app-card:hover {
+                will-change: transform !important;
+            }
+        `;
+        document.head.appendChild(perfStyle);
+
+        // 3. Pause non-critical tasks when tab is hidden
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                console.log('[PERF] Tab hidden, pausing non-critical tasks...');
+                window.__PAUSE_WATCHDOG__ = true;
+            } else {
+                console.log('[PERF] Tab visible, resuming tasks...');
+                window.__PAUSE_WATCHDOG__ = false;
+            }
+        });
+
+        // 4. Safe requestAnimationFrame throttling (Avoid breakage)
+        const originalRAF = window.requestAnimationFrame;
+        window.requestAnimationFrame = (fn) => {
+            return originalRAF(() => {
+                try {
+                    fn();
+                } catch (e) {
+                    console.error('RAF error:', e);
+                }
+            });
+        };
+    </script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles/styles.css">
+    <link rel="stylesheet" href="css/safe-asset-list.css">
+    
+    <!-- External Dependencies -->
+    <script src="/codebank/js/index.js"></script>
+    <script src="/codebank/js/utils.js"></script>
+    <script type="module">
+        import { AssetBus } from '/shared/local-asset-bus.js';
+        
+        // 🛡️ Phase 2: AssetBus is already set globally by local-asset-bus.js
+        // DO NOT reassign window.AssetBus — it is defined as writable:false
+        if (window.self === window.top && window.AssetBus) {
+            console.log("✅ AssetBus ready globally");
+        }
+        
+        // 🛡️ Phase 3: Secure Event Dispatch
+        try {
+            window.dispatchEvent(new CustomEvent('assetbus:ready', { detail: { snapshot: AssetBus.snapshot() } }));
+        } catch (e) {
+            console.error("⚠️ Failed to dispatch assetbus:ready event:", e);
+        }
+    </script>
+    <script src="/codebank/bankode-assetbus-bridge.js?v=3"></script>
+    
+    <!-- Modular App Core -->
+    <script type="module" src="/codebank/js/app-core.js?v=3"></script>
+    <script src="/codebank/js/service-manager.js?v=3"></script>
+    <script src="/shared/single-session.js?v=3"></script>
+    <script src="/shared/client-session-manager.js?v=1"></script>
+    <script type="module" src="/codebank/js/sync-test.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #FF6B35;
+            --secondary-color: #8B5CF6;
+            --accent-color: #58a6ff;
+            --bg-gradient-start: #87CEEB;
+            --bg-gradient-end: #B0E0E6;
+            --text-color: #E0E0E0;
+            --text-muted: #8b949e;
+            --text-bright: #ffffff;
+            --card-bg: rgba(22, 27, 34, 0.8);
+            --border-color: #30363d;
+            --hover-bg: #21262d;
+            --success-color: #00ff88;
+            --error-color: #f85149;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.2);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --glow-primary: 0 0 20px rgba(255, 107, 53, 0.3);
+            --glow-secondary: 0 0 20px rgba(139, 92, 246, 0.3);
+            --transition-fast: 0.2s ease;
+            --transition-normal: 0.3s ease;
+            --transition-slow: 0.6s ease;
+            
+            /* App Launcher Variables */
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --accent: #f59e0b;
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --bg-glass: rgba(30, 41, 59, 0.7);
+            --bg-glass-light: rgba(255, 255, 255, 0.05);
+            --text-primary: #f8fafc;
+            --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+            --gradient-dark: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+            --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.4);
+            --shadow-glow-pink: 0 0 20px rgba(236, 72, 153, 0.4);
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* 🎯 Community Mission Styles */
+        .mission-container {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 600px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mission-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #f8fafc;
+            margin-bottom: 12px;
+        }
+
+        .mission-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 20px;
+        }
+
+        /* Endless Progress Bar Logic */
+        .progress-wrapper {
+            position: relative;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            padding: 2px;
+        }
+
+        .progress-bracket {
+            color: rgba(255, 255, 255, 0.4);
+            font-weight: bold;
+            padding: 0 5px;
+            user-select: none;
+        }
+
+        .progress-track {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(255, 255, 255, 0.05) 10px,
+                rgba(255, 255, 255, 0.05) 20px
+            );
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s ease;
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+
+        /* Tiers */
+        .tier-grey { background-color: #ffffff; box-shadow: 0 0 10px rgba(255, 255, 255, 0.3); }
+        .tier-green { background-color: #00ff88; box-shadow: 0 0 15px rgba(0, 255, 136, 0.4); }
+        .tier-silver { background-color: #c0c0c0; box-shadow: 0 0 20px rgba(192, 192, 192, 0.5); background-image: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); background-size: 200% 100%; animation: silver-shine 3s infinite; }
+
+        @keyframes silver-shine {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .mission-stats {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        .multiplier-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .copy-icon {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .copy-icon:hover { color: #ffffff; }
+
+        body {
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            background-attachment: fixed;
+            color: var(--text-color);
+            font-family: 'Poppins', 'Inter', -apple-system, sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* Essential UI Classes */
+        .card { background: var(--card-bg); backdrop-filter: blur(20px); border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); }
+        .btn { padding: 12px 24px; border-radius: 12px; cursor: pointer; transition: all 0.3s; font-weight: 600; }
+        .btn-primary { background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; }
+        
+        /* Service Modal Styles - ONLY container used */
+        #service-modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          display: none;
+          flex-direction: column;
+          z-index: 10000;
+          background: #0f172a;
+        }
+
+        #service-modal.active {
+          display: flex !important;
+        }
+
+        #service-modal .service-modal-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 10px 20px;
+          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+          color: white;
+          height: 60px;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+          z-index: 10001;
+          flex-shrink: 0;
+        }
+
+        .service-iframe-container {
+          flex: 1;
+          position: relative;
+          background: #0f172a;
+          overflow: hidden;
+        }
+
+        #service-modal iframe {
+          width: 100% !important;
+          height: 100% !important;
+          border: none !important;
+          display: block !important;
+          opacity: 1 !important;
+          visibility: visible !important;
+          background: #0f172a !important;
+        }
+
+        .service-loading {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          background: #0f172a;
+          z-index: 10000;
+          transition: opacity 0.3s ease;
+        }
+
+        .service-loading.hidden {
+          display: none !important;
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        /* REMOVE LEGACY APP-RUNNER - Not used anymore */
+        #app-runner { display: none !important; }
+        
+        .dock-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 500; }
+        .dock { display: flex; align-items: flex-end; gap: 12px; padding: 12px 20px; background: var(--bg-glass); backdrop-filter: blur(20px); border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); }
+        
+        .launcher-section { margin-bottom: 32px; padding: 0 20px; }
+        .app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 24px; }
+        .app-card { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; transition: 0.3s; }
+        .app-icon-wrapper { width: 72px; height: 72px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 32px; background: var(--bg-glass-light); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 10000; }
+        .toast { background: rgba(22,27,34,0.95); border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; box-shadow: var(--shadow-lg); animation: toastSlideIn 0.3s ease-out; }
+        
+        @keyframes toastSlideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+        
+        /* SafeCode Content Visibility Fixes */
+        .safe-container,
+        .safe-asset-list,
+        #safeCodeFrame,
+        iframe[data-service="safecode"],
+        .service-iframe-container iframe {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            min-height: 400px !important;
+        }
+        
+        /* Ensure iframe content is visible */
+        iframe {
+            color-scheme: normal;
+        }
+
+        /* ══════════════════════════════════════════════════
+           MODERN DARK TILE SKIN — visual only, no logic
+        ══════════════════════════════════════════════════ */
+
+        /* 1. Dark purple page background */
+        body {
+            background: #12082e !important;
+            background-image: none !important;
+        }
+
+        /* 2. Compact section headers */
+        .launcher-section {
+            padding: 0 16px !important;
+            margin-bottom: 18px !important;
+        }
+        .launcher-section h2 {
+            font-size: 0.6rem !important;
+            color: rgba(255,255,255,0.2) !important;
+            letter-spacing: 0.18em !important;
+            margin-bottom: 10px !important;
+            padding-left: 2px !important;
+        }
+
+        /* 3. 4-column neon tile grid */
+        .app-grid {
+            display: grid !important;
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 10px !important;
+        }
+        @media (max-width: 640px) {
+            .app-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+
+        /* 4. Tile card base */
+        .app-card-tile {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: rgba(255,255,255,0.04) !important;
+            border-radius: 10px !important;
+            padding: 18px 10px 13px !important;
+            min-height: 82px !important;
+            cursor: pointer !important;
+            position: relative !important;
+            gap: 9px !important;
+            /* border + box-shadow come from inline style (per-app color) */
+        }
+        .app-card-tile:hover {
+            background: rgba(255,255,255,0.09) !important;
+            transform: translateY(-3px) !important;
+        }
+        .app-card-tile:active {
+            transform: scale(0.96) !important;
+        }
+
+        /* 5. Icon inside tile */
+        .app-card-tile .app-icon-wrapper {
+            width: auto !important;
+            height: auto !important;
+            background: none !important;
+            border-radius: 0 !important;
+            font-size: 24px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            /* color comes from inline style via app.color */
+        }
+
+        /* 6. App name */
+        .app-tile-name {
+            font-size: 11px !important;
+            font-weight: 600 !important;
+            color: rgba(255,255,255,0.88) !important;
+            text-align: center !important;
+            line-height: 1.3 !important;
+            max-width: 100% !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            white-space: nowrap !important;
+            letter-spacing: 0.01em !important;
+        }
+
+        /* 7. Small badge top-right */
+        .app-tile-badge {
+            position: absolute !important;
+            top: 5px !important;
+            right: 5px !important;
+            font-size: 7px !important;
+            font-weight: 800 !important;
+            color: #fff !important;
+            padding: 2px 5px !important;
+            border-radius: 4px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.06em !important;
+            line-height: 1.4 !important;
+        }
+
+        /* 8. Allow transitions & box-shadow on tiles
+               (overrides the perf-mode global suppression) */
+        .app-card-tile,
+        .app-card-tile:hover,
+        .app-card-tile:active {
+            transition: transform 0.15s ease, background 0.15s ease !important;
+        }
+        .app-card-tile {
+            box-shadow: var(--tile-glow, none) !important;
+        }
+        /* End MODERN DARK TILE SKIN */
+    
+        /* ============================================================
+           📱 PORTRAIT MOBILE — Full responsive overrides
+        ============================================================ */
+        
+        /* Prevent horizontal overflow globally */
+        html, body {
+            max-width: 100vw;
+            overflow-x: hidden;
+        }
+        
+        /* Safe area insets for notched phones */
+        body {
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        /* ── Header responsive ── */
+        @media (max-width: 600px) {
+            header .container {
+                flex-wrap: wrap !important;
+                gap: 8px !important;
+                padding: 8px 10px !important;
+            }
+            header .container > div:first-child {
+                flex: 1 1 auto;
+            }
+            header .container > div:last-child {
+                flex-wrap: wrap !important;
+                gap: 6px !important;
+            }
+            /* Hide Portfolio label on tiny screens */
+            #user-balance .font-semibold {
+                display: none !important;
+            }
+            #user-balance {
+                text-align: left !important;
+                font-size: 0.75rem !important;
+            }
+            /* Shrink title */
+            h1.text-2xl {
+                font-size: 1rem !important;
+            }
+            p.text-blue-300.text-sm {
+                font-size: 0.7rem !important;
+            }
+            /* Compact header */
+            header {
+                padding: 6px 0 !important;
+            }
+        }
+
+        /* ── App grid: max 2 cols on all phone sizes ── */
+        @media (max-width: 480px) {
+            .app-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 8px !important;
+            }
+        }
+
+        /* ── Mission container: full-width on mobile ── */
+        @media (max-width: 600px) {
+            .mission-container {
+                margin: 10px 8px !important;
+                padding: 14px 12px !important;
+            }
+            main.container {
+                padding-left: 8px !important;
+                padding-right: 8px !important;
+            }
+        }
+
+        /* ── Service modal: full screen on phone ── */
+        @media (max-width: 768px) {
+            #service-modal {
+                width: 100vw !important;
+                height: 100dvh !important;
+                max-width: 100vw !important;
+            }
+            #service-modal .service-modal-header {
+                padding: 8px 12px !important;
+                height: 50px !important;
+            }
+            #service-modal iframe {
+                width: 100% !important;
+                height: 100% !important;
+            }
+        }
+
+        /* ── Settings panel: full width on ALL phone screens ── */
+        @media (max-width: 768px) {
+            #settings-panel {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                right: 0 !important;
+            }
+        }
+
+        /* ── Dock: don't overflow ── */
+        @media (max-width: 480px) {
+            .dock {
+                gap: 6px !important;
+                padding: 8px 10px !important;
+            }
+            .dock-container {
+                width: 90% !important;
+            }
+        }
+
+        /* ── Launcher sections: reduce padding on mobile ── */
+        @media (max-width: 600px) {
+            .launcher-section {
+                padding: 0 8px !important;
+                margin-bottom: 12px !important;
+            }
+        }
+
+        /* ── App card tiles: ensure visibility ── */
+        @media (max-width: 480px) {
+            .app-card-tile {
+                padding: 12px 6px 10px !important;
+                min-height: 70px !important;
+            }
+            .app-card-tile .app-icon-wrapper {
+                font-size: 20px !important;
+            }
+            .app-tile-name {
+                font-size: 9px !important;
+            }
+        }
+
+        /* ── Auth cards: stack vertically ── */
+        .auth-cards-grid {
+            flex-direction: column !important;
+            align-items: center !important;
+        }
+        @media (max-width: 600px) {
+            .auth-card {
+                width: 100% !important;
+                max-width: 340px !important;
+                height: auto !important;
+                min-height: unset !important;
+            }
+        }
+        /* ============================================================ */
+        /* ══ Bankode Admin Tab Styles ══ */
+        .ba-tab { background:transparent; border:none; border-bottom:2px solid transparent; color:#6b7280; padding:10px 18px; font-size:.85rem; font-weight:600; cursor:pointer; margin-bottom:-1px; }
+        .ba-tab:hover { color:#d1d5db; }
+        .ba-tab.active { color:#a78bfa; border-bottom-color:#a78bfa; }
+        #ba-content::-webkit-scrollbar { width:4px; }
+        #ba-content::-webkit-scrollbar-thumb { background:#3730a3; border-radius:4px; }
+</style>
+</head>
+<body>
+    <div id="codebank-root">
+        <!-- ══ BANKODE TITLE ══ -->
+        <div id="bankode-title-bar" style="text-align:center;padding:28px 0 18px;user-select:none;">
+            <span id="bankode-title" style="
+                font-size:2.4rem;font-weight:900;letter-spacing:.2em;cursor:pointer;
+                font-family:'JetBrains Mono',monospace,sans-serif;
+                background:linear-gradient(135deg,#a78bfa 0%,#38bdf8 60%,#fb923c 100%);
+                -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+                display:inline-block;
+            ">Bankode</span>
+        </div>
+
+
+        <!-- Main Launcher Grid -->
+        <main class="container mx-auto py-8">
+
+            <!-- App Sections (Injected by app-launcher.js) -->
+            <div id="launcher-grid">
+                <section class="launcher-section">
+                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6" data-i18n="core_services">Core Services</h2>
+                    <div class="app-grid" id="core-apps"></div>
+                </section>
+
+                <section class="launcher-section">
+                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6" data-i18n="media_entertainment">Media & Entertainment</h2>
+                    <div class="app-grid" id="media-apps"></div>
+                </section>
+
+                <section class="launcher-section">
+                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6" data-i18n="finance_trading">Finance & Trading</h2>
+                    <div class="app-grid" id="finance-apps"></div>
+                </section>
+
+                <section class="launcher-section">
+                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6" data-i18n="games_fun">Games & Fun</h2>
+                    <div class="app-grid" id="games-apps"></div>
+                </section>
+
+                <section class="launcher-section">
+                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6" data-i18n="tools_ai">Tools & AI</h2>
+                    <div class="app-grid" id="tools-apps"></div>
+                </section>
+            </div>
+        </main>
+
+        <!-- App Runner View -->
+        <div id="app-runner" class="app-runner">
+            <header class="runner-header">
+                <button id="runner-back" class="p-3 hover:bg-white/10 rounded-xl text-white mr-4">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <h2 id="runner-title" class="text-lg font-bold text-white flex-1">App Name</h2>
+                <div class="flex space-x-2">
+                    <button id="runner-reload" class="p-3 text-gray-400 hover:text-white"><i class="fas fa-redo"></i></button>
+                    <button id="runner-fullscreen" class="p-3 text-gray-400 hover:text-white"><i class="fas fa-expand"></i></button>
+                </div>
+            </header>
+            <div class="runner-content" style="flex: 1; position: relative; overflow: hidden; background: #0f172a; visibility: visible;">
+                <div id="runner-loading" class="absolute inset-0 flex items-center justify-center bg-slate-900 z-10">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                </div>
+                <iframe id="runner-iframe" src="about:blank" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-top-navigation-by-user-activation" style="width: 100%; height: 100%; border: none; background: #ffffff; display: block; visibility: visible;"></iframe>
+            </div>
+        </div>
+
+        <!-- Service Modal (actly.md implementation) -->
+        <div id="service-modal">
+            <header class="service-modal-header">
+                <div class="flex items-center">
+                    <button id="service-modal-back" class="p-2 mr-4 hover:bg-white/10 rounded-full transition-colors">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <h2 id="service-modal-title" class="text-lg font-bold">SafeCode</h2>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="service-modal-reload" class="p-2 hover:bg-white/10 rounded-full transition-colors">
+                        <i class="fas fa-redo-alt"></i>
+                    </button>
+                    <button id="service-modal-close" class="p-2 hover:bg-white/10 rounded-full transition-colors text-xl">
+                        &times;
+                    </button>
+                </div>
+            </header>
+            <div class="service-iframe-container">
+                <div id="service-modal-loading" class="service-loading">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+                    <span data-i18n="loading_service">Loading Service...</span>
+                </div>
+                <iframe id="service-modal-iframe" src="about:blank" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-top-navigation-by-user-activation"></iframe>
+            </div>
+        </div>
+
+        <!-- Dock -->
+        <div class="dock-container">
+            <nav class="dock" id="dock"></nav>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div id="toast-container" class="toast-container"></div>
+
+        <!-- Settings Slide Panel -->
+        <aside id="settings-panel" class="fixed top-0 right-0 h-full w-80 bg-slate-900 shadow-2xl transform translate-x-full transition-transform duration-300">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-8">
+                    <h2 class="text-xl font-bold" data-i18n="my_room">My Room</h2>
+                    <button id="settings-close" class="text-2xl">&times;</button>
+                </div>
+                <div class="space-y-6">
+                    <section>
+                        <h3 class="text-xs font-bold text-gray-500 uppercase mb-4" data-i18n="appearance">Appearance</h3>
+                        <div class="bg-white/5 rounded-xl p-4 flex items-center justify-between">
+                            <span data-i18n="dark_mode">Dark Mode</span>
+                            <input type="checkbox" id="theme-toggle" checked>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h3 class="text-xs font-bold text-gray-500 uppercase mb-4" data-i18n="account">Account</h3>
+                        <button id="signOutBtn" class="w-full p-4 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl transition-colors flex items-center justify-between">
+                            <span data-i18n="sign_out">Sign Out</span>
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </section>
+
+                    <section>
+                        <h3 class="text-xs font-bold text-gray-500 uppercase mb-4" data-i18n="messages">Messages</h3>
+                        <button id="drmailBtn" class="w-full p-4 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-xl transition-colors flex items-center justify-between" style="position:relative;">
+                            <span style="display:flex;align-items:center;gap:8px;">
+                                <i class="fas fa-envelope"></i>
+                                <span data-i18n="drmail">Dr.D-mail</span>
+                                <span id="drmail-sidebar-badge" style="display:none;background:#ef4444;color:#fff;font-size:0.62rem;font-weight:700;padding:1px 6px;border-radius:99px;line-height:1.5;">0</span>
+                            </span>
+                            <i class="fas fa-chevron-right" style="font-size:0.75rem;"></i>
+                        </button>
+                    </section>
+                </div>
+            </div>
+        </aside>
+        <div id="settings-overlay" class="fixed inset-0 bg-black/50 opacity-0 pointer-events-none transition-opacity duration-300"></div>
+    </div>
+
+    <!-- SERVICE PATH FIX - Handles both folder and flat file structures -->
+    <script>
+        (function() {
+            // Override the openService function to try multiple path variants
+            const originalOpenService = window.openService;
+            
+            window.openService = function(serviceUrl, title) {
+                console.log('[CodeBank] Routing request for:', serviceUrl);
+                
+                // If it's a folder-based path that might 404, try flat path
+                if (serviceUrl.includes('/index.html')) {
+                    const flatUrl = serviceUrl.replace('/index.html', '.html');
+                    console.log('[CodeBank] Folder path detected, checking flat path:', flatUrl);
+                    
+                    // Try flat path first via HEAD request
+                    fetch(flatUrl, { method: 'HEAD' })
+                        .then(res => {
+                            if (res.ok) {
+                                console.log('[CodeBank] Flat path exists, using:', flatUrl);
+                                originalOpenService(flatUrl, title);
+                            } else {
+                                console.log('[CodeBank] Flat path not found, falling back to original folder path');
+                                originalOpenService(serviceUrl, title);
+                            }
+                        })
+                        .catch(() => {
+                            // Fallback to original on error
+                            originalOpenService(serviceUrl, title);
+                        });
+                } else {
+                    // Already flat or other structure
+                    originalOpenService(serviceUrl, title);
+                }
+            };
+        })();
+    </script>
+
+    <script>
+        // Consolidated Service Manager - Only uses service-modal, removes app-runner conflict
+        (function() {
+            const modal = document.getElementById('service-modal');
+            const modalIframe = document.getElementById('service-modal-iframe');
+            const modalLoading = document.getElementById('service-modal-loading');
+            const modalTitle = document.getElementById('service-modal-title');
+            const modalClose = document.getElementById('service-modal-close');
+            const modalBack = document.getElementById('service-modal-back');
+            const modalReload = document.getElementById('service-modal-reload');
+            
+            let currentServiceUrl = null;
+            
+            // SINGLE INSTANCE POLICY: Track open services
+            const openServices = new Map();
+
+            // Main entry point for opening services
+            window.openService = function(serviceUrl, title) {
+                console.log('[CodeBank] Opening service:', serviceUrl);
+
+                // If service is already open in the modal, just show the modal
+                if (currentServiceUrl === serviceUrl && modal.classList.contains('active')) {
+                    console.log('⚠️ Service already open and active:', serviceUrl);
+                    return;
+                }
+
+                currentServiceUrl = serviceUrl;
+                
+                // Set title
+                modalTitle.textContent = title || 'SafeCode';
+                
+                // Show modal
+                modal.classList.add('active');
+                modalLoading.style.display = 'flex';
+                modalLoading.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+                
+                // Check if we already have this URL loaded
+                if (modalIframe.src === serviceUrl || (serviceUrl.startsWith('/') && modalIframe.src.endsWith(serviceUrl))) {
+                    console.log('✅ Service already loaded in iframe, skipping reload');
+                    modalLoading.classList.add('hidden');
+                    return;
+                }
+
+                // Reset iframe - 🔧 FIX: Removed about:blank assignment
+                // modalIframe.src = 'about:blank';
+                
+                // Small delay then load
+                setTimeout(() => {
+                    // 🔧 FIX: Append ?auth_origin= so iframe-auth-client.js detectParentOrigin()
+                    // Method 1 (URL param) always succeeds — prevents the about:blank referrer
+                    // poisoning that sets state.parentOrigin = 'null' and blocks AUTH_RESPONSE.
+                    const _svcUrl = new URL(serviceUrl, window.location.href);
+                    _svcUrl.searchParams.set('auth_origin', window.location.origin);
+                    modalIframe.src = _svcUrl.toString();
+                    
+                    // Setup load handler
+                    modalIframe.onload = function() {
+                        console.log('[CodeBank] Service iframe loaded');
+                        modalLoading.style.display = '';
+                        modalLoading.classList.add('hidden');
+                        
+                        // Send init message to iframe
+                        setTimeout(() => {
+                            sendInitToIframe();
+                        }, 500);
+                    };
+                    
+                    // Fallback hide loading after 8 seconds
+                    setTimeout(() => {
+                        if (!modalLoading.classList.contains('hidden')) {
+                            modalLoading.style.display = '';
+                            modalLoading.classList.add('hidden');
+                        }
+                    }, 8000);
+                }, 100);
+            };
+            
+            function sendInitToIframe() {
+                // 🔧 FIX: Always re-query the iframe to avoid stale reference after DOM replacement
+                const iframeEl = document.getElementById('service-modal-iframe');
+                try {
+                    if (!iframeEl || !iframeEl.contentWindow) {
+                        console.warn('[CodeBank] sendInitToIframe: iframe not ready, skipping');
+                        return;
+                    }
+                    
+                    // Get user from multiple possible localStorage keys
+                    let userData = null;
+                    try {
+                        userData = JSON.parse(localStorage.getItem('__cached_user__') || localStorage.getItem('user') || 'null');
+                    } catch(_) {}
+                    const sessionId = localStorage.getItem('session_token') || localStorage.getItem('__cached_session_id__') || '';
+                    
+                    // 🛡️ Get codes + full assets from AssetBus
+                    let codes = [];
+                    let assetSnapshot = {};
+                    if (window.AssetBus && typeof window.AssetBus.snapshot === 'function') {
+                        const snap = window.AssetBus.snapshot();
+                        codes = snap.codes || [];
+                        assetSnapshot = snap;
+                    }
+                    if (!codes.length) {
+                        try { codes = JSON.parse(localStorage.getItem('safeCodes') || localStorage.getItem('bankode_codes') || '[]'); } catch(_) {}
+                    }
+
+                    const assetPayload = Object.assign({}, assetSnapshot, {
+                        codes_count:  Array.isArray(assetSnapshot.codes)  ? assetSnapshot.codes.length  : (assetSnapshot.codes_count  || 0),
+                        silver_count: Array.isArray(assetSnapshot.silver) ? assetSnapshot.silver.length : (assetSnapshot.silver_count || 0),
+                        gold_count:   Array.isArray(assetSnapshot.gold)   ? assetSnapshot.gold.length   : (assetSnapshot.gold_count   || 0),
+                    });
+
+                    // ① AUTH_RESPONSE — for iframe-auth-client.js (waits for this specific type)
+                    iframeEl.contentWindow.postMessage({
+                        type:          'AUTH_RESPONSE',
+                        authenticated: !!(userData && (userData.uid || userData.id || userData.email)),
+                        userId:        userData?.uid || userData?.id || userData?.email || null,
+                        sessionId:     sessionId,
+                        user:          userData,
+                        timestamp:     Date.now()
+                    }, '*');
+
+                    // ② assets:sync — for bridge bar
+                    iframeEl.contentWindow.postMessage({
+                        type:   'assets:sync',
+                        assets: assetPayload
+                    }, '*');
+
+                    // ③ auth:ready — for older services (auth-ready-component pattern)
+                    iframeEl.contentWindow.postMessage({
+                        type:      'auth:ready',
+                        source:    'codebank-parent',
+                        serviceId: currentServiceUrl,
+                        payload: {
+                            user:      userData,
+                            codes:     codes,
+                            assets:    assetPayload,
+                            timestamp: Date.now()
+                        }
+                    }, '*');
+                    
+                    console.log('[CodeBank] Sent AUTH_RESPONSE + auth:ready + assets:sync to iframe');
+                } catch (e) {
+                    console.error('[CodeBank] Failed to send init:', e);
+                }
+            }
+            
+            // 🔧 FIX: Expose globally so app-launcher.js can call it after iframe loads
+            window.sendInitToIframe = sendInitToIframe;
+            
+            function closeServiceModal() {
+                modal.classList.remove('active');
+                // 🔧 FIX: Comment out about:blank to preserve state
+                // modalIframe.src = 'about:blank';
+                currentServiceUrl = null;
+                document.body.style.overflow = '';
+            }
+            
+            function reloadService() {
+                if (currentServiceUrl) {
+                    modalLoading.classList.remove('hidden');
+                    modalLoading.style.display = 'flex';
+                    // 🔧 FIX: Comment out about:blank
+                    // modalIframe.src = 'about:blank';
+                    setTimeout(() => {
+                        // 🔧 FIX: Append auth_origin on reload so iframe-auth-client.js
+                        // can always detect parent via URL param (prevents about:blank poisoning)
+                        const _reloadUrl = new URL(currentServiceUrl, window.location.href);
+                        _reloadUrl.searchParams.set('auth_origin', window.location.origin);
+                        modalIframe.src = _reloadUrl.toString();
+                    }, 100);
+                }
+            }
+            
+            // Event listeners
+            if (modalClose) modalClose.onclick = closeServiceModal;
+            if (modalBack) modalBack.onclick = closeServiceModal;
+            if (modalReload) modalReload.onclick = reloadService;
+            
+            // Close on escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal.classList.contains('active')) {
+                    closeServiceModal();
+                }
+            });
+            
+            // Listen for messages from iframe
+            window.addEventListener('message', (e) => {
+                // 🔧 FIX: Handle AUTH_REQUEST from iframe-auth-client.js — respond with AUTH_RESPONSE
+                if (e.data?.type === 'AUTH_REQUEST' || e.data?.type === 'AUTH_REFRESH' || e.data?.type === 'IFRAME_READY') {
+                    console.log('[CodeBank] Auth request from service iframe:', e.data.type);
+                    sendInitToIframe();
+                    return;
+                }
+                
+                // Forward AUTH_SYNC to the service iframe
+                if (e.data?.type === 'AUTH_SYNC' || e.data?.type === 'AUTH_CONTEXT') {
+                    console.log('[CodeBank] Forwarding auth message to service iframe');
+                    const currentIframe = document.getElementById('service-modal-iframe');
+                    if (currentIframe && currentIframe.contentWindow) {
+                        currentIframe.contentWindow.postMessage(e.data, '*');
+                    }
+                }
+
+                if (e.data?.type === 'service:ready' || e.data?.type === 'iframe-ready' || e.data?.type === 'safe-assets-rendered') {
+                    console.log('[CodeBank] Service reports ready or rendered:', e.data.type);
+                    modalLoading.classList.add('hidden');
+                }
+                
+                if (e.data?.type === 'safe-code-ready') {
+                    console.log('[CodeBank] SafeCode specifically reports ready');
+                    modalLoading.classList.add('hidden');
+                }
+
+                // ── ACC Asset handling ──────────────────────────────────────
+                if (e.data?.type === 'assets:request') {
+                    // Service is asking for the current asset snapshot
+                    sendInitToIframe();
+                }
+
+                if (e.data?.type === 'assets:spend') {
+                    _handleAssetSpend(e.data);
+                }
+
+                if (e.data?.type === 'assets:earn') {
+                    _handleAssetEarn(e.data);
+                }
+            });
+            
+            // Legacy compatibility - redirect old calls to new modal
+            window.openServiceLegacy = window.openService;
+
+            // ── ACC: Build normalised snapshot helper ──────────────────────
+            function _buildAssetPayload(snap) {
+                if (!snap) return {};
+                return Object.assign({}, snap, {
+                    codes_count:  Array.isArray(snap.codes)  ? snap.codes.length  : (snap.codes_count  || 0),
+                    silver_count: Array.isArray(snap.silver) ? snap.silver.length : (snap.silver_count || 0),
+                    gold_count:   Array.isArray(snap.gold)   ? snap.gold.length   : (snap.gold_count   || 0),
+                });
+            }
+
+            // ── ACC: Push fresh assets to the open service iframe ──────────
+            function _pushAssetsToService() {
+                // 🔧 FIX: Always re-query iframe to avoid stale reference
+                const currentIframe = document.getElementById('service-modal-iframe');
+                if (!currentIframe || !currentIframe.contentWindow) return;
+                if (!modal.classList.contains('active')) return;
+                const snap = window.AssetBus ? window.AssetBus.snapshot() : null;
+                if (!snap) return;
+                currentIframe.contentWindow.postMessage({
+                    type:   'assets:sync',
+                    assets: _buildAssetPayload(snap)
+                }, '*');
+            }
+
+            // ── ACC: Handle spend request from service ─────────────────────
+            async function _handleAssetSpend(data) {
+                const { reqId, assetType, amount, serviceId, reason } = data;
+                let success = false;
+                let err = '';
+
+                try {
+                    // Map like/super/mega to the AssetBus counter names
+                    const fieldMap = { like: 'likes', super: 'superlikes', mega: 'superlikes', superlike: 'superlikes', megalike: 'superlikes' };
+                    const field = fieldMap[assetType] || assetType;
+
+                    if (window.AssetBus) {
+                        const snap = window.AssetBus.snapshot();
+                        const current = parseInt(snap[field]) || 0;
+                        const cost    = parseInt(amount)       || 1;
+                        if (current >= cost) {
+                            const upd = Object.assign({}, snap);
+                            upd[field] = current - cost;
+                            await window.AssetBus.update(upd, 'service-spend');
+                            success = true;
+                        } else {
+                            err = 'Insufficient ' + field;
+                        }
+                    } else {
+                        err = 'AssetBus unavailable';
+                    }
+                } catch (e) {
+                    err = e.message;
+                }
+
+                const freshSnap = window.AssetBus ? window.AssetBus.snapshot() : {};
+                const _spendIframe = document.getElementById('service-modal-iframe');
+                if (_spendIframe && _spendIframe.contentWindow) {
+                    _spendIframe.contentWindow.postMessage({
+                        type:    'assets:spend:result',
+                        reqId:   reqId,
+                        success: success,
+                        error:   err,
+                        assets:  _buildAssetPayload(freshSnap)
+                    }, '*');
+                }
+            }
+
+            // ── ACC: Handle earn request from service ──────────────────────
+            async function _handleAssetEarn(data) {
+                const { reqId, assetType, amount, serviceId, reason } = data;
+                let success = false;
+
+                try {
+                    const fieldMap = { like: 'likes', super: 'superlikes', games: 'games' };
+                    const field = fieldMap[assetType] || assetType;
+
+                    if (window.AssetBus) {
+                        const snap  = window.AssetBus.snapshot();
+                        const upd   = Object.assign({}, snap);
+                        upd[field]  = (parseInt(upd[field]) || 0) + (parseInt(amount) || 1);
+                        await window.AssetBus.update(upd, 'service-earn');
+                        success = true;
+                    }
+                } catch (e) {}
+
+                const freshSnap = window.AssetBus ? window.AssetBus.snapshot() : {};
+                const _earnIframe = document.getElementById('service-modal-iframe');
+                if (_earnIframe && _earnIframe.contentWindow) {
+                    _earnIframe.contentWindow.postMessage({
+                        type:    'assets:earn:result',
+                        reqId:   reqId,
+                        success: success,
+                        assets:  _buildAssetPayload(freshSnap)
+                    }, '*');
+                }
+            }
+
+            // ── ACC: Subscribe AssetBus → push to open service on every update ──
+            window.addEventListener('assetbus:ready', function () {
+                if (window.AssetBus && typeof window.AssetBus.subscribe === 'function') {
+                    window.AssetBus.subscribe('assets:updated', function () {
+                        _pushAssetsToService();
+                    });
+                }
+            });
+            // Also try subscribing immediately in case AssetBus is already ready
+            if (window.AssetBus && typeof window.AssetBus.subscribe === 'function') {
+                window.AssetBus.subscribe('assets:updated', function () {
+                    _pushAssetsToService();
+                });
+            }
+
+            console.log('[CodeBank] Service Manager initialized');
+        })();
+
+        // 🎯 Community Mission Logic (YouTube API v3)
+        (function() {
+            const API_KEY = 'AIzaSyBTz7CHWQI2dcAk9xmxvceFjEozKz_L1Mk';
+            const CHANNEL_ID = 'UC-lHJZR3Gqxm24_Vd_AJ5Yw'; // @PewDiePie for testing, replace with user channel ID if known
+            const UPDATE_INTERVAL = 300000; // 5 minutes
+            
+            const progressFill = document.getElementById('mission-progress-fill');
+            const currentCountEl = document.getElementById('mission-current-count');
+            const targetCountEl = document.getElementById('mission-target-count');
+            const targetLabelEl = document.getElementById('mission-target-label');
+            const multiplierEl = document.getElementById('mission-multiplier');
+
+            async function fetchSubscribers() {
+                try {
+                    // Try to get channel ID from local storage if available, otherwise use default
+                    const storedChannelId = localStorage.getItem('yt_channel_id') || CHANNEL_ID;
+                    
+                    const response = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${storedChannelId}&key=${API_KEY}`);
+                    const data = await response.json();
+                    
+                    if (data.items && data.items.length > 0) {
+                        const subCount = parseInt(data.items[0].statistics.subscriberCount);
+                        updateProgressBar(subCount);
+                    } else {
+                        console.warn('[YouTube API] No channel found or invalid ID');
+                        // Fallback to a mock number for demo if API fails
+                        updateProgressBar(742); 
+                    }
+                } catch (error) {
+                    console.error('[YouTube API] Error fetching subscriber count:', error);
+                    updateProgressBar(742); // Fallback
+                }
+            }
+
+            function updateProgressBar(count) {
+                // Guard: elements may not exist on this page
+                if (!progressFill || !currentCountEl || !targetCountEl || !targetLabelEl || !multiplierEl) return;
+                let target = 1000;
+                let tier = 'grey';
+                let multiplier = 1.0;
+                let displayPercentage = 0;
+
+                if (count < 1000) {
+                    // Tier 1: Grey (Goal 1000)
+                    target = 1000;
+                    tier = 'grey';
+                    displayPercentage = (count / target) * 100;
+                    multiplier = 1.0 + (count / 1000) * 0.3; // Progressing towards 1.3x
+                } else if (count < 5000) {
+                    // Tier 2: Green (Goal 5000)
+                    target = 5000;
+                    tier = 'green';
+                    displayPercentage = ((count - 1000) / (target - 1000)) * 100;
+                    multiplier = 1.3 + ((count - 1000) / 4000) * 0.7; // Progressing towards 2.0x
+                } else {
+                    // Tier 3: Silver (Endless)
+                    target = Math.ceil(count / 1000) * 1000 + 1000; // Dynamic next milestone
+                    tier = 'silver';
+                    displayPercentage = ((count - 5000) / (target - 5000)) * 100;
+                    multiplier = 2.0 + ((count - 5000) / 5000) * 1.0; // Scalable multiplier
+                }
+
+                // Apply UI updates
+                progressFill.style.width = `${displayPercentage}%`;
+                progressFill.className = `progress-fill tier-${tier}`;
+                
+                currentCountEl.textContent = count.toLocaleString();
+                targetCountEl.textContent = target.toLocaleString();
+                targetLabelEl.textContent = target.toLocaleString();
+                multiplierEl.textContent = `${multiplier.toFixed(1)}x`;
+
+                console.log(`[Mission] Count: ${count}, Tier: ${tier}, Target: ${target}`);
+            }
+
+            // Initial fetch and set interval
+            fetchSubscribers();
+            setInterval(fetchSubscribers, UPDATE_INTERVAL);
+        })();
+        
+        // Dark Mode Toggle
+        (function() {
+            const themeToggle = document.getElementById('theme-toggle');
+            const body = document.body;
+            
+            // Load saved preference
+            const savedTheme = localStorage.getItem('codebank-theme');
+            if (savedTheme === 'light') {
+                body.classList.remove('dark');
+                body.classList.add('light');
+                if (themeToggle) themeToggle.checked = false;
+            } else {
+                body.classList.add('dark');
+                body.classList.remove('light');
+                if (themeToggle) themeToggle.checked = true;
+            }
+            
+            // Toggle handler
+            if (themeToggle) {
+                themeToggle.addEventListener('change', function() {
+                    if (this.checked) {
+                        body.classList.add('dark');
+                        body.classList.remove('light');
+                        localStorage.setItem('codebank-theme', 'dark');
+                    } else {
+                        body.classList.remove('dark');
+                        body.classList.add('light');
+                        localStorage.setItem('codebank-theme', 'light');
+                    }
+                });
+            }
+        })();
+        
+        // Settings Panel
+        (function() {
+            const panel = document.getElementById('settings-panel');
+            const overlay = document.getElementById('settings-overlay');
+            const openBtn = document.getElementById('settings-btn');
+            const closeBtn = document.getElementById('settings-close');
+            
+            function openPanel() {
+                panel.classList.add('active');
+                panel.style.transform = 'translateX(0)';
+                if (overlay) {
+                    overlay.classList.add('active');
+                    overlay.style.opacity = '1';
+                    overlay.style.pointerEvents = 'auto';
+                }
+            }
+            
+            function closePanel() {
+                panel.classList.remove('active');
+                panel.style.transform = 'translateX(100%)';
+                if (overlay) {
+                    overlay.classList.remove('active');
+                    overlay.style.opacity = '0';
+                    overlay.style.pointerEvents = 'none';
+                }
+            }
+            
+            if (openBtn) openBtn.addEventListener('click', openPanel);
+            if (closeBtn) closeBtn.addEventListener('click', closePanel);
+            if (overlay) overlay.addEventListener('click', closePanel);
+        })();
+        
+        // REMOVE STATS WIDGETS - Per user request
+        (function() {
+            // Hide stats elements if they exist
+            const statsElements = [
+                document.getElementById('user-balance'),
+                document.getElementById('total-egp-value'),
+                document.querySelector('.header-balance'),
+                document.querySelector('.stats-widget'),
+                document.querySelector('.portfolio-value')
+            ];
+            
+            statsElements.forEach(el => {
+                if (el) el.style.display = 'none';
+            });
+            
+            // Also hide the codes count in header (optional - remove if you want to keep it)
+            const headerCodesCount = document.getElementById('header-codes-count');
+            if (headerCodesCount) {
+                // Keep it but style it minimally
+                headerCodesCount.parentElement.style.background = 'transparent';
+                headerCodesCount.parentElement.style.border = 'none';
+            }
+        })();
+
+        // 🔓 Sign Out Feature
+        (function() {
+            const signOutBtn = document.getElementById('signOutBtn');
+            if (signOutBtn) {
+                signOutBtn.addEventListener('click', async () => {
+                    console.log('🔓 Signing out...');
+
+                    // 1. Clear ALL cached auth & user-specific data
+                    localStorage.removeItem('session_active');
+                    localStorage.removeItem('session_token');
+                    localStorage.removeItem('user_data');
+                    localStorage.removeItem('__cached_user__');
+                    localStorage.removeItem('__cached_session_id__');
+                    localStorage.removeItem('auth_timestamp');
+                    localStorage.removeItem('safeCodes');
+                    localStorage.removeItem('bankode_codes');
+                    localStorage.removeItem('last_reload_time');
+                    try { document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax'; } catch(_){}
+
+                    // 2. Clear IndexedDB snapshots so next user starts fresh
+                    try {
+                        var idbReq = indexedDB.open('CodeBankSnapshotDB', 1);
+                        idbReq.onsuccess = function() {
+                            try {
+                                var db = idbReq.result;
+                                var tx = db.transaction('snapshots', 'readwrite');
+                                tx.objectStore('snapshots').clear();
+                                db.close();
+                            } catch(_) {}
+                        };
+                    } catch(_) {}
+
+                    // 3. Notify backend
+                    try {
+                        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+                    } catch (e) {
+                        console.warn('Logout notification failed:', e);
+                    }
+
+                    // 4. Redirect to login
+                    window.location.href = '/login.html';
+                });
+            }
+        })();
+
+        // ✉️ Dr.D-mail Button
+        (function() {
+            const drmailBtn = document.getElementById('drmailBtn');
+            if (drmailBtn) {
+                drmailBtn.addEventListener('click', function() {
+                    // Close settings panel
+                    const panel = document.getElementById('settings-panel');
+                    const overlay = document.getElementById('settings-overlay');
+                    if (panel) panel.classList.add('translate-x-full');
+                    if (overlay) { overlay.style.opacity = '0'; overlay.style.pointerEvents = 'none'; }
+                    // Open Dr.D-mail service
+                    if (typeof window.openService === 'function') {
+                        window.openService('/codebank/drmail.html', 'Dr.D-mail ✉️');
+                    } else {
+                        window.open('/codebank/drmail.html', '_blank');
+                    }
+                });
+            }
+
+            // Load unread count for Dr.D-mail badge
+            async function loadDrmailUnread() {
+                try {
+                    const res = await fetch('/api/drmail/unread-count', { credentials: 'include' });
+                    const data = await res.json();
+                    const badge = document.getElementById('drmail-sidebar-badge');
+                    if (badge && data.ok && data.count > 0) {
+                        badge.textContent = data.count;
+                        badge.style.display = 'inline-block';
+                    }
+                } catch(_) {}
+            }
+
+            // Try admin unread count too (for admin user)
+            async function loadDrmailUnreadAdmin() {
+                try {
+                    const res = await fetch('/api/drmail/admin/unread-count', { credentials: 'include' });
+                    const data = await res.json();
+                    const badge = document.getElementById('drmail-sidebar-badge');
+                    if (badge && data.ok && data.count > 0) {
+                        badge.textContent = data.count;
+                        badge.style.display = 'inline-block';
+                    }
+                } catch(_) {}
+            }
+
+            // Listen for unread count messages from drmail iframe
+            window.addEventListener('message', function(e) {
+                if (e.data && e.data.type === 'drmail-unread') {
+                    const badge = document.getElementById('drmail-sidebar-badge');
+                    if (badge) {
+                        badge.textContent = e.data.count;
+                        badge.style.display = e.data.count > 0 ? 'inline-block' : 'none';
+                    }
+                }
+            });
+
+            // Load on start and poll — only when a user session exists (avoids 401 spam in console)
+            const _cbSessionActive = localStorage.getItem('session_token') || localStorage.getItem('__cached_session_id__');
+            if (_cbSessionActive) {
+                setTimeout(function() {
+                    loadDrmailUnread();
+                    loadDrmailUnreadAdmin();
+                    setInterval(function() {
+                        loadDrmailUnread();
+                        loadDrmailUnreadAdmin();
+                    }, 60000);
+                }, 2000);
+            }
+        })();
+    </script>
+
+
+
+    <!-- 🔄 Render Keep-Alive: prevents free-tier cold starts while page is open -->
+    <script>
+    (function() {
+        var PING_INTERVAL = 4 * 60 * 1000; // 4 minutes
+        function ping() {
+            fetch('/ping', { method: 'GET', credentials: 'include' })
+                .then(function() { console.log('[KeepAlive] Server pinged OK'); })
+                .catch(function() {}); // silent fail
+        }
+        // Start pinging
+        setInterval(ping, PING_INTERVAL);
+        console.log('[KeepAlive] Started — pinging every 4 min to prevent cold start');
+    })();
+    </script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+        <!-- ══ ADMIN DASHBOARD OVERLAY ══ -->
+        <div id="bankode-admin-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:#0a0613;flex-direction:column;">
+            <div style="background:linear-gradient(135deg,#1a0533,#0f1729);border-bottom:1px solid rgba(167,139,250,.25);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+                <div style="display:flex;align-items:center;gap:14px;">
+                    <span style="font-size:1.5rem;font-weight:900;letter-spacing:.12em;background:linear-gradient(135deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Bankode</span>
+                    <span style="font-size:.7rem;color:#a78bfa;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);padding:2px 10px;border-radius:99px;font-weight:700;letter-spacing:.1em;">ADMIN</span>
+                </div>
+                <button onclick="document.getElementById('bankode-admin-overlay').style.display='none'" style="background:rgba(255,255,255,.07);border:none;color:#fff;border-radius:10px;padding:8px 16px;cursor:pointer;font-size:.85rem;">✕ Close</button>
+            </div>
+            <div style="display:flex;gap:0;padding:0 20px;background:#0d0921;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.07);overflow-x:auto;">
+                <button class="ba-tab active" onclick="baShowTab('users')" data-tab="users">👥 Users &amp; Assets</button>
+                <button class="ba-tab" onclick="baShowTab('pebalaash')" data-tab="pebalaash">🛒 Pebalaash</button>
+                <button class="ba-tab" onclick="baShowTab('qarsan')" data-tab="qarsan">⚔️ Qarsan Steals</button>
+                <button class="ba-tab" onclick="baShowTab('send')" data-tab="send">📤 Send Assets</button>
+            </div>
+            <div id="ba-content" style="flex:1;overflow-y:auto;padding:20px;">
+                <!-- USERS TAB -->
+                <div id="ba-tab-users">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                        <h2 style="color:#fff;font-size:1.1rem;font-weight:700;margin:0;">All Users &amp; Their Assets</h2>
+                        <button onclick="baLoadUsers()" style="background:rgba(167,139,250,.15);border:1px solid #a78bfa;color:#a78bfa;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:.8rem;">↻ Refresh</button>
+                    </div>
+                    <div id="ba-users-body"><div style="color:#6b7280;text-align:center;padding:40px;">Loading users...</div></div>
+                </div>
+                <!-- PEBALAASH TAB -->
+                <div id="ba-tab-pebalaash" style="display:none;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                        <h2 style="color:#fff;font-size:1.1rem;font-weight:700;margin:0;">Pebalaash — Purchases &amp; Stats</h2>
+                        <button onclick="baLoadPebalaash()" style="background:rgba(56,189,248,.15);border:1px solid #38bdf8;color:#38bdf8;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:.8rem;">↻ Refresh</button>
+                    </div>
+                    <div id="ba-pebalaash-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px;"></div>
+                    <h3 style="color:#94a3b8;font-size:.85rem;margin:0 0 12px;text-transform:uppercase;letter-spacing:.1em;">Recent Orders</h3>
+                    <div id="ba-pebalaash-body"><div style="color:#6b7280;text-align:center;padding:40px;">Loading purchases...</div></div>
+                </div>
+                <!-- QARSAN TAB -->
+                <div id="ba-tab-qarsan" style="display:none;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                        <h2 style="color:#fff;font-size:1.1rem;font-weight:700;margin:0;">Qarsan — Steal Activity Log</h2>
+                        <button onclick="baLoadQarsan()" style="background:rgba(251,146,60,.15);border:1px solid #fb923c;color:#fb923c;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:.8rem;">↻ Refresh</button>
+                    </div>
+                    <div id="ba-qarsan-body"><div style="color:#6b7280;text-align:center;padding:40px;">Loading steal log...</div></div>
+                </div>
+                <!-- SEND TAB -->
+                <div id="ba-tab-send" style="display:none;max-width:480px;margin:0 auto;">
+                    <h2 style="color:#fff;font-size:1.1rem;font-weight:700;margin-bottom:20px;">Send Assets to User</h2>
+                    <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:24px;display:flex;flex-direction:column;gap:16px;">
+                        <div>
+                            <label style="color:#94a3b8;font-size:.8rem;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">Recipient Email</label>
+                            <input id="ba-send-email" type="email" placeholder="user@example.com" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:12px 14px;color:#fff;font-size:.95rem;box-sizing:border-box;outline:none;" />
+                        </div>
+                        <div>
+                            <label style="color:#94a3b8;font-size:.8rem;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">Asset Type</label>
+                            <select id="ba-send-type" style="width:100%;background:#1e1b4b;border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:12px 14px;color:#fff;font-size:.95rem;box-sizing:border-box;outline:none;cursor:pointer;">
+                                <option value="codes">💎 Codes</option>
+                                <option value="silver">🥈 Silver Bars</option>
+                                <option value="gold">🥇 Gold Bars</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="color:#94a3b8;font-size:.8rem;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">Amount</label>
+                            <input id="ba-send-amount" type="number" min="1" placeholder="e.g. 100" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:12px 14px;color:#fff;font-size:.95rem;box-sizing:border-box;outline:none;" />
+                        </div>
+                        <div id="ba-send-preview" style="display:none;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:10px;padding:14px;font-size:.9rem;color:#c4b5fd;"></div>
+                        <button id="ba-send-preview-btn" onclick="baSendPreview()" style="background:rgba(167,139,250,.15);border:1px solid #a78bfa;color:#a78bfa;padding:12px;border-radius:10px;cursor:pointer;font-weight:600;font-size:.95rem;">Verify &amp; Preview</button>
+                        <button id="ba-send-confirm-btn" onclick="baSendConfirm()" style="display:none;background:linear-gradient(135deg,#7c3aed,#2563eb);border:none;color:#fff;padding:14px;border-radius:10px;cursor:pointer;font-weight:700;font-size:1rem;">✓ Confirm Send</button>
+                        <div id="ba-send-status" style="text-align:center;font-size:.9rem;min-height:20px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ PASSWORD MODAL ══ -->
+        <div id="bankode-pw-modal" style="display:none;position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.85);align-items:center;justify-content:center;">
+            <div style="background:#1a0533;border:1px solid rgba(167,139,250,.4);border-radius:18px;padding:36px 32px;width:320px;max-width:90vw;text-align:center;box-shadow:0 0 60px rgba(124,58,237,.3);">
+                <div style="font-size:1.8rem;margin-bottom:8px;">🔐</div>
+                <div style="font-size:1.2rem;font-weight:800;color:#fff;margin-bottom:4px;">Admin Access</div>
+                <div style="font-size:.8rem;color:#7c6fa0;margin-bottom:24px;">Enter your password to continue</div>
+                <input id="bankode-pw-input" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')bankodeCheckPassword()" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:12px 16px;color:#fff;font-size:1rem;box-sizing:border-box;margin-bottom:12px;outline:none;text-align:center;letter-spacing:.12em;" />
+                <div id="bankode-pw-error" style="color:#f87171;font-size:.82rem;min-height:18px;margin-bottom:12px;"></div>
+                <div style="display:flex;gap:10px;">
+                    <button onclick="document.getElementById('bankode-pw-modal').style.display='none';document.getElementById('bankode-pw-input').value='';document.getElementById('bankode-pw-error').textContent='';" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:#9ca3af;padding:11px;border-radius:10px;cursor:pointer;">Cancel</button>
+                    <button onclick="bankodeCheckPassword()" style="flex:1;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;padding:11px;border-radius:10px;cursor:pointer;font-weight:700;">Enter</button>
+                </div>
+            </div>
+        </div>
+
+    <script>
+        // ══ BANKODE - 7-Click Admin Gate ══
+        (function() {
+            var clickCount = 0;
+            var clickTimer = null;
+            var titleEl = document.getElementById('bankode-title');
+            if (!titleEl) return;
+            titleEl.addEventListener('click', function() {
+                clickCount++;
+                clearTimeout(clickTimer);
+                if (clickCount >= 7) {
+                    clickCount = 0;
+                    var modal = document.getElementById('bankode-pw-modal');
+                    if (modal) {
+                        modal.style.display = 'flex';
+                        setTimeout(function(){ var inp=document.getElementById('bankode-pw-input'); if(inp) inp.focus(); }, 80);
+                    }
+                } else {
+                    titleEl.style.filter = 'brightness(1.6)';
+                    setTimeout(function(){ titleEl.style.filter = ''; }, 130);
+                    clickTimer = setTimeout(function(){ clickCount = 0; }, 1600);
+                }
+            });
+        })();
+
+        // ── Helper: read XSRF-TOKEN cookie (for CSRF header) ──────────────────
+        function baCsrfToken() {
+            var match = document.cookie.match(/(?:^|;)\s*XSRF-TOKEN=([^;]+)/);
+            return match ? decodeURIComponent(match[1]) : '';
+        }
+
+        // ── Helper: fetch wrapper that adds Auth + CSRF headers automatically ──
+        async function baFetch(url, opts) {
+            opts = opts || {};
+            opts.credentials = 'include';
+            opts.headers = Object.assign({}, opts.headers || {});
+            // Bearer token (obtained after bankode-login)
+            if (window.__baToken) {
+                opts.headers['Authorization'] = 'Bearer ' + window.__baToken;
+            }
+            // CSRF token for unsafe methods
+            var method = (opts.method || 'GET').toUpperCase();
+            if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
+                var csrf = baCsrfToken();
+                if (csrf) opts.headers['x-csrf-token'] = csrf;
+            }
+            return fetch(url, opts);
+        }
+
+        async function bankodeCheckPassword() {
+            var inp = document.getElementById('bankode-pw-input');
+            var errEl = document.getElementById('bankode-pw-error');
+            var pw = inp ? inp.value : '';
+            if (pw === 'doitasap2025') {
+                // Exchange password for a real server-side session token
+                try {
+                    var csrf = baCsrfToken();
+                    var headers = { 'Content-Type': 'application/json' };
+                    if (csrf) headers['x-csrf-token'] = csrf;
+                    var r = await fetch('/api/admin/bankode-login', {
+                        method: 'POST', credentials: 'include',
+                        headers: headers,
+                        body: JSON.stringify({ password: pw })
+                    });
+                    var data = await r.json();
+                    if (data.ok && data.token) {
+                        window.__baToken = data.token;
+                        window.__baPw = pw; // keep for pebalaash x-admin-password
+                    }
+                } catch(e) {
+                    console.warn('[bankode] token exchange failed, admin API calls may fail:', e.message);
+                }
+                document.getElementById('bankode-pw-modal').style.display = 'none';
+                inp.value = ''; errEl.textContent = '';
+                var overlay = document.getElementById('bankode-admin-overlay');
+                overlay.style.display = 'flex';
+                baShowTab('users');
+                baLoadUsers();
+            } else {
+                errEl.textContent = '⚠️ Incorrect password';
+                inp.style.borderColor = '#f87171';
+                setTimeout(function(){ inp.style.borderColor = 'rgba(167,139,250,.3)'; }, 1200);
+            }
+        }
+
+        var BA_TABS = ['users','pebalaash','qarsan','send'];
+        function baShowTab(tab) {
+            BA_TABS.forEach(function(t) {
+                var el = document.getElementById('ba-tab-'+t);
+                if (el) el.style.display = (t===tab) ? 'block' : 'none';
+            });
+            document.querySelectorAll('.ba-tab').forEach(function(btn) {
+                btn.classList.toggle('active', btn.dataset.tab===tab);
+            });
+            if (tab==='pebalaash') baLoadPebalaash();
+            if (tab==='qarsan')    baLoadQarsan();
+        }
+
+        function baTable(headers, rows, emptyMsg) {
+            if (!rows || rows.length === 0) return '<div style="color:#6b7280;text-align:center;padding:32px;">'+(emptyMsg||'No data.')+'</div>';
+            var h = headers.map(function(hh){ return '<th style="padding:10px 14px;text-align:left;color:#a78bfa;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid rgba(255,255,255,.08);white-space:nowrap;">'+hh+'</th>'; }).join('');
+            var b = rows.map(function(row,i){
+                var cells = row.map(function(c){ return '<td style="padding:10px 14px;color:#e2e8f0;font-size:.83rem;border-bottom:1px solid rgba(255,255,255,.04);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis;">'+(c===null||c===undefined?'&#8212;':c)+'</td>'; }).join('');
+                return '<tr style="background:'+(i%2===0?'rgba(255,255,255,.02)':'transparent')+'">'+cells+'</tr>';
+            }).join('');
+            return '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;min-width:500px;"><thead><tr>'+h+'</tr></thead><tbody>'+b+'</tbody></table></div>';
+        }
+
+        function fmtDate(dt) {
+            if (!dt) return '&#8212;';
+            try { return new Date(dt).toLocaleString(); } catch(e) { return dt; }
+        }
+
+        async function baLoadUsers() {
+            var el = document.getElementById('ba-users-body');
+            el.innerHTML = '<div style="color:#6b7280;text-align:center;padding:32px;">⏳ Loading...</div>';
+            try {
+                var r = await baFetch('/api/admin/users/full');
+                var data = await r.json();
+                if (!data.ok) { el.innerHTML = '<div style="color:#f87171;padding:20px;">Error: '+data.error+'</div>'; return; }
+                var rows = (data.users||[]).map(function(u){ return [
+                    '<span style="font-size:.75rem;color:#7c6fa0;">'+(u.id||'').slice(0,8)+'…</span>',
+                    u.email||'&#8212;', u.user_type||'user',
+                    u.disabled ? '<span style="color:#f87171;">Disabled</span>' : '<span style="color:#34d399;">Active</span>',
+                    '<span style="color:#fbbf24;">💎 '+(Number(u.codes)||0)+'</span>',
+                    '<span style="color:#c0c0c0;">🥈 '+(Number(u.silver)||0)+'</span>',
+                    '<span style="color:#fbbf24;">🥇 '+(Number(u.gold)||0)+'</span>',
+                    fmtDate(u.created_at)
+                ]; });
+                el.innerHTML = baTable(['ID','Email','Type','Status','Codes','Silver','Gold','Joined'], rows, 'No users found.');
+            } catch(e) { el.innerHTML = '<div style="color:#f87171;padding:20px;">Error: '+e.message+'</div>'; }
+        }
+
+        async function baLoadPebalaash() {
+            var summary = document.getElementById('ba-pebalaash-summary');
+            var body = document.getElementById('ba-pebalaash-body');
+            body.innerHTML = '<div style="color:#6b7280;text-align:center;padding:32px;">⏳ Loading...</div>';
+            try {
+                var r = await baFetch('/api/pebalaash/admin/stats', {
+                    headers: window.__baPw ? { 'x-admin-password': window.__baPw } : {}
+                });
+                var data = await r.json();
+                summary.innerHTML = [
+                    ['🛒 Total Sold', data.totalSold||0, '#38bdf8'],
+                    ['💎 Total Revenue', (data.totalRevenueCodes||0)+' codes', '#fbbf24'],
+                    ['⚠️ Low Stock', (data.lowStockProducts||[]).length+' items', '#f87171'],
+                ].map(function(item){ return '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:16px;"><div style="font-size:.75rem;color:#6b7280;margin-bottom:6px;">'+item[0]+'</div><div style="font-size:1.4rem;font-weight:800;color:'+item[2]+';">'+item[1]+'</div></div>'; }).join('');
+                var orders = (data.recentOrders||[]).map(function(o){ return [
+                    (o.user_id||'').slice(0,8)+'…',
+                    o.product_name_display||o.product_name||'&#8212;',
+                    '💎 '+(o.price_codes||0),
+                    o.payment_type||'&#8212;',
+                    o.status||'&#8212;',
+                    fmtDate(o.created_at)
+                ]; });
+                body.innerHTML = baTable(['User ID','Product','Price','Method','Status','Date'], orders, 'No orders yet.');
+            } catch(e) { body.innerHTML = '<div style="color:#f87171;padding:20px;">Error: '+e.message+'</div>'; }
+        }
+
+        async function baLoadQarsan() {
+            var el = document.getElementById('ba-qarsan-body');
+            el.innerHTML = '<div style="color:#6b7280;text-align:center;padding:32px;">⏳ Loading...</div>';
+            try {
+                var r = await baFetch('/api/admin/qarsan/steals');
+                var data = await r.json();
+                if (!data.ok) { el.innerHTML = '<div style="color:#f87171;padding:20px;">Error: '+data.error+'</div>'; return; }
+                var rows = (data.steals||[]).map(function(s){ return [
+                    s.actor_email||(s.actor_id||'').slice(0,8)+'…',
+                    s.target_email||(s.target_id||'').slice(0,8)+'…',
+                    s.codes_stolen||0, s.silver_stolen||0, s.gold_stolen||0,
+                    '<strong style="color:#fb923c;">'+(s.total_stolen||0)+'</strong>',
+                    fmtDate(s.created_at)
+                ]; });
+                el.innerHTML = baTable(['Actor (Thief)','Target (Victim)','Codes','Silver','Gold','Total Stolen','Date'], rows, 'No steal events recorded.');
+            } catch(e) { el.innerHTML = '<div style="color:#f87171;padding:20px;">Error: '+e.message+'</div>'; }
+        }
+
+        function baSendPreview() {
+            var email = document.getElementById('ba-send-email').value.trim();
+            var type  = document.getElementById('ba-send-type').value;
+            var amt   = parseInt(document.getElementById('ba-send-amount').value, 10);
+            var prev  = document.getElementById('ba-send-preview');
+            var confBtn = document.getElementById('ba-send-confirm-btn');
+            var status = document.getElementById('ba-send-status');
+            status.textContent = '';
+            if (!email || !/@/.test(email)) { status.style.color='#f87171'; status.textContent='⚠️ Enter a valid email.'; return; }
+            if (!amt || amt < 1) { status.style.color='#f87171'; status.textContent='⚠️ Enter a valid amount.'; return; }
+            var typeLabel = {codes:'💎 Codes',silver:'🥈 Silver Bars',gold:'🥇 Gold Bars'}[type]||type;
+            prev.style.display='block';
+            prev.innerHTML='Sending <strong style="color:#fff;">'+amt+' '+typeLabel+'</strong> to <strong style="color:#fff;">'+email+'</strong>.<br>Tap <em>Confirm Send</em> to deposit instantly.';
+            confBtn.style.display='block';
+        }
+
+        async function baSendConfirm() {
+            var email = document.getElementById('ba-send-email').value.trim();
+            var type  = document.getElementById('ba-send-type').value;
+            var amt   = parseInt(document.getElementById('ba-send-amount').value, 10);
+            var status = document.getElementById('ba-send-status');
+            var confBtn = document.getElementById('ba-send-confirm-btn');
+            confBtn.disabled = true; confBtn.textContent = 'Sending...';
+            status.style.color='#94a3b8'; status.textContent='Processing...';
+            try {
+                var r = await baFetch('/api/admin/send-by-email', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({email:email, assetType:type, amount:amt})
+                });
+                var data = await r.json();
+                if (data.ok) {
+                    status.style.color='#34d399'; status.textContent='✅ '+data.message;
+                    document.getElementById('ba-send-email').value='';
+                    document.getElementById('ba-send-amount').value='';
+                    document.getElementById('ba-send-preview').style.display='none';
+                    confBtn.style.display='none';
+                } else {
+                    status.style.color='#f87171'; status.textContent='❌ '+(data.error||data.message||'Failed');
+                }
+            } catch(e) { status.style.color='#f87171'; status.textContent='❌ Network error: '+e.message; }
+            confBtn.disabled=false; confBtn.textContent='✓ Confirm Send';
+        }
+    </script>
+
+    <!-- 🌐 CodeBank Multi-Language Support -->
+    <script src="/codebank/translate.js?v=1"></script>
+</body>
+</html>

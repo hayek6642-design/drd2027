@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bankode Fix Test - Dependency Loading Verification</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    .test-result { 
+      padding: 10px; 
+      margin: 5px 0; 
+      border-radius: 5px; 
+      font-family: monospace;
+    }
+    .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+    .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+  </style>
+</head>
+<body class="bg-gray-100 p-8">
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-3xl font-bold mb-8 text-center">🔧 Bankode Dependency Fix Test</h1>
+    
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Test Status: <span id="overall-status">Running...</span></h2>
+      <div id="test-results"></div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-lg p-6">
+      <h2 class="text-xl font-semibold mb-4">Dependency Loading Timeline</h2>
+      <div id="timeline"></div>
+    </div>
+  </div>
+
+  <!-- Include our dependency helper functions first -->
+  <script src="utils/dependency-helpers.js"></script>
+  
+  <!-- Test script that checks everything -->
+  <script>
+    const testResults = [];
+    const timeline = [];
+
+    function log(message, type = 'info') {
+      const timestamp = new Date().toISOString();
+      timeline.push({ timestamp, message, type });
+      console.log(`[${timestamp}] ${message}`);
+      
+      const resultsDiv = document.getElementById('test-results');
+      const resultDiv = document.createElement('div');
+      resultDiv.className = `test-result ${type}`;
+      resultDiv.textContent = `${timestamp}: ${message}`;
+      resultsDiv.appendChild(resultDiv);
+      
+      const timelineDiv = document.getElementById('timeline');
+      const timelineItem = document.createElement('div');
+      timelineItem.className = `test-result ${type}`;
+      timelineItem.textContent = `${timestamp}: ${message}`;
+      timelineDiv.appendChild(timelineItem);
+    }
+
+    function testSupabaseInitialization() {
+      return new Promise((resolve) => {
+        log('Testing Supabase initialization...', 'info');
+        
+        // Check if Supabase is available
+        if (window.supabase) {
+          log('✅ Supabase global object exists', 'success');
+          
+          if (window.supabase.from) {
+            log('✅ Supabase client is properly initialized', 'success');
+            resolve(true);
+          } else {
+            log('❌ Supabase client missing .from method', 'error');
+            resolve(false);
+          }
+        } else {
+          log('⚠️ Supabase global object not found, waiting for supabase:ready event...', 'warning');
+          
+          // Wait for supabase:ready event
+          const checkSupabase = () => {
+            if (window.supabase && window.supabase.from) {
+              log('✅ Supabase initialized after event', 'success');
+              resolve(true);
+            } else {
+              log('❌ Supabase failed to initialize', 'error');
+              resolve(false);
+            }
+          };
+          
+          const timeout = setTimeout(() => {
+            log('❌ Supabase initialization timeout', 'error');
+            resolve(false);
+          }, 10000);
+          
+          window.addEventListener('supabase:ready', () => {
+            clearTimeout(timeout);
+            checkSupabase();
+          }, { once: true });
+        }
+      });
+    }
+
+    function testDependencyHelpers() {
+      log('Testing dependency helper functions...', 'info');
+      
+      const helpers = ['waitForSupabase', 'waitForDOM', 'waitForUnifiedStorage', 'waitForGlobal'];
+      let allHelpersPresent = true;
+      
+      helpers.forEach(helper => {
+        if (window[helper]) {
+          log(`✅ ${helper} function available`, 'success');
+        } else {
+          log(`❌ ${helper} function missing`, 'error');
+          allHelpersPresent = false;
+        }
+      });
+      
+      return allHelpersPresent;
+    }
+
+    async function testUnifiedStorage() {
+      log('Testing unifiedStorage...', 'info');
+      
+      // First check if unifiedStorageReady promise is available
+      if (window.unifiedStorageReady) {
+        log('✅ unifiedStorageReady promise is available', 'success');
+        try {
+          await window.unifiedStorageReady;
+          log('✅ unifiedStorageReady promise resolved successfully', 'success');
+        } catch (error) {
+          log('❌ unifiedStorageReady promise failed: ' + error.message, 'error');
+          return false;
+        }
+      } else if (window.unifiedStorage && window.unifiedStorage.unifiedStorageReady) {
+        log('✅ unifiedStorageReady promise available via API', 'success');
+        try {
+          await window.unifiedStorage.unifiedStorageReady;
+          log('✅ unifiedStorageReady promise resolved successfully (via API)', 'success');
+        } catch (error) {
+          log('❌ unifiedStorageReady promise failed (via API): ' + error.message, 'error');
+          return false;
+        }
+      } else {
+        log('⚠️ unifiedStorageReady promise not found, using fallback check', 'warning');
+      }
+      
+      // Wait a bit for unifiedStorage to be fully initialized
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      if (window.unifiedStorage) {
+        log('✅ unifiedStorage object exists', 'success');
+        
+        if (window.unifiedStorage.supabase) {
+          log('✅ unifiedStorage has Supabase reference', 'success');
+        } else {
+          log('⚠️ unifiedStorage missing Supabase reference', 'warning');
+        }
+        
+        // Test key methods
+        if (window.unifiedStorage.getCurrentUser) {
+          log('✅ unifiedStorage.getCurrentUser method exists', 'success');
+        } else {
+          log('❌ unifiedStorage.getCurrentUser method missing', 'error');
+        }
+        
+        if (window.unifiedStorage.rls && window.unifiedStorage.rls.getBalancesWithRLS) {
+          log('✅ unifiedStorage RLS methods available', 'success');
+        } else {
+          log('❌ unifiedStorage RLS methods missing', 'error');
+        }
+        
+        if (window.unifiedStorage.ensureReady) {
+          log('✅ unifiedStorage.ensureReady method exists', 'success');
+        } else {
+          log('⚠️ unifiedStorage.ensureReady method missing', 'warning');
+        }
+        
+        return true;
+      } else {
+        log('❌ unifiedStorage object not found', 'error');
+        return false;
+      }
+    }
+
+    function testDOMReadiness() {
+      log('Testing DOM readiness...', 'info');
+      
+      if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        log('✅ DOM is ready', 'success');
+        return true;
+      } else {
+        log('⚠️ DOM not yet ready, waiting...', 'warning');
+        return new Promise((resolve) => {
+          document.addEventListener('DOMContentLoaded', () => {
+            log('✅ DOM loaded via DOMContentLoaded event', 'success');
+            resolve(true);
+          });
+        });
+      }
+    }
+
+    async function runAllTests() {
+      log('🚀 Starting comprehensive dependency tests...', 'info');
+      
+      const results = {
+        helpers: testDependencyHelpers(),
+        dom: await testDOMReadiness(),
+        supabase: await testSupabaseInitialization(),
+        unifiedStorage: await testUnifiedStorage() // Now async
+      };
+      
+      const passed = Object.values(results).filter(r => r === true).length;
+      const total = Object.keys(results).length;
+      
+      const statusDiv = document.getElementById('overall-status');
+      if (passed === total) {
+        statusDiv.textContent = `✅ All tests passed (${passed}/${total})`;
+        statusDiv.className = 'text-green-600 font-semibold';
+        log(`🎉 All tests passed! (${passed}/${total})`, 'success');
+      } else {
+        statusDiv.textContent = `❌ Some tests failed (${passed}/${total} passed)`;
+        statusDiv.className = 'text-red-600 font-semibold';
+        log(`⚠️ Some tests failed (${passed}/${total} passed)`, 'error');
+      }
+      
+      // Test DOM elements that should exist
+      setTimeout(() => {
+        log('Testing DOM element availability...', 'info');
+        const elements = ['codes-balance', 'silver-balance', 'gold-balance', 'transactionsTable'];
+        elements.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) {
+            log(`✅ DOM element #${id} found`, 'success');
+          } else {
+            log(`❌ DOM element #${id} not found`, 'error');
+          }
+        });
+      }, 1000);
+      
+      return results;
+    }
+
+    // Run tests when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', runAllTests);
+    } else {
+      runAllTests();
+    }
+
+    // Also run on window load for complete verification
+    window.addEventListener('load', () => {
+      log('🔄 Window load event fired', 'info');
+    });
+  </script>
+
+  <!-- Load Supabase (same as in index.html) -->
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+    // Initialize the global Supabase v2 client
+    window.supabase = createClient(
+      "https://obmufgumrrxjvgjquqro.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ibXVmZ3VtcnJ4anZnanF1cXJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc2NzY0MTUsImV4cCI6MjA1MzI1MjQxNX0.wUKntErBvsfTgX5FJZ45TdC697Hg63rgkQcI5P-3SpQ"
+    );
+
+    console.log("🔥 Supabase v2 initialized globally");
+
+    // Dispatch a global event so other scripts know Supabase is ready
+    window.dispatchEvent(new Event('supabase:ready'));
+  </script>
+
+  <!-- Load unifiedStorage after Supabase -->
+  <script src="unifiedStorage.js"></script>
+</body>
+</html>
