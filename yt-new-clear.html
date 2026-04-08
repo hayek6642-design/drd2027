@@ -2327,6 +2327,20 @@
                                     transactions: (typeof bal.transactions==='number' ? bal.transactions : undefined)
                                 };
                                 
+                                // 🚀 BROADCAST ASSETS TO IFRAME on auth ready
+                                try {
+                                    var frame = document.getElementById('code-popup-iframe');
+                                    if (frame && frame.contentWindow) {
+                                        var assets = {
+                                            codes: bal.codes > 0 ? Array(bal.codes).fill('placeholder') : [],
+                                            silver: bal.silver > 0 ? Array(bal.silver).fill('placeholder') : [],
+                                            gold: bal.gold > 0 ? Array(bal.gold).fill('placeholder') : []
+                                        };
+                                        frame.contentWindow.postMessage({ type: 'assetbus:snapshot', data: assets }, window.location.origin);
+                                        console.log('[AUTH READY] Sent assets to iframe:', assets);
+                                    }
+                                } catch(_) {}
+                                
                             }
                         } catch(_){}
                     } catch(_){}
