@@ -6,6 +6,140 @@
     'use strict';
 
     // ==========================================
+    // RELIABLE IFRAME DETECTION
+    // ==========================================
+    function isInIframe() {
+        try {
+            return window.self !== window.top;
+        } catch (e) {
+            // Access denied = definitely in iframe
+            return true;
+        }
+    }
+    
+    const _isIframe = isInIframe();
+    
+    // Console rate limiter to prevent spam
+    const _logCounts = new Map();
+    let _lastLogTime = 0;
+    function _rateLimitedLog(...args) {
+        const key = args.join('').slice(0, 50);
+        const now = Date.now();
+        
+        if (now - _lastLogTime > 1000) {
+            _logCounts.clear();
+            _lastLogTime = now;
+        }
+        
+        const count = _logCounts.get(key) || 0;
+        if (count < 3) {
+            _logCounts.set(key, count + 1);
+            console.log(...args);
+        } else if (count === 3) {
+            console.log('[... logs suppressed for:', key.slice(0, 30), ']');
+            _logCounts.set(key, count + 1);
+        }
+    }
+
+    // ==========================================
+    // EARLY IFRAME PROXY - Install BEFORE any other code
+    // ==========================================
+    if (_isIframe) {
+        console.log('[Bridge] Running in iframe - installing early proxy');
+        
+        // Install proxy AssetBus that receives messages from parent
+        window.AssetBus = {
+            _snapshot: null,
+            _listeners: new Map(),
+            
+            subscribe: function(event, callback) {
+                if (!this._listeners.has(event)) {
+                    this._listeners.set(event, new Set());
+                }
+                this._listeners.get(event).add(callback);
+                
+                // Request initial data from parent
+                window.parent.postMessage({
+                    type: 'bridge:request-assets',
+                    source: 'safecode-iframe',
+                    timestamp: Date.now()
+                }, '*');
+                
+                return () => this._listeners.get(event)?.delete(callback);
+            },
+            
+            publish: function(event, data) {
+                window.parent.postMessage({
+                    type: 'assetbus:publish',
+                    event: event,
+                    data: data
+                }, '*');
+            },
+            
+            snapshot: function() {
+                return this._snapshot;
+            },
+            
+            getSnapshot: function() {
+                return Promise.resolve(this._snapshot);
+            },
+            
+            sync: function() {
+                window.parent.postMessage({
+                    type: 'bridge:request-assets',
+                    source: 'safecode-iframe',
+                    timestamp: Date.now()
+                }, '*');
+            }
+        };
+        
+        // Listen for messages from parent
+        window.addEventListener('message', function(e) {
+            const data = e.data;
+            if (!data) return;
+            
+            console.log('[Bridge] Iframe received:', data.type);
+            
+            // Handle asset snapshots
+            if (data.type === 'assetbus:snapshot' || data.type === 'CODEBANK_ASSETS_SYNC') {
+                window.AssetBus._snapshot = data.data || data.payload;
+                console.log('[Bridge] Iframe snapshot updated:', window.AssetBus._snapshot);
+                
+                // Dispatch events
+                window.dispatchEvent(new CustomEvent('sqlite:snapshot', { 
+                    detail: window.AssetBus._snapshot 
+                }));
+                window.dispatchEvent(new CustomEvent('assets:updated', { 
+                    detail: window.AssetBus._snapshot 
+                }));
+            }
+            
+            // Handle assets:sync from indexCB
+            if (data.type === 'assets:sync' && data.assets) {
+                window.AssetBus._snapshot = data.assets;
+                console.log('[Bridge] Iframe assets:sync updated:', window.AssetBus._snapshot);
+                
+                window.dispatchEvent(new CustomEvent('sqlite:snapshot', { 
+                    detail: window.AssetBus._snapshot 
+                }));
+                window.dispatchEvent(new CustomEvent('assets:updated', { 
+                    detail: window.AssetBus._snapshot 
+                }));
+            }
+            
+            // Handle specific event broadcasts
+            if (data.type && data.type.startsWith('assetbus:')) {
+                const eventName = data.type.replace('assetbus:', '');
+                window.AssetBus._listeners.get(eventName)?.forEach(cb => {
+                    try { cb(data.data); } catch(e) {}
+                });
+            }
+        });
+        
+        console.log('[Bridge] Early iframe proxy installed');
+    }
+
+    // ==========================================
     // NATIVE HTTP BRIDGE (Capacitor support)
     // ==========================================
     const _isNativePlatform = (() => {

@@ -63,6 +63,11 @@
   let __isGenerating = false;
   let __lastGenTime = 0;
   let syncLock = false; // 2️⃣ Sync Lock
+  
+  // Debounce for processSyncQueue to prevent console spam
+  let _lastProcessSyncTime = 0;
+  const SYNC_DEBOUNCE_MS = 5000; // 5 seconds minimum between syncs
+  
   function canGenerate(){ 
     const now = Date.now(); 
     if (now - __lastGenTime < FIVE_MIN) return false; 
@@ -838,6 +843,13 @@
 
     // Process pending syncs when back online - called by network recovery
     async processSyncQueue() {
+      const now = Date.now();
+      if (now - _lastProcessSyncTime < SYNC_DEBOUNCE_MS) {
+        if (window.DEBUG_MODE) console.log('[Bankode] processSyncQueue debounced, skipping');
+        return;
+      }
+      _lastProcessSyncTime = now;
+      
       if (this.isSyncPaused) {
         console.warn('[Bankode] Sync is paused due to integrity alert.');
         return;
