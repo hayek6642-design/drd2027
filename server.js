@@ -399,6 +399,15 @@ const AI_PROVIDERS = {
             { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B (Fast)', free: true },
             { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B', free: true }
         ]
+    },
+    gemini: {
+        name: 'Google Gemini',
+        baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models',
+        models: [
+            { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Free)', free: true },
+            { id: 'gemini-1.5-flash-8b', name: 'Gemini 1.5 Flash 8B', free: true },
+            { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', free: false }
+        ]
     }
 };
 
@@ -442,6 +451,8 @@ app.post('/api/chat', async (req, res) => {
                 selectedProvider = 'huggingface';
             } else if (modelId.startsWith('llama') || modelId.startsWith('mixtral')) {
                 selectedProvider = 'groq';
+            } else if (modelId.startsWith('gemini')) {
+                selectedProvider = 'gemini';
             }
         }
 
@@ -560,6 +571,35 @@ app.post('/api/chat', async (req, res) => {
             } else {
                 reply = 'No response from model';
             }
+            res.json({ reply, model: selectedModel, provider: selectedProvider });
+            
+        } else if (selectedProvider === 'gemini') {
+            // Google Gemini API
+            const apiKey = process.env.GEMINI_API_KEY;
+            if (!apiKey) {
+                return res.status(503).json({ error: 'Gemini API key not configured' });
+            }
+            
+            const response = await fetch(`${providerConfig.baseUrl}/${selectedModel}:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: message }] }],
+                    generationConfig: {
+                        temperature: 0.7,
+                        maxOutputTokens: 2048
+                    }
+                })
+            });
+            
+            if (!response.ok) {
+                const err = await response.text();
+                return res.status(500).json({ error: `Gemini error: ${err}` });
+            }
+            
+            responseData = await response.json();
+            const reply = responseData.candidates?.[0]?.content?.parts?.[0]?.text || 
+                        responseData.candidates?.[0]?.content?.parts?.[0]?.text || 'No response';
             res.json({ reply, model: selectedModel, provider: selectedProvider });
         } else {
             res.status(400).json({ error: 'Provider not supported' });
