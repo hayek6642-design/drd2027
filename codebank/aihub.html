@@ -631,6 +631,10 @@ const SERVICES = [
   { id:'n8n',         name:'n8n AI',        cat:'agent', emoji:'🔗', logo:'https://n8n.io/favicon.ico',                                             url:'https://n8n.io',                   desc:'AI workflow automation', badge:'open' },
   { id:'flowise',     name:'Flowise',       cat:'agent', emoji:'🌊', logo:'https://flowiseai.com/favicon.ico',                                      url:'https://flowiseai.com',            desc:'No-code LLM builder', badge:'open' },
 
+  /* ── Local Tools ────────────────────────────── */
+  { id:'openhands',   name:'OpenHands',     cat:'local', emoji:'👐', logo:'', url:'https://docs.openhands.dev/overview/welcome',         desc:'AI Software Agent', badge:'new', target:'_self' },
+  { id:'calculator', name:'Calculator',    cat:'local', emoji:'🔢', logo:'', url:'./calculator.html', desc:'Scientific Calculator', badge:null },
+
   /* ── YouTube & Video Platforms ─────────────────────────── */
   { id:'gg_channel',  name:'Gogod Blbless 📺', cat:'media', emoji:'📺', logo:'https://yt3.ggpht.com/ytc/AIdro_k6N8U0GmmNaMQUEsJ5YJmIVB8GGpFJAY-KW-oCCrk=s88-c-k-c0x00ffffff-no-rj', url:'https://www.youtube.com/channel/UCZ5heNyv3s5dIw9mtjsAGsg?sub_confirmation=1', desc:'🔔 Subscribe to Gogod Blbless — AI, Tech & more!', badge:'creator', creator:true },
   { id:'youtube',     name:'YouTube',       cat:'media', emoji:'▶️', logo:'https://www.youtube.com/favicon.ico',                                   url:'https://www.youtube.com',          desc:'AI video search & watch', badge:'free' },
@@ -689,6 +693,7 @@ const SERVICES = [
    ═══════════════════════════════════════════════════════════ */
 const CATS = [
   { id:'all',         label:'All',           icon:'🤖' },
+  { id:'local',       label:'Local',         icon:'💾' },
   { id:'chat',        label:'Chat AI',       icon:'💬' },
   { id:'image',       label:'Image AI',      icon:'🎨' },
   { id:'video',       label:'Video AI',      icon:'🎬' },
@@ -898,6 +903,18 @@ function onSearch() {
    ═══════════════════════════════════════════════════════════ */
 function openViewer(svc) {
   currentSvc = svc;
+  
+  // Handle target attribute for local tools - open in same tab or new tab
+  if (svc.target === '_self') {
+    // Navigate within current tab (like external link)
+    window.location.href = svc.url;
+    return;
+  } else if (svc.target === '_blank') {
+    // Open in new tab
+    window.open(svc.url, '_blank');
+    return;
+  }
+  
   const overlay = document.getElementById('viewerOverlay');
   const frame   = document.getElementById('viewerFrame');
   const loader  = document.getElementById('frameLoader');

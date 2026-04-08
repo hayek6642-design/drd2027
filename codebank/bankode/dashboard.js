@@ -52,6 +52,32 @@ export const logAdminAction = async (targetUserId, actionType, actionData) => {
   return await callRPC('bankode_log_admin_action', { p_target_user_id: targetUserId, p_action_type: actionType, p_action_data: payload });
 };
 
+// New: Send assets to user by email (admin function)
+export const sendAssetsByEmail = async (email, assetType, amount) => {
+  const res = await fetch('/api/admin/send-by-email', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getAdminToken()}`,
+      'x-csrf-token': getCookie('XSRF-TOKEN')
+    },
+    body: JSON.stringify({ email, assetType, amount }),
+    credentials: 'include'
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || data.message || 'Failed to send assets');
+  return data;
+};
+
+function getAdminToken() {
+  return localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token');
+}
+
+function getCookie(name) {
+  const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+  return v ? v[2] : null;
+}
+
 export const getAdminOverview = async () => {
   const [usersCount, txCount, minted] = await Promise.all([
     callRPC('bankode_admin_users_count'),

@@ -1821,6 +1821,12 @@ app.use((req, res, next) => {
   const unsafe = m === 'POST' || m === 'PUT' || m === 'PATCH' || m === 'DELETE';
   if (!unsafe) return next();
 
+  // Skip CSRF for specific endpoints that don't need it
+  const path = req.originalUrl || req.path;
+  if (path === '/api/admin/bankode-login' || path === '/api/users/send-code' || path === '/api/users/verify-code') {
+    return next();
+  }
+
   // Skip CSRF protection for smoke tests and development
   if (process.env.DISABLE_CSRF === 'true' || process.env.NODE_ENV !== 'production') {
     return next();

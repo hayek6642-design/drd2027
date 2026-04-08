@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculator 🔢 — Scientific Calculator</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    :root {
+      --bg: #0a0a16;
+      --surface: #12122a;
+      --surface2: #1c1c38;
+      --border: rgba(255,255,255,0.07);
+      --accent: #10b981;
+      --accent2: #06b6d4;
+      --gold: #f59e0b;
+      --text: #f0f0ff;
+      --muted: #8888aa;
+      --danger: #ef4444;
+      --radius: 12px;
+    }
+    
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    
+    .calculator {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 20px;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      border: 1px solid var(--border);
+    }
+    
+    .calc-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .calc-header i { font-size: 24px; color: var(--accent); }
+    .calc-header h1 { font-size: 16px; color: var(--text); }
+    
+    #display {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 15px;
+      text-align: right;
+      margin-bottom: 15px;
+    }
+    
+    #display .expression {
+      font-size: 14px;
+      color: var(--muted);
+      min-height: 20px;
+      word-break: break-all;
+    }
+    
+    #display .result {
+      font-size: 32px;
+      font-weight: bold;
+      color: var(--text);
+      margin-top: 5px;
+    }
+    
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+    }
+    
+    button {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 500;
+      padding: 14px 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    
+    button:hover { background: #2a2a4a; }
+    button:active { transform: scale(0.95); }
+    
+    button.operator { color: var(--accent2); }
+    button.function { color: var(--gold); font-size: 14px; }
+    button.equals { 
+      background: var(--accent); 
+      color: white;
+      grid-column: span 1;
+    }
+    button.equals:hover { background: #059669; }
+    
+    button.clear { color: var(--danger); }
+    button.backspace { font-size: 14px; }
+    
+    .info {
+      margin-top: 15px;
+      padding: 10px;
+      background: rgba(16,185,129,0.1);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="calculator">
+    <div class="calc-header">
+      <i class="fas fa-calculator"></i>
+      <h1>Scientific Calculator</h1>
+    </div>
+    
+    <div id="display">
+      <div class="expression" id="expression"></div>
+      <div class="result" id="result">0</div>
+    </div>
+    
+    <div class="buttons">
+      <!-- Row 1: Scientific functions -->
+      <button class="function" onclick="calc('sin')">sin</button>
+      <button class="function" onclick="calc('cos')">cos</button>
+      <button class="function" onclick="calc('tan')">tan</button>
+      <button class="function" onclick="calc('log')">log</button>
+      <button class="function" onclick="calc('ln')">ln</button>
+      
+      <!-- Row 2: More functions -->
+      <button class="function" onclick="calc('sqrt')">√</button>
+      <button class="function" onclick="calc('pow2')">x²</button>
+      <button class="function" onclick="calc('pow3')">x³</button>
+      <button class="function" onclick="calc('fact')">n!</button>
+      <button class="function" onclick="calc('pi')">π</button>
+      
+      <!-- Row 3 -->
+      <button class="clear" onclick="clear()">C</button>
+      <button class="operator" onclick="calc('(')">(</button>
+      <button class="operator" onclick="calc(')')">)</button>
+      <button class="backspace" onclick="backspace()">⌫</button>
+      <button class="operator" onclick="calc('/')">÷</button>
+      
+      <!-- Row 4 -->
+      <button onclick="calc('7')">7</button>
+      <button onclick="calc('8')">8</button>
+      <button onclick="calc('9')">9</button>
+      <button class="operator" onclick="calc('*')">×</button>
+      <button class="function" onclick="calc('e')">e</button>
+      
+      <!-- Row 5 -->
+      <button onclick="calc('4')">4</button>
+      <button onclick="calc('5')">5</button>
+      <button onclick="calc('6')">6</button>
+      <button class="operator" onclick="calc('-')">−</button>
+      <button class="operator" onclick="calc('%')">%</button>
+      
+      <!-- Row 6 -->
+      <button onclick="calc('1')">1</button>
+      <button onclick="calc('2')">2</button>
+      <button onclick="calc('3')">3</button>
+      <button class="operator" onclick="calc('+')">+</button>
+      <button class="equals" onclick="calculate()">=</button>
+      
+      <!-- Row 7 -->
+      <button onclick="calc('0')" style="grid-column: span 2;">0</button>
+      <button onclick="calc('.')">.</button>
+      <button onclick="calc('ans')">ANS</button>
+    </div>
+    
+    <div class="info">
+      <i class="fas fa-info-circle"></i> Use standard operators + - * / for basic math
+    </div>
+  </div>
+  
+  <script>
+    let expression = '';
+    let lastResult = null;
+    
+    function updateDisplay() {
+      document.getElementById('expression').textContent = expression || '';
+      document.getElementById('result').textContent = expression ? evaluate(expression) : '0';
+    }
+    
+    function calc(val) {
+      if (val === 'pi') {
+        expression += Math.PI.toFixed(8);
+      } else if (val === 'e') {
+        expression += Math.E.toFixed(8);
+      } else if (val === 'ans' && lastResult !== null) {
+        expression += lastResult;
+      } else if (val === 'sqrt') {
+        expression += 'Math.sqrt(';
+      } else if (val === 'pow2') {
+        expression = evaluate(expression + '**2');
+        lastResult = tryEvaluate(expression);
+        updateDisplay();
+        return;
+      } else if (val === 'pow3') {
+        expression = evaluate(expression + '**3');
+        lastResult = tryEvaluate(expression);
+        updateDisplay();
+        return;
+      } else if (val === 'fact') {
+        const n = parseInt(evaluate(expression));
+        expression = factorial(n).toString();
+        lastResult = tryEvaluate(expression);
+        updateDisplay();
+        return;
+      } else if (['sin', 'cos', 'tan', 'log', 'ln'].includes(val)) {
+        expression += `Math.${val}(`;
+      } else {
+        expression += val;
+      }
+      updateDisplay();
+    }
+    
+    function factorial(n) {
+      if (n < 0) return NaN;
+      if (n === 0 || n === 1) return 1;
+      let result = 1;
+      for (let i = 2; i <= n; i++) result *= i;
+      return result;
+    }
+    
+    function clear() {
+      expression = '';
+      lastResult = null;
+      updateDisplay();
+    }
+    
+    function backspace() {
+      expression = expression.slice(0, -1);
+      updateDisplay();
+    }
+    
+    function evaluate(expr) {
+      try {
+        const result = tryEvaluate(expr);
+        return result !== null ? result : expr || '0';
+      } catch {
+        return expr || '0';
+      }
+    }
+    
+    function tryEvaluate(expr) {
+      try {
+        // Handle special functions
+        let processed = expr
+          .replace(/Math\.sin\(/g, 'Math.sin(')
+          .replace(/Math\.cos\(/g, 'Math.cos(')
+          .replace(/Math\.tan\(/g, 'Math.tan(')
+          .replace(/Math\.log\(/g, 'Math.log10(')
+          .replace(/Math\.ln\(/g, 'Math.log(')
+          .replace(/Math\.sqrt\(/g, 'Math.sqrt(');
+        
+        const result = eval(processed);
+        if (!isFinite(result)) return null;
+        lastResult = result;
+        return formatNumber(result);
+      } catch {
+        return null;
+      }
+    }
+    
+    function formatNumber(n) {
+      if (Number.isInteger(n)) return n.toString();
+      return n.toFixed(8).replace(/\.?0+$/, '');
+    }
+    
+    function calculate() {
+      const result = tryEvaluate(expression);
+      expression = result !== null ? result.toString() : 'Error';
+      lastResult = result;
+      updateDisplay();
+    }
+    
+    // Keyboard support
+    document.addEventListener('keydown', (e) => {
+      const key = e.key;
+      if (key >= '0' && key <= '9' || key === '.' || key === '+' || key === '-' || key === '*' || key === '/' || key === '(' || key === ')') {
+        calc(key);
+      } else if (key === 'Enter') {
+        e.preventDefault();
+        calculate();
+      } else if (key === 'Backspace') {
+        backspace();
+      } else if (key === 'Escape') {
+        clear();
+      }
+    });
+    
+    updateDisplay();
+  </script>
+</body>
+</html>

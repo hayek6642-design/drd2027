@@ -190,6 +190,29 @@ export const AppRegistry = {
             badge: 'AI'
         },
         {
+            id: 'openHands',
+            name: 'OpenHands',
+            category: 'tools',
+            icon: 'fa-hands',
+            color: '#6366f1',
+            url: 'https://docs.openhands.dev/overview/welcome',
+            description: 'AI Software Agent - Open in iframe',
+            status: 'online',
+            badge: 'New',
+            target: '_self'
+        },
+        {
+            id: 'calculator',
+            name: 'Calculator',
+            category: 'tools',
+            icon: 'fa-calculator',
+            color: '#10b981',
+            url: './calculator.html',
+            description: 'Scientific Calculator',
+            status: 'online',
+            badge: null
+        },
+        {
             id: 'e7ki',
             name: 'E7ki',
             category: 'tools',

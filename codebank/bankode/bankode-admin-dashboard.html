@@ -64,6 +64,28 @@
   <button id="mintBtn" class="btn-primary">تأكيد عملية السكّ (Confirm Mint)</button>
 </section>
 
+<section class="mint-form" style="border-color: #28a745;">
+  <h2>إرسال الأصول عبر البريد الإلكتروني (Send Assets by Email)</h2>
+  <div class="form-group">
+    <label for="targetEmail">User Email:</label>
+    <input type="email" id="targetEmail" placeholder="e.g. gensyko@gmail.com" required>
+  </div>
+  <div class="form-group">
+    <label for="emailAssetType">Asset Type:</label>
+    <select id="emailAssetType">
+      <option value="codes">Codes</option>
+      <option value="silver">Silver</option>
+      <option value="gold">Gold</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label for="emailAmount">Amount:</label>
+    <input type="number" id="emailAmount" min="1" placeholder="e.g. 10" required>
+  </div>
+  <button id="sendEmailBtn" class="btn-primary" style="background: #28a745;">إرسال (Send)</button>
+  <div id="emailStatus" class="muted" aria-live="polite"></div>
+</section>
+
 <section>
   <button id="loadUsersBtn">تحميل قائمة المستخدمين</button>
   <div id="status" class="muted" aria-live="polite"></div>
@@ -77,12 +99,13 @@
 
 <script src="./config.js"></script>
 <script type="module">
-import { getAllUsers, getUserBalances, getAdminOverview } from './dashboard.js';
+import { getAllUsers, getUserBalances, getAdminOverview, sendAssetsByEmail } from './dashboard.js';
 import { getAdminToken, setAdminToken, logoutUser, getCookie } from './jwt-auth.js';
 
 const statusEl        = document.getElementById('status');
 const usersContainer  = document.getElementById('usersContainer');
 const ledgerContainer = document.getElementById('ledgerContainer');
+const emailStatusEl  = document.getElementById('emailStatus');
 
 /** Helper: build fetch headers with Authorization + CSRF token */
 function authHeaders(extra = {}) {
@@ -204,6 +227,45 @@ document.getElementById('mintBtn').addEventListener('click', async () => {
   } catch (err) {
     alert('خطأ في العملية: ' + err.message);
     statusEl.textContent = 'خطأ: ' + err.message;
+  }
+});
+
+// 3b. Send Assets by Email
+document.getElementById('sendEmailBtn').addEventListener('click', async () => {
+  const email    = document.getElementById('targetEmail').value.trim();
+  const assetType = document.getElementById('emailAssetType').value;
+  const amount   = parseInt(document.getElementById('emailAmount').value, 10);
+
+  if (!email || isNaN(amount) || amount <= 0) {
+    emailStatusEl.textContent = 'الرجاء إدخال بيانات صحيحة';
+    emailStatusEl.style.color = '#dc3545';
+    return;
+  }
+
+  if (!confirm(`هل أنت متأكد من إرسال ${amount} ${assetType} إلى ${email}؟`)) return;
+
+  try {
+    emailStatusEl.textContent = 'جاري إرسال الأصول...';
+    emailStatusEl.style.color = '#0d6efd';
+    
+    const result = await sendAssetsByEmail(email, assetType, amount);
+    
+    if (result.ok) {
+      emailStatusEl.textContent = '✅ ' + result.message;
+      emailStatusEl.style.color = '#28a745';
+      // Clear inputs
+      document.getElementById('targetEmail').value = '';
+      document.getElementById('emailAmount').value = '';
+      // Sync AssetBus if available
+      if (window.AssetBus && typeof window.AssetBus.sync === 'function') {
+        window.AssetBus.sync();
+      }
+    } else {
+      throw new Error(result.message || result.error || 'فشلت العملية');
+    }
+  } catch (err) {
+    emailStatusEl.textContent = '❌ ' + err.message;
+    emailStatusEl.style.color = '#dc3545';
   }
 });
 
