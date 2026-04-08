@@ -118,6 +118,26 @@
     </script>
     <script src="/codebank/bankode-assetbus-bridge.js?v=3"></script>
     
+    <!-- 🚀 Unified State Management (no bridge needed) -->
+    <script src="/shared/global-store.js"></script>
+    <script src="/shared/event-bus-simple.js"></script>
+    <script src="/shared/assets-direct.js"></script>
+    <script src="/shared/auth-unified.js"></script>
+    
+    <script>
+      // Initialize AppState from AssetBus when ready
+      window.addEventListener('assetbus:ready', () => {
+        console.log('[UnifiedState] Syncing with AssetBus...');
+        if (window.AssetBus?.snapshot) {
+          const snap = window.AssetBus.snapshot();
+          if (snap) {
+            window.AppState.setAssets(snap);
+            console.log('[UnifiedState] Synced assets:', snap);
+          }
+        }
+      });
+    </script>
+    
     <!-- Modular App Core -->
     <script type="module" src="/codebank/js/app-core.js?v=3"></script>
     <script src="/codebank/js/service-manager.js?v=3"></script>

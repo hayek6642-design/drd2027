@@ -1266,6 +1266,8 @@
     })();
     
     const snapshot = providedSnapshot || 
+      // 🚀 UNIFIED STATE: Check AppState first
+      (window.AppState?.assets) ||
       ((window.AssetBus && typeof window.AssetBus.snapshot === 'function') ? window.AssetBus.snapshot() : null) ||
       (window.top && typeof window.top.GET_AUTHORITATIVE_ASSETS === 'function' ? window.top.GET_AUTHORITATIVE_ASSETS() : null) ||
       _localStorageFallback;

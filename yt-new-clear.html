@@ -2483,6 +2483,26 @@
     <!-- 5. Bridge (regular script will now find AssetBus via deferred mode) -->
     <script src="/codebank/bankode-assetbus-bridge.js"></script>
     
+    <!-- 5a. Unified State Management (Global Store + Event Bus + Assets + Auth) -->
+    <script src="/shared/global-store.js"></script>
+    <script src="/shared/event-bus-simple.js"></script>
+    <script src="/shared/assets-direct.js"></script>
+    <script src="/shared/auth-unified.js"></script>
+    
+    <script>
+      // Initialize AppState from AssetBus when ready
+      window.addEventListener('assetbus:ready', () => {
+        console.log('[UnifiedState] Syncing with AssetBus...');
+        if (window.AssetBus?.snapshot) {
+          const snap = window.AssetBus.snapshot();
+          if (snap) {
+            window.AppState.setAssets(snap);
+            console.log('[UnifiedState] Synced assets:', snap);
+          }
+        }
+      });
+    </script>
+    
     <!-- 6. Safe Asset List - REMOVED from main page, only in CodeBank iframe -->
     <script src="/codebank/js/safe-storage.js"></script>
     <script src="/codebank/js/guardian-3d.js"></script>

@@ -6,6 +6,13 @@
   <title>SafeCode — DRD Vault</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  
+  <!-- 🚀 Unified State Management (no bridge needed) -->
+  <script src="/shared/global-store.js"></script>
+  <script src="/shared/event-bus-simple.js"></script>
+  <script src="/shared/assets-direct.js"></script>
+  <script src="/shared/auth-unified.js"></script>
+  
   <style>
     /* ════════════════════════════════════════════
        RESET & ROOT
@@ -1693,17 +1700,28 @@ document.addEventListener('touchstart', resetAutoLock, {passive:true});
 function loadInteriorAssets() {
   let codes=0, silver=0, gold=0;
   try {
-    // Try AssetBus from parent frame (Codebank integration)
-    const bus = window.AssetBus
-      || window.parent?.AssetBus
-      || window.parent?.parent?.AssetBus;
-    if (bus) {
-      const snap = bus.snapshot();
-      codes  = (snap.codes  || []).length;
-      silver = (snap.silver || []).length;
-      gold   = (snap.gold   || []).length;
+    // 🚀 UNIFIED STATE: Use direct asset access (no bridge needed)
+    // Priority 1: AppState (global store)
+    if (window.AppState?.assets) {
+      codes  = (window.AppState.assets.codes  || []).length;
+      silver = (window.AppState.assets.silver || []).length;
+      gold   = (window.AppState.assets.gold   || []).length;
     }
-  } catch(_) {}
+    // Priority 2: Legacy AssetBus fallback
+    else {
+      const bus = window.AssetBus
+        || window.parent?.AssetBus
+        || window.parent?.parent?.AssetBus;
+      if (bus) {
+        const snap = bus.snapshot();
+        codes  = (snap.codes  || []).length;
+        silver = (snap.silver || []).length;
+        gold   = (snap.gold   || []).length;
+      }
+    }
+  } catch(e) {
+    console.log('[SafeCode] Asset load error:', e.message);
+  }
 
   // Animate numbers counting up
   animCount(intCodes,  0, codes,  600);
