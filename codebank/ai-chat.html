@@ -103,6 +103,24 @@
             color: #888;
             margin-bottom: 5px;
         }
+        .ai-message .actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .ai-message .action-btn {
+            background: transparent;
+            border: 1px solid #444;
+            color: #888;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+        .ai-message .action-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
         .typing-indicator {
             align-self: flex-start;
             background: #2a2a3e;
@@ -204,6 +222,89 @@
             border-color: #667eea;
             color: #667eea;
         }
+        .chat-tabs {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+        .chat-tab {
+            background: #2a2a3e;
+            border: 1px solid #444;
+            color: #aaa;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .chat-tab.active {
+            background: #667eea;
+            border-color: #667eea;
+            color: #fff;
+        }
+        .chat-tab .close-tab {
+            opacity: 0.6;
+            font-size: 0.9rem;
+        }
+        .chat-tab .close-tab:hover {
+            opacity: 1;
+        }
+        .new-chat-btn {
+            background: transparent;
+            border: 1px dashed #444;
+            color: #667eea;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        .new-chat-btn:hover {
+            border-color: #667eea;
+        }
+        .voice-btn {
+            background: transparent;
+            border: none;
+            color: #aaa;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 8px;
+        }
+        .voice-btn:hover {
+            color: #667eea;
+        }
+        .voice-btn.recording {
+            color: #ff4757;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .markdown-content {
+            line-height: 1.6;
+        }
+        .markdown-content code {
+            background: #1a1a2e;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        .markdown-content pre {
+            background: #1a1a2e;
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 8px 0;
+        }
+        .markdown-content pre code {
+            background: none;
+            padding: 0;
+        }
     </style>
 </head>
 <body>
@@ -218,6 +319,13 @@
         </div>
     </div>
     
+    <div class="chat-tabs" id="chatTabs">
+        <button class="chat-tab active" id="defaultTab" onclick="switchTab('default')">
+            Chat 1 <span class="close-tab" onclick="event.stopPropagation(); closeTab('default')">×</span>
+        </button>
+        <button class="new-chat-btn" onclick="createNewChat()">+ New</button>
+    </div>
+    
     <div class="chat-container" id="chatContainer">
         <div class="message ai-message">
             <div class="model-tag">System</div>
@@ -227,6 +335,7 @@
     
     <div class="input-area">
         <div class="input-container">
+            <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()" title="Voice input">🎤</button>
             <input type="text" id="userInput" placeholder="Type your message..." onkeypress="if(event.key==='Enter') sendMessage()">
             <button id="sendBtn" onclick="sendMessage()">Send</button>
         </div>
@@ -241,9 +350,224 @@
         const userInput = document.getElementById('userInput');
         const sendBtn = document.getElementById('sendBtn');
         const modelSelect = document.getElementById('modelSelect');
+        const chatTabs = document.getElementById('chatTabs');
+        const voiceBtn = document.getElementById('voiceBtn');
         
         let chatHistory = [];
         let availableModels = [];
+        let chats = { 'default': [] };
+        let currentTab = 'default';
+        let recognition = null;
+        let isRecording = false;
+        
+        // Load chats from localStorage
+        function loadChatsFromStorage() {
+            try {
+                const saved = localStorage.getItem('ai_chats');
+                if (saved) {
+                    chats = JSON.parse(saved);
+                    // Restore tabs
+                    Object.keys(chats).forEach(tabId => {
+                        if (tabId !== 'default') {
+                            createTabElement(tabId);
+                        }
+                    });
+                }
+            } catch (e) {
+                console.log('No saved chats');
+            }
+        }
+        
+        // Save chats to localStorage
+        function saveChatsToStorage() {
+            try {
+                localStorage.setItem('ai_chats', JSON.stringify(chats));
+            } catch (e) {
+                console.log('Could not save chats');
+            }
+        }
+        
+        function createTabElement(tabId) {
+            const tab = document.createElement('button');
+            tab.className = 'chat-tab';
+            tab.id = 'tab_' + tabId;
+            tab.onclick = () => switchTab(tabId);
+            tab.innerHTML = `Chat ${tabId.slice(-1)} <span class="close-tab" onclick="event.stopPropagation(); closeTab('${tabId}')">×</span>`;
+            chatTabs.insertBefore(tab, chatTabs.lastElementChild);
+        }
+        
+        function createNewChat() {
+            const newId = 'chat_' + Date.now();
+            chats[newId] = [];
+            createTabElement(newId);
+            switchTab(newId);
+        }
+        
+        function switchTab(tabId) {
+            // Save current chat
+            chats[currentTab] = chatHistory;
+            saveChatsToStorage();
+            
+            // Switch
+            currentTab = tabId;
+            chatHistory = chats[tabId] || [];
+            
+            // Update tab UI
+            document.querySelectorAll('.chat-tab').forEach(t => t.classList.remove('active'));
+            const tabEl = document.getElementById('tab_' + tabId);
+            if (tabEl) tabEl.classList.add('active');
+            
+            // Render messages
+            renderMessages();
+        }
+        
+        function closeTab(tabId) {
+            if (Object.keys(chats).length <= 1) {
+                alert('Cannot close the last chat');
+                return;
+            }
+            delete chats[tabId];
+            
+            const tabEl = document.getElementById('tab_' + tabId);
+            if (tabEl) tabEl.remove();
+            
+            // Switch to first remaining tab
+            const firstTab = Object.keys(chats)[0];
+            switchTab(firstTab);
+            saveChatsToStorage();
+        }
+        
+        function renderMessages() {
+            chatContainer.innerHTML = '';
+            chatHistory.forEach(msg => {
+                const isUser = msg.role === 'user';
+                addMessage(msg.content, isUser, isUser ? null : msg.model);
+            });
+            
+            if (chatHistory.length === 0) {
+                chatContainer.innerHTML = `
+                    <div class="message ai-message">
+                        <div class="model-tag">System</div>
+                        Hello! I'm your AI assistant. Select a model from the dropdown and start chatting. All conversations stay within the app!
+                    </div>
+                `;
+            }
+        }
+        
+        // Simple markdown parser
+        function parseMarkdown(text) {
+            let html = text
+                .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+                .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+                .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+                .replace(/\n/g, '<br>');
+            return html;
+        }
+        
+        function addMessage(text, isUser, modelInfo = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', isUser ? 'user-message' : 'ai-message');
+            
+            if (!isUser && modelInfo) {
+                const tagDiv = document.createElement('div');
+                tagDiv.className = 'model-tag';
+                tagDiv.textContent = modelInfo;
+                messageDiv.appendChild(tagDiv);
+                
+                // Add actions for AI messages
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'actions';
+                
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'action-btn';
+                copyBtn.textContent = '📋 Copy';
+                copyBtn.onclick = () => {
+                    navigator.clipboard.writeText(text);
+                    copyBtn.textContent = '✓ Copied!';
+                    setTimeout(() => copyBtn.textContent = '📋 Copy', 2000);
+                };
+                actionsDiv.appendChild(copyBtn);
+                
+                const regenerateBtn = document.createElement('button');
+                regenerateBtn.className = 'action-btn';
+                regenerateBtn.textContent = '🔄 Regenerate';
+                regenerateBtn.onclick = () => {
+                    if (chatHistory.length > 0 && chatHistory[chatHistory.length - 1].role === 'assistant') {
+                        // Remove last assistant message and retry
+                        chatHistory.pop();
+                        const lastUser = chatHistory.pop();
+                        if (lastUser) {
+                            chatHistory.push(lastUser);
+                            sendMessage(true);
+                        }
+                    }
+                };
+                actionsDiv.appendChild(regenerateBtn);
+                
+                messageDiv.appendChild(actionsDiv);
+            }
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'markdown-content';
+            contentDiv.innerHTML = isUser ? text : parseMarkdown(text);
+            messageDiv.appendChild(contentDiv);
+            
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        // Voice input using Web Speech API
+        function toggleVoice() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                alert('Voice input not supported in this browser. Try Chrome.');
+                return;
+            }
+            
+            if (isRecording) {
+                if (recognition) recognition.stop();
+                return;
+            }
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            
+            recognition.onstart = () => {
+                isRecording = true;
+                voiceBtn.classList.add('recording');
+                voiceBtn.textContent = '🛑';
+            };
+            
+            recognition.onresult = (event) => {
+                let transcript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    transcript += event.results[i][0].transcript;
+                }
+                userInput.value = transcript;
+            };
+            
+            recognition.onerror = (event) => {
+                console.error('Voice error:', event.error);
+                stopRecording();
+            };
+            
+            recognition.onend = () => {
+                stopRecording();
+            };
+            
+            recognition.start();
+        }
+        
+        function stopRecording() {
+            isRecording = false;
+            voiceBtn.classList.remove('recording');
+            voiceBtn.textContent = '🎤';
+        }
         
         // Load available models
         async function loadModels() {
@@ -289,22 +613,6 @@
             }
         }
         
-        function addMessage(text, isUser, modelInfo = null) {
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message', isUser ? 'user-message' : 'ai-message');
-            
-            if (!isUser && modelInfo) {
-                messageDiv.innerHTML = `<div class="model-tag">${modelInfo}</div>`;
-            }
-            
-            const textSpan = document.createElement('span');
-            textSpan.textContent = text;
-            messageDiv.appendChild(textSpan);
-            
-            chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-        
         function showTyping() {
             const typingDiv = document.createElement('div');
             typingDiv.classList.add('typing-indicator');
@@ -319,13 +627,18 @@
             if (indicator) indicator.remove();
         }
         
-        async function sendMessage() {
+        async function sendMessage(isRegenerate = false) {
             const message = userInput.value.trim();
-            if (!message) return;
+            if (!message && !isRegenerate) return;
             
-            // Add user message
-            addMessage(message, true);
-            userInput.value = '';
+            const sendMsg = isRegenerate ? chatHistory.filter(m => m.role === 'user').pop()?.content : message;
+            if (!sendMsg && !isRegenerate) return;
+            
+            // Add user message only if not regenerating
+            if (!isRegenerate) {
+                addMessage(message, true);
+                userInput.value = '';
+            }
             
             // Disable input while loading
             userInput.disabled = true;
@@ -333,7 +646,7 @@
             showTyping();
             
             // Add to history
-            chatHistory.push({ role: 'user', content: message });
+            chatHistory.push({ role: 'user', content: sendMsg });
             
             try {
                 const modelId = modelSelect.value;
@@ -344,10 +657,10 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        message: message,
+                        message: sendMsg,
                         modelId: modelId,
                         provider: provider,
-                        history: chatHistory.slice(-5) // Last 5 messages
+                        history: chatHistory.slice(-6, -1) // Last 5 messages (excluding current)
                     })
                 });
                 
@@ -358,7 +671,8 @@
                     addMessage(`Error: ${data.error}`, false, 'Error');
                 } else {
                     addMessage(data.reply, false, `${data.provider} • ${data.model}`);
-                    chatHistory.push({ role: 'assistant', content: data.reply });
+                    chatHistory.push({ role: 'assistant', content: data.reply, model: data.model });
+                    saveChatsToStorage();
                 }
             } catch (err) {
                 removeTyping();
@@ -371,17 +685,14 @@
         }
         
         function clearChat() {
-            chatContainer.innerHTML = `
-                <div class="message ai-message">
-                    <div class="model-tag">System</div>
-                    Chat cleared. Select a model and start a new conversation!
-                </div>
-            `;
             chatHistory = [];
+            renderMessages();
+            saveChatsToStorage();
         }
         
         // Initialize
         loadModels();
+        loadChatsFromStorage();
         userInput.focus();
     </script>
 </body>
