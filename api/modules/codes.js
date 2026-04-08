@@ -387,9 +387,19 @@ router.post('/send-codes', async (req, res) => {
       })
     }
 
+    // Get sender's new balance after transfer
+    const newBalanceResult = await query(
+      'SELECT COUNT(*) as count FROM codes WHERE user_id = $1 AND spent = 0',
+      [identity.userId]
+    )
+    const newBalance = parseInt(newBalanceResult.rows[0]?.count || '0', 10)
+
     res.json({
       success: true,
+      ok: true,
       message: 'CODES_SENT_SUCCESSFULLY',
+      txId: crypto.randomUUID(),
+      newBalance: newBalance,
       sentCodesCount: codesToSend.length,
       receiverEmail: receiverEmail
     })
