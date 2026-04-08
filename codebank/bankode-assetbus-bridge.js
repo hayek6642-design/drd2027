@@ -130,7 +130,7 @@
             const data = e.data;
             if (!data) return;
             
-            console.log('[Bridge] Iframe received:', data.type);
+            console.log('[Bridge] Iframe received:', data.type, data);
             
             // Handle asset snapshots
             if (data.type === 'assetbus:snapshot' || data.type === 'CODEBANK_ASSETS_SYNC') {
@@ -169,6 +169,16 @@
         });
         
         console.log('[Bridge] Early iframe proxy installed');
+        
+        // 🚀 CRITICAL FIX: Request assets immediately on load (not just on subscribe)
+        setTimeout(() => {
+            window.parent.postMessage({
+                type: 'bridge:request-assets',
+                source: 'safecode-iframe',
+                timestamp: Date.now()
+            }, '*');
+            console.log('[Bridge] Initial asset request sent');
+        }, 100);
     }
 
     // ==========================================

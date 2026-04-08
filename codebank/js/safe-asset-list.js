@@ -1252,10 +1252,23 @@
     window.ACTIVE_ASSET_TAB = activeTab;
 
     // 🛡️ CROSS-IFRAME FIX: Resolve snapshot from multiple sources
+    console.log('[SafeAssetList] renderSafeAssets called, tab:', activeTab, 'providedSnapshot:', !!providedSnapshot);
+    
+    const _localStorageFallback = (() => { 
+        try { 
+            const _raw = localStorage.getItem('codebank_assets'); 
+            console.log('[SafeAssetList] localStorage codebank_assets:', _raw ? 'exists' : 'none');
+            return _raw ? JSON.parse(_raw) : null; 
+        } catch(_e) { 
+            console.log('[SafeAssetList] localStorage read failed:', _e.message);
+            return null; 
+        } 
+    })();
+    
     const snapshot = providedSnapshot || 
       ((window.AssetBus && typeof window.AssetBus.snapshot === 'function') ? window.AssetBus.snapshot() : null) ||
       (window.top && typeof window.top.GET_AUTHORITATIVE_ASSETS === 'function' ? window.top.GET_AUTHORITATIVE_ASSETS() : null) ||
-      (() => { try { const _raw = localStorage.getItem('codebank_assets'); return _raw ? JSON.parse(_raw) : null; } catch(_e) { return null; } })();
+      _localStorageFallback;
 
     // Check if container exists or try to find it (strict selector only)
     const cont = container || document.querySelector(CODEBANK_CONTAINER_SELECTOR);
