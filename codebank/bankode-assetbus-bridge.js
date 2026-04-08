@@ -6,6 +6,38 @@
     'use strict';
 
     // ==========================================
+    // GLOBAL CONSOLE RATE LIMITER - Prevent console spam
+    // ==========================================
+    const __consoleRateLimit = { counts: new Map(), lastClear: 0 };
+    const __originalLog = console.log;
+    const __originalWarn = console.warn;
+    const __originalError = console.error;
+    
+    function __rateLimitedLog(fn, args, category, maxPerMinute = 10) {
+        const now = Date.now();
+        if (now - __consoleRateLimit.lastClear > 60000) {
+            __consoleRateLimit.counts.clear();
+            __consoleRateLimit.lastClear = now;
+        }
+        const key = category || args.join('').slice(0, 40);
+        const count = (__consoleRateLimit.counts.get(key) || 0) + 1;
+        __consoleRateLimit.counts.set(key, count);
+        if (count <= maxPerMinute) {
+            fn.apply(console, args);
+        }
+    }
+    
+    console.log = function(...args) {
+        __rateLimitedLog(__originalLog, args, null, 20);
+    };
+    console.warn = function(...args) {
+        __rateLimitedLog(__originalWarn, args, 'warn', 30);
+    };
+    console.error = function(...args) {
+        __rateLimitedLog(__originalError, args, 'error', 50);
+    };
+
+    // ==========================================
     // RELIABLE IFRAME DETECTION
     // ==========================================
     function isInIframe() {
@@ -237,8 +269,9 @@
 
     if (window.DEBUG_MODE) console.log("[AssetBridge] Global Provider is ACTIVE.");
 
-    // Enable debug mode
-    window.DEBUG_MODE = true;
+    // Enable debug mode - set to true for verbose logging
+    // WARNING: Setting to true will spam console with sync logs!
+    window.DEBUG_MODE = false;
     
     // ==========================================
     // IFRAME ASSETBUS PROXY - For SafeCode iframe communication

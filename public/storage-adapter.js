@@ -11,6 +11,16 @@
   let isHealing = false;
   let lastCheck = 0;
   window.DEBUG_MODE = false; // Set to true in console to see verbose logs
+  
+  // Throttle console logs to prevent spam
+  const __logThrottle = new Map();
+  function __throttledLog(key, ...args) {
+    const now = Date.now();
+    const last = __logThrottle.get(key) || 0;
+    if (now - last < 3000) return; // Only log once per 3 seconds per key
+    __logThrottle.set(key, now);
+    console.log(...args);
+  }
 
   //  WEB STORAGE (IndexedDB - The Code Vault)
   const WebStorage = {
@@ -93,7 +103,7 @@
       //  3. Double Save Protection (Requirement 5)
       const isDuplicate = await this.checkDuplicate(code);
       if (isDuplicate) {
-        if (window.DEBUG_MODE) console.log('[VAULT][SKIP] Code already exists, ignoring double save:', code);
+        __throttledLog('skip-duplicate', '[VAULT][SKIP] Code already exists, ignoring double save:', code);
         return true; 
       }
       
