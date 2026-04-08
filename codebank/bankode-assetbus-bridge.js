@@ -103,9 +103,14 @@
 
     if (window.DEBUG_MODE) console.log("[AssetBridge] Global Provider is ACTIVE.");
 
+    // Enable debug mode
+    window.DEBUG_MODE = true;
+    
     // ==========================================
     // IFRAME ASSETBUS PROXY - For SafeCode iframe communication
     // ==========================================
+    console.log('[Bridge] Parent check: window.parent !== window =', window.parent !== window);
+    
     if (window.parent !== window) {
         console.log('[Bridge] Running in iframe mode, creating IframeAssetBusProxy');
         
