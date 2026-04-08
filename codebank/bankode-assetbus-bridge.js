@@ -109,6 +109,12 @@
     if (window.parent !== window) {
         console.log('[Bridge] Running in iframe mode, creating IframeAssetBusProxy');
         
+        // Expose for debugging
+        window.BankodeAssetBusBridge = {
+            mode: 'iframe',
+            createdAt: Date.now()
+        };
+        
         class IframeAssetBusProxy {
             constructor() {
                 this.listeners = new Map();
@@ -129,6 +135,8 @@
                     const data = e.data;
                     if (!data) return;
                     
+                    console.log('[Bridge] Received message:', data.type, data);
+                    
                     // Handle asset snapshot from parent (bridge:request-assets response)
                     if (data.type === 'assetbus:snapshot' || data.type === 'CODEBANK_ASSETS_SYNC') {
                         console.log('[Bridge] Received asset snapshot from parent:', data);
@@ -141,6 +149,8 @@
                         window.dispatchEvent(new CustomEvent('assets:updated', { 
                             detail: this._snapshot 
                         }));
+                        
+                        console.log('[Bridge] Dispatched events, snapshot now:', this._snapshot);
                     }
                     
                     // Handle assets:sync from indexCB.html
@@ -155,6 +165,8 @@
                         window.dispatchEvent(new CustomEvent('assets:updated', { 
                             detail: this._snapshot 
                         }));
+                        
+                        console.log('[Bridge] Dispatched events from assets:sync, snapshot now:', this._snapshot);
                     }
                     
                     // Handle direct asset updates
@@ -166,11 +178,24 @@
             
             requestAssets() {
                 // Request initial assets from parent
+                console.log('[Bridge] Requesting assets from parent');
                 window.parent.postMessage({
                     type: 'bridge:request-assets',
                     source: 'safecode',
                     timestamp: Date.now()
                 }, '*');
+                
+                // Retry after 2 seconds in case parent wasn't ready
+                setTimeout(() => {
+                    if (!this._snapshot) {
+                        console.log('[Bridge] Retrying asset request');
+                        window.parent.postMessage({
+                            type: 'bridge:request-assets',
+                            source: 'safecode-retry',
+                            timestamp: Date.now()
+                        }, '*');
+                    }
+                }, 2000);
             }
             
             subscribe(event, callback) {
