@@ -104,6 +104,147 @@
     if (window.DEBUG_MODE) console.log("[AssetBridge] Global Provider is ACTIVE.");
 
     // ==========================================
+    // IFRAME ASSETBUS PROXY - For SafeCode iframe communication
+    // ==========================================
+    if (window.parent !== window) {
+        console.log('[Bridge] Running in iframe mode, creating IframeAssetBusProxy');
+        
+        class IframeAssetBusProxy {
+            constructor() {
+                this.listeners = new Map();
+                this._ready = false;
+                this._readyResolve = null;
+                this._snapshot = null;
+                
+                this.setupListener();
+                this.requestAssets();
+                
+                // Signal ready
+                this._ready = true;
+                window.dispatchEvent(new CustomEvent('assetbus-ready'));
+            }
+            
+            setupListener() {
+                window.addEventListener('message', (e) => {
+                    const data = e.data;
+                    if (!data) return;
+                    
+                    // Handle asset snapshot from parent (bridge:request-assets response)
+                    if (data.type === 'assetbus:snapshot' || data.type === 'CODEBANK_ASSETS_SYNC') {
+                        console.log('[Bridge] Received asset snapshot from parent:', data);
+                        this._snapshot = data.data || data.payload;
+                        
+                        // Dispatch events for safe-asset-list.js
+                        window.dispatchEvent(new CustomEvent('sqlite:snapshot', { 
+                            detail: this._snapshot 
+                        }));
+                        window.dispatchEvent(new CustomEvent('assets:updated', { 
+                            detail: this._snapshot 
+                        }));
+                    }
+                    
+                    // Handle assets:sync from indexCB.html
+                    if (data.type === 'assets:sync' && data.assets) {
+                        console.log('[Bridge] Received assets:sync from parent:', data);
+                        this._snapshot = data.assets;
+                        
+                        // Dispatch events for safe-asset-list.js
+                        window.dispatchEvent(new CustomEvent('sqlite:snapshot', { 
+                            detail: this._snapshot 
+                        }));
+                        window.dispatchEvent(new CustomEvent('assets:updated', { 
+                            detail: this._snapshot 
+                        }));
+                    }
+                    
+                    // Handle direct asset updates
+                    if (data.type && data.type.startsWith('assetbus:')) {
+                        this.handleMessage(data);
+                    }
+                });
+            }
+            
+            requestAssets() {
+                // Request initial assets from parent
+                window.parent.postMessage({
+                    type: 'bridge:request-assets',
+                    source: 'safecode',
+                    timestamp: Date.now()
+                }, '*');
+            }
+            
+            subscribe(event, callback) {
+                if (!this.listeners.has(event)) {
+                    this.listeners.set(event, new Set());
+                }
+                this.listeners.get(event).add(callback);
+                
+                // Subscribe in parent too
+                window.parent.postMessage({
+                    type: 'assetbus:subscribe',
+                    event: event
+                }, '*');
+                
+                return () => this.unsubscribe(event, callback);
+            }
+            
+            unsubscribe(event, callback) {
+                this.listeners.get(event)?.delete(callback);
+            }
+            
+            publish(event, data) {
+                window.parent.postMessage({
+                    type: 'assetbus:publish',
+                    event: event,
+                    data: data
+                }, '*');
+            }
+            
+            handleMessage(msg) {
+                if (msg.type === 'assetbus:broadcast' && msg.event) {
+                    this.listeners.get(msg.event)?.forEach(cb => {
+                        try { cb(msg.data); } catch(e) {}
+                    });
+                }
+            }
+            
+            snapshot() {
+                return this._snapshot;
+            }
+            
+            getSnapshot() {
+                return new Promise((resolve) => {
+                    if (this._snapshot) {
+                        resolve(this._snapshot);
+                        return;
+                    }
+                    
+                    const handler = (e) => {
+                        if (e.data?.type === 'assetbus:snapshot' || e.data?.type === 'CODEBANK_ASSETS_SYNC') {
+                            window.removeEventListener('message', handler);
+                            resolve(e.data.data || e.data.payload);
+                        }
+                    };
+                    window.addEventListener('message', handler);
+                    
+                    // Request from parent
+                    this.requestAssets();
+                    
+                    setTimeout(() => resolve(this._snapshot), 3000);
+                });
+            }
+            
+            sync() {
+                this.requestAssets();
+            }
+        }
+        
+        // Install the proxy
+        window.AssetBus = new IframeAssetBusProxy();
+        console.log('[Bridge] IframeAssetBusProxy installed');
+    }
+
+    // ==========================================
     // ASSET SNAPSHOT + SYNC (injected onto AssetBus)
     // ==========================================
     let _snapshotCache = null;
