@@ -15,7 +15,8 @@ router.use((req, res, next) => {
 // POST /api/ai/agent - Run AI agent with message
 router.post('/agent', async (req, res) => {
   try {
-    const { message, context = {} } = req.body;
+    const body = req.body || {};
+    const { message, context = {} } = body;
     const user = req.user;
     
     if (!message) {
@@ -54,7 +55,8 @@ router.post('/agent', async (req, res) => {
 // POST /api/ai/execute - Execute AI command
 router.post('/execute', async (req, res) => {
   try {
-    const { action } = req.body;
+    const body = req.body || {};
+    const { action } = body;
     
     if (!action) {
       return res.status(400).json({ success: false, error: 'Action required' });
