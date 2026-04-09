@@ -1693,15 +1693,14 @@ document.addEventListener('touchstart', resetAutoLock, {passive:true});
 function loadInteriorAssets() {
   let codes=0, silver=0, gold=0;
   try {
-    // Try AssetBus from parent frame (Codebank integration)
-    const bus = window.AssetBus
-      || window.parent?.AssetBus
-      || window.parent?.parent?.AssetBus;
-    if (bus) {
-      const snap = bus.snapshot();
-      codes  = (snap.codes  || []).length;
-      silver = (snap.silver || []).length;
-      gold   = (snap.gold   || []).length;
+    // Read directly from AppState (same-origin parent or own window)
+    const state = window.AppState
+      || window.parent?.AppState
+      || window.parent?.parent?.AppState;
+    if (state && state.assets) {
+      codes  = (state.assets.codes  || []).length;
+      silver = (state.assets.silver || []).length;
+      gold   = (state.assets.gold   || []).length;
     }
   } catch(_) {}
 
