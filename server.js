@@ -313,7 +313,6 @@ app.use('/api/samma3ny', sammAutoRouter);
 app.use('/api/likes', likesRouter);
 app.use('/api/drmail', drmailRouter);
 app.use('/api/quota',  quotaRouter);
-app.use('/api/ai',    aiRouter);     // Platform Manager AI Agent
 
 // AUTH REMOVED — CLEAN RESET
 
