@@ -14,6 +14,7 @@
       gold: 'https://cdn-icons-png.flaticon.com/512/2489/2489745.png'
     };
     const CODEBANK_CONTAINER_SELECTOR = '#safe-assets-container';
+    const _tabCache = {}; // Per-tab data cache to survive snapshot gaps during tab switches
 
     // Consolidate rendering to renderSafeAssets
     function bruteForceManifest() {
@@ -1275,6 +1276,12 @@
     
     const seriesKey = TAB_MAP[activeTab] || 'codes';
     let list = Array.isArray(snapshot[seriesKey]) ? snapshot[seriesKey] : [];
+
+    // 🛡️ TAB-SWITCH CACHE: If snapshot returned empty but we previously had data for this tab, use the cache
+    if (list.length === 0 && _tabCache[seriesKey] && _tabCache[seriesKey].length > 0 && !isAuthoritative) {
+      console.warn('[SafeAssetList] Snapshot empty for tab:', seriesKey, '— using tab cache (', _tabCache[seriesKey].length, 'items)');
+      list = _tabCache[seriesKey].slice(); // use cached data
+    }
     
     // 🛡️ CRITICAL FIX: Enhanced State Protection
      // We only allow clearing the list if:
@@ -1331,6 +1338,9 @@
       const val = (item && typeof item === 'object') ? (item.code || '') : String(item || '');
       return !committedCodes.has(String(val));
     });
+
+    // 💾 Cache this tab's data for future tab switches
+    if (list.length > 0) _tabCache[seriesKey] = list.slice();
 
     const count = list.length;
     const last = count > 0 ? list[count - 1] : '—';
