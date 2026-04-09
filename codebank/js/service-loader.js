@@ -13,14 +13,16 @@
 
         init(containerEl) {
             // Create or reuse iframe inside the container
-            let iframe = containerEl.querySelector('iframe#service-iframe');
+            // Check for service-modal-iframe first (from indexCB.html), then service-iframe (fallback)
+            let iframe = containerEl.querySelector('iframe#service-modal-iframe') || containerEl.querySelector('iframe#service-iframe');
             if (!iframe) {
                 iframe = document.createElement('iframe');
-                iframe.id = 'service-iframe';
+                iframe.id = 'service-modal-iframe';
                 iframe.style.cssText =
                     'width:100%;height:100%;border:none;display:block;' +
                     'background:#0f172a;';
                 iframe.setAttribute('allow', 'autoplay; clipboard-write; fullscreen');
+                iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-top-navigation-by-user-activation');
                 containerEl.innerHTML = '';
                 containerEl.appendChild(iframe);
             }

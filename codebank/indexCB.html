@@ -687,8 +687,9 @@
                     <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
                     <span data-i18n="loading_service">Loading Service...</span>
                 </div>
-                <!-- Services injected directly — no iframe needed -->
-                <div id="service-content-container" style="width:100%;height:100%;overflow:hidden;position:relative;"></div>
+                <!-- Services injected via iframe (service-modal-iframe) - content container hidden -->
+                <iframe id="service-modal-iframe" style="width:100%;height:100%;border:none;display:block;background:#0f172a;" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-top-navigation-by-user-activation"></iframe>
+                <div id="service-content-container" style="width:100%;height:100%;overflow:hidden;position:relative;display:none;"></div>
             </div>
         </div>
 
