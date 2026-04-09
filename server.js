@@ -277,6 +277,13 @@ watchdog.setDb(query);
 // which meant req.cookies was always undefined inside every API router.
 app.use(cookieParser());
 
+// Parse JSON body BEFORE routes are mounted
+app.use(express.json({
+  verify: (req, _res, buf) => {
+    req.rawBody = buf;
+  },
+}));
+
 // Register WatchDog routes
 app.use('/api/watchdog', watchdogRoutes);
 
@@ -361,11 +368,6 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json({
-  verify: (req, _res, buf) => {
-    req.rawBody = buf;
-  },
-}));
 app.use(express.urlencoded({ extended: true }));
 
 // ✅ Keep-alive ping endpoint (prevents Render free-tier cold starts)
