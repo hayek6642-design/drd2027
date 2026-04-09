@@ -315,10 +315,12 @@
               return data;
             }
           }
-          // Fall back to localStorage
+          // 🔒 SECURITY: Fall back to localStorage with user verification
           try {
             const raw = localStorage.getItem('codebank_assets');
-            if (raw) {
+            const cachedUser = localStorage.getItem('codebank_assets_user');
+            const currentUser = window.AppState?.user?.id || window.AppState?.user?.userId;
+            if (raw && cachedUser === currentUser) {
               const parsed = JSON.parse(raw);
               if (parsed) {
                 if (parsed.codes && parsed.codes.length > 0) window.AssetBus._store.codes = parsed.codes;
