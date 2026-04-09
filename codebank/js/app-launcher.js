@@ -152,70 +152,58 @@ function tryOpenService(app, fallbackIndex = 0) {
 // Initialize the launcher UI
 export function initLauncher() {
     console.log('[AppLauncher] Initializing...');
-    
-    // Categories and their container IDs
-    const categories = {
-        core: 'core-apps',
-        media: 'media-apps',
-        finance: 'finance-apps',
-        games: 'games-apps',
-        tools: 'tools-apps'
-    };
 
-    // Render each category
-    Object.entries(categories).forEach(([category, containerId]) => {
-        const container = document.getElementById(containerId);
-        if (!container) return;
+    const container = document.getElementById('all-apps');
+    if (!container) return;
+    container.innerHTML = '';
 
-        // Clear container
-        container.innerHTML = '';
+    // All apps from every category in one flat list
+    const allApps = [
+        ...(AppRegistry.core    || []),
+        ...(AppRegistry.media   || []),
+        ...(AppRegistry.finance || []),
+        ...(AppRegistry.games   || []),
+        ...(AppRegistry.tools   || [])
+    ];
 
-        // Get apps for this category
-        const apps = AppRegistry[category] || [];
-        
-        apps.forEach(app => {
-            const card = document.createElement('div');
-            card.className = 'app-card app-card-tile';
-            card.setAttribute('data-id', app.id);
+    allApps.forEach(app => {
+        const card = document.createElement('div');
+        card.className = 'app-card app-launcher-icon';
+        card.setAttribute('data-id', app.id);
 
-            // Neon tile border — color comes from app.color
-            const tileColor = app.color || '#6366f1';
-            card.style.cssText = `border: 2px solid ${tileColor}; box-shadow: 0 0 16px ${tileColor}44;`;
+        const tileColor = app.color || '#6366f1';
 
-            // Icon wrapper
-            const iconWrapper = document.createElement('div');
-            iconWrapper.className = 'app-icon-wrapper';
+        // Icon wrapper — rounded square like iOS/Android
+        const iconWrapper = document.createElement('div');
+        iconWrapper.className = 'app-icon-wrapper';
+        iconWrapper.style.cssText = `background: ${tileColor}22; border-radius: 18px; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;`;
 
-            const icon = document.createElement('i');
-            // Ensure font-awesome classes are correct
-            const iconClass = app.icon.startsWith('fa-') ? `fas ${app.icon}` : app.icon;
-            icon.className = iconClass;
-            icon.style.color = tileColor;
+        const icon = document.createElement('i');
+        const iconClass = app.icon.startsWith('fa-') ? `fas ${app.icon}` : app.icon;
+        icon.className = iconClass;
+        icon.style.cssText = `color: ${tileColor}; font-size: 26px;`;
 
-            iconWrapper.appendChild(icon);
+        iconWrapper.appendChild(icon);
 
-            // App name
-            const name = document.createElement('span');
-            name.className = 'app-tile-name';
-            name.textContent = app.name;
+        // App name
+        const name = document.createElement('span');
+        name.className = 'app-tile-name';
+        name.textContent = app.name;
 
-            // Badge (if exists)
-            if (app.badge) {
-                const badge = document.createElement('div');
-                badge.className = 'app-tile-badge';
-                badge.textContent = app.badge;
-                badge.style.backgroundColor = tileColor;
-                card.appendChild(badge);
-            }
+        // Badge (if exists)
+        if (app.badge) {
+            const badge = document.createElement('div');
+            badge.className = 'app-tile-badge';
+            badge.textContent = app.badge;
+            badge.style.backgroundColor = tileColor;
+            card.appendChild(badge);
+        }
 
-            card.appendChild(iconWrapper);
-            card.appendChild(name);
-            
-            // Click handler
-            card.addEventListener('click', () => tryOpenService(app, 0));
-            
-            container.appendChild(card);
-        });
+        card.appendChild(iconWrapper);
+        card.appendChild(name);
+
+        card.addEventListener('click', () => tryOpenService(app, 0));
+        container.appendChild(card);
     });
 
     // Set up modal controls if not already done

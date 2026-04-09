@@ -398,71 +398,71 @@
             padding-left: 2px !important;
         }
 
-        /* 3. 4-column neon tile grid */
-        .app-grid {
+        /* 3. Phone-launcher app grid — no rectangles, icons only */
+        .app-launcher-grid {
             display: grid !important;
-            grid-template-columns: repeat(4, 1fr) !important;
-            gap: 10px !important;
+            grid-template-columns: repeat(5, 1fr) !important;
+            gap: 20px 12px !important;
+            padding: 16px !important;
         }
         @media (max-width: 640px) {
-            .app-grid { grid-template-columns: repeat(2, 1fr) !important; }
+            .app-launcher-grid { grid-template-columns: repeat(4, 1fr) !important; gap: 16px 8px !important; }
+        }
+        @media (max-width: 400px) {
+            .app-launcher-grid { grid-template-columns: repeat(4, 1fr) !important; gap: 12px 6px !important; }
         }
 
-        /* 4. Tile card base */
-        .app-card-tile {
+        /* 4. Phone-launcher icon card — transparent, no border, no bg */
+        .app-launcher-icon {
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
-            justify-content: center !important;
-            background: rgba(255,255,255,0.04) !important;
-            border-radius: 10px !important;
-            padding: 18px 10px 13px !important;
-            min-height: 82px !important;
+            justify-content: flex-start !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 4px 2px !important;
             cursor: pointer !important;
             position: relative !important;
-            gap: 9px !important;
-            /* border + box-shadow come from inline style (per-app color) */
-        }
-        .app-card-tile:hover {
-            background: rgba(255,255,255,0.09) !important;
-            transform: translateY(-3px) !important;
-        }
-        .app-card-tile:active {
-            transform: scale(0.96) !important;
-        }
-
-        /* 5. Icon inside tile */
-        .app-card-tile .app-icon-wrapper {
-            width: auto !important;
-            height: auto !important;
-            background: none !important;
+            gap: 7px !important;
             border-radius: 0 !important;
-            font-size: 24px !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            /* color comes from inline style via app.color */
+        }
+        .app-launcher-icon:hover .app-icon-wrapper {
+            transform: scale(1.12) !important;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4) !important;
+        }
+        .app-launcher-icon:active .app-icon-wrapper {
+            transform: scale(0.92) !important;
+        }
+        .app-launcher-icon,
+        .app-launcher-icon:hover,
+        .app-launcher-icon:active {
+            transition: none !important;
+        }
+        .app-launcher-icon .app-icon-wrapper {
+            transition: transform 0.15s var(--spring, ease), box-shadow 0.15s ease !important;
         }
 
-        /* 6. App name */
+        /* 6. App name under icon */
         .app-tile-name {
-            font-size: 11px !important;
-            font-weight: 600 !important;
-            color: rgba(255,255,255,0.88) !important;
+            font-size: 10px !important;
+            font-weight: 500 !important;
+            color: rgba(255,255,255,0.85) !important;
             text-align: center !important;
             line-height: 1.3 !important;
-            max-width: 100% !important;
+            max-width: 68px !important;
             overflow: hidden !important;
             text-overflow: ellipsis !important;
             white-space: nowrap !important;
             letter-spacing: 0.01em !important;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important;
         }
 
-        /* 7. Small badge top-right */
+        /* 7. Small badge top-right of icon wrapper */
         .app-tile-badge {
             position: absolute !important;
-            top: 5px !important;
-            right: 5px !important;
+            top: -2px !important;
+            right: 4px !important;
             font-size: 7px !important;
             font-weight: 800 !important;
             color: #fff !important;
@@ -471,19 +471,9 @@
             text-transform: uppercase !important;
             letter-spacing: 0.06em !important;
             line-height: 1.4 !important;
+            z-index: 2 !important;
         }
-
-        /* 8. Allow transitions & box-shadow on tiles
-               (overrides the perf-mode global suppression) */
-        .app-card-tile,
-        .app-card-tile:hover,
-        .app-card-tile:active {
-            transition: transform 0.15s ease, background 0.15s ease !important;
-        }
-        .app-card-tile {
-            box-shadow: var(--tile-glow, none) !important;
-        }
-        /* End MODERN DARK TILE SKIN */
+        /* End PHONE LAUNCHER SKIN */
     
         /* ============================================================
            📱 PORTRAIT MOBILE — Full responsive overrides
@@ -538,9 +528,9 @@
 
         /* ── App grid: max 2 cols on all phone sizes ── */
         @media (max-width: 480px) {
-            .app-grid {
-                grid-template-columns: repeat(2, 1fr) !important;
-                gap: 8px !important;
+            .app-launcher-grid {
+                grid-template-columns: repeat(4, 1fr) !important;
+                gap: 10px 6px !important;
             }
         }
 
@@ -601,15 +591,13 @@
 
         /* ── App card tiles: ensure visibility ── */
         @media (max-width: 480px) {
-            .app-card-tile {
-                padding: 12px 6px 10px !important;
-                min-height: 70px !important;
-            }
-            .app-card-tile .app-icon-wrapper {
-                font-size: 20px !important;
+            .app-launcher-icon .app-icon-wrapper {
+                width: 52px !important;
+                height: 52px !important;
             }
             .app-tile-name {
                 font-size: 9px !important;
+                max-width: 56px !important;
             }
         }
 
@@ -652,33 +640,8 @@
         <!-- Main Launcher Grid -->
         <main class="container mx-auto py-8">
 
-            <!-- App Sections (Injected by app-launcher.js) -->
-            <div id="launcher-grid">
-                <section class="launcher-section">
-                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6" data-i18n="core_services">Core Services</h2>
-                    <div class="app-grid" id="core-apps"></div>
-                </section>
-
-                <section class="launcher-section">
-                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6" data-i18n="media_entertainment">Media & Entertainment</h2>
-                    <div class="app-grid" id="media-apps"></div>
-                </section>
-
-                <section class="launcher-section">
-                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6" data-i18n="finance_trading">Finance & Trading</h2>
-                    <div class="app-grid" id="finance-apps"></div>
-                </section>
-
-                <section class="launcher-section">
-                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6" data-i18n="games_fun">Games & Fun</h2>
-                    <div class="app-grid" id="games-apps"></div>
-                </section>
-
-                <section class="launcher-section">
-                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6" data-i18n="tools_ai">Tools & AI</h2>
-                    <div class="app-grid" id="tools-apps"></div>
-                </section>
-            </div>
+            <!-- Flat App Grid — phone launcher style -->
+            <div id="all-apps" class="app-launcher-grid"></div>
         </main>
 
         <!-- App Runner View -->
