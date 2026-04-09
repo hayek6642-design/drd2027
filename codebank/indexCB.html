@@ -948,6 +948,25 @@
                         return;
                     }
                     
+                    // 🚀 DEFERRR: Wait for assets to be populated before sending
+                    async function waitForAssets(maxAttempts = 30) {
+                        let attempts = 0;
+                        while (attempts < maxAttempts) {
+                            const assets = window.AppState?.assets;
+                            const hasCodes = assets?.codes?.length > 0;
+                            const hasSilver = assets?.silver?.length > 0;
+                            const hasGold = assets?.gold?.length > 0;
+                            
+                            if (hasCodes || hasSilver || hasGold || attempts > 10) {
+                                return window.AppState?.assets || {};
+                            }
+                            
+                            await new Promise(r => setTimeout(r, 100));
+                            attempts++;
+                        }
+                        return window.AppState?.assets || {};
+                    }
+                    
                     // Get user from multiple possible localStorage keys
                     let userData = null;
                     try {
@@ -955,29 +974,39 @@
                     } catch(_) {}
                     const sessionId = localStorage.getItem('session_token') || localStorage.getItem('__cached_session_id__') || '';
                     
-                    // 🛡️ Get codes + full assets from AssetBus
-                    let codes = [];
-                    let assetSnapshot = {};
-                    if (window.AssetBus && typeof window.AssetBus.snapshot === 'function') {
-                        const snap = window.AssetBus.snapshot();
-                        codes = snap.codes || [];
-                        assetSnapshot = snap;
-                    }
-                    if (!codes.length) {
-                        try { codes = JSON.parse(localStorage.getItem('safeCodes') || localStorage.getItem('bankode_codes') || '[]'); } catch(_) {}
-                    }
+                    // 🛡️ Get codes + full assets - WAIT for assets to load first
+                    waitForAssets().then(async (appStateAssets) => {
+                        let codes = [];
+                        let assetSnapshot = appStateAssets || {};
+                        
+                        // If AppState empty, try AssetBus
+                        if (!assetSnapshot.codes?.length && !assetSnapshot.silver?.length && !assetSnapshot.gold?.length) {
+                            if (window.AssetBus && typeof window.AssetBus.snapshot === 'function') {
+                                const snap = window.AssetBus.snapshot();
+                                if (snap) {
+                                    codes = snap.codes || [];
+                                    assetSnapshot = snap;
+                                }
+                            }
+                        }
+                        
+                        if (!codes.length) {
+                            try { codes = JSON.parse(localStorage.getItem('safeCodes') || localStorage.getItem('bankode_codes') || '[]'); } catch(_) {}
+                        }
 
-                    const assetPayload = Object.assign({}, assetSnapshot, {
-                        codes_count:  Array.isArray(assetSnapshot.codes)  ? assetSnapshot.codes.length  : (assetSnapshot.codes_count  || 0),
-                        silver_count: Array.isArray(assetSnapshot.silver) ? assetSnapshot.silver.length : (assetSnapshot.silver_count || 0),
-                        gold_count:   Array.isArray(assetSnapshot.gold)   ? assetSnapshot.gold.length   : (assetSnapshot.gold_count   || 0),
-                    });
+                        const assetPayload = Object.assign({}, assetSnapshot, {
+                            codes_count:  Array.isArray(assetSnapshot.codes)  ? assetSnapshot.codes.length  : (assetSnapshot.codes_count  || 0),
+                            silver_count: Array.isArray(assetSnapshot.silver) ? assetSnapshot.silver.length : (assetSnapshot.silver_count || 0),
+                            gold_count:   Array.isArray(assetSnapshot.gold)   ? assetSnapshot.gold.length   : (assetSnapshot.gold_count   || 0),
+                        });
 
-                    // ① AUTH_RESPONSE — for iframe-auth-client.js (waits for this specific type)
-                    iframeEl.contentWindow.postMessage({
-                        type:          'AUTH_RESPONSE',
-                        authenticated: !!(userData && (userData.uid || userData.id || userData.email)),
-                        userId:        userData?.uid || userData?.id || userData?.email || null,
+                        console.log('[CodeBank] Sending assets to iframe:', assetPayload);
+
+                        // ① AUTH_RESPONSE — for iframe-auth-client.js (waits for this specific type)
+                        iframeEl.contentWindow.postMessage({
+                            type:          'AUTH_RESPONSE',
+                            authenticated: !!(userData && (userData.uid || userData.id || userData.email)),
+                            userId:        userData?.uid || userData?.id || userData?.email || null,
                         sessionId:     sessionId,
                         user:          userData,
                         timestamp:     Date.now()

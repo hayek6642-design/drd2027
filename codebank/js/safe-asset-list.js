@@ -1854,7 +1854,23 @@
   if (window.parent !== window) {
     window.addEventListener('message', (e) => {
       if (e.data && e.data.type === 'assets:updated') {
-        console.log('[SafeAssetList] Received assets updated from parent');
+        console.log('[SafeAssetList] Received assets:updated from parent');
+        const cont = document.querySelector(CODEBANK_CONTAINER_SELECTOR);
+        if (cont) {
+          renderSafeAssets(window.ACTIVE_ASSET_TAB || 'codes', cont);
+        }
+      }
+      // Also handle legacy CODEBANK_ASSETS_SYNC type
+      if (e.data && e.data.type === 'CODEBANK_ASSETS_SYNC') {
+        console.log('[SafeAssetList] Received CODEBANK_ASSETS_SYNC from parent');
+        const cont = document.querySelector(CODEBANK_CONTAINER_SELECTOR);
+        if (cont) {
+          renderSafeAssets(window.ACTIVE_ASSET_TAB || 'codes', cont);
+        }
+      }
+      // Also handle AUTH_RESPONSE with assets
+      if (e.data && e.data.type === 'AUTH_RESPONSE' && e.data.assets) {
+        console.log('[SafeAssetList] Received AUTH_RESPONSE with assets from parent');
         const cont = document.querySelector(CODEBANK_CONTAINER_SELECTOR);
         if (cont) {
           renderSafeAssets(window.ACTIVE_ASSET_TAB || 'codes', cont);
