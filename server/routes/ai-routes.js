@@ -3,7 +3,7 @@
 // Mount in server.js: import aiRouter from './server/routes/ai-routes.js'; app.use('/api/ai', aiRouter);
 
 import { Router }                    from 'express';
-import { requireAuth }               from '../api/middleware/auth.js';
+import { requireAuth }               from '../../api/middleware/auth.js';
 import { processMessage, clearHistory } from '../ai-agent/agent-core.js';
 import { getQuotaStats }             from '../services/ai-service.js';
 
