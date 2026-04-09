@@ -337,18 +337,52 @@
           }
         }
       };
-      // Listen for assets updates from parent
+      // Listen for assets updates from parent - support multiple message formats
       window.addEventListener('message', function(e) {
-        if (e.data && e.data.type === 'assets:updated' && e.data.snapshot) {
-          const s = e.data.snapshot;
+        const data = e.data || {};
+        
+        // Format 1: assets:updated with snapshot (old format)
+        if (data.type === 'assets:updated' && data.snapshot) {
+          const s = data.snapshot;
           if (s.codes) window.AssetBus._store.codes = s.codes;
           if (s.silver) window.AssetBus._store.silver = s.silver;
           if (s.gold) window.AssetBus._store.gold = s.gold;
           window.dispatchEvent(new CustomEvent('assets:updated', { detail: s }));
         }
+        
+        // Format 2: CODEBANK_ASSETS_SYNC with payload
+        if (data.type === 'CODEBANK_ASSETS_SYNC' && data.payload) {
+          const p = data.payload;
+          if (p.codes) window.AssetBus._store.codes = p.codes;
+          if (p.silver) window.AssetBus._store.silver = p.silver;
+          if (p.gold) window.AssetBus._store.gold = p.gold;
+          window.dispatchEvent(new CustomEvent('assets:updated', { detail: p }));
+        }
+        
+        // Format 3: assetbus:snapshot with data
+        if (data.type === 'assetbus:snapshot' && data.data) {
+          const d = data.data;
+          if (d.codes) window.AssetBus._store.codes = d.codes;
+          if (d.silver) window.AssetBus._store.silver = d.silver;
+          if (d.gold) window.AssetBus._store.gold = d.gold;
+          window.dispatchEvent(new CustomEvent('assets:updated', { detail: d }));
+        }
+        
+        // Format 4: request:assets - respond to requests from iframes
+        if (data.type === 'request:assets') {
+          // This is handled in the parent, not needed here
+        }
       });
       console.log('[AssetBus] Shim initialized');
     })();
+    
+    // Proactively request assets from parent after a short delay
+    setTimeout(() => {
+      if (window.parent && window.parent !== window) {
+        console.log('[SafeCode] Requesting assets from parent...');
+        window.parent.postMessage({ type: 'bridge:request-assets' }, '*');
+      }
+    }, 500);
     </script>
     <script type="module" src="/codebank/js/safe-asset-list.js"></script>
     <script type="module" src="/codebank/js/safe-list-actions.js"></script>
