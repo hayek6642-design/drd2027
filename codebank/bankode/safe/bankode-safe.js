@@ -797,6 +797,9 @@
 
       resetCombination();
       saveState({ locked: true, timestamp: Date.now() });
+      
+      // Dispatch closed event for UI updates
+      window.dispatchEvent(new CustomEvent('safe:closed'));
     }
 
     // Reveal assets

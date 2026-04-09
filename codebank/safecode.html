@@ -512,6 +512,30 @@
               const tab = document.getElementById('codebank-assets-tab');
               if (tab) tab.style.display = 'flex';
               activateWatchdog();
+              
+              // Show lock button to re-lock the vault
+              const closeBtn = document.querySelector('.safe-close-btn');
+              if (closeBtn) {
+                closeBtn.style.display = 'flex';
+                closeBtn.textContent = '🔒';
+                closeBtn.title = 'Lock Vault';
+              }
+            });
+            
+            // Listen for safe:closed to restore vault view
+            window.addEventListener('safe:closed', function() {
+              updateDebug('Safe locked - hiding assets');
+              const gate = document.getElementById('safe-gate');
+              const tab = document.getElementById('codebank-assets-tab');
+              
+              // Show vault door again
+              if (gate) {
+                gate.style.display = 'flex';
+                gate.classList.remove('fade-out');
+              }
+              
+              // Hide assets tab
+              if (tab) tab.style.display = 'none';
             });
 
         })();
