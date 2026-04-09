@@ -16,6 +16,7 @@ router.use((req, res, next) => {
 router.post('/agent', async (req, res) => {
   try {
     const body = req.body || {};
+    console.log('[AI-Routes] req.body:', JSON.stringify(body));
     const { message, context = {} } = body;
     const user = req.user;
     
