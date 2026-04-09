@@ -82,6 +82,7 @@ import { query, pool } from './api/config/db.js';
 import { watchdog } from './services/watchdog/watchdog.js';
 import watchdogRoutes from './routes/watchdog.js';
 import battaloodaRouter from './api/routes/battalooda.js';
+import aiRoutes from './api/routes/ai-routes.js';
 import shotsRouter from './api/modules/shots.js';
 import biometricRouter from './api/modules/biometric.js';
 import gambleRouter from './api/modules/gamble.js';
@@ -290,6 +291,9 @@ app.use('/api/pebalaash', pebalaashMod.default || pebalaashMod);
 
 // Register Battalooda routes
 app.use('/api/battalooda', battaloodaRouter);
+
+// Register AI routes
+app.use('/api/ai', aiRoutes);
 
 // Register Sync routes
 app.use('/api/codes', syncRouter);
