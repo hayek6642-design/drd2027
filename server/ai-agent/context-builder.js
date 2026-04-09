@@ -1,7 +1,7 @@
 // server/ai-agent/context-builder.js
 // Build rich context from user assets + platform state
 
-import { query } from '../api/config/db.js';
+import { query } from '../../api/config/db.js';
 
 export const PLATFORM_SERVICES = [
   { id: 'pebalaash', name: 'Pebalaash',      icon: '🛍️', url: '/codebank/pebalaash.html',       status: 'active' },
