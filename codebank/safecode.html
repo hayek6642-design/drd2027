@@ -381,8 +381,34 @@
       if (window.parent && window.parent !== window) {
         console.log('[SafeCode] Requesting assets from parent...');
         window.parent.postMessage({ type: 'bridge:request-assets' }, '*');
+        
+        console.log('[SafeCode] Requesting auth from parent...');
+        window.parent.postMessage({ type: 'request:auth' }, '*');
       }
     }, 500);
+    
+    // Listen for auth update from parent
+    window.addEventListener('message', function(e) {
+      const data = e.data || {};
+      
+      // Auth response from parent
+      if (data.type === 'auth:update' || data.type === 'AUTH_CONTEXT') {
+        console.log('[SafeCode] Received auth from parent:', data);
+        
+        // Update global auth state
+        if (data.user) {
+          window.__AUTH_STATE__ = {
+            authenticated: data.authenticated || true,
+            userId: data.user?.id || data.user?.userId || data.sessionId,
+            ...data
+          };
+          window.authReady = true;
+          
+          // Dispatch auth ready event
+          window.dispatchEvent(new CustomEvent('auth:ready', { detail: window.__AUTH_STATE__ }));
+        }
+      }
+    });
     </script>
     <script type="module" src="/codebank/js/safe-asset-list.js"></script>
     <script type="module" src="/codebank/js/safe-list-actions.js"></script>
