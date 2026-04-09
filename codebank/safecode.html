@@ -449,12 +449,31 @@
             }, 3000);
 
             // Auto-open the 3D safe after assets are ready
+            let safeOpenAttempts = 0;
             function tryOpenSafe() {
+              if (safeOpenAttempts > 10) {
+                console.warn('[SafeCode] Max attempts reached, forcing show assets');
+                // Force show assets anyway
+                const gate = document.getElementById('safe-gate');
+                if (gate) {
+                  gate.classList.add('fade-out');
+                  setTimeout(() => { gate.style.display = 'none'; }, 650);
+                }
+                const tab = document.getElementById('codebank-assets-tab');
+                if (tab) tab.style.display = 'flex';
+                return;
+              }
+              
               if (window.AssetSafe && typeof window.AssetSafe.open === 'function') {
+                console.log('[SafeCode] Opening vault...');
                 window.AssetSafe.open();
+              } else {
+                safeOpenAttempts++;
+                console.log('[SafeCode] Waiting for AssetSafe to initialize... attempt ' + safeOpenAttempts);
+                setTimeout(tryOpenSafe, 500);
               }
             }
-            setTimeout(tryOpenSafe, 2500);
+            setTimeout(tryOpenSafe, 2000);
 
             // Listen for safe:opened to hide gate and show assets
             window.addEventListener('safe:opened', function() {
