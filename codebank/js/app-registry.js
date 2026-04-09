@@ -6,13 +6,25 @@
 export const AppRegistry = {
     core: [
         {
+            id: 'aihub',
+            name: 'AI-Hub',
+            category: 'core',
+            icon: 'fa-brain',
+            color: '#00d4ff',
+            url: '/ai-hub.html',
+            fallbackUrls: [],
+            description: 'Gemma-powered AI Platform Manager',
+            status: 'online',
+            badge: 'NEW'
+        },
+        {
             id: 'safecode',
             name: 'SafeCode',
             category: 'core',
             icon: 'fa-shield-alt',
             color: '#10b981',
-            url: '/codebank/safecode.html',      // ✅ المسار المطلق بعد النقل 
-            fallbackUrls: [],                     // أفرغ المصفوفة لتجنب أي التباس 
+            url: '/codebank/safecode.html',
+            fallbackUrls: [],
             description: 'Secure code storage',
             status: 'online',
             badge: 'Core'

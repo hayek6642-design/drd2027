@@ -275,6 +275,10 @@ watchdog.setDb(query);
 // which meant req.cookies was always undefined inside every API router.
 app.use(cookieParser());
 
+// Register AI-Hub routes
+import aiRoutes from './server/routes/ai-routes.js';
+app.use('/api/ai', aiRoutes);
+
 // Register WatchDog routes
 app.use('/api/watchdog', watchdogRoutes);
 
@@ -2132,6 +2136,21 @@ app.use('/shared', express.static(path.join(__dirname, 'shared'), {
     }
   }
 }));
+
+// Serve AI-Hub public files
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '1h', etag: false
+}));
+
+// Serve ai-hub.html at root
+app.get('/ai-hub.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'ai-hub.html'));
+});
+
+app.get('/ai-hub', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'ai-hub.html'));
+});
+
 app.use('/shared_external', express.static(path.join(__dirname, 'shared_external'), {
   maxAge: '1d', etag: true, lastModified: true
 }));
