@@ -222,9 +222,53 @@
             border-radius: 16px;
             padding: 40px;
         }
+    #safe-gate.asset-safe-container {
+      position: fixed;
+      inset: 0;
+      z-index: 500;
+      max-width: 100%;
+      height: 100vh;
+      background: #0f172a;
+      border-radius: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    #safe-gate.asset-safe-container.fade-out {
+      opacity: 0;
+      transform: scale(1.05);
+      pointer-events: none;
+    }
     </style>
+    <link rel="stylesheet" href="/codebank/bankode/safe/bankode-safe.css">
 </head>
 <body>
+    <!-- 3D Safe Gate -->
+    <div id="safe-gate" class="asset-safe-container">
+      <div class="safe-3d-scene">
+        <div class="safe-frame">
+          <div class="safe-door-3d">
+            <div class="safe-bolts">
+              <div class="safe-bolt"></div>
+              <div class="safe-bolt"></div>
+              <div class="safe-bolt"></div>
+              <div class="safe-bolt"></div>
+            </div>
+            <div class="safe-dial">
+              <div class="safe-dial-ticks"></div>
+            </div>
+            <div class="safe-handle"></div>
+            <div class="safe-led"></div>
+            <div class="safe-inner-chamber">
+              <div class="safe-chamber-content"></div>
+            </div>
+          </div>
+        </div>
+        <p class="safe-instructions">🔐 Unlocking your assets...</p>
+        <button class="safe-close-btn" style="display:none;"></button>
+      </div>
+    </div>
     <div id="loading"><div class="spinner"></div><p>Loading Safe Assets...</p></div>
     <div id="codebank-assets-tab"> 
         <div class="tabs-header">
@@ -254,7 +298,58 @@
     }
     </script>
 
-    <script type="module" src="/codebank/bankode-assetbus-bridge.js"></script>
+    <!-- AssetBus shim: delegates to parent window's GET_AUTHORITATIVE_ASSETS -->
+    <script>
+    (function() {
+      window.AssetBus = {
+        _store: {},
+        snapshot: function() {
+          // Try parent window first
+          if (window.top && window.top !== window && typeof window.top.GET_AUTHORITATIVE_ASSETS === 'function') {
+            const data = window.top.GET_AUTHORITATIVE_ASSETS();
+            if (data) {
+              // Cache it locally
+              if (data.codes && data.codes.length > 0) window.AssetBus._store.codes = data.codes;
+              if (data.silver && data.silver.length > 0) window.AssetBus._store.silver = data.silver;
+              if (data.gold && data.gold.length > 0) window.AssetBus._store.gold = data.gold;
+              return data;
+            }
+          }
+          // Fall back to localStorage
+          try {
+            const raw = localStorage.getItem('codebank_assets');
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (parsed) {
+                if (parsed.codes && parsed.codes.length > 0) window.AssetBus._store.codes = parsed.codes;
+                if (parsed.silver && parsed.silver.length > 0) window.AssetBus._store.silver = parsed.silver;
+                if (parsed.gold && parsed.gold.length > 0) window.AssetBus._store.gold = parsed.gold;
+                return parsed;
+              }
+            }
+          } catch(_) {}
+          // Fall back to internal store (last known good data)
+          return window.AssetBus._store;
+        },
+        sync: function() {
+          if (window.top && window.top !== window && typeof window.top.AssetsManager?.sync === 'function') {
+            window.top.AssetsManager.sync();
+          }
+        }
+      };
+      // Listen for assets updates from parent
+      window.addEventListener('message', function(e) {
+        if (e.data && e.data.type === 'assets:updated' && e.data.snapshot) {
+          const s = e.data.snapshot;
+          if (s.codes) window.AssetBus._store.codes = s.codes;
+          if (s.silver) window.AssetBus._store.silver = s.silver;
+          if (s.gold) window.AssetBus._store.gold = s.gold;
+          window.dispatchEvent(new CustomEvent('assets:updated', { detail: s }));
+        }
+      });
+      console.log('[AssetBus] Shim initialized');
+    })();
+    </script>
     <script type="module" src="/codebank/js/safe-asset-list.js"></script>
     <script type="module" src="/codebank/js/safe-list-actions.js"></script>
 
@@ -319,7 +414,29 @@
                 }
             }, 3000);
 
+            // Auto-open the 3D safe after assets are ready
+            function tryOpenSafe() {
+              if (window.AssetSafe && typeof window.AssetSafe.open === 'function') {
+                window.AssetSafe.open();
+              }
+            }
+            setTimeout(tryOpenSafe, 2500);
+
+            // Listen for safe:opened to hide gate and show assets
+            window.addEventListener('safe:opened', function() {
+              updateDebug('Safe opened - revealing assets');
+              const gate = document.getElementById('safe-gate');
+              if (gate) {
+                gate.classList.add('fade-out');
+                setTimeout(() => { gate.style.display = 'none'; }, 650);
+              }
+              const tab = document.getElementById('codebank-assets-tab');
+              if (tab) tab.style.display = 'flex';
+              activateWatchdog();
+            });
+
         })();
     </script>
+    <script src="/codebank/bankode/safe/bankode-safe.js"></script>
 </body>
 </html>
