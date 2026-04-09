@@ -89,6 +89,7 @@ import sammAutoRouter from './api/modules/samma3ny-automode.js';
 import likesRouter from './api/modules/likes.js';
 import drmailRouter from './api/modules/drmail.js';
 import quotaRouter from './api/modules/quota.js';
+import aiRouter from './server/routes/ai-routes.js';
 
 import { 
   getAllCountries, 
@@ -301,6 +302,7 @@ app.use('/api/samma3ny', sammAutoRouter);
 app.use('/api/likes', likesRouter);
 app.use('/api/drmail', drmailRouter);
 app.use('/api/quota',  quotaRouter);
+app.use('/api/ai',    aiRouter);     // Platform Manager AI Agent
 
 // AUTH REMOVED — CLEAN RESET
 
