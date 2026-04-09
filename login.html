@@ -493,6 +493,11 @@ console.log('🔥 Window origin:', window.location.origin);
           .then(function(r) { return r.json(); })
           .then(function(data) {
             if (data.success || data.authenticated || data.ok) {
+              // 🔄 SYNC ASSETS ON SESSION RESTORE
+              if (window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
+                console.log('[Session] Syncing restored session assets...');
+                window.AssetsManager.sync();
+              }
               window.location.href = "/yt-new-clear.html";
             } else {
               // Server says NO — nuke stale client state

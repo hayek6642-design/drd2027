@@ -136,7 +136,20 @@
             localStorage.removeItem('codebank_assets');
             localStorage.removeItem('codebank_assets_user');
             window.AppState.assets = { codes: [], silver: [], gold: [] };
+        } else if (e.detail?.authenticated) {
+            // User authenticated - sync assets
+            window.AssetsManager.sync();
         }
+    });
+
+    // Also listen for login/signup events
+    window.addEventListener('auth:login', () => {
+        console.log('[AssetsManager] Login detected, syncing...');
+        window.AssetsManager.sync();
+    });
+    window.addEventListener('auth:signup', () => {
+        console.log('[AssetsManager] Signup detected, syncing...');
+        window.AssetsManager.sync();
     });
 
     console.log('[AssetsManager] Direct asset manager initialized.');
