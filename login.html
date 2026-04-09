@@ -978,7 +978,16 @@ async function handleSignup() {
           user: data.user
         });
       }
-      
+
+      // 🔄 SYNC ASSETS IMMEDIATELY AFTER SIGNUP
+      if (window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
+        console.log('[Signup] Syncing assets after account creation...');
+        window.AssetsManager.sync();
+      }
+      window.dispatchEvent(new CustomEvent('auth:signup', { 
+        detail: { user: data.user, sessionId: data.sessionId } 
+      }));
+
       setTimeout(() => {
         window.location.href = '/yt-new-clear.html';
       }, 1500);
@@ -1044,6 +1053,16 @@ async function handleLogin() {
       }
       
       localStorage.setItem('last_login_email', email);
+      // 🔄 SYNC ASSETS IMMEDIATELY AFTER LOGIN
+      if (window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
+        console.log('[Login] Syncing assets after login...');
+        window.AssetsManager.sync();
+      }
+      // Also emit event for any listeners
+      window.dispatchEvent(new CustomEvent('auth:login', { 
+        detail: { user: data.user, sessionId: data.sessionId } 
+      }));
+
       // Offer biometric registration if device supports it (native only)
       if (window._NativeBio && window._NativeBio.isNative()) {
         window._NativeBio.isAvailable().then(bioOk => {
