@@ -30,7 +30,12 @@
                 window.AppState.assets  = snapshot;
                 window.AppState.lastSync = snapshot.lastSync;
 
-                try { localStorage.setItem('codebank_assets', JSON.stringify(snapshot)); } catch(_) {}
+                // 🔒 SECURITY: Tag cached assets with user ID to prevent leakage
+                const userId = window.AppState.user?.id || window.AppState.user?.userId || 'anonymous';
+                try { 
+                    localStorage.setItem('codebank_assets', JSON.stringify(snapshot)); 
+                    localStorage.setItem('codebank_assets_user', userId);
+                } catch(_) {}
 
                 window.EventBus.dispatch('assets:updated', snapshot);
                 // Legacy compat events
@@ -81,13 +86,59 @@
     };
     window.GET_AUTHORITATIVE_ASSETS = function() { return window.AppState.assets; };
 
+    // On load, verify cached assets match current user
+    function loadCachedAssetsIfMatching() {
+        try {
+            const cachedUser = localStorage.getItem('codebank_assets_user');
+            const currentUser = window.AppState.user?.id || window.AppState.user?.userId;
+            const cached = localStorage.getItem('codebank_assets');
+            
+            if (cached && currentUser && cachedUser === currentUser) {
+                // Same user - safe to use cache
+                const snapshot = JSON.parse(cached);
+                window.AppState.assets = snapshot;
+                window.AppState.lastSync = snapshot.lastSync;
+                window.EventBus.dispatch('assets:updated', snapshot);
+                console.log('[AssetsManager] Loaded cached assets for user:', currentUser);
+            } else if (cached && !currentUser) {
+                // No user logged in, clear cached assets
+                localStorage.removeItem('codebank_assets');
+                localStorage.removeItem('codebank_assets_user');
+                window.AppState.assets = { codes: [], silver: [], gold: [] };
+            }
+            // Different user - don't use cache, will fetch fresh
+        } catch(_) {}
+    }
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => window.AssetsManager.sync());
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCachedAssetsIfMatching();
+            window.AssetsManager.sync();
+        });
     } else {
+        loadCachedAssetsIfMatching();
         window.AssetsManager.sync();
     }
 
     setInterval(() => window.AssetsManager.sync(), 30000);
+
+    // 🔒 SECURITY: Clear assets on logout
+    window.addEventListener('auth:logout', () => {
+        localStorage.removeItem('codebank_assets');
+        localStorage.removeItem('codebank_assets_user');
+        window.AppState.assets = { codes: [], silver: [], gold: [] };
+        console.log('[AssetsManager] Cleared assets on logout');
+    });
+
+    // Also listen for auth state changes
+    window.addEventListener('auth:changed', (e) => {
+        if (!e.detail?.authenticated) {
+            localStorage.removeItem('codebank_assets');
+            localStorage.removeItem('codebank_assets_user');
+            window.AppState.assets = { codes: [], silver: [], gold: [] };
+        }
+    });
+
     console.log('[AssetsManager] Direct asset manager initialized.');
 
 })(window);
