@@ -906,7 +906,8 @@ console.log(`🗑️ Cleaned up ${tracksToRemove.length} old downloads to free s
                 cdCoverImage.src = track.thumbnail;
                 cdCoverImage.style.opacity = '1';
             } else {
-                cdCoverImage.style.opacity = '0.3';
+                cdCoverImage.src = './dr.dc.png';
+                cdCoverImage.style.opacity = '1';
             }
             cdDisc.classList.add('playing');
         } catch (_) {}
@@ -928,8 +929,8 @@ console.log(`🗑️ Cleaned up ${tracksToRemove.length} old downloads to free s
                 cdCoverImage.src = track.thumbnail;
                 cdCoverImage.style.opacity = '1';
             } else {
-                cdCoverImage.style.opacity = '0.3';
-                cdCoverImage.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxjaXJjbGUgY3g9IjEwMCIgY3k9IjEwMCIgcj0iMTAwIiBmaWxsPSIjMzMzIi8+CjxwYXRoIGQ9Ik04MCA4MGg0MHY0MEg4MHoiIGZpbGw9IiM2NjYiLz4KPC9zdmc+';
+                cdCoverImage.src = './dr.dc.png';
+                cdCoverImage.style.opacity = '1';
             }
 
             currentTrackIndex = index;
