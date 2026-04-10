@@ -1,774 +1,407 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CodeBank Exchange</title>
-  <link rel="icon" type="image/png" href="/codebank/assets/images/dr.dc.png">
-  
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
-  <style>
-    :root {
-      --primary-color: #FF6B35;
-      --secondary-color: #8B5CF6;
-      --accent-color: #58a6ff;
-      --bg-gradient-start: #87CEEB;
-      --bg-gradient-end: #B0E0E6;
-      --text-color: #E0E0E0;
-      --text-muted: #8b949e;
-      --text-bright: #ffffff;
-      --card-bg: rgba(22, 27, 34, 0.8);
-      --border-color: #30363d;
-      --hover-bg: #21262d;
-      --success-color: #00ff88;
-      --error-color: #f85149;
-    }
+<!-- SafeCode Interior Assets Display Section (Enhanced) -->
+<!-- Add this to replace the <div class="sf-interior"> section in original safecode/index.html -->
 
-    body {
-      background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
-      background-attachment: fixed;
-      color: var(--text-color);
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-      min-height: 100vh;
-      margin: 0;
-      padding: 0;
-    }
+<style>
+  /* ════════════════════════════════════════════
+     TRANSFER SOURCE INDICATORS
+  ════════════════════════════════════════════ */
+  .asset-source-badge {
+    display: inline-block;
+    font-size: 7px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-left: 4px;
+    border: 1px solid;
+  }
 
-    .card {
-      background: var(--card-bg);
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    }
+  .asset-source-self {
+    background: rgba(0, 212, 255, 0.12);
+    color: #00d4ff;
+    border-color: rgba(0, 212, 255, 0.3);
+  }
 
-    .tab-navigation {
-      background: rgba(22, 27, 34, 0.6);
-      backdrop-filter: blur(20px);
-      border-radius: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 8px;
-      margin-bottom: 24px;
-      overflow-x: auto;
-    }
+  .asset-source-user {
+    background: rgba(255, 153, 48, 0.12);
+    color: #ff9930;
+    border-color: rgba(255, 153, 48, 0.3);
+  }
 
-    .tab-btn {
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      padding: 12px 20px;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      font-weight: 500;
-      white-space: nowrap;
-    }
+  .asset-source-admin {
+    background: rgba(255, 68, 68, 0.12);
+    color: #ff4444;
+    border-color: rgba(255, 68, 68, 0.3);
+  }
 
-    .tab-btn:hover {
-      color: var(--text-color);
-      background: rgba(255, 255, 255, 0.05);
-    }
+  /* Color variants for asset values */
+  .val-code.source-user    { color: #ff9930; text-shadow: 0 0 8px rgba(255, 153, 48, 0.5); }
+  .val-code.source-admin   { color: #ff4444; text-shadow: 0 0 8px rgba(255, 68, 68, 0.5); }
+  .val-silver.source-user  { color: #ffa64d; text-shadow: 0 0 8px rgba(255, 166, 77, 0.4); }
+  .val-silver.source-admin { color: #ff8080; text-shadow: 0 0 8px rgba(255, 128, 128, 0.4); }
+  .val-gold.source-user    { color: #ffb347; text-shadow: 0 0 8px rgba(255, 179, 71, 0.5); }
+  .val-gold.source-admin   { color: #ff6b6b; text-shadow: 0 0 8px rgba(255, 107, 107, 0.5); }
 
-    .tab-btn.active {
-      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-      color: white;
-    }
+  /* Asset row highlight on hover */
+  .asset-row {
+    position: relative;
+    transition: all 0.2s;
+  }
 
-    .tab-content {
-      display: none;
-    }
+  .asset-row:hover {
+    background: rgba(0, 212, 255, 0.08);
+    border-color: rgba(0, 212, 255, 0.25);
+    cursor: pointer;
+  }
 
-    .tab-content.active {
-      display: block;
-    }
+  .asset-row.source-user:hover {
+    background: rgba(255, 153, 48, 0.08);
+    border-color: rgba(255, 153, 48, 0.25);
+  }
 
-    .safe-container {
-      padding: 20px;
-      min-height: 300px;
-    }
+  .asset-row.source-admin:hover {
+    background: rgba(255, 68, 68, 0.08);
+    border-color: rgba(255, 68, 68, 0.25);
+  }
 
-    .safe-header {
-      margin-bottom: 20px;
-    }
+  /* Transfer info tooltip */
+  .transfer-info {
+    font-size: 7px;
+    color: rgba(255, 255, 255, 0.35);
+    margin-top: 2px;
+    letter-spacing: 0.5px;
+    display: none;
+  }
 
-    .safe-title-group {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-    }
+  .asset-row:hover .transfer-info {
+    display: block;
+  }
 
-    .safe-tabs {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
+  /* Transfer history modal */
+  .transfer-history-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 501;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(10px);
+  }
 
-    .safe-tab-button {
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: var(--text-color);
-      padding: 8px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
+  .transfer-history-modal.open {
+    display: flex;
+  }
 
-    .safe-tab-button:hover {
-      background: rgba(255, 255, 255, 0.2);
-    }
+  .history-box {
+    background: var(--m2);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    border-radius: 14px;
+    padding: 26px 24px;
+    width: 420px;
+    max-height: 500px;
+    overflow-y: auto;
+    box-shadow: 0 0 50px rgba(0, 212, 255, 0.18), 0 20px 60px rgba(0, 0, 0, 0.8);
+  }
 
-    .safe-tab-button.active {
-      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-      border-color: transparent;
-    }
+  .history-title {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--neon);
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
 
-    .safe-item {
-      padding: 12px 16px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      margin-bottom: 8px;
-      font-family: 'Courier New', monospace;
-      font-size: 14px;
-    }
+  .history-item {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(0, 212, 255, 0.15);
+    border-radius: 7px;
+    padding: 11px;
+    margin-bottom: 10px;
+    font-size: 9px;
+  }
 
-    .safe-empty {
-      text-align: center;
-      padding: 40px;
-      color: var(--text-muted);
-    }
+  .history-item.sent {
+    border-color: rgba(0, 212, 255, 0.2);
+  }
 
-    .btn {
-      background: linear-gradient(135deg, rgba(176, 67, 255, 0.15), rgba(255, 119, 233, 0.15));
-      border: 1px solid rgba(176, 67, 255, 0.3);
-      color: var(--text-color);
-      padding: 10px 20px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      font-weight: 500;
-    }
+  .history-item.received {
+    border-color: rgba(0, 255, 136, 0.2);
+    background: rgba(0, 255, 136, 0.05);
+  }
 
-    .btn:hover {
-      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-      color: white;
-    }
+  .history-from-to {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    color: rgba(255, 255, 255, 0.6);
+    letter-spacing: 0.5px;
+  }
 
-    .btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
+  .history-arrow {
+    color: var(--neon);
+    font-weight: 700;
+  }
 
-    .compact-header {
-      padding: 16px 24px;
-      background: linear-gradient(135deg, #1e293b, #0f172a);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
+  .history-time {
+    font-size: 8px;
+    color: rgba(255, 255, 255, 0.35);
+    margin-top: 4px;
+  }
 
-    .header-balance {
-      background: rgba(255, 255, 255, 0.1);
-      padding: 8px 16px;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
+  .transfer-stats {
+    background: rgba(0, 212, 255, 0.08);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    border-radius: 7px;
+    padding: 12px;
+    margin-bottom: 12px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    text-align: center;
+  }
 
-    .toast-container {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 10000;
-    }
+  .stat-item {
+    font-size: 8px;
+    color: rgba(255, 255, 255, 0.5);
+  }
 
-    .toast {
-      background: rgba(22, 27, 34, 0.95);
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 16px 20px;
-      margin-bottom: 12px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-      animation: toastSlideIn 0.3s ease-out;
-      max-width: 400px;
-    }
+  .stat-num {
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--neon);
+  }
 
-    @keyframes toastSlideIn {
-      from { opacity: 0; transform: translateX(100%); }
-      to { opacity: 1; transform: translateX(0); }
-    }
+  .history-close-btn {
+    display: block;
+    margin: 14px auto 0;
+    padding: 8px 20px;
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    border-radius: 7px;
+    color: var(--neon);
+    font-size: 9px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
 
-    .settings-panel {
-      position: fixed;
-      top: 0;
-      right: 0;
-      height: 100%;
-      width: 320px;
-      background: linear-gradient(180deg, #1e293b, #0f172a);
-      transform: translateX(100%);
-      transition: transform 0.3s ease;
-      z-index: 1000;
-      box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
-    }
+  .history-close-btn:hover {
+    background: rgba(0, 212, 255, 0.2);
+    border-color: var(--neon);
+  }
+</style>
 
-    .settings-panel.active {
-      transform: translateX(0);
-    }
+<!-- Interior Assets Section (Enhanced) -->
+<div class="sf-interior" id="safe-interior">
+  <div class="interior-title">Secured Assets</div>
+  <div class="interior-shelf"></div>
 
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 50px;
-      height: 24px;
-    }
-
-    .switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(255, 255, 255, 0.2);
-      transition: 0.3s;
-      border-radius: 24px;
-    }
-
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 18px;
-      width: 18px;
-      left: 3px;
-      bottom: 3px;
-      background: white;
-      transition: 0.3s;
-      border-radius: 50%;
-    }
-
-    input:checked + .slider {
-      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    }
-
-    input:checked + .slider:before {
-      transform: translateX(26px);
-    }
-
-    .form-input, .form-select {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      color: var(--text-color);
-      padding: 10px 14px;
-      width: 100%;
-      transition: all 0.3s ease;
-    }
-
-    .form-input:focus, .form-select:focus {
-      outline: none;
-      border-color: var(--primary-color);
-      box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
-    }
-
-    .loading-spinner {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 40px;
-    }
-
-    .spinner {
-      border: 4px solid rgba(255, 255, 255, 0.1);
-      border-top: 4px solid var(--primary-color);
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  </style>
-</head>
-<body>
-  <!-- Toast Container -->
-  <div id="toast-container" class="toast-container"></div>
-
-  <!-- Header -->
-  <header class="compact-header">
-    <div class="container mx-auto">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-4">
-          <div class="flex items-center space-x-3">
-            <div class="rounded-xl shadow-lg overflow-hidden" style="background:transparent;height:48px;width:48px">
-              <img src="/codebank/assets/images/dr.dc.png" alt="Dr.DC" style="height:48px;width:48px;object-fit:contain;border-radius:12px" onerror="this.parentElement.innerHTML='<div class=\'p-3 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-xl\'><i class=\'fas fa-money-bill-wave text-xl text-white\'></i></div>'">
-            </div>
-            <div>
-              <h1 class="text-2xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">CodeBank Exchange</h1>
-              <p class="text-blue-300 text-sm font-medium">Professional Banking Services</p>
-            </div>
-          </div>
-        </div>
-        
-        <div class="flex items-center space-x-3">
-          <!-- Premium Status -->
-          <button class="flex items-center bg-gradient-to-r from-yellow-400 to-yellow-600 px-3 py-1 rounded-full border border-yellow-300 text-sm">
-            <i class="fas fa-crown text-white mr-1"></i>
-            <span class="font-medium text-white">Premium</span>
-          </button>
-
-          <!-- Security Badge -->
-          <div class="flex items-center bg-green-500/20 px-2 py-1 rounded-full border border-green-500/30 text-sm">
-            <i class="fas fa-shield-check text-green-400 mr-1"></i>
-            <span class="font-medium">Secure</span>
-          </div>
-          
-          <!-- User Balance -->
-          <div class="header-balance cursor-pointer" title="CodeBank Balance">
-            <div class="font-semibold text-sm">CodeBank</div>
-            <div class="text-blue-200 text-xs">
-              Codes: <span id="header-codes-count">0</span>
-            </div>
-          </div>
-
-          <!-- Settings Button -->
-          <button id="settings-btn" class="px-3 py-2 bg-blue-700 hover:bg-blue-800 rounded-lg transition-colors flex items-center text-sm">
-            <i class="fas fa-cog mr-2"></i>
-            <span>Settings</span>
-          </button>
-        </div>
-      </div>
+  <!-- Transfer Statistics Summary -->
+  <div class="transfer-stats" id="transfer-stats">
+    <div class="stat-item">
+      <div class="stat-num" id="stat-self">0</div>
+      <div style="color: #00d4ff;">Self</div>
     </div>
-  </header>
-
-   <!-- Settings Panel -->
-   <aside id="settings-panel" class="settings-panel" aria-hidden="true">
-     <div class="p-6 h-full flex flex-col">
-       <div class="flex items-center justify-between mb-6">
-         <h2 class="text-xl font-semibold text-white">Settings</h2>
-         <button id="settings-close" class="text-white text-2xl hover:bg-white/10 rounded-full w-10 h-10 flex items-center justify-center transition-colors">
-           &times;
-         </button>
-       </div>
-
-       <!-- User Email Display - ADD THIS ENTIRE BLOCK -->
-       <div id="user-info-box" style="
-        background: linear-gradient(135deg, rgba(0,212,255,0.15) 0%, rgba(0,212,255,0.05) 100%);
-        border: 1px solid rgba(0,212,255,0.3);
-        border-radius: 12px;
-        padding: 15px;
-        margin: 15px;
-        text-align: center;
-        min-height: 60px;
-      ">
-        <div style="
-            font-size: 10px; 
-            color: #888; 
-            text-transform: uppercase; 
-            letter-spacing: 1px; 
-            margin-bottom: 5px;
-        ">Logged in as</div>
-        <div id="side-panel-email" style="
-            font-size: 13px;
-            font-weight: 600;
-            color: #00d4ff;
-            word-break: break-all;
-        ">
-            <!-- Email will appear here -->
-        </div>
-      </div>
-
-       <div class="overflow-auto flex-1 space-y-6">
-         <!-- Appearance -->
-         <section>
-           <h3 class="text-sm text-gray-400 mb-3 uppercase tracking-wider">Appearance</h3>
-           <div class="p-4 bg-white/5 rounded-xl space-y-4">
-             <div class="flex items-center justify-between">
-               <div>
-                 <div class="font-medium text-white">Dark Mode</div>
-                 <div class="text-xs text-gray-400">Toggle dark/light theme</div>
-               </div>
-               <label class="switch">
-                 <input id="theme-toggle" type="checkbox" checked>
-                 <span class="slider"></span>
-               </label>
-             </div>
-           </div>
-         </section>
-
-         <!-- Debug -->
-         <section>
-           <h3 class="text-sm text-gray-400 mb-3 uppercase tracking-wider">Debug</h3>
-           <div class="p-4 bg-white/5 rounded-xl space-y-3">
-             <label class="flex items-center justify-between cursor-pointer">
-               <span class="text-white">Debug Mode</span>
-               <input id="debug-toggle" type="checkbox">
-             </label>
-           </div>
-         </section>
-       </div>
-
-       <!-- Sign Out Button -->
-       <button id="sign-out-btn" onclick="logout()" style="
-        width: calc(100% - 30px);
-        margin: 0 15px 15px 15px;
-        padding: 12px;
-        background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%);
-        border: none;
-        border-radius: 10px;
-        color: white;
-        font-weight: 600;
-        cursor: pointer;
-       ">
-        Sign Out
-       </button>
-
-       <div class="text-xs text-gray-500 mt-4 pt-4 border-t border-white/10">
-         CodeBank v1.0 • SafeAssetList Enabled
-       </div>
-     </div>
-   </aside>
-
-  <!-- Main Content -->
-  <main class="container mx-auto py-8 px-4">
-    <!-- Tab Navigation -->
-    <div class="tab-navigation">
-      <nav class="flex space-x-2">
-        <button class="tab-btn active" data-tab="overview">
-          <i class="fas fa-chart-line mr-2"></i>Overview
-        </button>
-        <button class="tab-btn" data-tab="assets">
-          <i class="fas fa-box mr-2"></i>Assets
-        </button>
-        <button class="tab-btn" data-tab="codes">
-          <i class="fas fa-key mr-2"></i>Codes
-        </button>
-      </nav>
+    <div class="stat-item">
+      <div class="stat-num" id="stat-user" style="color: #ff9930;">0</div>
+      <div>From User</div>
     </div>
-
-    <!-- Tab Content -->
-    <div id="tab-content">
-      <!-- Overview Tab -->
-      <div id="overview-tab" class="tab-content active">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <!-- Stats Cards -->
-          <div class="card p-6">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-white">Total Codes</h3>
-              <i class="fas fa-key text-2xl text-blue-400"></i>
-            </div>
-            <p class="text-3xl font-bold text-white" id="overview-codes-count">0</p>
-            <p class="text-sm text-gray-400 mt-2">Generated codes</p>
-          </div>
-
-          <div class="card p-6">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-white">Silver Bars</h3>
-              <i class="fas fa-coins text-2xl text-gray-400"></i>
-            </div>
-            <p class="text-3xl font-bold text-white" id="overview-silver-count">0</p>
-            <p class="text-sm text-gray-400 mt-2">Silver assets</p>
-          </div>
-
-          <div class="card p-6">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-white">Gold Bars</h3>
-              <i class="fas fa-gem text-2xl text-yellow-400"></i>
-            </div>
-            <p class="text-3xl font-bold text-white" id="overview-gold-count">0</p>
-            <p class="text-sm text-gray-400 mt-2">Gold assets</p>
-          </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="card mt-6 p-6">
-          <h3 class="text-lg font-semibold text-white mb-4">Quick Actions</h3>
-          <div class="flex flex-wrap gap-4">
-            <button id="generate-code-btn" class="btn">
-              <i class="fas fa-plus mr-2"></i>Generate Code
-            </button>
-            <button id="generate-silver-btn" class="btn">
-              <i class="fas fa-coins mr-2"></i>Generate Silver
-            </button>
-            <button id="generate-gold-btn" class="btn">
-              <i class="fas fa-gem mr-2"></i>Generate Gold
-            </button>
-            <button id="refresh-assets-btn" class="btn">
-              <i class="fas fa-sync-alt mr-2"></i>Refresh
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Assets Tab -->
-      <div id="assets-tab" class="tab-content">
-        <div class="card">
-          <div class="p-6 border-b border-white/10 flex justify-between items-center">
-            <h3 class="text-xl font-semibold text-white">Safe Assets</h3>
-            <button id="safe-refresh-btn" class="btn btn-secondary">
-              <i class="fas fa-sync-alt mr-2"></i>Refresh
-            </button>
-          </div>
-          <div class="p-6">
-            <!-- SafeAssetList Container - THIS IS THE KEY ELEMENT -->
-            <div id="codebank-assets-tab">
-              <div class="safe-container">
-                <!-- SafeAssetList will render here -->
-                <div class="loading-spinner">
-                  <div class="spinner"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Codes Tab -->
-      <div id="codes-tab" class="tab-content">
-        <div class="card">
-          <div class="p-6 border-b border-white/10">
-            <h3 class="text-xl font-semibold text-white">Generated Codes</h3>
-          </div>
-          <div class="p-6">
-            <div id="codes-list" class="space-y-2">
-              <div class="safe-empty">
-                <i class="fas fa-inbox text-4xl mb-4 text-gray-500"></i>
-                <p>No codes generated yet</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="stat-item">
+      <div class="stat-num" id="stat-admin" style="color: #ff4444;">0</div>
+      <div>From Admin</div>
     </div>
-  </main>
+  </div>
 
-  <!-- Scripts - Load Order: Event Bus → Global Store → Assets Direct → Safe Asset List -->
-  <script src="js/event-bus-simple.js"></script>
-  <script src="js/global-store.js"></script>
-  <script src="js/assets-direct.js"></script>
-  <script src="js/safe-asset-list.js"></script>
+  <div class="interior-assets" id="interior-assets">
+    <div class="asset-row">
+      <div class="asset-row-left">
+        <span class="asset-emoji">💾</span>
+        <span class="asset-name">Codes</span>
+      </div>
+      <span class="asset-val val-code" id="int-codes">—</span>
+    </div>
+    <div class="asset-row">
+      <div class="asset-row-left">
+        <span class="asset-emoji">🥈</span>
+        <span class="asset-name">Silver Bars</span>
+      </div>
+      <span class="asset-val val-silver" id="int-silver">—</span>
+    </div>
+    <div class="asset-row">
+      <div class="asset-row-left">
+        <span class="asset-emoji">🥇</span>
+        <span class="asset-name">Gold Bars</span>
+      </div>
+      <span class="asset-val val-gold" id="int-gold">—</span>
+    </div>
+  </div>
 
-  <script>
-    // Counter update listener - bridges asset updates to UI
-    document.addEventListener('assets:updated', function(e) {
-        const assets = e.detail || {};
-        const codes = assets.codes || [];
-        const silver = assets.silver || [];
-        const gold = assets.gold || [];
-        
-        // Update all counter elements
-        const headerCount = document.getElementById('header-codes-count');
-        const overviewCount = document.getElementById('overview-codes-count');
-        if (headerCount) headerCount.textContent = codes.length;
-        if (overviewCount) overviewCount.textContent = codes.length;
-        
-        // Update silver/gold counters if they exist
-        const silverEl = document.getElementById('overview-silver-count');
-        const goldEl = document.getElementById('overview-gold-count');
-        if (silverEl) silverEl.textContent = silver.length;
-        if (goldEl) goldEl.textContent = gold.length;
-        
-        console.log('[Counters] Updated:', {codes: codes.length, silver: silver.length, gold: gold.length});
+  <!-- Transfer History Button -->
+  <button class="interior-change-pin" id="btn-view-history" style="background: rgba(0, 212, 255, 0.12); margin-bottom: 7px;">
+    📋 View Transfer History
+  </button>
+
+  <button class="interior-change-pin" id="btn-change-pin">⚙ Change Passcode</button>
+  <button class="interior-lock-btn" id="btn-relock">🔒 Lock Vault</button>
+</div>
+
+<!-- Transfer History Modal -->
+<div class="transfer-history-modal" id="transfer-history-modal">
+  <div class="history-box">
+    <div class="history-title">Transfer History</div>
+    <div id="history-content" style="max-height: 400px; overflow-y: auto;">
+      <!-- Populated by JS -->
+    </div>
+    <button class="history-close-btn" id="btn-close-history">CLOSE</button>
+  </div>
+</div>
+
+<!-- Enhanced JavaScript Functions -->
+<script>
+/**
+ * Load interior assets with transfer source information
+ */
+function loadInteriorAssets() {
+  let codes = 0,
+    silver = 0,
+    gold = 0;
+  let assets = { codes: [], silver: [], gold: [] };
+
+  try {
+    // Get assets from parent app state or local storage
+    const state =
+      window.AppState ||
+      window.parent?.AppState ||
+      window.parent?.parent?.AppState ||
+      {};
+
+    if (state.assets) {
+      assets = state.assets;
+      codes = assets.codes?.length || 0;
+      silver = assets.silver?.length || 0;
+      gold = assets.gold?.length || 0;
+    }
+
+    // Store for transfer history
+    window.__assetsList = assets;
+  } catch (_) {}
+
+  // Animate numbers counting up
+  animCount($("int-codes"), 0, codes, 600);
+  animCount($("int-silver"), 0, silver, 800);
+  animCount($("int-gold"), 0, gold, 1000);
+
+  // Calculate transfer stats
+  updateTransferStats(assets);
+}
+
+/**
+ * Update transfer source statistics
+ */
+function updateTransferStats(assets) {
+  let stats = { self: 0, user_transfer: 0, admin_transfer: 0 };
+
+  // Count assets by source
+  ["codes", "silver", "gold"].forEach((type) => {
+    (assets[type] || []).forEach((asset) => {
+      const source = asset.source_type || "self";
+      stats[source] = (stats[source] || 0) + 1;
     });
+  });
 
-    // Global toast function
-    window.showToast = function(message, type = 'info', duration = 3500) {
-      const container = document.getElementById('toast-container');
-      const toast = document.createElement('div');
-      toast.className = 'toast';
-      
-      const colors = {
-        success: '#28a745',
-        error: '#dc3545',
-        warning: '#ffc107',
-        info: '#17a2b8'
-      };
-      
-      toast.style.cssText = `
-        background: ${colors[type] || colors.info};
-        color: ${type === 'warning' ? '#000' : '#fff'};
-        padding: 12px 16px;
-        border-radius: 8px;
-        margin-bottom: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  // Update display
+  $("stat-self").textContent = stats.self || 0;
+  $("stat-user").textContent = stats.user_transfer || 0;
+  $("stat-admin").textContent = stats.admin_transfer || 0;
+}
+
+/**
+ * Open transfer history modal with formatted data
+ */
+function openTransferHistory() {
+  const modal = $("transfer-history-modal");
+  const content = $("history-content");
+
+  // Simulate loading history (in production, fetch from server)
+  const history = [
+    {
+      asset_id: "code-123",
+      asset_type: "code",
+      from_email: "alice@example.com",
+      to_email: "you@example.com",
+      transfer_type: "user",
+      transferred_at: "2026-04-10T14:23:00Z",
+      message: "Shared security snippet",
+    },
+    {
+      asset_id: "gold-001",
+      asset_type: "gold",
+      from_email: "admin@company.com",
+      to_email: "you@example.com",
+      transfer_type: "admin",
+      transferred_at: "2026-04-09T09:15:00Z",
+      message: "Monthly rewards",
+    },
+  ];
+
+  if (history.length === 0) {
+    content.innerHTML =
+      '<div style="text-align:center; color:rgba(255,255,255,0.3); padding:20px;">No transfers recorded</div>';
+  } else {
+    content.innerHTML = history
+      .map((h) => {
+        const isReceived = true; // Assuming current user is recipient
+        const fromEmail = h.from_email.split("@")[0];
+        const toEmail = h.to_email.split("@")[0];
+        const date = new Date(h.transferred_at).toLocaleDateString();
+
+        return `
+        <div class="history-item ${isReceived ? "received" : "sent"}">
+          <div class="history-from-to">
+            <span>${fromEmail}</span>
+            <span class="history-arrow">${isReceived ? "→" : "←"}</span>
+            <span>${toEmail}</span>
+          </div>
+          <div style="color:rgba(255,255,255,0.5); margin-bottom:4px;">
+            📦 ${h.asset_type.toUpperCase()} 
+            <span style="color:${h.transfer_type === "admin" ? "#ff4444" : "#ff9930"};">
+              [${h.transfer_type.toUpperCase()}]
+            </span>
+          </div>
+          ${h.message ? `<div style="color:rgba(255,255,255,0.4); font-style:italic;">"${h.message}"</div>` : ""}
+          <div class="history-time">${date}</div>
+        </div>
       `;
-      toast.textContent = message;
-      
-      container.appendChild(toast);
-      
-      setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(100%)';
-        setTimeout(() => toast.remove(), 300);
-      }, duration);
-    };
+      })
+      .join("");
+  }
 
-    // Settings Panel
-    document.addEventListener('DOMContentLoaded', function() {
-      const panel = document.getElementById('settings-panel');
-      const openBtn = document.getElementById('settings-btn');
-      const closeBtn = document.getElementById('settings-close');
+  modal.classList.add("open");
+}
 
-      function openPanel() {
-        panel.classList.add('active');
-        panel.setAttribute('aria-hidden', 'false');
-      }
+function closeTransferHistory() {
+  const modal = $("transfer-history-modal");
+  modal.classList.remove("open");
+}
 
-      function closePanel() {
-        panel.classList.remove('active');
-        panel.setAttribute('aria-hidden', 'true');
-      }
+// Event listeners
+$("btn-view-history").addEventListener("click", openTransferHistory);
+$("btn-close-history").addEventListener("click", closeTransferHistory);
 
-      if (openBtn) openBtn.addEventListener('click', openPanel);
-      if (closeBtn) closeBtn.addEventListener('click', closePanel);
+// Modal close on overlay click
+$("transfer-history-modal").addEventListener("click", (e) => {
+  if (e.target.id === "transfer-history-modal") {
+    closeTransferHistory();
+  }
+});
 
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closePanel();
-      });
-
-      // Tab switching
-      const tabBtns = document.querySelectorAll('.tab-btn');
-      const tabContents = document.querySelectorAll('.tab-content');
-
-      tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-          const tabId = btn.dataset.tab;
-          
-          // Update active states
-          tabBtns.forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          
-          tabContents.forEach(c => {
-            c.classList.remove('active');
-            if (c.id === `${tabId}-tab`) {
-              c.classList.add('active');
-            }
-          });
-
-          // Trigger SafeAssetList render when assets tab is opened
-          if (tabId === 'assets' && window.SafeAssetList) {
-            setTimeout(() => {
-              const container = document.querySelector('#codebank-assets-tab .safe-container');
-              if (container) {
-                window.SafeAssetList.render(window.ACTIVE_ASSET_TAB || 'codes', container);
-              }
-            }, 100);
-          }
-        });
-      });
-
-      // Debug toggle
-      const debugToggle = document.getElementById('debug-toggle');
-      if (debugToggle) {
-        debugToggle.addEventListener('change', () => {
-          window.CODEBANK_DEBUG = debugToggle.checked;
-          console.log('[CodeBank] Debug mode:', window.CODEBANK_DEBUG ? 'ON' : 'OFF');
-        });
-      }
-
-      // Quick action buttons
-      document.getElementById('generate-code-btn')?.addEventListener('click', () => {
-        if (window.Bankode) {
-          const payload = window.Bankode.generateIfDue();
-          if (payload) {
-            window.showToast('Code generated: ' + payload.code.substring(0, 10) + '...', 'success');
-          }
-        }
-      });
-
-      document.getElementById('refresh-assets-btn')?.addEventListener('click', () => {
-        window.dispatchEvent(new CustomEvent('assets:updated', { 
-          detail: { source: 'manual-refresh' } 
-        }));
-        window.showToast('Assets refreshed', 'info');
-      });
-
-       // Initialize
-       console.log('[CodeBank] Page initialized successfully');
-       window.showToast('CodeBank loaded successfully!', 'success', 2000);
-     });
-   </script>
-
-   <!-- Email Display Script - ADD AT END OF BODY -->
-   <script>
-   (function() {
-       function updateEmailDisplay() {
-           const emailBox = document.getElementById('side-panel-email');
-           if (!emailBox) return;
-           
-           // Try to get email from multiple sources
-           let email = null;
-           
-           // Source 1: AuthCore state
-           if (window.AuthCore && typeof window.AuthCore.getState === 'function') {
-               try {
-                   const state = window.AuthCore.getState();
-                   email = state.user?.email || state.user?.user_metadata?.email;
-               } catch(e) {}
-           }
-           
-           // Source 2: AppState
-           if (!email && window.AppState?.user?.email) {
-               email = window.AppState.user.email;
-           }
-           
-           // Source 3: localStorage cache
-           if (!email) {
-               try {
-                   const cached = localStorage.getItem('bankode_user_cache');
-                   if (cached) {
-                       const user = JSON.parse(cached);
-                       email = user.email || user.user_metadata?.email;
-                   }
-               } catch(e) {}
-           }
-           
-           // Source 4: Check session cookie
-           if (!email) {
-               const match = document.cookie.match(/email=([^;]+)/);
-               if (match) email = decodeURIComponent(match[1]);
-           }
-           
-           if (email) {
-               emailBox.textContent = email;
-               console.log('[SidePanel] Email displayed:', email);
-           } else {
-               emailBox.innerHTML = '<span style="color:#ff6b6b">Not logged in</span>';
-               console.warn('[SidePanel] No email found');
-           }
-       }
-       
-       // Update immediately and on auth events
-       updateEmailDisplay();
-       window.addEventListener('auth:ready', updateEmailDisplay);
-       window.addEventListener('auth:changed', updateEmailDisplay);
-       document.addEventListener('DOMContentLoaded', updateEmailDisplay);
-       
-       // Retry every 2 seconds until found (for race conditions)
-       const retryInterval = setInterval(() => {
-           const emailBox = document.getElementById('side-panel-email');
-           if (emailBox && emailBox.textContent.includes('@')) {
-               clearInterval(retryInterval);
-           } else {
-               updateEmailDisplay();
-           }
-       }, 2000);
-       
-       // Stop after 10 seconds
-       setTimeout(() => clearInterval(retryInterval), 10000);
-   })();
-   </script>
- </body>
-</html>
+// Update display when vault opens
+const originalOpenVault = openVault;
+openVault = function () {
+  originalOpenVault.call(this);
+  loadInteriorAssets();
+};
+</script>
