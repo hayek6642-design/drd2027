@@ -445,11 +445,11 @@
             box-shadow: inset 0 0 5px 1px rgba(255, 255, 255, 0.8);
             border-radius: 50%;
             position: absolute;
-            color: rgba(0, 0, 0, 0.5);
-            font-size: 17px;
+            color: transparent !important;
+            font-size: 0 !important;
             /* Dr.D logo as background image, centered and scaled to fit */
-            background: url('/codebank/samma3ny/dr.dc.png') no-repeat center center;
-            background-size: cover;
+            background: url('/codebank/samma3ny/dr.dc.png') no-repeat center center !important;
+            background-size: cover !important;
             /* Default green color for playing state */
             margin-left: -38.5px;
             margin-top: -40px;
@@ -461,12 +461,18 @@
             cursor: pointer;
             z-index: 10000 !important;
             /* Fixed: ensure button is above ticker */
+            border: none !important;
+            padding: 0 !important;
+        }
+
+        #play-pause-button * {
+            display: none !important;
         }
 
         #play-pause-button.paused {
             /* Keep Dr.D logo background, add red tint */
-            background: url('/codebank/samma3ny/dr.dc.png') no-repeat center center, rgba(255, 0, 0, 0.3);
-            background-size: cover;
+            background: url('/codebank/samma3ny/dr.dc.png') no-repeat center center, rgba(255, 0, 0, 0.3) !important;
+            background-size: cover !important;
         }
 
         /* Enhanced Escape Button Animations */
@@ -2043,8 +2049,7 @@
                     <div id="progress-bar" class="progress-bar"></div>
                 </div>
             
-                <button id="play-pause-button" class="btn btn-success" title="Play/Pause" aria-label="Play/Pause"><span
-                        id="progress-text" class="pp-overlay" style="display:none">0%</span></button>
+                <button id="play-pause-button" title="Play/Pause" aria-label="Play/Pause"></button>
             </div>
         </div>
 
