@@ -3322,7 +3322,16 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
   }
 });
 
-// Admin-only manual deposit endpoint
+// Admin-only manual deposit endpoint - use middleware style
+app.use('/api/admin/deposit', (req, res, next) => {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ ok: false, error: 'method_not_allowed' });
+  }
+  console.log('[DEPOSIT] Request received at /api/admin/deposit');
+  // Continue to the actual handler
+  next();
+});
+
 app.post('/api/admin/deposit', async (req, res) => {
   try {
     console.log('[DEPOSIT] Request received at /api/admin/deposit');
