@@ -5620,6 +5620,38 @@ app.get('/debug-codes/:userId', async (req, res) => {
   }
 });
 
+// Debug: Fix user's codes_count balance
+app.get('/debug-fix-balance/:userId', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    console.log('[DEBUG] Fixing balance for user:', userId);
+    
+    if (process.env.DATABASE_URL) {
+      // First count actual codes in the codes table
+      const countRes = await query(
+        "SELECT COUNT(*) as cnt FROM codes WHERE user_id = $1 AND spent = 0",
+        [userId]
+      );
+      const actualCount = parseInt(countRes.rows[0]?.cnt || 0, 10);
+      
+      // Update user balance
+      await query(
+        "UPDATE users SET codes_count = $1 WHERE id = $2",
+        [actualCount, userId]
+      );
+      
+      console.log('[DEBUG] Fixed balance:', actualCount);
+      
+      return res.json({ ok: true, userId, codes_count: actualCount });
+    } else {
+      return res.json({ ok: false, error: 'No DATABASE_URL' });
+    }
+  } catch(e) {
+    console.error('[DEBUG] Error:', e.message);
+    return res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // Finally mount the consolidated router
 app.use('/api', apiRouter);
 
