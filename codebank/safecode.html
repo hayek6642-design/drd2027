@@ -5,6 +5,58 @@
     <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; font-src * data: 'self'; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src * data: blob:; media-src *; frame-src *;">
     <title>SafeCode Assets</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- SafeCode iframe asset bridge - receives from parent -->
+    <script>
+    (function() {
+        'use strict';
+        
+        // Create isolated AppState for iframe
+        window.AppState = window.AppState || { 
+            assets: { codes: [], silver: [], gold: [] },
+            user: null 
+        };
+        
+        console.log('[SafeCode] Asset bridge initializing...');
+        
+        // Listen for SNAPSHOT from parent (yt-new-clear.html)
+        window.addEventListener('message', function(e) {
+            console.log('[SafeCode] Received postMessage:', e.data?.type);
+            
+            // Support multiple message formats
+            if (e.data && (e.data.type === 'sqlite:snapshot' || e.data.type === 'assets:updated')) {
+                const snapshot = e.data.assets || e.data.snapshot || e.data;
+                console.log('[SafeCode] Got snapshot with', snapshot.codes?.length, 'codes');
+                
+                if (snapshot.codes || snapshot.silver || snapshot.gold) {
+                    window.AppState.assets = {
+                        codes: snapshot.codes || [],
+                        silver: snapshot.silver || [],
+                        gold: snapshot.gold || []
+                    };
+                    
+                    // Notify components
+                    window.dispatchEvent(new CustomEvent('safe-assets-ready', { 
+                        detail: window.AppState.assets 
+                    }));
+                    
+                    console.log('[SafeCode] Assets ready:', window.AppState.assets.codes.length, 'codes');
+                }
+            }
+        });
+        
+        // Request assets from parent if needed
+        if (window.parent !== window) {
+            window.parent.postMessage({ 
+                type: 'safecode:ready',
+                request: 'assets'
+            }, '*');
+        }
+        
+        console.log('[SafeCode] Asset bridge ready');
+    })();
+    </script>
+    
         <style>
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
