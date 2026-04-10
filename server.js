@@ -285,7 +285,7 @@ app.use(express.json({
 }));
 
 // Direct admin deposit - NO MIDDLEWARE - placed early to test
-app.use('/abc123-unique-test', (req, res) => {
+app.use('/abc123-unique-test', (req, res, next) => {
   console.log('[UNIQUE] Test endpoint hit - new code is running!');
   res.json({ ok: true, unique: true, method: req.method, timestamp: Date.now() });
 });
