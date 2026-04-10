@@ -225,6 +225,32 @@
     </div>
   </div>
 
+  <!-- Direct Asset Manager - loads before dashboard -->
+  <script src="/codebank/js/assets-direct.js"></script>
+
+  <!-- Listen for asset updates and update dashboard UI -->
+  <script>
+    document.addEventListener('assets:updated', function(e) {
+      const assets = e.detail || {};
+      console.log('[Bankode] Assets updated:', assets);
+      
+      // Update balance elements if they exist
+      const codesBalance = document.getElementById('codes-balance');
+      const silverBalance = document.getElementById('silver-balance');
+      const goldBalance = document.getElementById('gold-balance');
+      
+      if (codesBalance) {
+        codesBalance.textContent = (assets.codes?.length || assets.codes_count || 0);
+      }
+      if (silverBalance) {
+        silverBalance.textContent = (assets.silver?.length || assets.silver_count || 0);
+      }
+      if (goldBalance) {
+        goldBalance.textContent = (assets.gold?.length || assets.gold_count || 0);
+      }
+    });
+  </script>
+
   <!-- Dependency Helper Functions (MUST load first) -->
   <script src="utils/dependency-helpers.js"></script>
 

@@ -16,6 +16,17 @@ export const getUserBalances = async (userId) => {
     }
   }
 
+  // 🛡️ Also check AppState.assets from assets-direct.js
+  if (window.AppState && window.AppState.assets) {
+    const assets = window.AppState.assets;
+    console.log('[Dashboard] Syncing with AppState.assets:', assets);
+    return {
+      codes: Array.isArray(assets.codes) ? assets.codes.length : (assets.codes_count || 0),
+      silver: Array.isArray(assets.silver) ? assets.silver.length : (assets.silver_count || 0),
+      gold: Array.isArray(assets.gold) ? assets.gold.length : (assets.gold_count || 0)
+    };
+  }
+
   const data = await callRPC('bankode_get_balances', { p_user_id: userId });
   const norm = (obj) => {
     const out = { codes: 0, silver: 0, gold: 0 };
