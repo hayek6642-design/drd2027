@@ -1423,15 +1423,23 @@ console.log(`🗑️ Cleaned up ${tracksToRemove.length} old downloads to free s
         thumbnail.alt = track.title;
         thumbnail.classList.add('track-thumbnail');
 
-        // Set thumbnail source with proper fallback handling
-        if (track.thumbnail && track.thumbnail.trim() !== '') {
+        // Set thumbnail source with robust fallback handling
+        const defaultThumbnail = './dr.dc.png';
+        const fallbackSvg = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><rect fill="#1a1a2e" width="60" height="60"/><text x="50%" y="50%" fill="#00d4ff" text-anchor="middle" dy=".3em" font-family="Arial" font-size="10">Dr.D</text></svg>');
+        
+        if (track.thumbnail && track.thumbnail.trim() !== '' && !track.thumbnail.includes('undefined') && !track.thumbnail.includes('null')) {
             thumbnail.src = track.thumbnail;
             thumbnail.onerror = function() {
-                this.src = './dr.dc.png';
-                this.onerror = null;
+                this.src = defaultThumbnail;
+                this.onerror = function() {
+                    this.src = fallbackSvg;
+                };
             };
         } else {
-            thumbnail.src = './dr.dc.png';
+            thumbnail.src = defaultThumbnail;
+            thumbnail.onerror = function() {
+                this.src = fallbackSvg;
+            };
         }
 
         // Track details
