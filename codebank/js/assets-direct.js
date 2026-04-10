@@ -61,10 +61,15 @@
 
                 // 🔄 Send to all iframes via postMessage (for SafeCode, etc)
                 try {
-                    const snapshotData = JSON.stringify({ type: 'assets:updated', snapshot: snapshot });
+                    // Send in format SafeCode expects: { type: 'parent:assets-init', assets: {...} }
+                    const msgData = { 
+                        type: 'parent:assets-init', 
+                        assets: snapshot,
+                        user: window.AppState.user
+                    };
                     document.querySelectorAll('iframe').forEach(iframe => {
                         try {
-                            iframe.contentWindow?.postMessage(snapshotData, '*');
+                            iframe.contentWindow?.postMessage(msgData, '*');
                         } catch(e) {}
                     });
                 } catch(e) {}

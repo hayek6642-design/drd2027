@@ -1777,6 +1777,35 @@ drawDial(0);
 if (isFirstRun()) {
   setPinMsg('DEFAULT PIN: 00000000');
 }
+
+// ═════════════════════════════════════════════
+// POST MESSAGE LISTENER (receive assets from parent)
+// ═════════════════════════════════════════════
+(function() {
+  window.addEventListener('message', function(e) {
+    // Accept messages from parent or same origin
+    if (!e.data || !e.data.type) return;
+    
+    if (e.data.type === 'parent:assets-init' || e.data.assets) {
+      window.AppState = window.AppState || {};
+      window.AppState.assets = e.data.assets || { codes: [], silver: [], gold: [] };
+      window.AppState.user = e.data.user;
+      console.log('[SafeCode] Received assets via postMessage:', window.AppState.assets);
+      
+      // Reload interior with new assets if vault is open
+      if (typeof loadInteriorAssets === 'function' && typeof isVaultOpen !== 'undefined' && isVaultOpen) {
+        loadInteriorAssets();
+      }
+    }
+  });
+  
+  // Request assets from parent after 1 second
+  setTimeout(function() {
+    if (window.self !== window.parent) {
+      try { window.parent.postMessage({ type: 'safecode:request-assets' }, '*'); } catch(_) {}
+    }
+  }, 1000);
+})();
 </script>
 </body>
 </html>
