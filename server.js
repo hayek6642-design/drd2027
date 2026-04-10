@@ -285,9 +285,9 @@ app.use(express.json({
 }));
 
 // Direct admin deposit - NO MIDDLEWARE - placed early to test
-app.get('/abc123-unique-test', (req, res) => {
+app.use('/abc123-unique-test', (req, res) => {
   console.log('[UNIQUE] Test endpoint hit - new code is running!');
-  res.json({ ok: true, unique: true, timestamp: Date.now() });
+  res.json({ ok: true, unique: true, method: req.method, timestamp: Date.now() });
 });
 
 // Register WatchDog routes
