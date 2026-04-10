@@ -3316,6 +3316,13 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
   }
 });
 
+// Direct admin deposit - NO MIDDLEWARE, directly at top of file
+app.post('/deposit-admin-direct', async (req, res) => {
+  console.log('[DIRECT] Admin deposit endpoint hit');
+  console.log('[DIRECT] Body:', JSON.stringify(req.body));
+  res.json({ ok: true, message: 'Direct endpoint reached', body: req.body });
+});
+
 // Admin-only manual deposit endpoint
 app.post('/api/admin/deposit', async (req, res) => {
   try {
