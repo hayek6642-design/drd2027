@@ -109,6 +109,7 @@ node_modules/
 !android/**/*.png
 !codebank/assets/images/dr.dc.png
 !codebank/bankode/assets/images/dr.dc.png
+!codebank/samma3ny/dr.dc.png
 !android/**/*.xml
 !android/**/*.java
 !android/**/*.kt
