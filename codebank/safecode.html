@@ -542,6 +542,30 @@
 
         })();
     </script>
+    
+    <!-- Direct Asset Manager - loads before SafeCode -->
+    <script src="/codebank/js/assets-direct.js"></script>
+    
+    <!-- Listen for asset updates and update counter UI -->
+    <script>
+      document.addEventListener('assets:updated', function(e) {
+        const assets = e.detail || {};
+        
+        // Update tab counters
+        var codesBtn = document.querySelector('button[data-tab="codes"]');
+        var silverBtn = document.querySelector('button[data-tab="silver"]');
+        var goldBtn = document.querySelector('button[data-tab="gold"]');
+        
+        var codesCount = assets.codes?.length || assets.codes_count || 0;
+        var silverCount = assets.silver?.length || assets.silver_count || 0;
+        var goldCount = assets.gold?.length || assets.gold_count || 0;
+        
+        if (codesBtn) codesBtn.innerHTML = '🔑 Codes (' + codesCount + ')';
+        if (silverBtn) silverBtn.innerHTML = '🥈 Silver (' + silverCount + ')';
+        if (goldBtn) goldBtn.innerHTML = '🥇 Gold (' + goldCount + ')';
+      });
+    </script>
+    
     <script src="/codebank/bankode/safe/bankode-safe.js"></script>
 </body>
 </html>
