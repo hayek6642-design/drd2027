@@ -3,8 +3,12 @@ try { if (typeof window !== 'undefined') { if (typeof window.CODEBANK_DEBUG === 
 
 // Compatibility function for bankode-assetbus-bridge.js
 window.updateCodeDisplay = function(latest) {
-  __LAST_LATEST_CODE__ = latest;
-  __applyLatest__(latest);
+  // Validate before applying
+  const validCode = latest ? __validateCodeFormat__(latest) : null;
+  if (validCode) {
+    __LAST_LATEST_CODE__ = validCode;
+    __applyLatest__(validCode);
+  }
 };
 
 function __applyLatest__(latest){
@@ -32,17 +36,49 @@ function __rehydrateFromSnapshot__(){
     if (window.AssetBus && typeof window.AssetBus.snapshot === 'function') {
       const snap = window.AssetBus.snapshot();
       if (snap && snap.latest) {
-        __LAST_LATEST_CODE__ = snap.latest;
-        __applyLatest__(snap.latest);
-        return;
+        const validCode = __validateCodeFormat__(snap.latest);
+        if (validCode) {
+          __LAST_LATEST_CODE__ = validCode;
+          __applyLatest__(validCode);
+          return;
+        }
       }
     }
     
     // Fallback to IndexedDB snapshot
     const openDB = function(){ return new Promise(function(resolve,reject){ try{ var req=indexedDB.open('CodeBankSnapshotDB',1); req.onupgradeneeded=function(){ try{ var db=req.result; if(!db.objectStoreNames.contains('snapshots')) db.createObjectStore('snapshots'); }catch(_){ } }; req.onsuccess=function(){ resolve(req.result) }; req.onerror=function(){ reject(req.error) }; }catch(e){ reject(e) } }); };
     const readSnap = function(){ return openDB().then(function(db){ return new Promise(function(resolve,reject){ try{ var tx=db.transaction('snapshots','readonly'); var store=tx.objectStore('snapshots'); var req=store.get('latest'); req.onsuccess=function(){ resolve(req.result||null) }; req.onerror=function(){ reject(req.error) }; }catch(e){ reject(e) } }); }); };
-    readSnap().then(function(snap){ try{ if(snap && snap.latestCode){ __LAST_LATEST_CODE__ = snap.latestCode; __applyLatest__(snap.latestCode); } }catch(_){ } });
+    readSnap().then(function(snap){ 
+      try{ 
+        if(snap && snap.latestCode){ 
+          const validCode = __validateCodeFormat__(snap.latestCode);
+          if (validCode) {
+            __LAST_LATEST_CODE__ = validCode;
+            __applyLatest__(validCode);
+          }
+        } 
+      }catch(_){ } 
+    });
   } catch(_) {}
+}
+
+// Validate code format - reject invalid/test codes
+function __validateCodeFormat__(code) {
+  if (!code || typeof code !== 'string') return null;
+  // Reject short codes
+  if (code.length < 20) return null;
+  // Reject plain text or numbers only
+  if (/^[a-zA-Z]+$/.test(code)) return null;
+  if (/^[0-9]+$/.test(code)) return null;
+  // Accept proper format: XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-P#
+  if (/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-P[0-9]$/.test(code)) {
+    return code;
+  }
+  // Accept reasonably long mixed codes
+  if (code.length >= 30 && /[A-Z]/.test(code) && /[0-9]/.test(code)) {
+    return code;
+  }
+  return null;
 }
 
 export const CodeBankBridge = {
@@ -56,14 +92,18 @@ export const CodeBankBridge = {
       const d = e && e.detail || {};
       const latest = d.latest || '';
       if (!latest && __LAST_LATEST_CODE__) return;
-      if (latest) { __LAST_LATEST_CODE__ = latest; __applyLatest__(latest); }
+      // Validate before applying
+      const validCode = latest ? __validateCodeFormat__(latest) : null;
+      if (validCode) { __LAST_LATEST_CODE__ = validCode; __applyLatest__(validCode); }
     } catch(_){ }
   });
   window.addEventListener('bridge:snapshot-applied', (e) => {
     try {
       const d = e && e.detail || {};
       const latest = d.latestCode || d.latest;
-      if (latest) { __LAST_LATEST_CODE__ = latest; __applyLatest__(latest); }
+      // Validate before applying
+      const validCode = latest ? __validateCodeFormat__(latest) : null;
+      if (validCode) { __LAST_LATEST_CODE__ = validCode; __applyLatest__(validCode); }
     } catch(_){ }
   });
   window.addEventListener('assets:updated', (e) => {
@@ -71,12 +111,16 @@ export const CodeBankBridge = {
     const latest = d.latest;
     const count = d.count;
     const type = d.type || 'unknown';
-    __LAST_LATEST_CODE__ = latest || __LAST_LATEST_CODE__;
-    if (type === (window.AssetType ? window.AssetType.Codes : 'codes')) {
-      __applyLatest__(latest);
-      const codeCounter = document.getElementById('asset-codes');
-      if (codeCounter && typeof count === 'number') codeCounter.textContent = String(count);
-      try { if (window.CODEBANK_DEBUG) console.log('[UI UPDATE]', 'codes', latest); } catch(_){}
+    // Validate before applying
+    const validCode = latest ? __validateCodeFormat__(latest) : null;
+    if (validCode) {
+      __LAST_LATEST_CODE__ = validCode;
+      if (type === (window.AssetType ? window.AssetType.Codes : 'codes')) {
+        __applyLatest__(validCode);
+        const codeCounter = document.getElementById('asset-codes');
+        if (codeCounter && typeof count === 'number') codeCounter.textContent = String(count);
+        try { if (window.CODEBANK_DEBUG) console.log('[UI UPDATE]', 'codes', validCode); } catch(_){}
+      }
     }
     if (type === (window.AssetType ? window.AssetType.Likes : 'likes')) {
       const likeCount = typeof d.likes === 'number' ? d.likes : null;
