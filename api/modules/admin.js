@@ -597,7 +597,7 @@ router.get('/qarsan/steals', requireRole('admin'), async (_req, res) => {
 
 // ─── Bankode Admin: Send assets to user by email ─────────────────────────────
 router.post('/send-by-email', requireRole('admin'), async (req, res) => {
-  const { email, assetType, amount } = req.body || {}
+  const { email, assetType, amount, pValue } = req.body || {}
   if (!email || !assetType || !amount || Number(amount) <= 0) {
     return res.status(400).json({ ok: false, error: 'INVALID_INPUT' })
   }
@@ -611,11 +611,41 @@ router.post('/send-by-email', requireRole('admin'), async (req, res) => {
       return res.status(404).json({ ok: false, error: 'USER_NOT_FOUND', message: `No user found with email: ${email}. Check the email is correct and the user has signed up.` })
     }
     const userId = userRes.rows[0].id
+    const quantity = Number(amount)
+    const timestamp = new Date().toISOString()
+    
+    // Import the code generator utility
+    const { generateFormattedCode, isValidCodeFormat, parseCode } = await import('../../server/utils/code-generator.js');
+    
+    const generatedCodes = []
+    const assetTypeForCode = assetType === 'codes' ? 'code' : assetType === 'silver' ? 'silver' : 'gold'
+    
+    // Generate proper formatted codes
+    for (let i = 0; i < quantity; i++) {
+      const code = generateFormattedCode(assetTypeForCode, pValue ? Number(pValue) : null)
+      const parsed = parseCode(code)
+      
+      // Store in codes table with proper format
+      await query(`
+        INSERT INTO codes (user_id, code, type, p_value, status, source, created_at, metadata)
+        VALUES ($1, $2, $3, $4, 'active', 'admin_send', $5, $6)
+      `, [
+        userId,
+        code,
+        assetTypeForCode,
+        parsed.pValue,
+        timestamp,
+        JSON.stringify({ sentBy: 'admin', email, adminId: req.session?.userId })
+      ])
+      
+      generatedCodes.push({ code, pValue: parsed.pValue, type: assetTypeForCode })
+    }
+    
     const col = assetType === 'codes' ? 'codes_count' : assetType === 'silver' ? 'silver_count' : 'gold_count'
     // Update balance on users table
     await query(`
       UPDATE users SET ${col} = COALESCE(${col}, 0) + $2 WHERE id = $1
-    `, [userId, Number(amount)])
+    `, [userId, quantity])
     // Also ensure the balances table is in sync (user-facing balance reads from here)
     await query(`
       INSERT INTO balances (user_id, codes_count, silver_count, gold_count)
@@ -624,14 +654,21 @@ router.post('/send-by-email', requireRole('admin'), async (req, res) => {
     `, [userId])
     await query(`
       UPDATE balances SET ${col} = COALESCE(${col}, 0) + $2 WHERE user_id = $1
-    `, [userId, Number(amount)])
+    `, [userId, quantity])
+    
     await audit(req, {
       action: 'ADMIN_SEND_ASSETS_BY_EMAIL',
       target_type: 'user',
       target_id: userId,
-      metadata: { email, assetType, amount: Number(amount) }
+      metadata: { email, assetType, amount: quantity, codes: generatedCodes }
     })
-    res.json({ ok: true, message: `${amount} ${assetType} deposited to ${email} instantly ✅` })
+    
+    res.json({ 
+      ok: true, 
+      message: `${quantity} ${assetType} deposited to ${email} instantly ✅`,
+      codes: generatedCodes,
+      count: quantity
+    })
   } catch (e) {
     res.status(500).json({ ok: false, error: 'ADMIN_SEND_FAILED', detail: e.message })
   }
