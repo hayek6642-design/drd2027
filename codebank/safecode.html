@@ -3,104 +3,229 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Safe Assets</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- CRITICAL: Asset receiver MUST be first script -->
-    <script>
-        // SafeCode iframe asset receiver
-        (function() {
-            'use strict';
-            
-            window.AppState = { 
-                assets: { codes: [], silver: [], gold: [] },
-                user: null,
-                loaded: false
-            };
-            
-            window.addEventListener('message', function(e) {
-                console.log('[SafeCode] Message received:', e.data?.type);
-                
-                if (e.data?.type === 'parent:assets-init' || e.data?.assets) {
-                    window.AppState.assets = e.data.assets || { codes: [], silver: [], gold: [] };
-                    window.AppState.user = e.data.user;
-                    window.AppState.loaded = true;
-                    
-                    // Hide loading, show content
-                    document.getElementById('loading').style.display = 'none';
-                    document.getElementById('asset-container').style.display = 'block';
-                    
-                    // Dispatch ready event
-                    window.dispatchEvent(new CustomEvent('safe-assets-ready', { 
-                        detail: window.AppState.assets 
-                    }));
-                    
-                    console.log('[SafeCode] Assets loaded:', window.AppState.assets);
-                }
-            });
-            
-            // Request assets after 1 second if not received (backup)
-            setTimeout(function() {
-                if (!window.AppState.loaded && window.parent !== window) {
-                    console.log('[SafeCode] Requesting assets from parent...');
-                    window.parent.postMessage({ type: 'safecode:request-assets' }, '*');
-                }
-            }, 1000);
-        })();
-    </script>
-    
+    <title>SafeCode - Asset Storage</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
-            background: #0f0f0f; 
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 100%);
             color: #fff; 
-            font-family: system-ui, -apple-system, sans-serif; 
-            height: 100vh; 
-            overflow: hidden;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+            padding: 20px;
         }
-        #loading { 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            height: 100vh; 
-            flex-direction: column; 
-            gap: 20px; 
+        .container { max-width: 1200px; margin: 0 auto; }
+        
+        #loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 60vh;
+            gap: 20px;
         }
-        .spinner { 
-            width: 50px; 
-            height: 50px; 
-            border: 3px solid #333; 
-            border-top-color: #00d4ff; 
-            border-radius: 50%; 
-            animation: spin 1s linear infinite; 
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top-color: #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        #asset-container { 
-            width: 100%; 
-            height: 100vh; 
-            overflow-y: auto; 
-            padding: 20px; 
-            display: none; 
-        }
-        .error-box {
-            background: #ff4757;
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
+        
+        #error {
+            display: none;
+            background: rgba(255,71,87,0.1);
+            border: 1px solid #ff4757;
+            color: #ff6b7a;
+            padding: 30px;
+            border-radius: 15px;
             text-align: center;
+        }
+        #error button {
+            margin-top: 20px;
+            padding: 12px 30px;
+            background: #ff4757;
+            border: none;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        #assets-container {
+            display: none;
+        }
+        
+        h1 {
+            margin: 30px 0 40px;
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #00d4ff, #8a2be2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+        }
+        
+        .section h2 {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .asset-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(0,212,255,0.2);
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .asset-card:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(0,212,255,0.4);
+            transform: translateX(5px);
+        }
+        
+        .asset-label { color: #aaa; }
+        .asset-value { 
+            color: #00d4ff;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .empty-state {
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .badge {
+            display: inline-block;
+            background: rgba(0,212,255,0.2);
+            color: #00d4ff;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            margin-left: 10px;
         }
     </style>
 </head>
 <body>
-    <div id="loading">
-        <div class="spinner"></div>
-        <p>Loading Safe Assets...</p>
+    <div class="container">
+        <div id="loading">
+            <div class="spinner"></div>
+            <p style="font-size: 1.1em;">Loading Safe Assets...</p>
+        </div>
+        
+        <div id="error">
+            <h2>🔒 Authentication Required</h2>
+            <p>Please sign in to access your assets</p>
+            <button onclick="goToLogin()">Go to Login</button>
+        </div>
+        
+        <div id="assets-container">
+            <h1>🔐 Safe Assets</h1>
+            
+            <div class="section">
+                <h2>
+                    💳 Codes
+                    <span class="badge" id="codes-count">0</span>
+                </h2>
+                <div id="codes-list"></div>
+            </div>
+            
+            <div class="section">
+                <h2>
+                    🪙 Silver
+                    <span class="badge" id="silver-count">0</span>
+                </h2>
+                <div id="silver-list"></div>
+            </div>
+            
+            <div class="section">
+                <h2>
+                    👑 Gold
+                    <span class="badge" id="gold-count">0</span>
+                </h2>
+                <div id="gold-list"></div>
+            </div>
+        </div>
     </div>
-    <div id="asset-container">
-        <!-- Assets will render here -->
-    </div>
-    
-    <!-- Your existing safe-asset-list.js -->
-    <script src="js/safe-asset-list.js"></script>
+
+    <script src="../shared/js/auth-client.js"></script>
+    <script>
+        function goToLogin() {
+            window.location.href = '/login.html?redirect=' + encodeURIComponent('/codebank/safecode.html');
+        }
+        
+        function renderAssets(assets) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('assets-container').style.display = 'block';
+            
+            // Codes
+            const codes = assets?.codes || [];
+            document.getElementById('codes-count').textContent = codes.length;
+            document.getElementById('codes-list').innerHTML = codes.length > 0
+                ? codes.map(c => `
+                    <div class="asset-card">
+                        <span class="asset-label">${c.code || 'Code'}</span>
+                        <span class="asset-value">${c.value || 'N/A'}</span>
+                    </div>
+                `).join('')
+                : '<div class="empty-state">No codes in storage</div>';
+            
+            // Silver
+            const silver = assets?.silver || [];
+            document.getElementById('silver-count').textContent = silver.length;
+            document.getElementById('silver-list').innerHTML = silver.length > 0
+                ? silver.map(s => `
+                    <div class="asset-card">
+                        <span class="asset-label">Silver Stack</span>
+                        <span class="asset-value">${s.amount || 0} SLVR</span>
+                    </div>
+                `).join('')
+                : '<div class="empty-state">No silver in storage</div>';
+            
+            // Gold
+            const gold = assets?.gold || [];
+            document.getElementById('gold-count').textContent = gold.length;
+            document.getElementById('gold-list').innerHTML = gold.length > 0
+                ? gold.map(g => `
+                    <div class="asset-card">
+                        <span class="asset-label">Gold Reserve</span>
+                        <span class="asset-value">${g.amount || 0} GOLD</span>
+                    </div>
+                `).join('')
+                : '<div class="empty-state">No gold in storage</div>';
+        }
+        
+        // Listen for auth changes
+        window.AuthClient.on('auth:changed', (state) => {
+            if (state.authenticated && state.assets) {
+                renderAssets(state.assets);
+            } else if (!state.authenticated && !state.loading) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+            }
+        });
+        
+        // Check immediately in case event already fired
+        setTimeout(() => {
+            if (window.AuthClient.isAuth() && window.AuthClient.getAssets()) {
+                renderAssets(window.AuthClient.getAssets());
+            }
+        }, 800);
+    </script>
 </body>
 </html>
