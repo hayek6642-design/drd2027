@@ -291,6 +291,11 @@ app.post('/admin-deposit-test', async (req, res) => {
   res.json({ ok: true, message: 'Direct endpoint reached', body: req.body });
 });
 
+app.get('/admin-deposit-test', (req, res) => {
+  console.log('[DIRECT] GET test hit');
+  res.json({ ok: true, message: 'GET endpoint works' });
+});
+
 // Register WatchDog routes
 app.use('/api/watchdog', watchdogRoutes);
 
