@@ -902,13 +902,9 @@ console.log(`🗑️ Cleaned up ${tracksToRemove.length} old downloads to free s
             currentTrackTitle.textContent = (track && track.title) ? track.title : 'Track';
             currentTrackArtist.textContent = 'Dr.D';
             currentTrackDescription.textContent = track && track.description ? track.description : '';
-            if (track && track.thumbnail) {
-                cdCoverImage.src = track.thumbnail;
-                cdCoverImage.style.opacity = '1';
-            } else {
-                cdCoverImage.src = '/codebank/samma3ny/dr.dc.png';
-                cdCoverImage.style.opacity = '1';
-            }
+            
+            // Hide CD cover image (show only in playlist thumbnails, not rotating vinyl)
+            cdCoverImage.style.display = 'none';
             cdDisc.classList.add('playing');
         } catch (_) {}
         _updatingTrackDisplay = false;
@@ -924,14 +920,8 @@ console.log(`🗑️ Cleaned up ${tracksToRemove.length} old downloads to free s
             currentTrackArtist.textContent = 'Dr.D';
             currentTrackDescription.textContent = track.description || '';
 
-            // Update CD cover image
-            if (track.thumbnail && track.thumbnail !== '') {
-                cdCoverImage.src = track.thumbnail;
-                cdCoverImage.style.opacity = '1';
-            } else {
-                cdCoverImage.src = '/codebank/samma3ny/dr.dc.png';
-                cdCoverImage.style.opacity = '1';
-            }
+            // Hide CD cover (show only in playlist thumbnails, not rotating vinyl)
+            cdCoverImage.style.display = 'none';
 
             currentTrackIndex = index;
 
