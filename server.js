@@ -2604,6 +2604,107 @@ app.get('/api/assets/balance', requireAuth, async (req, res) => {
   }
 });
 
+// POST /api/assets/transaction - Universal asset transaction endpoint
+app.post('/api/assets/transaction', requireAuth, async (req, res) => {
+  try {
+    const { type, action, amount, service, metadata } = req.body;
+    const userId = req.user.id;
+    
+    if (!type || !action || !service) {
+      return res.status(400).json({ error: 'Missing required fields: type, action, service' });
+    }
+    
+    const db = await getDb();
+    const timestamp = new Date().toISOString();
+    const txId = `TX-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    let result = null;
+    
+    // Handle different asset types
+    switch(type) {
+      case 'code':
+        if (action === 'spend') {
+          // Find an active code to spend
+          const code = await db.get(
+            'SELECT * FROM codes WHERE user_id = ? AND (status = "active" OR status IS NULL) AND used_by IS NULL LIMIT 1',
+            [userId]
+          );
+          if (!code) throw new Error('No active codes available');
+          
+          // Mark as used
+          await db.run(
+            'UPDATE codes SET used_by = ?, used_at = ? WHERE id = ?',
+            [service, timestamp, code.id]
+          );
+          result = { codeId: code.id, value: 1 };
+          
+          // Update user balance
+          await db.run('UPDATE users SET codes_count = codes_count - 1 WHERE id = ?', [userId]);
+        }
+        break;
+        
+      case 'silver':
+        if (action === 'spend') {
+          const current = await db.get('SELECT silver_count FROM users WHERE id = ?', [userId]);
+          if (!current || current.silver_count < amount) throw new Error('Insufficient silver');
+          
+          await db.run(
+            'INSERT INTO ledger (user_id, type, action, amount, service, created_at, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [userId, 'silver', 'spend', amount, service, timestamp, JSON.stringify(metadata || {})]
+          );
+          await db.run('UPDATE users SET silver_count = silver_count - ? WHERE id = ?', [amount, userId]);
+          result = { amount: -amount };
+        } else if (action === 'earn') {
+          await db.run(
+            'INSERT INTO ledger (user_id, type, action, amount, service, created_at, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [userId, 'silver', 'earn', amount, service, timestamp, JSON.stringify(metadata || {})]
+          );
+          await db.run('UPDATE users SET silver_count = silver_count + ? WHERE id = ?', [amount, userId]);
+          result = { amount: amount };
+        }
+        break;
+        
+      case 'gold':
+        if (action === 'spend') {
+          const current = await db.get('SELECT gold_count FROM users WHERE id = ?', [userId]);
+          if (!current || current.gold_count < amount) throw new Error('Insufficient gold');
+          
+          await db.run(
+            'INSERT INTO ledger (user_id, type, action, amount, service, created_at, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [userId, 'gold', 'spend', amount, service, timestamp, JSON.stringify(metadata || {})]
+          );
+          await db.run('UPDATE users SET gold_count = gold_count - ? WHERE id = ?', [amount, userId]);
+          result = { amount: -amount };
+        } else if (action === 'earn') {
+          await db.run(
+            'INSERT INTO ledger (user_id, type, action, amount, service, created_at, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [userId, 'gold', 'earn', amount, service, timestamp, JSON.stringify(metadata || {})]
+          );
+          await db.run('UPDATE users SET gold_count = gold_count + ? WHERE id = ?', [amount, userId]);
+          result = { amount: amount };
+        }
+        break;
+        
+      default:
+        throw new Error('Unknown asset type: ' + type);
+    }
+    
+    // Record transaction in ledger
+    console.log(`[TRANSACTION] ${type}:${action} by ${service} for user ${userId}`);
+    
+    res.json({
+      success: true,
+      transactionId: txId,
+      result: result,
+      timestamp: timestamp
+    });
+    
+  } catch (err) {
+    console.error('[API] Transaction error:', err);
+    res.status(400).json({ error: err.message });
+  }
+});
+
 
 // YT-Clear routes
 app.get(['/yt-clear', '/yt-clear/yt-new-clear.html'], (req, res) => {
