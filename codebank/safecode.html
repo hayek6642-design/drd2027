@@ -298,45 +298,63 @@
     }
     </script>
 
-    <!-- AssetBus shim: delegates to parent window's GET_AUTHORITATIVE_ASSETS -->
+    <!-- AssetBus shim: delegates to parent window's GET_AUTHORITATIVE_ASSETS, with localStorage and API fallback -->
     <script>
     (function() {
       window.AssetBus = {
         _store: {},
+        _loading: false,
         snapshot: function() {
           // Try parent window first
           if (window.top && window.top !== window && typeof window.top.GET_AUTHORITATIVE_ASSETS === 'function') {
             const data = window.top.GET_AUTHORITATIVE_ASSETS();
-            if (data) {
-              // Cache it locally
-              if (data.codes && data.codes.length > 0) window.AssetBus._store.codes = data.codes;
-              if (data.silver && data.silver.length > 0) window.AssetBus._store.silver = data.silver;
-              if (data.gold && data.gold.length > 0) window.AssetBus._store.gold = data.gold;
+            if (data && (data.codes?.length > 0 || data.silver?.length > 0 || data.gold?.length > 0)) {
+              console.log('[AssetBus] Got assets from parent window');
+              window.AssetBus._store = data;
               return data;
             }
           }
-          // 🔒 SECURITY: Fall back to localStorage with user verification
+          // Fall back to localStorage
           try {
             const raw = localStorage.getItem('codebank_assets');
             const cachedUser = localStorage.getItem('codebank_assets_user');
             const currentUser = window.AppState?.user?.id || window.AppState?.user?.userId;
             if (raw && cachedUser === currentUser) {
               const parsed = JSON.parse(raw);
-              if (parsed) {
-                if (parsed.codes && parsed.codes.length > 0) window.AssetBus._store.codes = parsed.codes;
-                if (parsed.silver && parsed.silver.length > 0) window.AssetBus._store.silver = parsed.silver;
-                if (parsed.gold && parsed.gold.length > 0) window.AssetBus._store.gold = parsed.gold;
+              if (parsed && (parsed.codes?.length > 0 || parsed.silver?.length > 0 || parsed.gold?.length > 0)) {
+                console.log('[AssetBus] Got assets from localStorage cache');
+                window.AssetBus._store = parsed;
                 return parsed;
               }
             }
           } catch(_) {}
           // Fall back to internal store (last known good data)
+          console.log('[AssetBus] Using cached store:', window.AssetBus._store);
           return window.AssetBus._store;
         },
         sync: function() {
+          // Sync from parent
           if (window.top && window.top !== window && typeof window.top.AssetsManager?.sync === 'function') {
             window.top.AssetsManager.sync();
           }
+        },
+        // NEW: Fetch from API directly (fallback when no parent)
+        fetchFromAPI: async function() {
+          if (window.AssetBus._loading) return window.AssetBus._store;
+          window.AssetBus._loading = true;
+          try {
+            const resp = await fetch('/api/codes', { credentials: 'include' });
+            const data = await resp.json();
+            if (data.success && data.codes) {
+              window.AssetBus._store.codes = data.codes;
+              console.log('[AssetBus] Loaded', data.codes.length, 'codes from API');
+            }
+          } catch(e) {
+            console.warn('[AssetBus] API fetch failed:', e.message);
+          } finally {
+            window.AssetBus._loading = false;
+          }
+          return window.AssetBus._store;
         }
       };
       // Listen for assets updates from parent - support multiple message formats
@@ -549,24 +567,82 @@
         })();
     </script>
     
-    <!-- Listen for asset updates and update counter UI -->
+    <!-- Listen for asset updates and update counter UI - with API fallback -->
     <script>
-      document.addEventListener('assets:updated', function(e) {
-        const assets = e.detail || {};
+      // Function to load and display assets
+      async function loadAssets() {
+        console.log('[SafeCode] Loading assets...');
+        
+        // First try AssetBus.snapshot (parent window or localStorage)
+        var assets = window.AssetBus?.snapshot?.() || {};
+        
+        console.log('[SafeCode] AssetBus snapshot:', assets);
+        
+        // If no codes from snapshot, try API
+        if (!assets.codes || assets.codes.length === 0) {
+          console.log('[SafeCode] No codes from AssetBus, trying API...');
+          try {
+            var resp = await fetch('/api/codes', { credentials: 'include' });
+            var data = await resp.json();
+            if (data.success && data.codes) {
+              assets.codes = data.codes;
+              console.log('[SafeCode] Loaded', data.codes.length, 'codes from API');
+            }
+          } catch(e) {
+            console.warn('[SafeCode] API fetch failed:', e.message);
+          }
+        }
+        
+        // Update the UI with what we have
+        updateAssetUI(assets);
+        
+        // Dispatch event for components that listen
+        window.dispatchEvent(new CustomEvent('safe-assets-rendered', { detail: assets }));
+        
+        return assets;
+      }
+      
+      function updateAssetUI(assets) {
+        console.log('[SafeCode] Updating UI with:', assets);
         
         // Update tab counters
         var codesBtn = document.querySelector('button[data-tab="codes"]');
         var silverBtn = document.querySelector('button[data-tab="silver"]');
         var goldBtn = document.querySelector('button[data-tab="gold"]');
         
-        var codesCount = assets.codes?.length || assets.codes_count || 0;
-        var silverCount = assets.silver?.length || assets.silver_count || 0;
-        var goldCount = assets.gold?.length || assets.gold_count || 0;
+        var codesCount = assets.codes?.length || 0;
+        var silverCount = assets.silver?.length || 0;
+        var goldCount = assets.gold?.length || 0;
         
         if (codesBtn) codesBtn.innerHTML = '🔑 Codes (' + codesCount + ')';
         if (silverBtn) silverBtn.innerHTML = '🥈 Silver (' + silverCount + ')';
         if (goldBtn) goldBtn.innerHTML = '🥇 Gold (' + goldCount + ')';
+        
+        // Update total count display
+        var totalCountEl = document.getElementById('total-count');
+        if (totalCountEl) {
+          totalCountEl.textContent = codesCount + ' Codes';
+        }
+        
+        console.log('[SafeCode] UI updated - Codes:', codesCount, 'Silver:', silverCount, 'Gold:', goldCount);
+      }
+      
+      // Listen for assets:updated events from parent
+      document.addEventListener('assets:updated', function(e) {
+        console.log('[SafeCode] Received assets:updated event');
+        updateAssetUI(e.detail || {});
       });
+      
+      // Auto-load assets when DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadAssets);
+      } else {
+        // Page already loaded, wait for scripts then load
+        setTimeout(loadAssets, 500);
+      }
+      
+      // Also load immediately as fallback
+      setTimeout(loadAssets, 2000);
     </script>
     
     <script src="/codebank/bankode/safe/bankode-safe.js"></script>
