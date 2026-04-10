@@ -1,1811 +1,407 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SafeCode — DRD Vault</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-  <style>
-    /* ════════════════════════════════════════════
-       RESET & ROOT
-    ════════════════════════════════════════════ */
-    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+<!-- SafeCode Interior Assets Display Section (Enhanced) -->
+<!-- Add this to replace the <div class="sf-interior"> section in original safecode/index.html -->
 
-    :root {
-      --neon:  #00d4ff;
-      --neon2: #0080ff;
-      --neon-g: rgba(0,212,255,0.45);
-      --green: #00ff88;
-      --red:   #ff4444;
-      --gold:  #ffcc44;
-      /* Metal palette */
-      --m0: #080b14;
-      --m1: #0f1422;
-      --m2: #1a2038;
-      --m3: #26304e;
-      --m4: #344068;
-      --m5: #445080;
-      --m6: #5c6a94;
-      --m7: #7888aa;
-      --shine: #a0b0cc;
-    }
+<style>
+  /* ════════════════════════════════════════════
+     TRANSFER SOURCE INDICATORS
+  ════════════════════════════════════════════ */
+  .asset-source-badge {
+    display: inline-block;
+    font-size: 7px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-left: 4px;
+    border: 1px solid;
+  }
 
-    html, body {
-      width:100%; height:100%;
-      overflow:hidden;
-      background:var(--m0);
-      font-family: 'Segoe UI', system-ui, monospace, sans-serif;
-      -webkit-font-smoothing: antialiased;
-    }
+  .asset-source-self {
+    background: rgba(0, 212, 255, 0.12);
+    color: #00d4ff;
+    border-color: rgba(0, 212, 255, 0.3);
+  }
 
-    /* ════════════════════════════════════════════
-       AMBIENT BACKGROUND
-    ════════════════════════════════════════════ */
-    #bg-canvas {
-      position:fixed; inset:0;
-      pointer-events:none; z-index:0;
-    }
+  .asset-source-user {
+    background: rgba(255, 153, 48, 0.12);
+    color: #ff9930;
+    border-color: rgba(255, 153, 48, 0.3);
+  }
 
-    /* ════════════════════════════════════════════
-       SCENE LAYOUT
-    ════════════════════════════════════════════ */
-    .vault-scene {
-      position:relative; z-index:1;
-      width:100%; height:100vh;
-      display:flex; flex-direction:column;
-      align-items:center; justify-content:center;
-      perspective:1300px;
-      perspective-origin:50% 42%;
-      gap:18px;
-    }
+  .asset-source-admin {
+    background: rgba(255, 68, 68, 0.12);
+    color: #ff4444;
+    border-color: rgba(255, 68, 68, 0.3);
+  }
 
-    /* ════════════════════════════════════════════
-       3D SAFE GROUP  (320 × 320 × 200 px box)
-       Depth  = 200 → half = 100  → front/back translateZ
-       Width  = 320 → half = 160  → left/right translateZ
-       Height = 320 → half = 160  → top/bottom translateZ
-       Right face  size: 200 w × 320 h
-       Top face    size: 320 w × 200 h
-    ════════════════════════════════════════════ */
-    .safe-group {
-      position:relative;
-      width:320px; height:320px;
-      transform-style:preserve-3d;
-      transform: rotateX(7deg) rotateY(-22deg);
-      filter: drop-shadow(0 50px 90px rgba(0,0,0,.9))
-              drop-shadow(0 10px 20px rgba(0,0,0,.6));
-    }
+  /* Color variants for asset values */
+  .val-code.source-user    { color: #ff9930; text-shadow: 0 0 8px rgba(255, 153, 48, 0.5); }
+  .val-code.source-admin   { color: #ff4444; text-shadow: 0 0 8px rgba(255, 68, 68, 0.5); }
+  .val-silver.source-user  { color: #ffa64d; text-shadow: 0 0 8px rgba(255, 166, 77, 0.4); }
+  .val-silver.source-admin { color: #ff8080; text-shadow: 0 0 8px rgba(255, 128, 128, 0.4); }
+  .val-gold.source-user    { color: #ffb347; text-shadow: 0 0 8px rgba(255, 179, 71, 0.5); }
+  .val-gold.source-admin   { color: #ff6b6b; text-shadow: 0 0 8px rgba(255, 107, 107, 0.5); }
 
-    /* ── Shared face base ── */
-    .sf {
-      position:absolute; top:0; left:0;
-      backface-visibility:hidden;
-    }
+  /* Asset row highlight on hover */
+  .asset-row {
+    position: relative;
+    transition: all 0.2s;
+  }
 
-    /* BACK */
-    .sf-back {
-      width:320px; height:320px;
-      transform: rotateY(180deg) translateZ(100px);
-      background:var(--m1);
-      border-radius:18px;
-    }
+  .asset-row:hover {
+    background: rgba(0, 212, 255, 0.08);
+    border-color: rgba(0, 212, 255, 0.25);
+    cursor: pointer;
+  }
 
-    /* LEFT (darker, shadow side) */
-    .sf-left {
-      width:200px; height:320px;
-      transform: rotateY(-90deg) translateZ(160px);
-      background: linear-gradient(180deg, var(--m2) 0%, var(--m1) 100%);
-      border-radius:14px 0 0 14px;
-    }
+  .asset-row.source-user:hover {
+    background: rgba(255, 153, 48, 0.08);
+    border-color: rgba(255, 153, 48, 0.25);
+  }
 
-    /* RIGHT (light side, visible) */
-    .sf-right {
-      width:200px; height:320px;
-      transform: rotateY(90deg) translateZ(160px);
-      background: linear-gradient(160deg, var(--m7) 0%, var(--m5) 35%, var(--m3) 100%);
-      border-radius:0 14px 14px 0;
-    }
-    /* Right face detail lines */
-    .sf-right::before {
-      content:'';
-      position:absolute; inset:0;
-      background: repeating-linear-gradient(
-        180deg, transparent, transparent 39px,
-        rgba(255,255,255,0.04) 40px
-      );
-      border-radius:0 14px 14px 0;
-    }
-    /* Rivets on right face */
-    .sf-right::after {
-      content:'';
-      position:absolute;
-      top:20px; left:12px;
-      width:10px; height:10px;
-      border-radius:50%;
-      background: radial-gradient(circle at 35% 35%, var(--shine), var(--m3));
-      box-shadow:
-        0 260px 0 0 radial-gradient(circle at 35% 35%, var(--shine), var(--m3));
-    }
+  .asset-row.source-admin:hover {
+    background: rgba(255, 68, 68, 0.08);
+    border-color: rgba(255, 68, 68, 0.25);
+  }
 
-    /* TOP (light side, visible) */
-    .sf-top {
-      width:320px; height:200px;
-      transform: rotateX(90deg) translateZ(160px);
-      background: linear-gradient(115deg, var(--m7) 0%, var(--m5) 50%, var(--m3) 100%);
-      border-radius:14px 14px 0 0;
-    }
-    .sf-top::before {
-      content:'';
-      position:absolute; inset:0;
-      background: repeating-linear-gradient(
-        90deg, transparent, transparent 39px,
-        rgba(255,255,255,0.04) 40px
-      );
-      border-radius:14px 14px 0 0;
-    }
-    /* "DRD VAULT" brand plate on top */
-    .sf-top::after {
-      content:'DRD VAULT';
-      position:absolute;
-      right:22px; bottom:18px;
-      font-size:8px; letter-spacing:4px;
-      color:rgba(255,255,255,0.18);
-      font-weight:700; text-transform:uppercase;
-    }
+  /* Transfer info tooltip */
+  .transfer-info {
+    font-size: 7px;
+    color: rgba(255, 255, 255, 0.35);
+    margin-top: 2px;
+    letter-spacing: 0.5px;
+    display: none;
+  }
 
-    /* BOTTOM */
-    .sf-bottom {
-      width:320px; height:200px;
-      transform: rotateX(-90deg) translateZ(160px);
-      background: var(--m1);
-    }
-    /* Rubber feet */
-    .sf-bottom::before {
-      content:'';
-      position:absolute;
-      bottom:4px; left:16px;
-      width:22px; height:10px;
-      border-radius:5px;
-      background:rgba(0,0,0,0.5);
-      box-shadow: 262px 0 0 0 rgba(0,0,0,0.5);
-    }
+  .asset-row:hover .transfer-info {
+    display: block;
+  }
 
-    /* ════════════════════════════════════════════
-       INTERIOR (z=98, just behind door)
-    ════════════════════════════════════════════ */
-    .sf-interior {
-      position:absolute; top:0; left:0;
-      width:320px; height:320px;
-      transform:translateZ(98px);
-      background: radial-gradient(ellipse at 50% 20%, #1e1400 0%, #080600 100%);
-      border-radius:14px;
-      display:flex; flex-direction:column;
-      align-items:center; padding:18px;
-      overflow:hidden;
-    }
-    /* Golden ambient inside */
-    .sf-interior::before {
-      content:'';
-      position:absolute; inset:0;
-      background: radial-gradient(ellipse at 50% 0%, rgba(120,90,0,0.35) 0%, transparent 65%);
-      border-radius:14px;
-      pointer-events:none;
-    }
-    .interior-title {
-      font-size:8px; letter-spacing:5px;
-      color:rgba(255,200,60,0.45);
-      text-transform:uppercase; font-weight:700;
-      margin-bottom:8px; position:relative; z-index:1;
-    }
-    .interior-shelf {
-      width:86%; height:2px;
-      background:linear-gradient(90deg, transparent, rgba(255,200,60,0.25), transparent);
-      margin-bottom:12px; position:relative; z-index:1;
-    }
-    .interior-assets {
-      display:flex; flex-direction:column;
-      gap:7px; width:100%; position:relative; z-index:1;
-    }
-    .asset-row {
-      display:flex; align-items:center;
-      justify-content:space-between;
-      background:rgba(0,0,0,0.45);
-      border:1px solid rgba(255,190,50,0.1);
-      border-radius:7px; padding:7px 11px;
-    }
-    .asset-row-left { display:flex; align-items:center; gap:8px; }
-    .asset-emoji { font-size:16px; }
-    .asset-name { font-size:9px; letter-spacing:1.5px; color:rgba(255,255,255,0.5); text-transform:uppercase; }
-    .asset-val { font-size:16px; font-weight:900; font-family:monospace; }
-    .val-code   { color:#60a0ff; text-shadow:0 0 8px rgba(96,160,255,0.5); }
-    .val-silver { color:#a8b8cc; text-shadow:0 0 8px rgba(168,184,204,0.4); }
-    .val-gold   { color:var(--gold); text-shadow:0 0 8px rgba(255,200,60,0.5); }
+  /* Transfer history modal */
+  .transfer-history-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 501;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(10px);
+  }
 
-    .interior-lock-btn {
-      margin-top:14px; position:relative; z-index:1;
-      padding:7px 18px;
-      background:rgba(255,68,68,0.12);
-      border:1px solid rgba(255,68,68,0.3);
-      border-radius:20px; color:#ff8888;
-      font-size:9px; letter-spacing:2px;
-      text-transform:uppercase; cursor:pointer;
-      transition:all 0.2s;
-    }
-    .interior-lock-btn:hover {
-      background:rgba(255,68,68,0.22);
-      border-color:#ff4444; color:#ffaaaa;
-    }
-    .interior-change-pin {
-      margin-top:7px; position:relative; z-index:1;
-      padding:5px 14px;
-      background:rgba(0,212,255,0.07);
-      border:1px solid rgba(0,212,255,0.2);
-      border-radius:20px; color:var(--neon);
-      font-size:8px; letter-spacing:2px;
-      text-transform:uppercase; cursor:pointer;
-      transition:all 0.2s;
-    }
-    .interior-change-pin:hover { background:rgba(0,212,255,0.16); }
+  .transfer-history-modal.open {
+    display: flex;
+  }
 
-    /* ════════════════════════════════════════════
-       DOOR PIVOT MECHANISM
-       Positioned at the RIGHT EDGE of the front face.
-       left:320px, translateZ:100 → at right-edge of front face.
-       .safe-door extends 320px to the LEFT (right:0).
-       transform-origin: right center → pivots at its right edge.
-       rotateY(-110deg) = door swings open toward viewer.
-    ════════════════════════════════════════════ */
-    .door-pivot {
-      position:absolute;
-      left:320px; top:0;
-      width:1px; height:320px;
-      transform-style:preserve-3d;
-      transform:translateZ(100px);
-    }
-    .safe-door {
-      position:absolute;
-      right:0; top:0;
-      width:320px; height:320px;
-      transform-style:preserve-3d;
-      transform-origin:right center;
-      /* rotateY 0 = fully closed */
-    }
+  .history-box {
+    background: var(--m2);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    border-radius: 14px;
+    padding: 26px 24px;
+    width: 420px;
+    max-height: 500px;
+    overflow-y: auto;
+    box-shadow: 0 0 50px rgba(0, 212, 255, 0.18), 0 20px 60px rgba(0, 0, 0, 0.8);
+  }
 
-    /* ── Door outer face (what you see when locked) ── */
-    .door-outer {
-      position:absolute; inset:0;
-      border-radius:16px;
-      backface-visibility:hidden;
-      overflow:hidden;
-      /* Multi-layer metallic gradient matching reference image */
-      background:
-        linear-gradient(145deg,
-          var(--m7) 0%,
-          var(--m5) 20%,
-          var(--m3) 55%,
-          var(--m2) 100%
-        );
-    }
-    /* Brushed metal horizontal lines */
-    .door-outer::before {
-      content:'';
-      position:absolute; inset:0;
-      background: repeating-linear-gradient(
-        90deg, transparent, transparent 4px,
-        rgba(255,255,255,0.018) 4px, rgba(255,255,255,0.018) 8px
-      );
-      border-radius:16px;
-    }
-    /* Edge bevel highlight */
-    .door-outer::after {
-      content:'';
-      position:absolute; inset:0;
-      border-radius:16px;
-      box-shadow:
-        inset 3px 3px 0 rgba(255,255,255,0.13),
-        inset -2px -2px 0 rgba(0,0,0,0.35),
-        inset 0 0 60px rgba(0,0,0,0.3);
-    }
+  .history-title {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--neon);
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
 
-    /* ── Door inner face (visible when door swings open) ── */
-    .door-inner {
-      position:absolute; inset:0;
-      border-radius:16px;
-      backface-visibility:hidden;
-      transform: rotateY(180deg) translateZ(1px);
-      background:linear-gradient(135deg, var(--m4) 0%, var(--m2) 100%);
-      display:flex; align-items:center; justify-content:center;
-    }
-    .door-inner::after {
-      content:'DRD';
-      font-size:28px; font-weight:900;
-      letter-spacing:8px;
-      color:rgba(255,255,255,0.06);
-      transform:scaleX(-1);
-    }
+  .history-item {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(0, 212, 255, 0.15);
+    border-radius: 7px;
+    padding: 11px;
+    margin-bottom: 10px;
+    font-size: 9px;
+  }
 
-    /* ── Door hardware ── */
-    .door-bolt {
-      position:absolute;
-      width:22px; height:22px;
-      border-radius:50%;
-      background: radial-gradient(circle at 35% 30%, var(--shine), var(--m5) 55%, var(--m2));
-      box-shadow:
-        0 3px 6px rgba(0,0,0,0.7),
-        inset 0 1px 3px rgba(255,255,255,0.25),
-        inset 0 -1px 2px rgba(0,0,0,0.4);
-    }
-    .bolt-tl { top:8px; left:8px; }
-    .bolt-tr { top:8px; right:8px; }
-    .bolt-bl { bottom:8px; left:8px; }
-    .bolt-br { bottom:8px; right:8px; }
+  .history-item.sent {
+    border-color: rgba(0, 212, 255, 0.2);
+  }
 
-    /* Handle bar on LEFT side of door */
-    .door-handle {
-      position:absolute;
-      left:-20px; top:50%;
-      transform:translateY(-50%);
-      width:18px; height:76px;
-      background:linear-gradient(90deg, var(--m2), var(--m6), var(--m4));
-      border-radius:9px 0 0 9px;
-      box-shadow:-3px 0 8px rgba(0,0,0,0.6);
-    }
-    .door-handle::after {
-      content:'';
-      position:absolute;
-      top:50%; left:3px;
-      transform:translateY(-50%);
-      width:4px; height:32px;
-      border-radius:2px;
-      background:rgba(255,255,255,0.15);
-    }
+  .history-item.received {
+    border-color: rgba(0, 255, 136, 0.2);
+    background: rgba(0, 255, 136, 0.05);
+  }
 
-    /* Hinges on RIGHT side */
-    .door-hinge {
-      position:absolute;
-      right:-5px;
-      width:11px; height:30px;
-      background:linear-gradient(90deg, var(--m4), var(--m7), var(--m5));
-      border-radius:0 5px 5px 0;
-      box-shadow:3px 0 6px rgba(0,0,0,0.5);
-    }
-    .hinge-1 { top:28px; }
-    .hinge-2 { top:138px; }
-    .hinge-3 { top:248px; }
+  .history-from-to {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    color: rgba(255, 255, 255, 0.6);
+    letter-spacing: 0.5px;
+  }
 
-    /* ════════════════════════════════════════════
-       AUTH PANEL (inside door-outer)
-    ════════════════════════════════════════════ */
-    .auth-panel {
-      position:absolute;
-      top:16px; left:16px; right:16px; bottom:16px;
-      background:#06091a;
-      border-radius:10px;
-      border:2px solid var(--m4);
-      display:flex; flex-direction:column;
-      align-items:center; justify-content:flex-start;
-      padding:12px 10px 8px;
-      overflow:hidden;
-      /* Blue neon glow matching reference image */
-      box-shadow:
-        0 0 0 1px rgba(0,200,255,0.12),
-        0 0 24px rgba(0,180,255,0.22),
-        0 0 60px rgba(0,100,255,0.12),
-        inset 0 0 40px rgba(0,0,0,0.7);
-    }
-    /* Neon border gradient */
-    .auth-panel::before {
-      content:'';
-      position:absolute; inset:-2px;
-      border-radius:12px;
-      background:linear-gradient(
-        135deg,
-        var(--neon) 0%, transparent 35%,
-        var(--neon2) 65%, transparent 100%
-      );
-      z-index:-1;
-      animation:neonGlow 3s ease-in-out infinite alternate;
-    }
-    @keyframes neonGlow {
-      from { opacity:0.4; }
-      to   { opacity:0.85; }
-    }
-    /* Subtle scan line moving across panel */
-    .auth-panel::after {
-      content:'';
-      position:absolute; left:0; right:0;
-      height:1px;
-      background:linear-gradient(90deg, transparent, rgba(0,212,255,0.08), transparent);
-      animation:panelScan 5s linear infinite;
-      pointer-events:none; z-index:0;
-    }
-    @keyframes panelScan {
-      from { top:0; }
-      to   { top:100%; }
-    }
+  .history-arrow {
+    color: var(--neon);
+    font-weight: 700;
+  }
 
-    /* ── Brand ── */
-    .vault-brand {
-      font-size:8px; letter-spacing:5px;
-      color:var(--neon); text-transform:uppercase;
-      font-weight:700; opacity:0.75;
-      margin-bottom:5px; position:relative; z-index:1;
-    }
+  .history-time {
+    font-size: 8px;
+    color: rgba(255, 255, 255, 0.35);
+    margin-top: 4px;
+  }
 
-    /* ── Phase pips ── */
-    .phase-pips {
-      display:flex; gap:14px;
-      margin-bottom:7px; position:relative; z-index:1;
-    }
-    .ppip {
-      display:flex; align-items:center; gap:5px;
-      font-size:8px; letter-spacing:1.5px;
-      color:rgba(255,255,255,0.2); text-transform:uppercase;
-      transition:color 0.4s;
-    }
-    .ppip-dot {
-      width:7px; height:7px; border-radius:50%;
-      background:rgba(255,255,255,0.12);
-      border:1px solid rgba(255,255,255,0.15);
-      transition:all 0.4s;
-    }
-    .ppip.done { color:var(--green); }
-    .ppip.done .ppip-dot {
-      background:var(--green); border-color:var(--green);
-      box-shadow:0 0 7px var(--green);
-    }
-    .ppip.active { color:var(--neon); }
-    .ppip.active .ppip-dot {
-      background:var(--neon); border-color:var(--neon);
-      box-shadow:0 0 8px var(--neon);
-      animation:pipBlink 1s infinite;
-    }
-    @keyframes pipBlink { 50% { opacity:0.4; } }
+  .transfer-stats {
+    background: rgba(0, 212, 255, 0.08);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    border-radius: 7px;
+    padding: 12px;
+    margin-bottom: 12px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    text-align: center;
+  }
 
-    /* ── Panel divider ── */
-    .panel-div {
-      width:88%; height:1px;
-      background:linear-gradient(90deg, transparent, rgba(0,212,255,0.25), transparent);
-      margin:4px 0 8px; position:relative; z-index:1;
-    }
+  .stat-item {
+    font-size: 8px;
+    color: rgba(255, 255, 255, 0.5);
+  }
 
-    /* ── Phase containers ── */
-    .phase-block {
-      display:none; flex-direction:column;
-      align-items:center; width:100%;
-      position:relative; z-index:1;
-    }
-    .phase-block.active { display:flex; }
+  .stat-num {
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--neon);
+  }
 
-    .phase-lbl {
-      font-size:8px; letter-spacing:3px;
-      color:var(--neon); text-transform:uppercase;
-      font-weight:700; margin-bottom:7px;
-    }
+  .history-close-btn {
+    display: block;
+    margin: 14px auto 0;
+    padding: 8px 20px;
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    border-radius: 7px;
+    color: var(--neon);
+    font-size: 9px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
 
-    /* ════════════════════════════════════════════
-       PHASE 1 — 8-DIGIT PASSCODE
-    ════════════════════════════════════════════ */
-    .digit-row {
-      display:flex; gap:4px;
-      background:rgba(0,0,0,0.55);
-      padding:5px 9px; border-radius:6px;
-      border:1px solid rgba(0,212,255,0.2);
-      margin-bottom:9px;
-    }
-    .dslot {
-      width:14px; height:20px;
-      display:flex; align-items:center; justify-content:center;
-      font-size:15px; font-weight:900; font-family:monospace;
-      transition:all 0.1s;
-    }
-    .dslot.empty { color:rgba(0,212,255,0.18); }
-    .dslot.filled {
-      color:var(--neon);
-      text-shadow:0 0 7px var(--neon);
-      animation:digitPop 0.1s ease-out;
-    }
-    @keyframes digitPop {
-      0% { transform:scale(1.4); }
-      100% { transform:scale(1); }
-    }
+  .history-close-btn:hover {
+    background: rgba(0, 212, 255, 0.2);
+    border-color: var(--neon);
+  }
+</style>
 
-    .numpad {
-      display:grid;
-      grid-template-columns:repeat(3, 1fr);
-      gap:5px; width:168px;
-    }
-    .nkey {
-      padding:7px 4px;
-      background:rgba(255,255,255,0.055);
-      border:1px solid rgba(255,255,255,0.08);
-      border-radius:5px;
-      color:#b0c0dc; font-size:13px;
-      font-weight:700; font-family:monospace;
-      cursor:pointer; text-align:center;
-      user-select:none;
-      transition:background 0.1s, border-color 0.1s, color 0.1s, transform 0.08s;
-    }
-    .nkey:hover {
-      background:rgba(0,212,255,0.12);
-      border-color:rgba(0,212,255,0.3);
-      color:var(--neon);
-    }
-    .nkey:active { transform:scale(0.88); background:rgba(0,212,255,0.22); }
-    .nkey.del { color:#ff8080; }
-    .nkey.del:hover { background:rgba(255,80,80,0.12); border-color:rgba(255,80,80,0.3); color:#ff8080; }
-    .nkey.go  { color:var(--green); }
-    .nkey.go:hover  { background:rgba(0,255,136,0.1); border-color:rgba(0,255,136,0.3); }
+<!-- Interior Assets Section (Enhanced) -->
+<div class="sf-interior" id="safe-interior">
+  <div class="interior-title">Secured Assets</div>
+  <div class="interior-shelf"></div>
 
-    .pin-msg {
-      font-size:9px; letter-spacing:1.5px;
-      color:var(--red); min-height:13px;
-      text-align:center; margin-top:4px;
-      text-transform:uppercase;
-    }
+  <!-- Transfer Statistics Summary -->
+  <div class="transfer-stats" id="transfer-stats">
+    <div class="stat-item">
+      <div class="stat-num" id="stat-self">0</div>
+      <div style="color: #00d4ff;">Self</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num" id="stat-user" style="color: #ff9930;">0</div>
+      <div>From User</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num" id="stat-admin" style="color: #ff4444;">0</div>
+      <div>From Admin</div>
+    </div>
+  </div>
 
-    /* ════════════════════════════════════════════
-       PHASE 2 — COMBINATION SPINNER DIAL
-    ════════════════════════════════════════════ */
-    .dial-instr {
-      text-align:center; margin-bottom:5px;
-    }
-    .dial-dir-lbl {
-      font-size:13px; font-weight:900;
-      letter-spacing:3px; text-transform:uppercase;
-      transition:color 0.3s;
-    }
-    .dial-dir-lbl.R { color:var(--neon); }
-    .dial-dir-lbl.L { color:#ff9930; }
-    .dial-clicks-lbl {
-      font-size:9px; color:rgba(255,255,255,0.45);
-      margin-top:2px; letter-spacing:1px;
-    }
+  <div class="interior-assets" id="interior-assets">
+    <div class="asset-row">
+      <div class="asset-row-left">
+        <span class="asset-emoji">💾</span>
+        <span class="asset-name">Codes</span>
+      </div>
+      <span class="asset-val val-code" id="int-codes">—</span>
+    </div>
+    <div class="asset-row">
+      <div class="asset-row-left">
+        <span class="asset-emoji">🥈</span>
+        <span class="asset-name">Silver Bars</span>
+      </div>
+      <span class="asset-val val-silver" id="int-silver">—</span>
+    </div>
+    <div class="asset-row">
+      <div class="asset-row-left">
+        <span class="asset-emoji">🥇</span>
+        <span class="asset-name">Gold Bars</span>
+      </div>
+      <span class="asset-val val-gold" id="int-gold">—</span>
+    </div>
+  </div>
 
-    .dial-wrap {
-      position:relative;
-      width:140px; height:140px;
-    }
-    #dial-canvas { display:block; cursor:grab; }
-    /* Pointer triangle at top */
-    .dial-ptr {
-      position:absolute;
-      top:0; left:50%; transform:translateX(-50%);
-      width:0; height:0;
-      border-left:7px solid transparent;
-      border-right:7px solid transparent;
-      border-top:14px solid #ff3333;
-      filter:drop-shadow(0 0 5px #ff3333);
-      z-index:2;
-    }
+  <!-- Transfer History Button -->
+  <button class="interior-change-pin" id="btn-view-history" style="background: rgba(0, 212, 255, 0.12); margin-bottom: 7px;">
+    📋 View Transfer History
+  </button>
 
-    .dial-ctrl {
-      display:flex; align-items:center;
-      gap:10px; margin-top:7px;
-    }
-    .dial-btn {
-      width:38px; height:38px; border-radius:50%;
-      border:2px solid rgba(0,212,255,0.35);
-      background:rgba(0,212,255,0.06);
-      color:var(--neon); font-size:15px;
-      cursor:pointer; display:flex;
-      align-items:center; justify-content:center;
-      user-select:none; transition:all 0.15s;
-    }
-    .dial-btn:hover {
-      background:rgba(0,212,255,0.18);
-      border-color:var(--neon);
-      box-shadow:0 0 12px var(--neon-g);
-    }
-    .dial-btn:active { transform:scale(0.85); }
-    .dial-btn.wrong { border-color:var(--red); color:var(--red); animation:wrongShake 0.3s; }
-    @keyframes wrongShake {
-      0%,100% { transform:translateX(0); }
-      25% { transform:translateX(-4px); }
-      75% { transform:translateX(4px); }
-    }
-
-    .step-pips {
-      display:flex; gap:5px;
-    }
-    .stpip {
-      width:22px; height:4px; border-radius:2px;
-      background:rgba(255,255,255,0.1);
-      transition:all 0.3s;
-    }
-    .stpip.done { background:var(--green); box-shadow:0 0 5px var(--green); }
-    .stpip.active { background:var(--neon); box-shadow:0 0 5px var(--neon); animation:pipBlink 0.8s infinite; }
-
-    /* ════════════════════════════════════════════
-       PHASE 3 — FINGERPRINT BIOMETRIC
-    ════════════════════════════════════════════ */
-    .fp-wrap {
-      position:relative;
-      width:120px; height:120px;
-      display:flex; align-items:center;
-      justify-content:center; cursor:pointer;
-    }
-    .fp-ring {
-      position:absolute; border-radius:50%;
-      border:1.5px solid var(--neon); opacity:0.2;
-    }
-    .fp-ring-1 { inset:0; animation:fpPulse 2.5s ease-in-out infinite; }
-    .fp-ring-2 { inset:-10px; border-color:var(--neon2); animation:fpPulse 2.5s ease-in-out 0.5s infinite; }
-    .fp-ring-3 { inset:-20px; animation:fpPulse 2.5s ease-in-out 1s infinite; }
-    @keyframes fpPulse {
-      0%,100% { opacity:0.1; transform:scale(1); }
-      50%     { opacity:0.45; transform:scale(1.04); }
-    }
-    .fp-svg { width:78px; height:78px; position:relative; z-index:2; }
-    .fp-scan-line {
-      position:absolute;
-      left:10px; right:10px; height:2px;
-      background:linear-gradient(90deg, transparent, var(--neon) 30%, var(--neon2) 70%, transparent);
-      box-shadow:0 0 10px var(--neon), 0 0 20px var(--neon-g);
-      top:10px; opacity:0; z-index:3;
-    }
-    .fp-tap-hint {
-      font-size:8px; letter-spacing:2px;
-      color:rgba(255,255,255,0.35);
-      text-transform:uppercase; margin-top:5px;
-      text-align:center;
-    }
-    #fp-status-text {
-      font-size:9px; letter-spacing:2px;
-      color:rgba(255,255,255,0.4);
-      text-transform:uppercase; text-align:center;
-      transition:color 0.3s;
-    }
-    .fp-bar-wrap {
-      width:120px; height:3px;
-      background:rgba(255,255,255,0.08);
-      border-radius:2px; margin-top:6px;
-      overflow:hidden;
-    }
-    .fp-bar {
-      height:100%; width:0%;
-      background:linear-gradient(90deg, var(--neon2), var(--neon));
-      border-radius:2px;
-      box-shadow:0 0 6px var(--neon);
-      transition:width 0.1s linear;
-    }
-
-    /* ════════════════════════════════════════════
-       LOCKOUT SCREEN
-    ════════════════════════════════════════════ */
-    .lockout-screen {
-      display:none; flex-direction:column;
-      align-items:center; gap:8px;
-      padding:16px; text-align:center;
-      position:relative; z-index:1;
-    }
-    .lockout-icon { font-size:28px; color:var(--red); }
-    .lockout-title {
-      font-size:9px; letter-spacing:3px;
-      color:var(--red); text-transform:uppercase; font-weight:700;
-    }
-    .lockout-cd {
-      font-size:30px; font-weight:900;
-      font-family:monospace; color:var(--red);
-      text-shadow:0 0 12px rgba(255,68,68,0.5);
-    }
-    .lockout-sub { font-size:8px; color:rgba(255,255,255,0.3); letter-spacing:1px; }
-
-    /* ════════════════════════════════════════════
-       FLASH OVERLAY
-    ════════════════════════════════════════════ */
-    #vault-flash {
-      position:fixed; inset:0;
-      pointer-events:none; z-index:999; opacity:0;
-    }
-
-    /* ════════════════════════════════════════════
-       STATUS LINE BELOW SAFE
-    ════════════════════════════════════════════ */
-    .vault-status-line {
-      font-size:9px; letter-spacing:3px;
-      color:rgba(255,255,255,0.18);
-      text-transform:uppercase; text-align:center;
-      transition:color 0.5s;
-    }
-
-    /* ════════════════════════════════════════════
-       SHAKE ANIMATION (wrong PIN)
-    ════════════════════════════════════════════ */
-    @keyframes safeShake {
-      0%,100% { transform:rotateX(7deg) rotateY(-22deg) translateX(0); }
-      15%     { transform:rotateX(7deg) rotateY(-22deg) translateX(-9px); }
-      30%     { transform:rotateX(7deg) rotateY(-22deg) translateX(9px); }
-      50%     { transform:rotateX(7deg) rotateY(-22deg) translateX(-5px); }
-      70%     { transform:rotateX(7deg) rotateY(-22deg) translateX(5px); }
-      85%     { transform:rotateX(7deg) rotateY(-22deg) translateX(-2px); }
-    }
-    .safe-shake { animation:safeShake 0.55s ease-in-out; }
-
-    /* ════════════════════════════════════════════
-       PIN CHANGE MODAL
-    ════════════════════════════════════════════ */
-    .modal-overlay {
-      display:none; position:fixed; inset:0;
-      z-index:500; align-items:center; justify-content:center;
-      background:rgba(0,0,0,0.75); backdrop-filter:blur(10px);
-    }
-    .modal-overlay.open { display:flex; }
-    .modal-box {
-      background:var(--m2);
-      border:1px solid rgba(0,212,255,0.3);
-      border-radius:14px; padding:26px 24px;
-      width:290px; text-align:center;
-      box-shadow:0 0 50px rgba(0,212,255,0.18), 0 20px 60px rgba(0,0,0,0.8);
-    }
-    .modal-ttl {
-      font-size:11px; letter-spacing:3px;
-      color:var(--neon); text-transform:uppercase;
-      font-weight:700; margin-bottom:8px;
-    }
-    .modal-sub {
-      font-size:10px; color:rgba(255,255,255,0.4);
-      margin-bottom:16px; letter-spacing:0.5px; line-height:1.5;
-    }
-    .modal-inp {
-      width:100%; background:rgba(0,0,0,0.5);
-      border:1px solid rgba(0,212,255,0.3);
-      border-radius:7px; padding:11px;
-      color:var(--neon); font-family:monospace;
-      font-size:20px; letter-spacing:6px;
-      text-align:center; outline:none;
-      margin-bottom:14px; transition:border-color 0.2s;
-    }
-    .modal-inp:focus { border-color:var(--neon); box-shadow:0 0 10px var(--neon-g); }
-    .modal-inp.err   { border-color:var(--red); }
-    .modal-btns { display:flex; gap:10px; justify-content:center; }
-    .mbtn {
-      padding:9px 20px; border-radius:7px;
-      border:none; cursor:pointer;
-      font-size:10px; letter-spacing:2px;
-      text-transform:uppercase; font-weight:700;
-      transition:all 0.2s;
-    }
-    .mbtn-ok  { background:var(--neon); color:#000; }
-    .mbtn-ok:hover  { box-shadow:0 0 14px var(--neon); }
-    .mbtn-skip { background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.5); }
-    .mbtn-skip:hover { background:rgba(255,255,255,0.18); }
-
-    /* ════════════════════════════════════════════
-       AUTO-LOCK INDICATOR
-    ════════════════════════════════════════════ */
-    .autolock-bar {
-      position:fixed; bottom:0; left:0; right:0;
-      height:2px; z-index:100;
-      background:rgba(0,212,255,0.15);
-    }
-    .autolock-fill {
-      height:100%;
-      background:linear-gradient(90deg, var(--neon2), var(--neon));
-      transition:width 1s linear;
-      box-shadow:0 0 6px var(--neon);
-    }
-  </style>
-</head>
-<body>
-
-<!-- Particle / ambient canvas -->
-<canvas id="bg-canvas"></canvas>
-
-<!-- Flash overlay for unlock effect -->
-<div id="vault-flash"></div>
-
-<!-- Auto-lock progress bar at bottom -->
-<div class="autolock-bar" id="autolock-bar" style="display:none">
-  <div class="autolock-fill" id="autolock-fill" style="width:100%"></div>
+  <button class="interior-change-pin" id="btn-change-pin">⚙ Change Passcode</button>
+  <button class="interior-lock-btn" id="btn-relock">🔒 Lock Vault</button>
 </div>
 
-<!-- ═══════════════════════════════════════════
-     MAIN SCENE
-════════════════════════════════════════════ -->
-<div class="vault-scene">
-
-  <!-- ── 3D SAFE ── -->
-  <div class="safe-group" id="safe-group">
-
-    <!-- Static box body (5 faces, no front) -->
-    <div class="sf sf-back"></div>
-    <div class="sf sf-left"></div>
-    <div class="sf sf-right"></div>
-    <div class="sf sf-top"></div>
-    <div class="sf sf-bottom"></div>
-
-    <!-- Interior (revealed when door opens) -->
-    <div class="sf-interior" id="safe-interior">
-      <div class="interior-title">Secured Assets</div>
-      <div class="interior-shelf"></div>
-      <div class="interior-assets" id="interior-assets">
-        <div class="asset-row">
-          <div class="asset-row-left"><span class="asset-emoji">💾</span><span class="asset-name">Codes</span></div>
-          <span class="asset-val val-code" id="int-codes">—</span>
-        </div>
-        <div class="asset-row">
-          <div class="asset-row-left"><span class="asset-emoji">🥈</span><span class="asset-name">Silver Bars</span></div>
-          <span class="asset-val val-silver" id="int-silver">—</span>
-        </div>
-        <div class="asset-row">
-          <div class="asset-row-left"><span class="asset-emoji">🥇</span><span class="asset-name">Gold Bars</span></div>
-          <span class="asset-val val-gold" id="int-gold">—</span>
-        </div>
-      </div>
-      <button class="interior-change-pin" id="btn-change-pin">⚙ Change Passcode</button>
-      <button class="interior-lock-btn" id="btn-relock">🔒 Lock Vault</button>
+<!-- Transfer History Modal -->
+<div class="transfer-history-modal" id="transfer-history-modal">
+  <div class="history-box">
+    <div class="history-title">Transfer History</div>
+    <div id="history-content" style="max-height: 400px; overflow-y: auto;">
+      <!-- Populated by JS -->
     </div>
-
-    <!-- ── DOOR PIVOT (right edge of front face) ── -->
-    <div class="door-pivot" id="door-pivot">
-      <div class="safe-door" id="safe-door">
-
-        <!-- OUTER face (shown when locked) -->
-        <div class="door-outer" id="door-outer">
-
-          <!-- Bolts -->
-          <div class="door-bolt bolt-tl"></div>
-          <div class="door-bolt bolt-tr"></div>
-          <div class="door-bolt bolt-bl"></div>
-          <div class="door-bolt bolt-br"></div>
-
-          <!-- Handle (left side) -->
-          <div class="door-handle"></div>
-
-          <!-- Hinges (right side) -->
-          <div class="door-hinge hinge-1"></div>
-          <div class="door-hinge hinge-2"></div>
-          <div class="door-hinge hinge-3"></div>
-
-          <!-- ══ AUTH PANEL ══ -->
-          <div class="auth-panel" id="auth-panel">
-            <div class="vault-brand">DRD SafeCode</div>
-
-            <!-- Phase indicator pips -->
-            <div class="phase-pips">
-              <div class="ppip active" id="ppip-1">
-                <div class="ppip-dot"></div><span>PIN</span>
-              </div>
-              <div class="ppip" id="ppip-2">
-                <div class="ppip-dot"></div><span>DIAL</span>
-              </div>
-              <div class="ppip" id="ppip-3">
-                <div class="ppip-dot"></div><span>BIO</span>
-              </div>
-            </div>
-
-            <div class="panel-div"></div>
-
-            <!-- ── LOCKOUT SCREEN ── -->
-            <div class="lockout-screen" id="lockout-screen">
-              <div class="lockout-icon"><i class="fas fa-lock"></i></div>
-              <div class="lockout-title">Vault Locked</div>
-              <div class="lockout-cd" id="lockout-cd">5:00</div>
-              <div class="lockout-sub">TOO MANY FAILED ATTEMPTS</div>
-            </div>
-
-            <!-- ── PHASE 1: 8-digit passcode ── -->
-            <div class="phase-block active" id="phase-1">
-              <div class="phase-lbl">Enter Passcode</div>
-              <div class="digit-row" id="digit-row">
-                <!-- filled by JS -->
-              </div>
-              <div class="numpad" id="numpad">
-                <!-- filled by JS -->
-              </div>
-              <div class="pin-msg" id="pin-msg"></div>
-            </div>
-
-            <!-- ── PHASE 2: Spinner dial ── -->
-            <div class="phase-block" id="phase-2">
-              <div class="dial-instr">
-                <div class="dial-dir-lbl R" id="dial-dir-lbl">TURN RIGHT →</div>
-                <div class="dial-clicks-lbl" id="dial-clicks-lbl">3 CLICKS REMAINING</div>
-              </div>
-              <div class="dial-wrap">
-                <canvas id="dial-canvas" width="140" height="140"></canvas>
-                <div class="dial-ptr"></div>
-              </div>
-              <div class="dial-ctrl">
-                <button class="dial-btn" id="dial-btn-L" title="Turn Left">◀</button>
-                <div class="step-pips" id="step-pips"></div>
-                <button class="dial-btn" id="dial-btn-R" title="Turn Right">▶</button>
-              </div>
-            </div>
-
-            <!-- ── PHASE 3: Fingerprint ── -->
-            <div class="phase-block" id="phase-3">
-              <div class="phase-lbl">Biometric Scan</div>
-              <div class="fp-wrap" id="fp-wrap">
-                <div class="fp-ring fp-ring-1"></div>
-                <div class="fp-ring fp-ring-2"></div>
-                <div class="fp-ring fp-ring-3"></div>
-                <!-- Fingerprint SVG (stylised ridges) -->
-                <svg class="fp-svg" viewBox="0 0 80 80" fill="none"
-                     xmlns="http://www.w3.org/2000/svg" id="fp-svg">
-                  <g stroke="rgba(0,212,255,0.55)" stroke-width="1.4"
-                     fill="none" stroke-linecap="round">
-                    <!-- whorl rings, outermost first -->
-                    <path d="M15 55 Q10 42 15 30 Q22 16 40 13 Q60 11 68 28 Q76 44 70 60 Q62 74 44 77 Q24 79 13 62"/>
-                    <path d="M19 53 Q14 42 19 31 Q26 19 40 16 Q58 14 66 30 Q72 44 67 58 Q59 71 43 74 Q25 76 16 61"/>
-                    <path d="M23 52 Q18 42 23 33 Q30 22 40 19 Q56 17 63 32 Q69 44 64 56 Q57 68 43 71 Q27 73 20 60"/>
-                    <path d="M27 50 Q23 42 27 35 Q33 25 40 22 Q54 20 60 33 Q65 43 61 54 Q55 65 42 68 Q28 70 23 58"/>
-                    <path d="M31 48 Q28 41 31 36 Q36 28 40 26 Q52 24 57 35 Q61 44 57 53 Q52 62 42 64 Q30 66 27 56"/>
-                    <path d="M35 46 Q33 41 35 37 Q39 31 40 30 Q50 28 54 37 Q57 44 53 52 Q48 59 41 61 Q33 63 31 53"/>
-                    <!-- inner tight whorl -->
-                    <path d="M38 44 Q37 41 38 38 Q40 35 42 35 Q46 35 47 38 Q48 41 46 44 Q44 47 41 47 Q38 47 38 44Z" stroke-width="1.2"/>
-                    <!-- lower arch -->
-                    <path d="M22 62 Q28 68 40 70 Q52 72 60 65"/>
-                    <path d="M17 60 Q24 67 40 70 Q56 73 64 65"/>
-                    <path d="M12 58 Q20 67 40 70 Q60 73 68 63"/>
-                  </g>
-                  <!-- center biometric dot -->
-                  <circle cx="40" cy="40" r="4" fill="rgba(0,212,255,0.8)"/>
-                  <circle cx="40" cy="40" r="7" stroke="rgba(0,212,255,0.3)" stroke-width="1" fill="none"/>
-                </svg>
-                <div class="fp-scan-line" id="fp-scan-line"></div>
-              </div>
-              <div style="margin-top:6px;">
-                <div id="fp-status-text">TOUCH TO SCAN</div>
-              </div>
-              <div class="fp-bar-wrap">
-                <div class="fp-bar" id="fp-bar"></div>
-              </div>
-            </div>
-
-          </div><!-- /auth-panel -->
-        </div><!-- /door-outer -->
-
-        <!-- INNER face (visible when door is open) -->
-        <div class="door-inner"></div>
-
-      </div><!-- /safe-door -->
-    </div><!-- /door-pivot -->
-
-  </div><!-- /safe-group -->
-
-  <div class="vault-status-line" id="vault-status-line">SECURED · LOCKED · PROTECTED</div>
-
-</div><!-- /vault-scene -->
-
-<!-- ═══════════════════════════════════════════
-     PIN CHANGE MODAL
-════════════════════════════════════════════ -->
-<div class="modal-overlay" id="pin-modal">
-  <div class="modal-box">
-    <div class="modal-ttl">Set New Passcode</div>
-    <div class="modal-sub">Choose an 8-digit passcode to secure your vault.<br>Keep it secret — it won't be stored in plain text.</div>
-    <input type="password" id="modal-pin-inp" class="modal-inp"
-           maxlength="8" placeholder="••••••••" inputmode="numeric">
-    <div id="modal-pin-err" style="font-size:9px;color:var(--red);min-height:13px;margin-bottom:8px;"></div>
-    <div class="modal-btns">
-      <button class="mbtn mbtn-ok"   id="modal-btn-ok">CONFIRM</button>
-      <button class="mbtn mbtn-skip" id="modal-btn-skip">SKIP</button>
-    </div>
+    <button class="history-close-btn" id="btn-close-history">CLOSE</button>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════
-     JAVASCRIPT
-════════════════════════════════════════════ -->
+<!-- Enhanced JavaScript Functions -->
 <script>
-/* ══════════════════════════════════════════════
-   CONSTANTS & CONFIG
-══════════════════════════════════════════════ */
-const PIN_KEY       = 'drd_vault_pin_v2';
-const DEFAULT_PIN   = '00000000';
-const MAX_ATTEMPTS  = 3;
-const LOCKOUT_SECS  = 300;   // 5 min
-const AUTO_LOCK_SECS = 300;  // 5 min idle
-
-// Combination: 6 steps alternating R/L, each requires N clicks
-const COMBO = [
-  { dir:'R', clicks:3 },
-  { dir:'L', clicks:2 },
-  { dir:'R', clicks:5 },
-  { dir:'L', clicks:1 },
-  { dir:'R', clicks:4 },
-  { dir:'L', clicks:2 },
-];
-
-/* ══════════════════════════════════════════════
-   STATE
-══════════════════════════════════════════════ */
-let currentPhase   = 1;
-let pinEntry       = '';
-let pinAttempts    = 0;
-let isLocked       = false;
-let isVaultOpen    = false;
-let lockoutTimer   = null;
-let autoLockTimer  = null;
-let autoLockSecsLeft = AUTO_LOCK_SECS;
-
-let spinStep       = 0;
-let spinClicksLeft = COMBO[0].clicks;
-let dialAngle      = 0;
-let dialAnimating  = false;
-
-let fpScanning     = false;
-let fpProgress     = 0;
-let fpIv           = null;
-
-/* ══════════════════════════════════════════════
-   PIN HELPERS
-══════════════════════════════════════════════ */
-function getPin()      { return localStorage.getItem(PIN_KEY) || DEFAULT_PIN; }
-function setPin(p)     { localStorage.setItem(PIN_KEY, p); }
-function isFirstRun()  { return !localStorage.getItem(PIN_KEY); }
-
-/* ══════════════════════════════════════════════
-   WEB AUDIO ENGINE
-══════════════════════════════════════════════ */
-let _ac = null;
-function ac() {
-  if (!_ac) _ac = new (window.AudioContext || window.webkitAudioContext)();
-  return _ac;
-}
-function tone(freq, dur, type='sine', vol=0.22, delay=0) {
-  try {
-    const ctx = ac();
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.connect(g); g.connect(ctx.destination);
-    o.type = type; o.frequency.value = freq;
-    const t = ctx.currentTime + delay;
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(vol, t + 0.012);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.start(t); o.stop(t + dur + 0.05);
-  } catch(_) {}
-}
-const SFX = {
-  key:     () => tone(720, 0.055, 'square', 0.14),
-  err:     () => { tone(160, 0.28, 'sawtooth', 0.28); tone(130, 0.45, 'sawtooth', 0.18, 0.12); },
-  dialClk: () => tone(410, 0.07, 'triangle', 0.16),
-  phase:   () => { tone(523,0.11,'sine',0.18); tone(659,0.11,'sine',0.18,0.13); tone(784,0.18,'sine',0.22,0.26); },
-  fpBeep:  () => tone(1300, 0.045, 'sine', 0.13),
-  open:    () => {
-    // Deep mechanical thud + click + fanfare
-    tone(55,  0.9,  'sawtooth', 0.38);
-    tone(80,  0.5,  'sine',     0.22, 0.5);
-    tone(110, 0.3,  'sine',     0.15, 0.8);
-    tone(523, 0.12, 'sine',     0.25, 1.3);
-    tone(659, 0.12, 'sine',     0.25, 1.45);
-    tone(784, 0.24, 'sine',     0.30, 1.60);
-    tone(1047,0.20, 'sine',     0.20, 1.80);
-  },
-  lock:    () => { tone(784,0.1,'sine',0.2); tone(523,0.1,'sine',0.2,0.12); tone(330,0.3,'sine',0.25,0.24); },
-};
-
-/* ══════════════════════════════════════════════
-   DOM REFS
-══════════════════════════════════════════════ */
-const $ = id => document.getElementById(id);
-const safeGroup    = $('safe-group');
-const safeDoor     = $('safe-door');
-const authPanel    = $('auth-panel');
-const vaultFlash   = $('vault-flash');
-const statusLine   = $('vault-status-line');
-const lockoutScr   = $('lockout-screen');
-const lockoutCd    = $('lockout-cd');
-const digitRow     = $('digit-row');
-const numpadEl     = $('numpad');
-const pinMsgEl     = $('pin-msg');
-const dialDirLbl   = $('dial-dir-lbl');
-const dialClicksLbl= $('dial-clicks-lbl');
-const dialCanvas   = $('dial-canvas');
-const dctx         = dialCanvas.getContext('2d');
-const stepPipsEl   = $('step-pips');
-const dialBtnL     = $('dial-btn-L');
-const dialBtnR     = $('dial-btn-R');
-const fpWrap       = $('fp-wrap');
-const fpScanLine   = $('fp-scan-line');
-const fpStatusTxt  = $('fp-status-text');
-const fpBarEl      = $('fp-bar');
-const phase1El     = $('phase-1');
-const phase2El     = $('phase-2');
-const phase3El     = $('phase-3');
-const ppips        = [$('ppip-1'), $('ppip-2'), $('ppip-3')];
-const intCodes     = $('int-codes');
-const intSilver    = $('int-silver');
-const intGold      = $('int-gold');
-const pinModal     = $('pin-modal');
-const modalInp     = $('modal-pin-inp');
-const modalErr     = $('modal-pin-err');
-const autolockFill = $('autolock-fill');
-const autolockBar  = $('autolock-bar');
-
-/* ══════════════════════════════════════════════
-   PARTICLE BACKGROUND
-══════════════════════════════════════════════ */
-(function initParticles() {
-  const canvas = $('bg-canvas');
-  const ctx    = canvas.getContext('2d');
-  let W, H, pts = [];
-
-  function resize() {
-    W = canvas.width  = window.innerWidth;
-    H = canvas.height = window.innerHeight;
-  }
-  resize();
-  window.addEventListener('resize', resize);
-
-  for (let i = 0; i < 55; i++) {
-    pts.push({
-      x: Math.random() * 1920,
-      y: Math.random() * 1080,
-      r: Math.random() * 1.4 + 0.3,
-      vx: (Math.random() - 0.5) * 0.25,
-      vy: (Math.random() - 0.5) * 0.25,
-      o: Math.random() * 0.4 + 0.1,
-    });
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
-    pts.forEach(p => {
-      p.x += p.vx; p.y += p.vy;
-      if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
-      if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
-      ctx.fillStyle = `rgba(0,180,255,${p.o})`;
-      ctx.fill();
-    });
-    requestAnimationFrame(draw);
-  }
-  draw();
-})();
-
-/* ══════════════════════════════════════════════
-   BUILD NUMPAD (Phase 1)
-══════════════════════════════════════════════ */
-function buildNumpad() {
-  // 8 digit slots
-  digitRow.innerHTML = Array.from({length:8}, (_,i) =>
-    `<div class="dslot empty" id="ds${i}">·</div>`
-  ).join('');
-
-  // Keys layout
-  const keys = [
-    {l:'1',v:'1'},{l:'2',v:'2'},{l:'3',v:'3'},
-    {l:'4',v:'4'},{l:'5',v:'5'},{l:'6',v:'6'},
-    {l:'7',v:'7'},{l:'8',v:'8'},{l:'9',v:'9'},
-    {l:'⌫',v:'del',c:'del'},{l:'0',v:'0'},{l:'↵',v:'go',c:'go'},
-  ];
-  numpadEl.innerHTML = '';
-  keys.forEach(k => {
-    const btn = document.createElement('div');
-    btn.className = 'nkey' + (k.c ? ' '+k.c : '');
-    btn.textContent = k.l;
-    btn.addEventListener('click', () => { SFX.key(); onPinKey(k.v); });
-    numpadEl.appendChild(btn);
-  });
-}
-
-function updateDigitRow() {
-  for (let i = 0; i < 8; i++) {
-    const el = $('ds'+i);
-    if (!el) continue;
-    if (i < pinEntry.length) {
-      el.textContent = '●'; el.className = 'dslot filled';
-    } else {
-      el.textContent = '·'; el.className = 'dslot empty';
-    }
-  }
-}
-
-function onPinKey(v) {
-  if (isLocked || currentPhase !== 1) return;
-  if (v === 'del') {
-    if (pinEntry.length > 0) { pinEntry = pinEntry.slice(0,-1); updateDigitRow(); }
-  } else if (v === 'go') {
-    trySubmitPin();
-  } else if (pinEntry.length < 8) {
-    pinEntry += v;
-    updateDigitRow();
-    if (pinEntry.length === 8) setTimeout(trySubmitPin, 280);
-  }
-}
-
-function trySubmitPin() {
-  if (pinEntry.length < 8) { pinMsgEl.textContent = 'ENTER 8 DIGITS'; return; }
-  if (pinEntry === getPin()) {
-    SFX.phase();
-    pinMsgEl.textContent = '';
-    pinAttempts = 0;
-    toPhase(2);
-  } else {
-    pinAttempts++;
-    pinEntry = ''; updateDigitRow();
-    SFX.err();
-    if (pinAttempts >= MAX_ATTEMPTS) {
-      beginLockout(LOCKOUT_SECS);
-    } else {
-      pinMsgEl.textContent = `WRONG PIN · ${MAX_ATTEMPTS - pinAttempts} LEFT`;
-      shakeVault();
-    }
-  }
-}
-
-function setPinMsg(m) { pinMsgEl.textContent = m; }
-
-/* ══════════════════════════════════════════════
-   LOCKOUT
-══════════════════════════════════════════════ */
-function beginLockout(secs) {
-  isLocked = true;
-  pinAttempts = 0;
-  phase1El.classList.remove('active');
-  lockoutScr.style.display = 'flex';
-
-  let rem = secs;
-  function tick() {
-    const m = Math.floor(rem/60);
-    const s = rem % 60;
-    lockoutCd.textContent = `${m}:${s.toString().padStart(2,'0')}`;
-    if (rem <= 0) {
-      isLocked = false;
-      lockoutScr.style.display = 'none';
-      phase1El.classList.add('active');
-      pinEntry = ''; updateDigitRow();
-      setPinMsg('');
-    } else {
-      rem--;
-      lockoutTimer = setTimeout(tick, 1000);
-    }
-  }
-  tick();
-}
-
-/* ══════════════════════════════════════════════
-   SHAKE ANIMATION
-══════════════════════════════════════════════ */
-function shakeVault() {
-  safeGroup.classList.remove('safe-shake');
-  void safeGroup.offsetWidth;
-  safeGroup.classList.add('safe-shake');
-  setTimeout(() => safeGroup.classList.remove('safe-shake'), 600);
-}
-
-/* ══════════════════════════════════════════════
-   PHASE ADVANCEMENT
-══════════════════════════════════════════════ */
-function toPhase(p) {
-  // Update pips
-  ppips.forEach((pip, i) => {
-    pip.className = 'ppip ' + (i+1 < p ? 'done' : i+1 === p ? 'active' : '');
-  });
-  // Hide all, show target
-  [phase1El, phase2El, phase3El].forEach(el => el.classList.remove('active'));
-  currentPhase = p;
-  if (p === 1) phase1El.classList.add('active');
-  if (p === 2) { initSpinner(); phase2El.classList.add('active'); }
-  if (p === 3) phase3El.classList.add('active');
-}
-
-/* ══════════════════════════════════════════════
-   PHASE 2 — SPINNER DIAL
-══════════════════════════════════════════════ */
-function initSpinner() {
-  spinStep       = 0;
-  spinClicksLeft = COMBO[0].clicks;
-  dialAngle      = 0;
-  buildStepPips();
-  updateDialUI();
-  drawDial(0);
-}
-
-function buildStepPips() {
-  stepPipsEl.innerHTML = COMBO.map((_,i) =>
-    `<div class="stpip ${i===0?'active':''}" id="stp${i}"></div>`
-  ).join('');
-}
-
-function updateDialUI() {
-  const step = COMBO[spinStep];
-  if (!step) return;
-  const isR = step.dir === 'R';
-  dialDirLbl.textContent  = isR ? 'TURN RIGHT →' : '← TURN LEFT';
-  dialDirLbl.className    = 'dial-dir-lbl ' + step.dir;
-  dialClicksLbl.textContent = `${spinClicksLeft} CLICK${spinClicksLeft===1?'':'S'} REMAINING`;
-  // Dim the wrong-direction button
-  dialBtnL.style.opacity = isR ? '0.28' : '1';
-  dialBtnR.style.opacity = isR ? '1'    : '0.28';
-  // Update step pips
-  COMBO.forEach((_,i) => {
-    const el = $('stp'+i);
-    if (!el) return;
-    el.className = 'stpip' + (i < spinStep ? ' done' : i===spinStep ? ' active' : '');
-  });
-}
-
-function onDialClick(dir) {
-  if (dialAnimating || currentPhase !== 2) return;
-  const step = COMBO[spinStep];
-
-  // Wrong direction
-  if (dir !== step.dir) {
-    SFX.err();
-    const wrongBtn = dir === 'L' ? dialBtnL : dialBtnR;
-    wrongBtn.classList.add('wrong');
-    setTimeout(() => wrongBtn.classList.remove('wrong'), 350);
-    // Reset step progress but not whole combo
-    spinClicksLeft = step.clicks;
-    updateDialUI();
-    shakeVault();
-    return;
-  }
-
-  SFX.dialClk();
-  dialAnimating = true;
-
-  // 60° per click
-  const delta     = dir === 'R' ? 60 : -60;
-  const startAng  = dialAngle;
-  const endAng    = dialAngle + delta;
-  const duration  = 220; // ms
-  let   startTs   = null;
-
-  function animFrame(ts) {
-    if (!startTs) startTs = ts;
-    const t   = Math.min((ts - startTs) / duration, 1);
-    const ease = 1 - Math.pow(1 - t, 3); // ease-out cubic
-    dialAngle = startAng + delta * ease;
-    drawDial(dialAngle);
-    if (t < 1) {
-      requestAnimationFrame(animFrame);
-    } else {
-      dialAngle = endAng;
-      drawDial(endAng);
-      dialAnimating = false;
-      spinClicksLeft--;
-      if (spinClicksLeft <= 0) {
-        // Step done
-        spinStep++;
-        if (spinStep >= COMBO.length) {
-          // All 6 steps complete!
-          SFX.phase();
-          setTimeout(() => toPhase(3), 400);
-          return;
-        }
-        SFX.phase();
-        spinClicksLeft = COMBO[spinStep].clicks;
-      }
-      updateDialUI();
-    }
-  }
-  requestAnimationFrame(animFrame);
-}
-
-dialBtnL.addEventListener('click', () => onDialClick('L'));
-dialBtnR.addEventListener('click', () => onDialClick('R'));
-
-// Mouse/touch drag support on dial canvas
-let dragStartX = null;
-let dragTotalDelta = 0;
-dialCanvas.addEventListener('mousedown',  e => { dragStartX = e.clientX; dragTotalDelta = 0; });
-dialCanvas.addEventListener('mousemove',  e => {
-  if (dragStartX === null) return;
-  const dx = e.clientX - dragStartX;
-  if (Math.abs(dx) > 30) {
-    onDialClick(dx > 0 ? 'R' : 'L');
-    dragStartX = e.clientX;
-  }
-});
-dialCanvas.addEventListener('mouseup',   () => { dragStartX = null; });
-dialCanvas.addEventListener('mouseleave',() => { dragStartX = null; });
-dialCanvas.addEventListener('touchstart', e => { dragStartX = e.touches[0].clientX; }, {passive:true});
-dialCanvas.addEventListener('touchmove',  e => {
-  if (dragStartX === null) return;
-  const dx = e.touches[0].clientX - dragStartX;
-  if (Math.abs(dx) > 28) {
-    onDialClick(dx > 0 ? 'R' : 'L');
-    dragStartX = e.touches[0].clientX;
-  }
-}, {passive:true});
-dialCanvas.addEventListener('touchend', () => { dragStartX = null; });
-
-/* ── DIAL CANVAS DRAWING ── */
-function drawDial(angle) {
-  const W=140, H=140, cx=70, cy=70, r=63;
-  dctx.clearRect(0,0,W,H);
-
-  // Outer shadow ring
-  dctx.beginPath();
-  dctx.arc(cx, cy, r+3, 0, Math.PI*2);
-  dctx.fillStyle = 'rgba(0,0,0,0.7)';
-  dctx.fill();
-
-  // Metallic base
-  const base = dctx.createRadialGradient(cx-16, cy-16, 4, cx, cy, r);
-  base.addColorStop(0,   '#7888a8');
-  base.addColorStop(0.35,'#484e68');
-  base.addColorStop(0.75,'#2c3048');
-  base.addColorStop(1,   '#181e2e');
-  dctx.beginPath();
-  dctx.arc(cx, cy, r, 0, Math.PI*2);
-  dctx.fillStyle = base;
-  dctx.fill();
-
-  // Outer rim
-  dctx.beginPath();
-  dctx.arc(cx, cy, r, 0, Math.PI*2);
-  dctx.strokeStyle = 'rgba(120,140,180,0.7)';
-  dctx.lineWidth = 2.5;
-  dctx.stroke();
-
-  // ── Rotating ticks & numbers ──
-  dctx.save();
-  dctx.translate(cx, cy);
-  dctx.rotate(angle * Math.PI/180);
-
-  for (let i = 0; i < 60; i++) {
-    const a      = (i/60)*Math.PI*2 - Math.PI/2;
-    const major  = (i%5 === 0);
-    const innerR = major ? r-22 : r-10;
-    dctx.beginPath();
-    dctx.moveTo(Math.cos(a)*innerR,   Math.sin(a)*innerR);
-    dctx.lineTo(Math.cos(a)*(r-3),    Math.sin(a)*(r-3));
-    dctx.strokeStyle = major
-      ? 'rgba(0,212,255,0.92)'
-      : 'rgba(255,255,255,0.18)';
-    dctx.lineWidth = major ? 2 : 1;
-    dctx.stroke();
-
-    if (major) {
-      const num = (i/5)*10;
-      const tx  = Math.cos(a)*(r-33);
-      const ty  = Math.sin(a)*(r-33);
-      dctx.save();
-      dctx.translate(tx, ty);
-      // Counter-rotate so numbers stay upright
-      dctx.rotate(-(angle*Math.PI/180) - a + Math.PI/2);
-      dctx.fillStyle = 'rgba(0,212,255,0.82)';
-      dctx.font = 'bold 7px monospace';
-      dctx.textAlign = 'center';
-      dctx.textBaseline = 'middle';
-      dctx.fillText(num===0 ? '00' : String(num), 0, 0);
-      dctx.restore();
-    }
-  }
-  dctx.restore();
-
-  // Inner ring groove
-  dctx.beginPath();
-  dctx.arc(cx, cy, r-24, 0, Math.PI*2);
-  dctx.fillStyle = '#101420';
-  dctx.fill();
-  dctx.strokeStyle = 'rgba(0,212,255,0.18)';
-  dctx.lineWidth = 1;
-  dctx.stroke();
-
-  // Center cap — metallic
-  const cap = dctx.createRadialGradient(cx-6, cy-7, 2, cx, cy, 20);
-  cap.addColorStop(0,   '#909ab8');
-  cap.addColorStop(0.5, '#4a5068');
-  cap.addColorStop(1,   '#1c2030');
-  dctx.beginPath();
-  dctx.arc(cx, cy, 20, 0, Math.PI*2);
-  dctx.fillStyle = cap;
-  dctx.fill();
-  dctx.strokeStyle = 'rgba(120,140,180,0.5)';
-  dctx.lineWidth = 1.5;
-  dctx.stroke();
-
-  // Center indicator glow dot
-  dctx.beginPath();
-  dctx.arc(cx, cy, 5, 0, Math.PI*2);
-  dctx.fillStyle = '#00d4ff';
-  dctx.shadowColor = '#00d4ff';
-  dctx.shadowBlur  = 10;
-  dctx.fill();
-  dctx.shadowBlur  = 0;
-}
-
-/* ══════════════════════════════════════════════
-   PHASE 3 — FINGERPRINT
-══════════════════════════════════════════════ */
-fpWrap.addEventListener('click', startFP);
-fpWrap.addEventListener('touchstart', startFP, {passive:true});
-
-function startFP() {
-  if (fpScanning || currentPhase !== 3) return;
-  fpScanning  = true;
-  fpProgress  = 0;
-  fpStatusTxt.textContent = 'SCANNING…';
-  fpStatusTxt.style.color = 'var(--neon)';
-
-  // Animate scan line
-  fpScanLine.style.opacity = '1';
-  gsap.fromTo(fpScanLine,
-    { top:'10px' },
-    { top:'110px', duration:1.6, ease:'none',
-      repeat:-1, repeatDelay:0.2,
-      onRepeat:() => { gsap.set(fpScanLine, {top:'10px'}); }
-    }
-  );
-
-  // Fill progress in ~2.5 s
-  fpIv = setInterval(() => {
-    fpProgress += 1.6;
-    fpBarEl.style.width = Math.min(fpProgress, 100) + '%';
-    if (Math.round(fpProgress) % 18 === 0) SFX.fpBeep();
-
-    // Update SVG color as progress fills
-    const pct = fpProgress/100;
-    const svgPaths = document.querySelectorAll('#fp-svg g path, #fp-svg g circle:not(:last-child)');
-    svgPaths.forEach(p => {
-      p.style.stroke = `rgba(0,${Math.round(212*pct+80*(1-pct))},${Math.round(255*pct+100*(1-pct))},${0.4+pct*0.55})`;
-    });
-
-    if (fpProgress >= 100) {
-      clearInterval(fpIv);
-      gsap.killTweensOf(fpScanLine);
-      fpScanLine.style.opacity = '0';
-      fpBarEl.style.width = '100%';
-      fpStatusTxt.textContent = '✓ VERIFIED';
-      fpStatusTxt.style.color = 'var(--green)';
-      SFX.phase();
-      setTimeout(openVault, 700);
-    }
-  }, 40);
-}
-
-/* ══════════════════════════════════════════════
-   VAULT OPEN SEQUENCE
-══════════════════════════════════════════════ */
-function openVault() {
-  if (isVaultOpen) return;
-  isVaultOpen = true;
-  SFX.open();
-
-  statusLine.textContent = 'UNLOCKED · VAULT OPEN';
-  statusLine.style.color = 'var(--green)';
-
-  // Flash
-  gsap.fromTo(vaultFlash,
-    { opacity:0, background:'rgba(0,212,255,0.2)' },
-    { opacity:1, duration:0.14, yoyo:true, repeat:5, ease:'none' }
-  );
-
-  // Bring safe group to near-frontal view
-  gsap.to(safeGroup, {
-    rotateX: 2,
-    rotateY: -4,
-    duration: 1.1,
-    ease: 'power2.inOut',
-    delay: 0.2,
-  });
-
-  // Open the door — pivot around its right edge (hinge)
-  gsap.to(safeDoor, {
-    rotateY: -110,
-    duration: 1.9,
-    ease: 'power3.inOut',
-    delay: 0.7,
-    onComplete: () => {
-      loadInteriorAssets();
-      startAutoLock();
-      if (isFirstRun()) {
-        setTimeout(() => openPinModal(), 800);
-      }
-    }
-  });
-}
-
-/* ══════════════════════════════════════════════
-   CLOSE VAULT / RE-LOCK
-══════════════════════════════════════════════ */
-function lockVault() {
-  if (!isVaultOpen) return;
-  SFX.lock();
-  isVaultOpen = false;
-  stopAutoLock();
-
-  statusLine.textContent = 'SECURED · LOCKED · PROTECTED';
-  statusLine.style.color  = '';
-
-  // Close door
-  gsap.to(safeDoor, {
-    rotateY: 0,
-    duration: 1.6,
-    ease: 'power3.inOut',
-  });
-
-  // Return to angled view
-  gsap.to(safeGroup, {
-    rotateX: 7,
-    rotateY: -22,
-    duration: 1.2,
-    ease: 'power2.inOut',
-    delay: 0.3,
-  });
-
-  // Reset auth state
-  setTimeout(() => {
-    isVaultOpen    = false;
-    currentPhase   = 1;
-    pinEntry       = '';
-    spinStep       = 0;
-    spinClicksLeft = COMBO[0].clicks;
-    dialAngle      = 0;
-    fpProgress     = 0; fpScanning = false;
-    if (fpIv) { clearInterval(fpIv); fpIv = null; }
-    gsap.killTweensOf(fpScanLine);
-    fpScanLine.style.opacity = '0';
-    fpBarEl.style.width = '0%';
-    fpStatusTxt.textContent = 'TOUCH TO SCAN';
-    fpStatusTxt.style.color = '';
-    toPhase(1);
-    updateDigitRow();
-    setPinMsg('');
-    drawDial(0);
-  }, 1700);
-}
-
-$('btn-relock').addEventListener('click', lockVault);
-
-/* ══════════════════════════════════════════════
-   AUTO-LOCK TIMER (5 min idle)
-══════════════════════════════════════════════ */
-function startAutoLock() {
-  autoLockSecsLeft = AUTO_LOCK_SECS;
-  autolockBar.style.display = 'block';
-  autolockFill.style.width  = '100%';
-  autolockFill.style.transition = 'none';
-
-  clearInterval(autoLockTimer);
-  autoLockTimer = setInterval(() => {
-    autoLockSecsLeft--;
-    const pct = (autoLockSecsLeft / AUTO_LOCK_SECS) * 100;
-    autolockFill.style.transition = 'width 1s linear';
-    autolockFill.style.width = pct + '%';
-    if (autoLockSecsLeft <= 0) {
-      stopAutoLock();
-      lockVault();
-    }
-  }, 1000);
-}
-
-function resetAutoLock() {
-  if (!isVaultOpen) return;
-  autoLockSecsLeft = AUTO_LOCK_SECS;
-  autolockFill.style.transition = 'none';
-  autolockFill.style.width = '100%';
-}
-
-function stopAutoLock() {
-  clearInterval(autoLockTimer);
-  autolockBar.style.display = 'none';
-}
-
-// Reset idle timer on any interaction
-document.addEventListener('click',     resetAutoLock);
-document.addEventListener('keydown',   resetAutoLock);
-document.addEventListener('touchstart', resetAutoLock, {passive:true});
-
-/* ══════════════════════════════════════════════
-   LOAD INTERIOR ASSETS
-══════════════════════════════════════════════ */
+/**
+ * Load interior assets with transfer source information
+ */
 function loadInteriorAssets() {
-  let codes=0, silver=0, gold=0;
+  let codes = 0,
+    silver = 0,
+    gold = 0;
+  let assets = { codes: [], silver: [], gold: [] };
+
   try {
-    // Read directly from AppState (same-origin parent or own window)
-    const state = window.AppState
-      || window.parent?.AppState
-      || window.parent?.parent?.AppState;
-    if (state && state.assets) {
-      codes  = (state.assets.codes  || []).length;
-      silver = (state.assets.silver || []).length;
-      gold   = (state.assets.gold   || []).length;
+    // Get assets from parent app state or local storage
+    const state =
+      window.AppState ||
+      window.parent?.AppState ||
+      window.parent?.parent?.AppState ||
+      {};
+
+    if (state.assets) {
+      assets = state.assets;
+      codes = assets.codes?.length || 0;
+      silver = assets.silver?.length || 0;
+      gold = assets.gold?.length || 0;
     }
-  } catch(_) {}
+
+    // Store for transfer history
+    window.__assetsList = assets;
+  } catch (_) {}
 
   // Animate numbers counting up
-  animCount(intCodes,  0, codes,  600);
-  animCount(intSilver, 0, silver, 800);
-  animCount(intGold,   0, gold,   1000);
+  animCount($("int-codes"), 0, codes, 600);
+  animCount($("int-silver"), 0, silver, 800);
+  animCount($("int-gold"), 0, gold, 1000);
+
+  // Calculate transfer stats
+  updateTransferStats(assets);
 }
 
-function animCount(el, from, to, dur) {
-  if (to === 0) { el.textContent = '0'; return; }
-  const steps = Math.max(to, 20);
-  const delay = dur / steps;
-  let cur = from;
-  const iv = setInterval(() => {
-    cur = Math.min(cur + Math.ceil((to-from)/steps * 3), to);
-    el.textContent = cur;
-    if (cur >= to) clearInterval(iv);
-  }, delay);
-}
+/**
+ * Update transfer source statistics
+ */
+function updateTransferStats(assets) {
+  let stats = { self: 0, user_transfer: 0, admin_transfer: 0 };
 
-/* ══════════════════════════════════════════════
-   PIN CHANGE MODAL
-══════════════════════════════════════════════ */
-function openPinModal() { pinModal.classList.add('open'); modalInp.value=''; modalErr.textContent=''; }
-function closePinModal() { pinModal.classList.remove('open'); }
-
-$('btn-change-pin').addEventListener('click', openPinModal);
-
-$('modal-btn-ok').addEventListener('click', () => {
-  const v = modalInp.value.trim();
-  if (!/^\d{8}$/.test(v)) {
-    modalErr.textContent = 'Must be exactly 8 digits';
-    modalInp.classList.add('err');
-    setTimeout(() => modalInp.classList.remove('err'), 800);
-    return;
-  }
-  setPin(v);
-  modalErr.textContent = '';
-  closePinModal();
-  // Short success flash
-  gsap.fromTo(vaultFlash,
-    {opacity:0, background:'rgba(0,255,136,0.15)'},
-    {opacity:1, duration:0.15, yoyo:true, repeat:2, ease:'none'}
-  );
-});
-
-$('modal-btn-skip').addEventListener('click', closePinModal);
-modalInp.addEventListener('keydown', e => { if (e.key==='Enter') $('modal-btn-ok').click(); });
-
-/* ══════════════════════════════════════════════
-   KEYBOARD SUPPORT (Phase 1 - numpad)
-══════════════════════════════════════════════ */
-document.addEventListener('keydown', e => {
-  if (pinModal.classList.contains('open')) return;
-  if (currentPhase === 1) {
-    if (e.key >= '0' && e.key <= '9') { SFX.key(); onPinKey(e.key); }
-    else if (e.key === 'Backspace')    { SFX.key(); onPinKey('del'); }
-    else if (e.key === 'Enter')        onPinKey('go');
-  }
-  if (currentPhase === 2) {
-    if (e.key === 'ArrowLeft')  onDialClick('L');
-    if (e.key === 'ArrowRight') onDialClick('R');
-  }
-});
-
-/* ══════════════════════════════════════════════
-   INIT
-══════════════════════════════════════════════ */
-buildNumpad();
-drawDial(0);
-
-// Show "set passcode" hint if on default
-if (isFirstRun()) {
-  setPinMsg('DEFAULT PIN: 00000000');
-}
-
-// ═════════════════════════════════════════════
-// POST MESSAGE LISTENER (receive assets from parent)
-// ═════════════════════════════════════════════
-(function() {
-  window.addEventListener('message', function(e) {
-    // Accept messages from parent or same origin
-    if (!e.data || !e.data.type) return;
-    
-    if (e.data.type === 'parent:assets-init' || e.data.assets) {
-      window.AppState = window.AppState || {};
-      window.AppState.assets = e.data.assets || { codes: [], silver: [], gold: [] };
-      window.AppState.user = e.data.user;
-      console.log('[SafeCode] Received assets via postMessage:', window.AppState.assets);
-      
-      // Reload interior with new assets if vault is open
-      if (typeof loadInteriorAssets === 'function' && typeof isVaultOpen !== 'undefined' && isVaultOpen) {
-        loadInteriorAssets();
-      }
-    }
+  // Count assets by source
+  ["codes", "silver", "gold"].forEach((type) => {
+    (assets[type] || []).forEach((asset) => {
+      const source = asset.source_type || "self";
+      stats[source] = (stats[source] || 0) + 1;
+    });
   });
-  
-  // Request assets from parent after 1 second
-  setTimeout(function() {
-    if (window.self !== window.parent) {
-      try { window.parent.postMessage({ type: 'safecode:request-assets' }, '*'); } catch(_) {}
-    }
-  }, 1000);
-})();
+
+  // Update display
+  $("stat-self").textContent = stats.self || 0;
+  $("stat-user").textContent = stats.user_transfer || 0;
+  $("stat-admin").textContent = stats.admin_transfer || 0;
+}
+
+/**
+ * Open transfer history modal with formatted data
+ */
+function openTransferHistory() {
+  const modal = $("transfer-history-modal");
+  const content = $("history-content");
+
+  // Simulate loading history (in production, fetch from server)
+  const history = [
+    {
+      asset_id: "code-123",
+      asset_type: "code",
+      from_email: "alice@example.com",
+      to_email: "you@example.com",
+      transfer_type: "user",
+      transferred_at: "2026-04-10T14:23:00Z",
+      message: "Shared security snippet",
+    },
+    {
+      asset_id: "gold-001",
+      asset_type: "gold",
+      from_email: "admin@company.com",
+      to_email: "you@example.com",
+      transfer_type: "admin",
+      transferred_at: "2026-04-09T09:15:00Z",
+      message: "Monthly rewards",
+    },
+  ];
+
+  if (history.length === 0) {
+    content.innerHTML =
+      '<div style="text-align:center; color:rgba(255,255,255,0.3); padding:20px;">No transfers recorded</div>';
+  } else {
+    content.innerHTML = history
+      .map((h) => {
+        const isReceived = true; // Assuming current user is recipient
+        const fromEmail = h.from_email.split("@")[0];
+        const toEmail = h.to_email.split("@")[0];
+        const date = new Date(h.transferred_at).toLocaleDateString();
+
+        return `
+        <div class="history-item ${isReceived ? "received" : "sent"}">
+          <div class="history-from-to">
+            <span>${fromEmail}</span>
+            <span class="history-arrow">${isReceived ? "→" : "←"}</span>
+            <span>${toEmail}</span>
+          </div>
+          <div style="color:rgba(255,255,255,0.5); margin-bottom:4px;">
+            📦 ${h.asset_type.toUpperCase()} 
+            <span style="color:${h.transfer_type === "admin" ? "#ff4444" : "#ff9930"};">
+              [${h.transfer_type.toUpperCase()}]
+            </span>
+          </div>
+          ${h.message ? `<div style="color:rgba(255,255,255,0.4); font-style:italic;">"${h.message}"</div>` : ""}
+          <div class="history-time">${date}</div>
+        </div>
+      `;
+      })
+      .join("");
+  }
+
+  modal.classList.add("open");
+}
+
+function closeTransferHistory() {
+  const modal = $("transfer-history-modal");
+  modal.classList.remove("open");
+}
+
+// Event listeners
+$("btn-view-history").addEventListener("click", openTransferHistory);
+$("btn-close-history").addEventListener("click", closeTransferHistory);
+
+// Modal close on overlay click
+$("transfer-history-modal").addEventListener("click", (e) => {
+  if (e.target.id === "transfer-history-modal") {
+    closeTransferHistory();
+  }
+});
+
+// Update display when vault opens
+const originalOpenVault = openVault;
+openVault = function () {
+  originalOpenVault.call(this);
+  loadInteriorAssets();
+};
 </script>
-</body>
-</html>
