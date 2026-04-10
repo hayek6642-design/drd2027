@@ -5580,10 +5580,29 @@ app.get('/debug-codes/:userId', async (req, res) => {
     
     if (process.env.DATABASE_URL) {
       const result = await query(
-        "SELECT id, code, type, created_at FROM codes WHERE user_id = $1 AND spent = 0 ORDER BY created_at DESC LIMIT 100",
+        "SELECT id, code, type, created_at, spent FROM codes WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100",
         [userId]
       );
-      return res.json({ ok: true, userId, codes: result.rows, count: result.rowCount });
+      
+      // Also get user balance
+      const userRes = await query(
+        "SELECT codes_count, silver_count, gold_count FROM users WHERE id = $1",
+        [userId]
+      );
+      
+      // Count spent vs unspent
+      const unspentCount = result.rows.filter(r => !r.spent).length;
+      const spentCount = result.rows.filter(r => r.spent).length;
+      
+      return res.json({ 
+        ok: true, 
+        userId, 
+        codes: result.rows, 
+        totalInCodesTable: result.rowCount,
+        unspentCount,
+        spentCount,
+        userBalance: userRes.rows[0] || {}
+      });
     } else {
       return res.json({ ok: false, error: 'No DATABASE_URL' });
     }
