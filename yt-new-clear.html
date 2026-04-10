@@ -445,28 +445,41 @@
             box-shadow: inset 0 0 5px 1px rgba(255, 255, 255, 0.8);
             border-radius: 50%;
             position: absolute;
+            /* Hide any text content */
             color: transparent !important;
             font-size: 0 !important;
-            /* Dr.D logo as background image, centered and scaled to fit */
+            line-height: 0 !important;
+            overflow: hidden !important;
+            /* Dr.D logo as background image */
             background: url('/codebank/samma3ny/dr.dc.png?v=20260410') no-repeat center center !important;
             background-size: cover !important;
-            /* Default green color for playing state */
+            background-position: center !important;
+            /* Size */
+            min-width: 65px !important;
+            min-height: 65px !important;
+            width: 65px !important;
+            height: 65px !important;
+            /* Position */
             margin-left: -38.5px;
             margin-top: -40px;
-            display: block;
-            height: 65px;
-            width: 65px;
             left: 52%;
             top: 103%;
             cursor: pointer;
             z-index: 10000 !important;
-            /* Fixed: ensure button is above ticker */
             border: none !important;
             padding: 0 !important;
+            /* Ensure no text shows */
+            text-indent: -9999px !important;
+            white-space: nowrap !important;
         }
 
-        #play-pause-button * {
+        /* Hide any child elements */
+        #play-pause-button::before,
+        #play-pause-button::after,
+        #play-pause-button span,
+        #play-pause-button div {
             display: none !important;
+            visibility: hidden !important;
         }
 
         #play-pause-button.paused {
@@ -2471,10 +2484,7 @@
       }
     </script>
 
-    <!-- 5. Bridge (regular script will now find AssetBus via deferred mode) -->
-    <script src="/codebank/bankode-assetbus-bridge.js"></script>
-    
-    <!-- 5b. Direct Assets Manager - replaces bridge logic for asset sync -->
+    <!-- 5. Direct Assets Manager - replaces bridge logic for asset sync -->
     <script src="/codebank/js/assets-direct.js"></script>
     
     <!-- 6. Safe Asset List - REMOVED from main page, only in CodeBank iframe -->

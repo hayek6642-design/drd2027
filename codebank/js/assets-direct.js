@@ -37,10 +37,27 @@
                     localStorage.setItem('codebank_assets_user', userId);
                 } catch(_) {}
 
-                window.EventBus.dispatch('assets:updated', snapshot);
+                window.EventBus.dispatch('assets:updated', {
+                    type: 'codes',
+                    list: snapshot.codes,
+                    latest: snapshot.codes[0] || null,
+                    count: snapshot.codes.length
+                });
+                window.EventBus.dispatch('assets:updated', {
+                    type: 'silver',
+                    list: snapshot.silver,
+                    latest: snapshot.silver[0] || null,
+                    count: snapshot.silver.length
+                });
+                window.EventBus.dispatch('assets:updated', {
+                    type: 'gold',
+                    list: snapshot.gold,
+                    latest: snapshot.gold[0] || null,
+                    count: snapshot.gold.length
+                });
                 // Legacy compat events
-                window.dispatchEvent(new CustomEvent('sqlite:snapshot', { detail: snapshot }));
-                window.dispatchEvent(new CustomEvent('assets:updated', { detail: snapshot }));
+                window.dispatchEvent(new CustomEvent('sqlite:snapshot', { detail: { latestCode: snapshot.codes[0], codesList: snapshot.codes, count: snapshot.codes.length } }));
+                window.dispatchEvent(new CustomEvent('assets:updated', { detail: { latest: snapshot.codes[0], list: snapshot.codes, type: 'codes', count: snapshot.codes.length } }));
 
                 // 🔄 Send to all iframes via postMessage (for SafeCode, etc)
                 try {
