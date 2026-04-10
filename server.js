@@ -3372,6 +3372,14 @@ app.post('/api/admin/deposit', async (req, res) => {
         [crypto.randomUUID(), userId, String(code).trim(), kind, JSON.stringify({ from_admin: true })]
       );
 
+      // [FIX] Always update user's codes_count AFTER inserting codes
+      const balanceField = kind === 'codes' ? 'codes_count' : (kind === 'silver' ? 'silver_count' : 'gold_count');
+      await client.query(
+        `UPDATE users SET ${balanceField} = COALESCE(${balanceField}, 0) + $1 WHERE id = $2`,
+        [ins.rowCount || 0, userId]
+      );
+      console.log('[Admin Deposit] Updated user balance:', balanceField, '+', ins.rowCount || 0);
+
       await client.query('COMMIT');
       try {
         if (wss) {
