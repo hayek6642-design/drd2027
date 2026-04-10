@@ -412,6 +412,12 @@
       }
     });
     </script>
+    <!-- Core globals MUST load first - before any modules -->
+    <script src="/codebank/js/event-bus-simple.js"></script>
+    <script src="/codebank/js/global-store.js"></script>
+    <script src="/codebank/js/assets-direct.js"></script>
+    
+    <!-- Safe asset list modules - load after globals -->
     <script type="module" src="/codebank/js/safe-asset-list.js"></script>
     <script type="module" src="/codebank/js/safe-list-actions.js"></script>
 
@@ -542,11 +548,6 @@
 
         })();
     </script>
-    
-    <!-- Direct Asset Manager - loads before SafeCode -->
-    <script src="/codebank/js/event-bus-simple.js"></script>
-    <script src="/codebank/js/global-store.js"></script>
-    <script src="/codebank/js/assets-direct.js"></script>
     
     <!-- Listen for asset updates and update counter UI -->
     <script>
