@@ -309,6 +309,59 @@
         },
         
         /**
+         * Transfer assets to another user
+         */
+        async transfer(receiverEmail, assetType, amount) {
+            if (!this.state.authenticated) {
+                return { success: false, error: 'Not authenticated' };
+            }
+            
+            if (!receiverEmail || !assetType || !amount) {
+                return { success: false, error: 'Missing required fields' };
+            }
+            
+            try {
+                // Generate unique transaction ID for idempotency
+                const transactionId = `TXF-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                
+                // Prepare the request body based on asset type
+                let body = {
+                    transactionId,
+                    receiverEmail,
+                    type: assetType,
+                    amount: amount
+                };
+                
+                // For codes, we need an array of code values
+                if (assetType === 'codes' && Array.isArray(amount)) {
+                    body.codes = amount;
+                } else if (assetType === 'codes') {
+                    body.codes = []; // Will be filled by backend if needed
+                }
+                
+                const res = await fetch('/api/transfer', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    // Refresh assets after successful transfer
+                    await this.fetchAssets();
+                    this.notify('transfer:success', { receiverEmail, assetType, amount });
+                }
+                
+                return data;
+            } catch (err) {
+                console.error('[AuthClient] Transfer failed:', err);
+                return { success: false, error: 'Network error' };
+            }
+        },
+        
+        /**
          * Getters
          */
         isAuth() { return this.state.authenticated; },

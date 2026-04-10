@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SafeCode - Asset Storage</title>
+    <title>SafeCode - Asset Storage & Transfer</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -82,18 +82,24 @@
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(0,212,255,0.2);
             border-radius: 12px;
-            padding: 15px 20px;
+            padding: 20px;
             margin-bottom: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             transition: all 0.3s ease;
+            flex-wrap: wrap;
         }
         
         .asset-card:hover {
             background: rgba(255,255,255,0.08);
             border-color: rgba(0,212,255,0.4);
             transform: translateX(5px);
+        }
+        
+        .asset-info {
+            flex: 1;
+            min-width: 200px;
         }
         
         .asset-label { color: #aaa; }
@@ -119,6 +125,134 @@
             font-size: 0.85em;
             margin-left: 10px;
         }
+        
+        .send-btn {
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #00d4ff, #00a8cc);
+            border: none;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85em;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        
+        .send-btn:hover {
+            background: linear-gradient(135deg, #00a8cc, #0088aa);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,212,255,0.3);
+        }
+        
+        #transferModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #transferModal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 100%);
+            border: 1px solid rgba(0,212,255,0.3);
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 8px 32px rgba(0,212,255,0.2);
+        }
+        
+        .modal-content h2 {
+            margin-bottom: 20px;
+            color: #00d4ff;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #aaa;
+            font-size: 0.9em;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(0,212,255,0.2);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 1em;
+            box-sizing: border-box;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #00d4ff;
+            background: rgba(0,212,255,0.1);
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+        
+        .modal-buttons button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-send {
+            background: linear-gradient(135deg, #00d4ff, #00a8cc);
+            color: white;
+        }
+        
+        .btn-send:hover {
+            background: linear-gradient(135deg, #00a8cc, #0088aa);
+        }
+        
+        .btn-cancel {
+            background: rgba(255,255,255,0.1);
+            color: #aaa;
+        }
+        
+        .btn-cancel:hover {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+        }
+        
+        .modal-error {
+            background: rgba(255,71,87,0.1);
+            border: 1px solid #ff4757;
+            color: #ff6b7a;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        
+        .modal-error.show {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -143,6 +277,7 @@
                     <span class="badge" id="codes-count">0</span>
                 </h2>
                 <div id="codes-list"></div>
+                <button class="send-btn" onclick="openTransferModal('codes')">📤 Send Codes</button>
             </div>
             
             <div class="section">
@@ -151,6 +286,7 @@
                     <span class="badge" id="silver-count">0</span>
                 </h2>
                 <div id="silver-list"></div>
+                <button class="send-btn" onclick="openTransferModal('silver')">📤 Send Silver</button>
             </div>
             
             <div class="section">
@@ -159,14 +295,138 @@
                     <span class="badge" id="gold-count">0</span>
                 </h2>
                 <div id="gold-list"></div>
+                <button class="send-btn" onclick="openTransferModal('gold')">📤 Send Gold</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Transfer Modal -->
+    <div id="transferModal">
+        <div class="modal-content">
+            <h2>📤 Send Assets</h2>
+            <div class="modal-error" id="modalError"></div>
+            <div class="form-group">
+                <label>Recipient Email</label>
+                <input type="email" id="recipientEmail" placeholder="user@example.com">
+            </div>
+            <div class="form-group">
+                <label id="amountLabel">Amount</label>
+                <input type="number" id="transferAmount" placeholder="1" min="1">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-send" onclick="submitTransfer()">Send Now</button>
+                <button class="btn-cancel" onclick="closeTransferModal()">Cancel</button>
             </div>
         </div>
     </div>
 
     <script src="../shared/js/auth-client.js"></script>
     <script>
+        let currentAssetType = null;
+        
         function goToLogin() {
             window.location.href = '/login.html?redirect=' + encodeURIComponent('/codebank/safecode.html');
+        }
+        
+        function openTransferModal(assetType) {
+            currentAssetType = assetType;
+            const assets = window.AuthClient.getAssets();
+            let count = 0;
+            
+            if (assetType === 'codes') {
+                count = assets?.codes?.length || 0;
+                document.getElementById('amountLabel').textContent = 'How many codes?';
+            } else if (assetType === 'silver') {
+                count = assets?.silver?.length || 0;
+                document.getElementById('amountLabel').textContent = 'How much silver?';
+            } else if (assetType === 'gold') {
+                count = assets?.gold?.length || 0;
+                document.getElementById('amountLabel').textContent = 'How much gold?';
+            }
+            
+            if (count === 0) {
+                document.getElementById('modalError').textContent = `❌ You have no ${assetType} to send!`;
+                document.getElementById('modalError').classList.add('show');
+                setTimeout(() => {
+                    document.getElementById('modalError').classList.remove('show');
+                }, 3000);
+                return;
+            }
+            
+            document.getElementById('transferAmount').max = count;
+            document.getElementById('transferAmount').value = '1';
+            document.getElementById('recipientEmail').value = '';
+            document.getElementById('modalError').classList.remove('show');
+            document.getElementById('transferModal').classList.add('show');
+        }
+        
+        function closeTransferModal() {
+            document.getElementById('transferModal').classList.remove('show');
+            currentAssetType = null;
+        }
+        
+        async function submitTransfer() {
+            const email = document.getElementById('recipientEmail').value.trim();
+            const amount = parseInt(document.getElementById('transferAmount').value, 10);
+            
+            if (!email) {
+                showModalError('❌ Please enter recipient email');
+                return;
+            }
+            
+            if (!email.includes('@')) {
+                showModalError('❌ Invalid email format');
+                return;
+            }
+            
+            if (amount < 1) {
+                showModalError('❌ Amount must be at least 1');
+                return;
+            }
+            
+            if (email === window.AuthClient.getEmail()) {
+                showModalError('❌ Cannot send to yourself');
+                return;
+            }
+            
+            try {
+                const sendBtn = event.target;
+                sendBtn.disabled = true;
+                sendBtn.textContent = '⏳ Sending...';
+                
+                const result = await window.AuthClient.transfer(email, currentAssetType, amount);
+                
+                if (result.success) {
+                    showModalError(`✅ Sent ${amount} ${currentAssetType}(s) to ${email}!`, true);
+                    setTimeout(() => {
+                        closeTransferModal();
+                        renderAssets(window.AuthClient.getAssets());
+                    }, 1500);
+                } else {
+                    showModalError(`❌ Transfer failed: ${result.error || 'Unknown error'}`);
+                    sendBtn.disabled = false;
+                    sendBtn.textContent = 'Send Now';
+                }
+            } catch (err) {
+                showModalError(`❌ Error: ${err.message}`);
+                event.target.disabled = false;
+                event.target.textContent = 'Send Now';
+            }
+        }
+        
+        function showModalError(message, isSuccess = false) {
+            const errorEl = document.getElementById('modalError');
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+            if (isSuccess) {
+                errorEl.style.background = 'rgba(0,212,255,0.1)';
+                errorEl.style.borderColor = '#00d4ff';
+                errorEl.style.color = '#00d4ff';
+            } else {
+                errorEl.style.background = 'rgba(255,71,87,0.1)';
+                errorEl.style.borderColor = '#ff4757';
+                errorEl.style.color = '#ff6b7a';
+            }
         }
         
         function renderAssets(assets) {
@@ -179,8 +439,10 @@
             document.getElementById('codes-list').innerHTML = codes.length > 0
                 ? codes.map(c => `
                     <div class="asset-card">
-                        <span class="asset-label">${c.code || 'Code'}</span>
-                        <span class="asset-value">${c.value || 'N/A'}</span>
+                        <div class="asset-info">
+                            <span class="asset-label">${c.code || 'Code'}</span>
+                            <div class="asset-value">${c.value || 'N/A'}</div>
+                        </div>
                     </div>
                 `).join('')
                 : '<div class="empty-state">No codes in storage</div>';
@@ -191,8 +453,10 @@
             document.getElementById('silver-list').innerHTML = silver.length > 0
                 ? silver.map(s => `
                     <div class="asset-card">
-                        <span class="asset-label">Silver Stack</span>
-                        <span class="asset-value">${s.amount || 0} SLVR</span>
+                        <div class="asset-info">
+                            <span class="asset-label">Silver Stack</span>
+                            <div class="asset-value">${s.amount || 0} SLVR</div>
+                        </div>
                     </div>
                 `).join('')
                 : '<div class="empty-state">No silver in storage</div>';
@@ -203,8 +467,10 @@
             document.getElementById('gold-list').innerHTML = gold.length > 0
                 ? gold.map(g => `
                     <div class="asset-card">
-                        <span class="asset-label">Gold Reserve</span>
-                        <span class="asset-value">${g.amount || 0} GOLD</span>
+                        <div class="asset-info">
+                            <span class="asset-label">Gold Reserve</span>
+                            <div class="asset-value">${g.amount || 0} GOLD</div>
+                        </div>
                     </div>
                 `).join('')
                 : '<div class="empty-state">No gold in storage</div>';
@@ -213,11 +479,9 @@
         // Listen for silver awards from auto-mode
         window.AuthClient.on('silver:awarded', (data) => {
             console.log('[SafeCode] 🎉 Silver awarded!', data);
-            // Update assets display if already rendered
             if (window.AuthClient.isAuth()) {
                 renderAssets(window.AuthClient.getAssets());
             }
-            // Show notification
             const notification = document.createElement('div');
             notification.innerHTML = `
                 <div style="position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #FFD700, #FFA500); 
