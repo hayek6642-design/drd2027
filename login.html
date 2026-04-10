@@ -1,1371 +1,214 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YT-Clear - Hybrid Authentication</title>
-<style>
-  * { box-sizing: border-box; }
-  body { 
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-    margin: 0;
-    padding: 20px; 
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    min-height: 100vh;
-    color: #fff;
-  }
-  .container {
-    max-width: 500px;
-    margin: 0 auto;
-    background: rgba(255,255,255,0.05);
-    backdrop-filter: blur(10px);
-    border-radius: 20px;
-    padding: 30px;
-    border: 1px solid rgba(255,255,255,0.1);
-  }
-  h2 { 
-    text-align: center; 
-    margin-bottom: 30px;
-    color: #00d4ff;
-    font-size: 28px;
-  }
-  .form-group {
-    margin-bottom: 20px;
-  }
-  label {
-    display: block;
-    margin-bottom: 8px;
-    font-size: 14px;
-    color: #aaa;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  input, select {
-    width: 100%;
-    padding: 12px 15px;
-    border: 2px solid rgba(255,255,255,0.1);
-    border-radius: 10px;
-    background: rgba(0,0,0,0.3);
-    color: #fff;
-    font-size: 16px;
-    transition: all 0.3s ease;
-  }
-  input:focus, select:focus {
-    outline: none;
-    border-color: #00d4ff;
-    background: rgba(0,0,0,0.5);
-  }
-  select option {
-    background: #1a1a2e;
-    color: #fff;
-  }
-  button {
-    width: 100%;
-    padding: 15px;
-    margin-top: 10px;
-    border: none;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
-    color: #fff;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
-  }
-  button:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(0,212,255,0.3);
-  }
-  button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-  button.secondary {
-    background: rgba(255,255,255,0.1);
-    border: 1px solid rgba(255,255,255,0.2);
-  }
-  .phone-group {
-    display: flex;
-    gap: 10px;
-  }
-  .phone-group select {
-    width: 140px;
-    flex-shrink: 0;
-  }
-  .verification-section {
-    display: none;
-    margin-top: 20px;
-    padding: 20px;
-    background: rgba(0,212,255,0.1);
-    border-radius: 10px;
-    border: 1px solid rgba(0,212,255,0.3);
-  }
-  .verification-section.active {
-    display: block;
-    animation: slideDown 0.3s ease;
-  }
-  @keyframes slideDown {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .channel-status {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 15px;
-    background: rgba(0,0,0,0.3);
-    border-radius: 8px;
-    margin-bottom: 15px;
-  }
-  .channel-status.verified {
-    background: rgba(0,255,0,0.1);
-    border: 1px solid #00ff00;
-  }
-  .channel-status.pending {
-    background: rgba(255,165,0,0.1);
-    border: 1px solid #ffa500;
-  }
-  .status-icon {
-    font-size: 24px;
-  }
-  .otp-input-group {
-    display: flex;
-    gap: 10px;
-    margin-top: 10px;
-  }
-  .otp-input-group input {
-    text-align: center;
-    letter-spacing: 5px;
-    font-size: 20px;
-  }
-  .timer {
-    text-align: center;
-    color: #ff6b6b;
-    font-size: 14px;
-    margin-top: 10px;
-  }
-  .status-message {
-    padding: 12px;
-    border-radius: 8px;
-    margin-top: 15px;
-    text-align: center;
-    font-size: 14px;
-    display: none;
-  }
-  .status-message.success {
-    background: rgba(0,255,0,0.1);
-    border: 1px solid #00ff00;
-    color: #00ff00;
-    display: block;
-  }
-  .status-message.error {
-    background: rgba(255,0,0,0.1);
-    border: 1px solid #ff0000;
-    color: #ff0000;
-    display: block;
-  }
-  .tab-switcher {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 30px;
-  }
-  .tab-btn {
-    flex: 1;
-    padding: 12px;
-    background: rgba(255,255,255,0.05);
-    border: 2px solid transparent;
-    color: #aaa;
-    font-size: 14px;
-  }
-  .tab-btn.active {
-    background: rgba(0,212,255,0.1);
-    border-color: #00d4ff;
-    color: #00d4ff;
-  }
-  pre { 
-    background: #0f0f1a; 
-    padding: 15px; 
-    border-radius: 10px;
-    border: 1px solid rgba(255,255,255,0.1);
-    max-height: 300px; 
-    overflow-y: auto;
-    font-size: 12px;
-    color: #00ff00;
-    margin-top: 20px;
-  }
-  .loading {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 3px solid rgba(255,255,255,.3);
-    border-radius: 50%;
-    border-top-color: #fff;
-    animation: spin 1s ease-in-out infinite;
-  }
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-  .select-loading {
-    color: #aaa;
-    font-size: 12px;
-    margin-left: 10px;
-  }
-  .info-box {
-    background: rgba(0,212,255,0.1);
-    border-left: 4px solid #00d4ff;
-    padding: 15px;
-    margin-bottom: 20px;
-    border-radius: 0 8px 8px 0;
-    font-size: 14px;
-  }
-</style>
-<script>
-// ── NativeBiometric + NativeStorage helpers for Capacitor ──────────────
-window._NativeBio = {
-  isNative: () => !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()),
-  plugin: () => window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.NativeBiometric,
-  prefs: () => window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Preferences,
-
-  async isAvailable() {
-    const p = this.plugin();
-    if (!p) return false;
-    try { const r = await p.isAvailable(); return r.isAvailable === true; } catch(_) { return false; }
-  },
-
-  // Persist session to BOTH localStorage AND Capacitor Preferences
-  async saveSession(sessionId, userData) {
-    localStorage.setItem('session_active', 'true');
-    if (sessionId) localStorage.setItem('session_token', sessionId);
-    if (userData) localStorage.setItem('user_data', typeof userData === 'string' ? userData : JSON.stringify(userData));
-    const pr = this.prefs();
-    if (pr) {
-      try {
-        await pr.set({ key: 'session_active', value: 'true' });
-        if (sessionId) await pr.set({ key: 'session_token', value: sessionId });
-        if (userData) await pr.set({ key: 'user_data', value: typeof userData === 'string' ? userData : JSON.stringify(userData) });
-      } catch(e) { console.warn('[NativeBio] saveSession error:', e); }
-    }
-  },
-
-  // Restore session from Capacitor Preferences → localStorage
-  async restoreSession() {
-    const pr = this.prefs();
-    if (!pr) return false;
-    try {
-      const r = await pr.get({ key: 'session_active' });
-      if (r.value !== 'true') return false;
-      const t = await pr.get({ key: 'session_token' });
-      const u = await pr.get({ key: 'user_data' });
-      if (t.value) localStorage.setItem('session_token', t.value);
-      if (u.value) localStorage.setItem('user_data', u.value);
-      localStorage.setItem('session_active', 'true');
-      return true;
-    } catch(e) { return false; }
-  }
-};
-</script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeBank - Login</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: system-ui, -apple-system, sans-serif;
+            color: white;
+        }
+        .login-container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .logo {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #00d4ff 0%, #8a2be2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            color: #888;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        label {
+            display: block;
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        input {
+            width: 100%;
+            padding: 14px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        input:focus {
+            outline: none;
+            border-color: #00d4ff;
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+        }
+        button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #00d4ff 0%, #8a2be2 100%);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .error {
+            background: rgba(255, 71, 87, 0.1);
+            border: 1px solid rgba(255, 71, 87, 0.3);
+            color: #ff4757;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .signup-link {
+            margin-top: 20px;
+            color: #888;
+            font-size: 14px;
+        }
+        .signup-link a {
+            color: #00d4ff;
+            text-decoration: none;
+        }
+        .loading {
+            display: none;
+            margin-bottom: 20px;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-<!-- Single-Session Kickout Banner -->
-<script>
-(function() {
-  var reason = new URLSearchParams(window.location.search).get('reason');
-  if (reason === 'kicked') {
-    var msg = sessionStorage.getItem('__kickout_reason__') ||
-      'Your account was opened on another device. Sign in here to continue.';
-    sessionStorage.removeItem('__kickout_reason__');
-    // Inject banner after body opens
-    document.addEventListener('DOMContentLoaded', function() {
-      var banner = document.createElement('div');
-      banner.id = 'kickout-banner';
-      banner.style.cssText = [
-        'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:99999',
-        'background:linear-gradient(90deg,#c0392b,#e74c3c)',
-        'color:#fff', 'text-align:center', 'padding:12px 20px',
-        'font-size:14px', 'font-family:-apple-system,BlinkMacSystemFont,sans-serif',
-        'box-shadow:0 2px 12px rgba(0,0,0,0.4)', 'display:flex',
-        'align-items:center', 'justify-content:center', 'gap:10px'
-      ].join(';');
-      banner.innerHTML = '<span>📱</span><span>' + msg + '</span>' +
-        '<button onclick="document.getElementById('kickout-banner').remove()" ' +
-        'style="background:rgba(255,255,255,0.2);border:none;color:#fff;' +
-        'padding:4px 10px;border-radius:4px;cursor:pointer;font-size:13px;margin-left:8px">✕</button>';
-      document.body.insertBefore(banner, document.body.firstChild);
-      // Auto-dismiss after 8s
-      setTimeout(function() {
-        var b = document.getElementById('kickout-banner');
-        if (b) b.remove();
-      }, 8000);
-    });
-  }
-})();
-</script>
-
-<div class="container">
-  <h2>🔐 YT-Clear Hybrid Auth</h2>
-  
-  <div class="tab-switcher">
-    <button class="tab-btn active" onclick="switchTab('signup', event)">Sign Up</button>
-    <button class="tab-btn" onclick="switchTab('login', event)">Login</button>
-  </div>
-
-  <!-- SIGNUP FORM -->
-    <div id="signupForm">
-
-    <!-- Google Sign-In (signup) -->
-    <div id="google-signup-wrapper" style="display:none;margin-bottom:10px;">
-      <div id="google-signin-signup" style="display:flex;justify-content:center;"></div>
-    </div>
-    <div id="google-divider-signup" style="display:none;align-items:center;gap:10px;margin:16px 0 20px;">
-      <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
-      <span style="color:#666;font-size:12px;white-space:nowrap;">or sign up with email</span>
-      <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
+    <div class="login-container">
+        <div class="logo">🏦</div>
+        <h1>CodeBank</h1>
+        <p class="subtitle">Sign in to access your assets</p>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 15px; color: #888;">Checking session...</p>
+        </div>
+        
+        <div class="error" id="error"></div>
+        
+        <form id="login-form" style="display: none;">
+            <div class="input-group">
+                <label>Email</label>
+                <input type="email" id="email" placeholder="your@gmail.com" required>
+            </div>
+            
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+            
+            <button type="submit" id="login-btn">
+                Sign In
+            </button>
+        </form>
+        
+        <p class="signup-link" id="signup-section" style="display: none;">
+            Don't have an account? <a href="/signup.html">Sign up</a>
+        </p>
     </div>
 
-    <div class="form-group">
-      <label>Email Address</label>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <input type="email" id="signupEmail" placeholder="your@email.com" required style="flex:1;">
-        <button type="button" id="sendOtpEmailBtn" onclick="sendEmailOTPCode()" 
-          style="white-space:nowrap;padding:10px 14px;font-size:13px;background:linear-gradient(135deg,#0066cc,#00d4ff);color:#fff;border:none;border-radius:8px;cursor:pointer;transition:opacity .2s;">
-          Send Code
-        </button>
-      </div>
-    </div>
-
-    <!-- OTP Verification Panel (hidden until code sent) -->
-    <div id="emailOtpPanel" style="display:none;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.3);border-radius:10px;padding:14px 16px;margin-bottom:12px;">
-      <p style="margin:0 0 10px;font-size:13px;color:#aaa;">✉️ A 6-digit code was sent to your email. Enter it below:</p>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <input type="text" id="emailOtpInput" maxlength="6" placeholder="_ _ _ _ _ _"
-          style="flex:1;letter-spacing:6px;font-size:20px;text-align:center;padding:10px;background:#111;color:#00d4ff;border:1px solid #333;border-radius:8px;"
-          oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-        <button type="button" onclick="verifyEmailOTPCode()"
-          style="padding:10px 16px;background:#00c853;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">
-          Verify ✓
-        </button>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:#666;">
-        <span id="emailOtpStatus"></span>
-        <button type="button" onclick="resendEmailOTPCode()" style="background:none;border:none;color:#00d4ff;cursor:pointer;font-size:12px;padding:0;">Resend code</button>
-      </div>
-    </div>
-
-    <!-- Email verified badge (hidden until verified) -->
-    <div id="emailVerifiedBadge" style="display:none;background:rgba(0,200,83,0.12);border:1px solid #00c853;border-radius:8px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#00c853;">
-      ✅ Email verified — you're good to go!
-    </div>
-    
-    <div class="form-group">
-      <label>Username</label>
-      <input type="text" id="signupUsername" placeholder="Choose a username" required>
-    </div>
-    
-    <div class="form-group">
-      <label>Password</label>
-      <input type="password" id="signupPassword" placeholder="Create a strong password" required>
-    </div>
-    
-    <div class="form-group">
-      <label>Religion <span id="religionLoading" class="select-loading"></span></label>
-      <select id="religion" required>
-        <option value="">-- Select Religion --</option>
-      </select>
-    </div>
-    
-    <div class="form-group">
-      <label>Country <span id="countryLoading" class="select-loading"></span></label>
-      <select id="country" required onchange="updateCountryCode()">
-        <option value="">-- Select Country --</option>
-      </select>
-    </div>
-    
-    <div class="form-group">
-      <label>Phone Number</label>
-      <div class="phone-group">
-        <select id="countryCode" required>
-          <option value="">Code</option>
-        </select>
-        <input type="tel" id="phoneNumber" placeholder="Phone number" required>
-      </div>
-    </div>
-    
-    <div id="statusMessage" class="status-message"></div>
-    
-    <button onclick="handleSignup()" id="signupBtn">🔒 Verify Email First</button>
-  </div>
-
-  <!-- LOGIN FORM -->
-  <div id="loginForm" style="display: none;">
-
-    <!-- Google Sign-In -->
-    <div id="google-login-wrapper" style="display:none;margin-bottom:10px;">
-      <div id="google-signin-login" style="display:flex;justify-content:center;"></div>
-    </div>
-    <div id="google-divider-login" style="display:none;align-items:center;gap:10px;margin:16px 0 20px;">
-      <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
-      <span style="color:#666;font-size:12px;white-space:nowrap;">or sign in with email</span>
-      <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
-    </div>
-
-    <div class="form-group">
-      <label>Email Address</label>
-      <input type="email" id="loginEmail" placeholder="your@email.com" required>
-    </div>
-    
-    <div class="form-group">
-      <label>Password</label>
-      <input type="password" id="loginPassword" placeholder="Enter your password" required>
-    </div>
-    
-
-    <button onclick="handleLogin()">Login</button>
-
-    <!-- ─── Biometric Login ──────────────────────────────────── -->
-    <div id="biometricSection" style="display:none; margin-top:16px;">
-      <div style="display:flex;align-items:center;gap:10px;margin:12px 0;">
-        <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
-        <span style="color:#666;font-size:12px">or</span>
-        <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
-      </div>
-      <button id="bioAuthBtn" onclick="handleBiometricLogin()" style="
-        background:linear-gradient(135deg,#1a1a2e,#0f3460);
-        border:2px solid rgba(0,212,255,0.4);
-        display:flex;align-items:center;justify-content:center;gap:10px;
-        font-size:15px;letter-spacing:0.3px;">
-        <span style="font-size:22px">🪪</span> Sign in with Fingerprint / Face ID
-      </button>
-    </div>
-
-    <!-- ─── Register Biometric (shown after password login) ─── -->
-    <div id="registerBiometricSection" style="display:none;margin-top:20px;
-      background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.25);
-      border-radius:12px;padding:18px;text-align:center;">
-      <div style="font-size:28px;margin-bottom:8px">🪪</div>
-      <div style="font-weight:600;margin-bottom:6px">Enable Fingerprint Login?</div>
-      <div style="font-size:13px;color:#aaa;margin-bottom:14px">
-        Use your device fingerprint or face to sign in instantly next time — no password needed.
-      </div>
-      <div style="display:flex;gap:10px;">
-        <button onclick="registerBiometric()" style="
-          background:linear-gradient(135deg,#00d4ff,#0099cc);font-size:14px;padding:10px 0;">
-          ✅ Enable Now
-        </button>
-        <button onclick="document.getElementById('registerBiometricSection').style.display='none'" 
-          class="secondary" style="font-size:14px;padding:10px 0;margin-top:0">
-          Not Now
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <pre id="output"></pre>
-</div>
-
-<script>
-const API_BASE = '';
-
-console.log('🔥 API_BASE:', API_BASE);
-console.log('🔥 Window origin:', window.location.origin);
-
-  // 🧠 Auth Flow Control: Auto-redirect if session is ACTUALLY active
-  // 🛡️ FIX: Don't blindly trust localStorage — validate with server first
-  //   Also check Capacitor Preferences (native storage) for persisted sessions.
-  (async function checkExistingSession() {
-    // First: try to restore from Capacitor Preferences (survives app kill on Android)
-    const localActive = localStorage.getItem("session_active") === "true";
-    if (!localActive && window._NativeBio && window._NativeBio.isNative()) {
-      await window._NativeBio.restoreSession();
-    }
-
-    if (localStorage.getItem("session_active") === "true") {
-      // Quick gate: if the cookie is already gone, no point asking the server
-      if (!document.cookie.includes('session_token=')) {
-        localStorage.removeItem("session_active");
-        localStorage.removeItem("session_token");
-        localStorage.removeItem("user_data");
-        localStorage.removeItem("__cached_user__");
-        localStorage.removeItem("__cached_session_id__");
-      } else {
-        // Cookie exists — ask the server if it's still valid
-        fetch('/api/auth/me', { credentials: 'include' })
-          .then(function(r) { return r.json(); })
-          .then(function(data) {
-            if (data.success || data.authenticated || data.ok) {
-              // 🔄 SYNC ASSETS ON SESSION RESTORE
-              if (window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
-                console.log('[Session] Syncing restored session assets...');
-                window.AssetsManager.sync();
-              }
-              window.location.href = "/yt-new-clear.html";
+    <script src="/shared/js/session-manager.js"></script>
+    <script>
+        // Check for existing session first
+        async function checkSession() {
+            const loading = document.getElementById('loading');
+            const form = document.getElementById('login-form');
+            const signup = document.getElementById('signup-section');
+            
+            loading.style.display = 'block';
+            
+            // SessionManager will auto-redirect if valid
+            // We just need to wait
+            setTimeout(() => {
+                // If still here after 2 seconds, show login form
+                loading.style.display = 'none';
+                form.style.display = 'block';
+                signup.style.display = 'block';
+            }, 2000);
+        }
+        
+        // Handle login
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btn = document.getElementById('login-btn');
+            const error = document.getElementById('error');
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            btn.disabled = true;
+            btn.textContent = 'Signing in...';
+            error.style.display = 'none';
+            
+            const result = await window.SessionManager.login(email, password);
+            
+            if (result.success) {
+                btn.textContent = 'Success! Redirecting...';
+                // Redirect to app
+                const params = new URLSearchParams(window.location.search);
+                const redirect = params.get('redirect') || '/codebank/indexCB.html';
+                window.location.href = redirect;
             } else {
-              // Server says NO — nuke stale client state
-              localStorage.removeItem("session_active");
-              localStorage.removeItem("session_token");
-              localStorage.removeItem("user_data");
-              localStorage.removeItem("__cached_user__");
-              localStorage.removeItem("__cached_session_id__");
-              document.cookie = "session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                error.textContent = result.error || 'Login failed';
+                error.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Sign In';
             }
-          })
-          .catch(function() {
-            // Network error — clear stale flag so user isn't stuck
-            localStorage.removeItem("session_active");
-          });
-      }
-    } else {
-      // No session in either storage — also check if biometric can auto-login
-      if (window._NativeBio && window._NativeBio.isNative()) {
-        const bioAvailable = await window._NativeBio.isAvailable();
-        const prefs = window._NativeBio.prefs();
-        if (bioAvailable && prefs) {
-          try {
-            const t = await prefs.get({ key: 'session_token' });
-            if (t.value) {
-              document.getElementById('biometricSection').style.display = 'block';
-            }
-          } catch(_) {}
-        }
-      }
-    }
-  })();
-
-  let sessionId = null;
-let verificationStatus = { email: false, phone: false };
-let emailOtpSessionId = null; // tracks active email-OTP session
-let countriesData = [];
-let religionsData = [];
-
-// Load data on page load
-document.addEventListener('DOMContentLoaded', async () => {
-  await Promise.all([loadCountries(), loadReligions()]);
-});
-
-async function loadCountries() {
-  const loadingEl = document.getElementById('countryLoading');
-  if (loadingEl) loadingEl.textContent = '(loading...)';
-  try {
-    const response = await fetch(`${API_BASE}/api/countries`);
-    const data = await response.json();
-    if (data.success) {
-      countriesData = data.countries;
-      populateCountrySelects();
-    }
-  } catch (error) {
-    console.error('Failed to load countries:', error);
-  } finally {
-    if (loadingEl) loadingEl.textContent = '';
-  }
-}
-
-async function loadReligions() {
-  const loadingEl = document.getElementById('religionLoading');
-  if (loadingEl) loadingEl.textContent = '(loading...)';
-  try {
-    const response = await fetch(`${API_BASE}/api/religions`);
-    const data = await response.json();
-    if (data.success) {
-      religionsData = data.religions;
-      populateReligionSelect();
-    }
-  } catch (error) {
-    // Fallback
-    religionsData = [
-      { value: 'Islam', label: 'Islam', icon: '☪️' },
-      { value: 'Christianity', label: 'Christianity', icon: '✝️' },
-      { value: 'Judaism', label: 'Judaism', icon: '✡️' },
-      { value: 'Hinduism', label: 'Hinduism', icon: '🕉️' },
-      { value: 'Buddhism', label: 'Buddhism', icon: '☸️' },
-      { value: 'Sikhism', label: 'Sikhism', icon: '🪯' },
-      { value: 'Atheist', label: 'Atheist', icon: '⚛️' },
-      { value: 'Agnostic', label: 'Agnostic', icon: '❓' },
-      { value: 'Other', label: 'Other', icon: '🌐' },
-      { value: 'Prefer not to say', label: 'Prefer not to say', icon: '🤫' }
-    ];
-    populateReligionSelect();
-  } finally {
-    if (loadingEl) loadingEl.textContent = '';
-  }
-}
-
-function populateCountrySelects() {
-  const countrySelect = document.getElementById('country');
-  const countryCodeSelect = document.getElementById('countryCode');
-  
-  if (!countrySelect || !countryCodeSelect) return;
-
-  countrySelect.innerHTML = '<option value="">-- Select Country --</option>';
-  countryCodeSelect.innerHTML = '<option value="">Code</option>';
-  
-  countriesData.forEach(country => {
-    const option = document.createElement('option');
-    option.value = country.code;
-    option.textContent = `${country.flag} ${country.name}`;
-    option.setAttribute('data-phone-code', country.phoneCode);
-    countrySelect.appendChild(option);
-    
-    const codeOption = document.createElement('option');
-    codeOption.value = country.phoneCode;
-    codeOption.textContent = `${country.flag} ${country.phoneCode}`;
-    codeOption.setAttribute('data-country', country.code);
-    countryCodeSelect.appendChild(codeOption);
-  });
-}
-
-function populateReligionSelect() {
-  const religionSelect = document.getElementById('religion');
-  if (!religionSelect) return;
-
-  religionSelect.innerHTML = '<option value="">-- Select Religion --</option>';
-  religionsData.forEach(religion => {
-    const option = document.createElement('option');
-    option.value = religion.value;
-    option.textContent = `${religion.icon || ''} ${religion.label || religion.value}`;
-    religionSelect.appendChild(option);
-  });
-}
-
-function updateCountryCode() {
-  const countrySelect = document.getElementById('country');
-  const countryCodeSelect = document.getElementById('countryCode');
-  if (!countrySelect || !countryCodeSelect) return;
-
-  const selectedOption = countrySelect.options[countrySelect.selectedIndex];
-  const phoneCode = selectedOption.getAttribute('data-phone-code');
-  
-  if (phoneCode) {
-    for (let i = 0; i < countryCodeSelect.options.length; i++) {
-      if (countryCodeSelect.options[i].value === phoneCode) {
-        countryCodeSelect.selectedIndex = i;
-        break;
-      }
-    }
-  }
-}
-
-function switchTab(tab, evt) {
-  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-  if (evt && evt.target) evt.target.classList.add('active');
-  
-  if (tab === 'signup') {
-    document.getElementById('signupForm').style.display = 'block';
-    document.getElementById('loginForm').style.display = 'none';
-  } else {
-    document.getElementById('signupForm').style.display = 'none';
-    document.getElementById('loginForm').style.display = 'block';
-  }
-}
-
-function showStatus(message, type) {
-  const statusEl = document.getElementById('statusMessage');
-  if (!statusEl) return;
-  statusEl.textContent = message;
-  statusEl.className = 'status-message ' + type;
-  setTimeout(() => {
-    statusEl.className = 'status-message';
-  }, 5000);
-}
-
-// ── Email OTP client functions (freemium) ────────────────────────────────────
-
-async function sendEmailOTPCode() {
-  const email = document.getElementById('signupEmail').value.trim();
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    showStatus('Please enter a valid email address first', 'error'); return;
-  }
-  const btn = document.getElementById('sendOtpEmailBtn');
-  btn.disabled = true; btn.textContent = 'Sending…';
-
-  try {
-    const res = await fetch(`${API_BASE}/api/auth/send-email-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    });
-    const data = await res.json();
-    if (data.success) {
-      emailOtpSessionId = data.sessionId;
-      document.getElementById('emailOtpPanel').style.display = 'block';
-      document.getElementById('emailVerifiedBadge').style.display = 'none';
-      document.getElementById('emailOtpStatus').textContent = '';
-      btn.textContent = 'Resend';
-      btn.disabled = false;
-      showStatus(data.message || 'Code sent! Check your inbox.', 'success');
-      // Dev: show mock OTP in console
-      if (data.mockOtp) console.warn('[DEV] Email OTP:', data.mockOtp);
-    } else {
-      showStatus(data.error || 'Failed to send code', 'error');
-      btn.textContent = 'Send Code'; btn.disabled = false;
-    }
-  } catch (e) {
-    showStatus('Network error. Please try again.', 'error');
-    btn.textContent = 'Send Code'; btn.disabled = false;
-  }
-}
-
-async function verifyEmailOTPCode() {
-  const otp = document.getElementById('emailOtpInput').value.trim();
-  const statusEl = document.getElementById('emailOtpStatus');
-  if (!otp || otp.length !== 6) { statusEl.textContent = 'Enter the 6-digit code'; return; }
-  if (!emailOtpSessionId) { statusEl.textContent = 'Please send a code first'; return; }
-  statusEl.textContent = 'Verifying…';
-  try {
-    const res = await fetch(`${API_BASE}/api/auth/verify-email-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId: emailOtpSessionId, otp })
-    });
-    const data = await res.json();
-    if (data.success && data.verified) {
-      verificationStatus.email = true;
-      document.getElementById('emailOtpPanel').style.display = 'none';
-      document.getElementById('emailVerifiedBadge').style.display = 'block';
-      const signupBtn = document.getElementById('signupBtn');
-      signupBtn.textContent = 'Complete Sign Up';
-      signupBtn.style.background = 'linear-gradient(135deg,#00c853,#00e676)';
-      showStatus('✅ Email verified!', 'success');
-    } else {
-      statusEl.textContent = data.error || 'Incorrect code. Try again.';
-    }
-  } catch (e) { statusEl.textContent = 'Network error. Try again.'; }
-}
-
-async function resendEmailOTPCode() {
-  emailOtpSessionId = null;
-  await sendEmailOTPCode();
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-
-async function sendHybridOTP() {
-  const email = document.getElementById('signupEmail').value.trim();
-  const phone = document.getElementById('phoneNumber').value.trim();
-  const countryCode = document.getElementById('countryCode').value;
-  
-  console.log('🔥 Sending OTP with:', { email, phone, countryCode });
-  
-  if (!email || !phone || !countryCode) {
-    showStatus('Please fill in all fields', 'error');
-    return;
-  }
-  
-  const sendBtn = document.getElementById('sendOtpBtn');
-  sendBtn.disabled = true;
-  sendBtn.innerHTML = '<span class="loading"></span> Sending...';
-  
-  try {
-    // Debug: Log the exact URL being called
-    const url = `${API_BASE}/api/auth/send-hybrid-otp`;
-    console.log('🔥 Fetching URL:', url);
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      credentials: 'include', // 🛡️ CRITICAL for cookies
-      body: JSON.stringify({ email, phone, countryCode })
-    });
-    
-    console.log('🔥 Response status:', response.status);
-    
-    const data = await response.json();
-    console.log('🔥 Response data:', data);
-    
-    if (data.success) {
-      sessionId = data.sessionId;
-      document.getElementById('verificationSection').classList.add('active');
-      showStatus(data.message, 'success');
-      
-      // Show mock OTP in development
-      if (data.mockOtp) {
-        console.log('🔐 DEVELOPMENT OTP:', data.mockOtp);
-        // Only display OTP on screen in local development (never in production)
-        if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
-          const output = document.getElementById('output');
-          if (output) output.textContent = `[DEV MOCK OTP]: ${data.mockOtp}`;
-        }
-      }
-      
-      startTimer();
-    } else {
-      showStatus(data.error || 'Failed to send OTP', 'error');
-    }
-    
-  } catch (error) {
-    // 🛡️ CRITICAL: Log the actual error
-    console.error('🔥 Fetch error:', error);
-    console.error('Error name:', error.name);
-    console.error('Error message:', error.message);
-    
-    showStatus(`Network error: ${error.message}`, 'error');
-  } finally {
-    sendBtn.disabled = false;
-    sendBtn.textContent = 'Send Verification Codes';
-  }
-}
-
-async function verifyOTP(channel) {
-  const otpInput = channel === 'email' ? 'emailOtp' : 'phoneOtp';
-  const otp = document.getElementById(otpInput).value.trim();
-  
-  if (!otp || otp.length !== 6) {
-    showStatus(`Please enter the 6-digit OTP`, 'error');
-    return;
-  }
-  
-  try {
-    const response = await fetch(`${API_BASE}/api/auth/verify-hybrid-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId, otp, channel })
-    });
-    
-    const data = await response.json();
-    
-    if (data.success) {
-      verificationStatus[channel] = true;
-      updateChannelStatus(channel, true);
-      
-      if (data.verified) {
-        showStatus('Phone number verified! You can now complete signup.', 'success');
-        document.getElementById('signupBtn').disabled = false;
-        if (document.getElementById('phoneOtpInput')) {
-          document.getElementById('phoneOtpInput').style.display = 'none';
-        }
-      }
-    } else {
-      showStatus(data.error || 'Invalid OTP', 'error');
-    }
-  } catch (error) {
-    showStatus('Verification failed. Please try again.', 'error');
-  }
-}
-
-async function resendOTP(channel) {
-  try {
-    const response = await fetch(`${API_BASE}/api/auth/resend-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId, channel })
-    });
-    
-    const data = await response.json();
-    
-    if (data.success) {
-      showStatus(`OTP resent via ${channel}`, 'success');
-    } else {
-      showStatus(data.error || 'Failed to resend', 'error');
-    }
-  } catch (error) {
-    showStatus('Failed to resend OTP', 'error');
-  }
-}
-
-function updateChannelStatus(channel, verified) {
-  const channelEl = document.getElementById(channel + 'Channel');
-  const statusEl = document.getElementById(channel + 'Status');
-  const inputEl = document.getElementById(channel + 'OtpInput');
-  
-  if (verified && channelEl && statusEl && inputEl) {
-    channelEl.classList.remove('pending');
-    channelEl.classList.add('verified');
-    statusEl.textContent = '✓ Verified';
-    inputEl.style.display = 'none';
-    
-    // Enable signup button when verification is successful
-    if (channel === 'phone') {
-      const signupBtn = document.getElementById('signupBtn');
-      if (signupBtn) signupBtn.disabled = false;
-    }
-  }
-}
-
-function startTimer() {
-  let seconds = 600; // 10 minutes
-  
-  const timerEl = document.getElementById('timer');
-  if (!timerEl) return;
-
-  const interval = setInterval(() => {
-    seconds--;
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    timerEl.textContent = `Codes expire in ${mins}:${secs.toString().padStart(2, '0')}`;
-    
-    if (seconds <= 0) {
-      clearInterval(interval);
-      timerEl.textContent = 'Codes expired. Please request new codes.';
-    }
-  }, 1000);
-}
-
-async function handleSignup() {
-  const email = document.getElementById('signupEmail').value.trim();
-  const username = document.getElementById('signupUsername').value.trim();
-  const password = document.getElementById('signupPassword').value;
-  const religion = document.getElementById('religion').value;
-  const country = document.getElementById('country').value;
-  const countryCode = document.getElementById('countryCode').value;
-  const phone = document.getElementById('phoneNumber').value.trim();
-  
-  if (!email || !username || !password || !religion || !country || !phone) {
-    showStatus('Please fill in all fields', 'error');
-    return;
-  }
-  
-  // 🔒 OTP gate — must verify email before completing signup
-  if (!verificationStatus.email) {
-    showStatus('Please verify your email address first — click "Send Code"', 'error');
-    document.getElementById('signupEmail').focus();
-    return;
-  }
-  
-  // Password strength validation
-  if (password.length < 8) {
-    showStatus('Password must be at least 8 characters long', 'error');
-    return;
-  }
-  if (!/[0-9!@#$%^&*()_\-+=]/.test(password)) {
-    showStatus('Password must include at least one number or special character', 'error');
-    return;
-  }
-  
-  const signupBtn = document.getElementById('signupBtn');
-  signupBtn.disabled = true;
-  signupBtn.innerHTML = '<span class="loading"></span> Creating account...';
-  
-  try {
-    const response = await fetch(`${API_BASE}/api/auth/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        email,
-        username,
-        password,
-        religion,
-        country,
-        phone,
-        countryCode
-      })
-    });
-    
-    const data = await response.json();
-    
-    if (data.status === 'success') {
-      showStatus('Account created successfully! Redirecting...', 'success');
-      
-      // 🛡️ CRITICAL: Store session and update auth state
-      const session = {
-        userId: data.userId,
-        sessionId: data.sessionId,
-        user: data.user
-      };
-      localStorage.setItem('session_token', data.sessionId);
-      localStorage.setItem('user_data', JSON.stringify(data.user));
-      
-      // 🧠 Auth Flow Control
-      localStorage.setItem('session_active', 'true');
-
-      // 📱 NATIVE: Persist to Capacitor Preferences so session survives app kill
-      if (window._NativeBio) window._NativeBio.saveSession(data.sessionId, data.user);
-      
-      // FIXED: Update auth state to authenticated in AuthCore
-      if (window.AuthCore && typeof window.AuthCore._setState === 'function') {
-        window.AuthCore._setState({
-          authenticated: true,
-          status: 'active',
-          userId: data.userId,
-          sessionId: data.sessionId,
-          user: data.user
         });
-      }
-
-      // 🔄 SYNC ASSETS IMMEDIATELY AFTER SIGNUP
-      if (window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
-        console.log('[Signup] Syncing assets after account creation...');
-        window.AssetsManager.sync();
-      }
-      window.dispatchEvent(new CustomEvent('auth:signup', { 
-        detail: { user: data.user, sessionId: data.sessionId } 
-      }));
-
-      setTimeout(() => {
-        window.location.href = '/yt-new-clear.html';
-      }, 1500);
-    } else {
-      if (data.error === 'USER_EXISTS') {
-        showStatus('Account already exists. Please sign in.', 'error');
-        return;
-      }
-      showStatus(data.error || 'Signup failed', 'error');
-      signupBtn.disabled = false;
-      signupBtn.textContent = 'Complete Sign Up';
-    }
-  } catch (error) {
-    showStatus('Network error. Please try again.', 'error');
-    signupBtn.disabled = false;
-    signupBtn.textContent = 'Complete Sign Up';
-  }
-}
-
-async function handleLogin() {
-  const email = document.getElementById('loginEmail').value.trim();
-  const password = document.getElementById('loginPassword').value;
-
-  if (!email || !password) {
-    showStatus('Email and password required', 'error');
-    return;
-  }
-
-  try {
-    const response = await fetch(`${API_BASE}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ email, password })
-    });
-
-    const data = await response.json();
-
-    if (data.status === 'success') {
-      showStatus('Login successful! Redirecting...', 'success');
-      
-      // 🛡️ CRITICAL: Store session and update auth state
-      localStorage.setItem('session_token', data.sessionId);
-      if (data.user) {
-        localStorage.setItem('user_data', JSON.stringify(data.user));
-      }
-      
-      // 🧠 Auth Flow Control
-      localStorage.setItem('session_active', 'true');
-
-      // 📱 NATIVE: Persist to Capacitor Preferences so session survives app kill
-      if (window._NativeBio) window._NativeBio.saveSession(data.sessionId, data.user);
-      
-      // FIXED: Update auth state to authenticated in AuthCore
-      if (window.AuthCore && typeof window.AuthCore._setState === 'function') {
-        window.AuthCore._setState({
-          authenticated: true,
-          status: 'active',
-          userId: data.userId,
-          sessionId: data.sessionId,
-          user: data.user
-        });
-      }
-      
-      localStorage.setItem('last_login_email', email);
-      // 🔄 SYNC ASSETS IMMEDIATELY AFTER LOGIN
-      if (window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
-        console.log('[Login] Syncing assets after login...');
-        window.AssetsManager.sync();
-      }
-      // Also emit event for any listeners
-      window.dispatchEvent(new CustomEvent('auth:login', { 
-        detail: { user: data.user, sessionId: data.sessionId } 
-      }));
-
-      // Offer biometric registration if device supports it (native only)
-      if (window._NativeBio && window._NativeBio.isNative()) {
-        window._NativeBio.isAvailable().then(bioOk => {
-          if (bioOk) {
-            document.getElementById('registerBiometricSection').style.display = 'block';
-            setTimeout(() => { window.location.href = '/yt-new-clear.html'; }, 3000);
-            return;
-          }
-          window.location.href = '/yt-new-clear.html';
-        });
-      } else {
-        setTimeout(() => { window.location.href = '/yt-new-clear.html'; }, 1500);
-      }
-    } else {
-      showStatus(data.error || 'Login failed', 'error');
-    }
-  } catch (error) {
-    showStatus('Network error. Please try again.', 'error');
-  }
-}
-
-
-// ══════════════════════════════════════════════════════
-//  BIOMETRIC — Uses capacitor-native-biometric plugin
-// ══════════════════════════════════════════════════════
-
-// On page load: check if native biometric is available + stored session exists
-document.addEventListener('DOMContentLoaded', async () => {
-  if (!window._NativeBio || !window._NativeBio.isNative()) return;
-  try {
-    const bioAvailable = await window._NativeBio.isAvailable();
-    const prefs = window._NativeBio.prefs();
-    if (bioAvailable && prefs) {
-      const t = await prefs.get({ key: 'session_token' });
-      if (t.value) {
-        // Restore last known email to the input
-        const emailResult = await prefs.get({ key: 'user_data' });
-        if (emailResult.value) {
-          try {
-            const u = JSON.parse(emailResult.value);
-            const emailInput = document.getElementById('loginEmail');
-            if (emailInput && u.email) emailInput.value = u.email;
-          } catch(_) {}
-        }
-        document.getElementById('biometricSection').style.display = 'block';
-      }
-    }
-  } catch(e) { console.warn('[Biometric] init error:', e); }
-});
-
-async function handleBiometricLogin() {
-  const btn = document.getElementById('bioAuthBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="loading"></span> Verifying biometric...';
-
-  try {
-    if (!window._NativeBio || !window._NativeBio.isNative()) {
-      throw new Error('Biometric login is only available on the mobile app');
-    }
-
-    // Step 1: Trigger native biometric prompt (fingerprint / face)
-    const NativeBiometric = window.Capacitor.Plugins.NativeBiometric;
-    await NativeBiometric.verifyIdentity({
-      reason: 'Sign in to CodeBank',
-      title: 'Biometric Login',
-      subtitle: 'Use fingerprint or face to sign in',
-      negativeButtonText: 'Use Password Instead'
-    });
-
-    // Step 2: Biometric passed — restore session from Capacitor Preferences
-    const prefs = window._NativeBio.prefs();
-    if (!prefs) throw new Error('Storage unavailable');
-
-    const tokenResult = await prefs.get({ key: 'session_token' });
-    if (!tokenResult.value) {
-      throw new Error('No saved session. Please log in with your password first.');
-    }
-
-    // Restore to localStorage
-    localStorage.setItem('session_token', tokenResult.value);
-    const userData = await prefs.get({ key: 'user_data' });
-    if (userData.value) localStorage.setItem('user_data', userData.value);
-    localStorage.setItem('session_active', 'true');
-
-    // Step 3: Validate the restored session with the server
-    showStatus('Verifying session...', 'info');
-    const resp = await fetch('/api/auth/me', { credentials: 'include' });
-    const data = await resp.json();
-
-    if (data.success || data.authenticated || data.ok) {
-      showStatus('✅ Welcome back!', 'success');
-      setTimeout(() => { window.location.href = '/yt-new-clear.html'; }, 800);
-    } else {
-      // Session expired — clear it
-      localStorage.removeItem('session_active');
-      localStorage.removeItem('session_token');
-      await prefs.remove({ key: 'session_active' });
-      await prefs.remove({ key: 'session_token' });
-      throw new Error('Session expired. Please log in with your password.');
-    }
-  } catch (err) {
-    console.error('[BIOMETRIC]', err);
-    const msg = err.message || '';
-    if (msg.includes('cancel') || msg.includes('Cancel') || err.code === 10 || err.code === 'BIOMETRIC_DISMISSED') {
-      showStatus('Biometric cancelled — use your password below', 'error');
-    } else {
-      showStatus(msg || 'Biometric failed', 'error');
-    }
-    btn.disabled = false;
-    btn.innerHTML = '<span style="font-size:22px">🪪</span> Sign in with Fingerprint / Face ID';
-  }
-}
-
-async function registerBiometric() {
-  const section = document.getElementById('registerBiometricSection');
-  if (!window._NativeBio || !window._NativeBio.isNative()) {
-    section.innerHTML = '<div style="text-align:center;padding:10px;color:#aaa">Biometric login is only available on the mobile app.</div>';
-    return;
-  }
-
-  try {
-    section.innerHTML = '<div style="text-align:center;padding:10px"><span class="loading"></span> Checking biometric...</div>';
-
-    // Verify biometric is available
-    const available = await window._NativeBio.isAvailable();
-    if (!available) throw new Error('No biometric hardware found on this device');
-
-    // Test that biometric works (optional prompt)
-    const NativeBiometric = window.Capacitor.Plugins.NativeBiometric;
-    await NativeBiometric.verifyIdentity({
-      reason: 'Enable biometric login for CodeBank',
-      title: 'Enable Biometric',
-      subtitle: 'Confirm your identity to enable fast login',
-      negativeButtonText: 'Cancel'
-    });
-
-    // Session data is already saved to Capacitor Preferences after login.
-    // Biometric is now "registered" — just mark it
-    localStorage.setItem('biometric_registered', '1');
-    const prefs = window._NativeBio.prefs();
-    if (prefs) await prefs.set({ key: 'biometric_registered', value: '1' });
-
-    section.innerHTML = `
-      <div style="text-align:center;padding:10px;color:#00ff88">
-        🎉 Fingerprint / Face ID enabled!<br>
-        <small style="color:#aaa">Next login, just tap the fingerprint button.</small>
-      </div>`;
-  } catch (err) {
-    console.error('[BIOMETRIC REG]', err);
-    const msg = err.message || '';
-    if (msg.includes('cancel') || msg.includes('Cancel')) {
-      section.innerHTML = '<div style="text-align:center;padding:10px;color:#aaa">Setup cancelled.</div>';
-      return;
-    }
-    section.innerHTML = `
-      <div style="text-align:center;padding:10px;color:#ff6b6b">
-        ❌ ${err.message || 'Biometric setup failed'}<br>
-        <small style="color:#aaa">You can try again from your profile settings.</small>
-      </div>`;
-  }
-}
-
-</script>
-
-<script>
-// ── Google Sign-In Integration ──────────────────────────────────────────────
-async function initGoogleSignIn() {
-  try {
-    const res = await fetch('/api/auth/google-client-id');
-    const data = await res.json();
-    // Validate it's a real Google client ID (not empty or placeholder)
-    const isValidClientId = data.clientId &&
-      data.clientId !== 'your_google_client_id.apps.googleusercontent.com' &&
-      /^\d+(-\w+)?\.apps\.googleusercontent\.com$/.test(data.clientId);
-
-    if (!isValidClientId) {
-      console.log('[Google] GOOGLE_CLIENT_ID not configured — hiding Google Sign-In buttons');
-      document.querySelectorAll('.google-login-wrapper, #google-login-wrapper, #google-signup-wrapper, #google-divider-login, #google-divider-signup').forEach(el => {
-        if (el) el.style.display = 'none';
-      });
-      return;
-    }
-
-    google.accounts.id.initialize({
-      client_id: data.clientId,
-      callback: handleGoogleCredential,
-      auto_select: false,
-      context: 'signin'
-    });
-
-    // Render in login form
-    const loginBtn = document.getElementById('google-signin-login');
-    if (loginBtn) {
-      google.accounts.id.renderButton(loginBtn, {
-        theme: 'filled_blue',
-        size: 'large',
-        width: 440,
-        text: 'signin_with',
-        shape: 'pill',
-        logo_alignment: 'left'
-      });
-      document.getElementById('google-login-wrapper').style.display = 'block';
-      document.getElementById('google-divider-login').style.display = 'flex';
-    }
-
-    // Render in signup form
-    const signupBtn = document.getElementById('google-signin-signup');
-    if (signupBtn) {
-      google.accounts.id.renderButton(signupBtn, {
-        theme: 'filled_blue',
-        size: 'large',
-        width: 440,
-        text: 'continue_with',
-        shape: 'pill',
-        logo_alignment: 'left'
-      });
-      document.getElementById('google-signup-wrapper').style.display = 'block';
-      document.getElementById('google-divider-signup').style.display = 'flex';
-    }
-
-    console.log('[Google] Sign-In buttons rendered');
-  } catch (e) {
-    console.warn('[Google] Init failed:', e);
-  }
-}
-
-async function handleGoogleCredential(response) {
-  const statusEl = document.getElementById('statusMessage');
-  try {
-    if (statusEl) {
-      statusEl.textContent = 'Signing in with Google...';
-      statusEl.className = 'status-message success';
-      statusEl.style.display = 'block';
-    }
-
-    const res = await fetch('/api/auth/google', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ credential: response.credential })
-    });
-
-    const data = await res.json();
-
-    if (data.status === 'success') {
-      localStorage.setItem('session_token', data.sessionId);
-      if (data.user) localStorage.setItem('user_data', JSON.stringify(data.user));
-      localStorage.setItem('session_active', 'true');
-      if (data.user && data.user.email) localStorage.setItem('last_login_email', data.user.email);
-      // 📱 NATIVE: Persist to Capacitor Preferences so session survives app kill
-      if (window._NativeBio) window._NativeBio.saveSession(data.sessionId, data.user);
-
-      // 📱 NATIVE: Persist to Capacitor Preferences so session survives app kill
-      if (window._NativeBio) window._NativeBio.saveSession(data.sessionId, data.user);
-
-      if (window.AuthCore && typeof window.AuthCore._setState === 'function') {
-        window.AuthCore._setState({
-          authenticated: true,
-          status: 'active',
-          userId: data.userId,
-          sessionId: data.sessionId,
-          user: data.user
-        });
-      }
-
-      if (statusEl) {
-        statusEl.textContent = '✅ Signed in with Google! Redirecting...';
-        statusEl.className = 'status-message success';
-      }
-
-      setTimeout(function() { window.location.href = '/yt-new-clear.html'; }, 1000);
-    } else {
-      if (statusEl) {
-        statusEl.textContent = data.error || 'Google sign-in failed';
-        statusEl.className = 'status-message error';
-      }
-    }
-  } catch (e) {
-    console.error('[Google Auth Error]', e);
-    if (statusEl) {
-      statusEl.textContent = 'Network error during Google sign-in';
-      statusEl.className = 'status-message error';
-    }
-  }
-}
-
-// Wait for Google library to load, then initialize
-function _tryInitGoogle() {
-  if (window.google && window.google.accounts) {
-    initGoogleSignIn();
-  } else {
-    setTimeout(_tryInitGoogle, 300);
-  }
-}
-document.addEventListener('DOMContentLoaded', function() {
-  setTimeout(_tryInitGoogle, 200);
-});
-</script>
-
+        
+        // Start
+        checkSession();
+    </script>
 </body>
 </html>

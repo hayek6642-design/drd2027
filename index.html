@@ -1,183 +1,44 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#0f0f0f">
-  
-  <!-- Performance: Preconnect to critical domains -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="dns-prefetch" href="https://api.codebank.app">
-  
-  <!-- ═══ PWA & NATIVE INSTALL ══════════════════════════════════════════ -->
-  <link rel="manifest" href="/manifest.json">
-
-  <!-- iOS Safari PWA -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="CodeBank">
-
-  <!-- iOS Touch Icons (all required sizes) -->
-  <link rel="apple-touch-icon" href="/icons/icon-180x180.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png">
-  <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167x167.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180.png">
-
-  <!-- iOS Splash Screens (covers common iPhone/iPad sizes) -->
-  <link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" href="/icons/splash-390x844.png">
-  <link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)" href="/icons/splash-414x896.png">
-  <link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" href="/icons/splash-375x667.png">
-  <link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)" href="/icons/splash-430x932.png">
-
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32x32.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png">
-  <link rel="shortcut icon" href="/icons/favicon.ico">
-
-  <!-- Microsoft / Windows -->
-  <meta name="msapplication-TileImage" content="/icons/icon-144x144.png">
-  <meta name="msapplication-TileColor" content="#0f0f0f">
-  <meta name="msapplication-config" content="none">
-
-  <!-- Description for install banner -->
-  <meta name="description" content="CodeBank — manage codes, rewards, music, games and more. Install for the full native experience.">
-  
-  <!-- Critical CSS inline -->
-  <style>
-    /* Minimal critical CSS for first paint */
-    body { margin: 0; background: #0f0f0f; color: #fff; font-family: system-ui; }
-    #app { min-height: 100vh; }
-    .loading-screen { 
-      position: fixed; 
-      inset: 0; 
-      display: flex; 
-      align-items: center; 
-      justify-content: center;
-      background: #0f0f0f;
-      z-index: 99999;
-    }
-    .spinner { 
-      width: 40px; 
-      height: 40px; 
-      border: 3px solid #333; 
-      border-top-color: #00d4ff; 
-      border-radius: 50%; 
-      animation: spin 1s linear infinite; 
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-  </style>
-  
-  <!-- Async load non-critical CSS -->
-  <link rel="preload" href="/src/styles/performance-optimizations.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-  <noscript><link rel="stylesheet" href="/src/styles/performance-optimizations.css"></noscript>
-  
-  <title>CodeBank</title>
-
-  <!-- Capacitor Native Bridge -->
-  <script src="https://cdn.jsdelivr.net/npm/@capacitor/core/dist/capacitor.js"></script>
-  <script src="/src/native-bridge.js"></script>
-  <script src="/src/native-storage.js"></script>
-  
-  <!-- Native platform styles -->
-  <style>
-    /* Safe area support for notched devices */
-    body {
-      padding-top: env(safe-area-inset-top);
-      padding-bottom: env(safe-area-inset-bottom);
-      padding-left: env(safe-area-inset-left);
-      padding-right: env(safe-area-inset-right);
-    }
-    /* Hide scrollbars on native */
-    .native-platform ::-webkit-scrollbar { display: none; }
-    .native-platform { -webkit-overflow-scrolling: touch; }
-  </style>
-
-  <!-- PWA Install Handler (iOS guide + Android banner + Service Worker) -->
-  <script src="/src/pwa-install.js" defer></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeBank</title>
+    <style>
+        body {
+            background: #0f0f0f;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .loading {
+            text-align: center;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        p {
+            color: #888;
+        }
+    </style>
 </head>
 <body>
-  <!-- Loading screen (removed by JS when ready) -->
-  <div id="loading" class="loading-screen">
-    <div class="spinner"></div>
-  </div>
-
-  <div id="app"></div>
-
-  <!-- Module scripts (loaded asynchronously) -->
-  <script type="module">
-    // 🌐 Platform Detection: Add native class for CSS targeting
-    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-      document.body.classList.add('native-platform');
-      document.body.classList.add('platform-' + window.Capacitor.getPlatform());
-      console.log('[CodeBank] Running on native:', window.Capacitor.getPlatform());
-    }
-
-    // 🧠 Auth Flow Control: Skip grid if session is active
-    // On native, also check NativeStorage for persisted session
-    const sessionActive = localStorage.getItem("session_active") === "true";
-    const nativeSession = window.NativeStorage ? await window.NativeStorage.syncGet("session_active") : null;
+    <div class="loading">
+        <div class="spinner"></div>
+        <p>Loading CodeBank...</p>
+    </div>
     
-    if (sessionActive || nativeSession === "true" || nativeSession === true) {
-      console.log("Active session found, redirecting to app...");
-      // Show loading screen is already handled by the HTML
-      setTimeout(() => {
-        window.location.href = "/yt-new-clear.html";
-      }, 1500);
-      // Stop further execution
-      throw new Error("REDIRECTING");
-    }
-
-    // Dynamic imports for code splitting
-    const loadApp = async () => {
-      try {
-        // Core first
-        const [{ serviceManager }, { assetBus }, { watchDog }] = await Promise.all([
-          import('./src/core/service-manager-v2.js'),
-          import('./src/core/assetbus-v2.js'),
-          import('./src/core/watch-dog-optimized.js')
-        ]);
-        
-        // UI components (lazy)
-        const { renderAppGrid } = await import('./src/components/app-grid.js');
-        
-        // Initialize
-        window.serviceManager = serviceManager;
-        window.assetBus = assetBus;
-        window.watchDog = watchDog;
-        
-        // Render
-        renderAppGrid(document.getElementById('app'));
-        
-        // Remove loading screen
-        document.getElementById('loading').remove();
-        
-        // Load performance monitor (dev only)
-        if (location.hostname === 'localhost' || location.search.includes('debug')) {
-          await import('./src/utils/performance-monitor.js');
-        }
-        
-      } catch (err) {
-        console.error('Failed to load app:', err);
-        document.getElementById('loading').innerHTML = '<p>فشل التحميل. يرجى تحديث الصفحة.</p>';
-      }
-    };
-    
-    // Use requestIdleCallback for non-critical start
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(loadApp, { timeout: 2000 });
-    } else {
-      setTimeout(loadApp, 0);
-    }
-  </script>
-
-  <!-- Service Worker -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js', { 
-        updateViaCache: 'imports' 
-      }).catch(console.error);
-    }
-  </script>
+    <script src="/shared/js/session-manager.js"></script>
 </body>
 </html>
