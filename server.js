@@ -3322,6 +3322,34 @@ app.post('/api/transfer', requireAuth, transferLimiter, enforceFinancialSecurity
   }
 });
 
+// Debug: Get user's codes without auth
+app.get('/debug-codes/:userId', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    console.log('[DEBUG] Fetching codes for user:', userId);
+    
+    if (process.env.DATABASE_URL) {
+      // Use Turso/Neon
+      const result = await query(
+        "SELECT id, code, type, created_at FROM codes WHERE user_id = $1 AND spent = 0 ORDER BY created_at DESC LIMIT 100",
+        [userId]
+      );
+      return res.json({ ok: true, userId, codes: result.rows, count: result.rowCount });
+    } else {
+      // Use SQLite
+      const Database = require('better-sqlite3');
+      const db = new Database('data/bankode.db');
+      const stmt = db.prepare("SELECT id, code, type, created_at FROM codes WHERE user_id = ? AND spent = 0 ORDER BY created_at DESC LIMIT 100");
+      const rows = stmt.all(userId);
+      db.close();
+      return res.json({ ok: true, userId, codes: rows, count: rows.length });
+    }
+  } catch(e) {
+    console.error('[DEBUG] Error:', e.message);
+    return res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // Admin-only manual deposit endpoint - use middleware style
 app.use('/api/admin/deposit', (req, res, next) => {
   if (req.method !== 'POST') {
