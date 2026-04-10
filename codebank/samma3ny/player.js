@@ -906,7 +906,7 @@ console.log(`🗑️ Cleaned up ${tracksToRemove.length} old downloads to free s
                 cdCoverImage.src = track.thumbnail;
                 cdCoverImage.style.opacity = '1';
             } else {
-                cdCoverImage.src = './dr.dc.png';
+                cdCoverImage.src = '/codebank/samma3ny/dr.dc.png';
                 cdCoverImage.style.opacity = '1';
             }
             cdDisc.classList.add('playing');
@@ -929,7 +929,7 @@ console.log(`🗑️ Cleaned up ${tracksToRemove.length} old downloads to free s
                 cdCoverImage.src = track.thumbnail;
                 cdCoverImage.style.opacity = '1';
             } else {
-                cdCoverImage.src = './dr.dc.png';
+                cdCoverImage.src = '/codebank/samma3ny/dr.dc.png';
                 cdCoverImage.style.opacity = '1';
             }
 
@@ -1424,23 +1424,14 @@ console.log(`🗑️ Cleaned up ${tracksToRemove.length} old downloads to free s
         thumbnail.classList.add('track-thumbnail');
 
         // Set thumbnail source with robust fallback handling
-        const defaultThumbnail = './dr.dc.png';
+        const defaultThumbnail = '/codebank/samma3ny/dr.dc.png';
         const fallbackSvg = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><rect fill="#1a1a2e" width="60" height="60"/><text x="50%" y="50%" fill="#00d4ff" text-anchor="middle" dy=".3em" font-family="Arial" font-size="10">Dr.D</text></svg>');
         
-        if (track.thumbnail && track.thumbnail.trim() !== '' && !track.thumbnail.includes('undefined') && !track.thumbnail.includes('null')) {
-            thumbnail.src = track.thumbnail;
-            thumbnail.onerror = function() {
-                this.src = defaultThumbnail;
-                this.onerror = function() {
-                    this.src = fallbackSvg;
-                };
-            };
-        } else {
-            thumbnail.src = defaultThumbnail;
-            thumbnail.onerror = function() {
-                this.src = fallbackSvg;
-            };
-        }
+        // Force check if image actually loads
+        const img = new Image();
+        img.onload = () => { thumbnail.src = defaultThumbnail; };
+        img.onerror = () => { thumbnail.src = fallbackSvg; };
+        img.src = defaultThumbnail;
 
         // Track details
         const details = document.createElement('div');
