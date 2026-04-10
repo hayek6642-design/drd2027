@@ -285,15 +285,9 @@ app.use(express.json({
 }));
 
 // Direct admin deposit - NO MIDDLEWARE - placed early to test
-app.post('/admin-deposit-test', async (req, res) => {
-  console.log('[DIRECT] Admin deposit endpoint hit');
-  console.log('[DIRECT] Body:', JSON.stringify(req.body));
-  res.json({ ok: true, message: 'Direct endpoint reached', body: req.body });
-});
-
-app.get('/admin-deposit-test', (req, res) => {
-  console.log('[DIRECT] GET test hit');
-  res.json({ ok: true, message: 'GET endpoint works' });
+app.get('/abc123-unique-test', (req, res) => {
+  console.log('[UNIQUE] Test endpoint hit - new code is running!');
+  res.json({ ok: true, unique: true, timestamp: Date.now() });
 });
 
 // Register WatchDog routes
