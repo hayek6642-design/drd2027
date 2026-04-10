@@ -1,49 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#0d1117">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>CodeBank</title>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{background:#0d1117;color:#fff;font-family:-apple-system,system-ui,sans-serif;min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
-    .loader{text-align:center}
-    .spinner{width:48px;height:48px;border:3px solid #30363d;border-top-color:#00d4ff;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .status{color:#8b949e;font-size:14px;margin-top:8px}
-    .error-msg{display:none;color:#f85149;font-size:14px;margin-top:16px;max-width:300px}
-    .retry-btn{display:none;margin-top:16px;padding:10px 24px;background:#00d4ff;color:#0d1117;border:none;border-radius:8px;font-weight:bold;font-size:14px;cursor:pointer}
-  </style>
-</head>
-<body>
-  <div class="loader">
-    <div class="spinner" id="spinner"></div>
-    <div class="status" id="status">Connecting to CodeBank...</div>
-    <div class="error-msg" id="error">Unable to connect. Please check your internet connection.</div>
-    <button class="retry-btn" id="retry" onclick="tryConnect()">Retry Connection</button>
-  </div>
-  <script>
-    const SERVER='https://drd2027.onrender.com';
-    let retries=0;const MAX_RETRIES=3;
-    async function tryConnect(){
-      document.getElementById('spinner').style.display='block';
-      document.getElementById('error').style.display='none';
-      document.getElementById('retry').style.display='none';
-      document.getElementById('status').textContent='Connecting to CodeBank...';
-      try{
-        const resp=await fetch(SERVER+'/api/health',{method:'GET',mode:'cors',cache:'no-store',signal:AbortSignal.timeout(15000)});
-        if(resp.ok){document.getElementById('status').textContent='Loading app...';window.location.replace(SERVER);}
-        else throw new Error('Server returned '+resp.status);
-      }catch(err){
-        retries++;
-        if(retries<MAX_RETRIES){document.getElementById('status').textContent='Retrying... ('+retries+'/'+MAX_RETRIES+')';setTimeout(tryConnect,2000*retries);}
-        else{document.getElementById('spinner').style.display='none';document.getElementById('status').textContent='Connection failed';document.getElementById('error').style.display='block';document.getElementById('retry').style.display='inline-block';retries=0;}
-      }
-    }
-    tryConnect();
-  </script>
-</body>
-</html>
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0d1117;color:#fff;font-family:system-ui;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}.loader{text-align:center}.spinner{width:48px;height:48px;border:3px solid #30363d;border-top-color:#00d4ff;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}@keyframes spin{to{transform:rotate(360deg)}}</style>
+</head><body><div class="loader"><div class="spinner"></div><p style="color:#8b949e">Connecting to CodeBank...</p></div>
+<script>
+const S='https://dr-d-h51l.onrender.com';let r=0;
+async function t(){try{const p=await fetch(S+'/api/health',{signal:AbortSignal.timeout(15000)});if(p.ok)window.location.replace(S);else throw 0}catch(e){if(++r<3)setTimeout(t,2000*r);else document.body.innerHTML='<div style="text-align:center;padding:40px"><h2 style="color:#f85149">Connection Failed</h2><p style="color:#8b949e;margin:16px 0">Check your internet connection</p><button onclick="r=0;t()" style="padding:10px 24px;background:#00d4ff;color:#0d1117;border:none;border-radius:8px;font-weight:bold">Retry</button></div>'}}
+t();</script></body></html>

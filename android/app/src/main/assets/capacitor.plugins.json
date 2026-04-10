@@ -50,5 +50,17 @@
 	{
 		"pkg": "capacitor-native-biometric",
 		"classpath": "com.epicshaggy.biometric.NativeBiometric"
+	},
+	{
+		"pkg": "@capacitor/app-launcher",
+		"classpath": "com.capacitorjs.plugins.applauncher.AppLauncherPlugin"
+	},
+	{
+		"pkg": "@capacitor/camera",
+		"classpath": "com.capacitorjs.plugins.camera.CameraPlugin"
+	},
+	{
+		"pkg": "@capacitor-community/contacts",
+		"classpath": "getcapacitor.community.contacts.ContactsPlugin"
 	}
 ]

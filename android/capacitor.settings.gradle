@@ -40,3 +40,12 @@ project(':capacitor-device').projectDir = new File('../node_modules/@capacitor/d
 
 include ':capacitor-native-biometric'
 project(':capacitor-native-biometric').projectDir = new File('../node_modules/capacitor-native-biometric/android')
+
+include ':capacitor-app-launcher'
+project(':capacitor-app-launcher').projectDir = new File('../node_modules/@capacitor/app-launcher/android')
+
+include ':capacitor-camera'
+project(':capacitor-camera').projectDir = new File('../node_modules/@capacitor/camera/android')
+
+include ':capacitor-community-contacts'
+project(':capacitor-community-contacts').projectDir = new File('../node_modules/@capacitor-community/contacts/android')

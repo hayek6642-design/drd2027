@@ -512,15 +512,35 @@
     </div>
   </main>
 
-  <!-- Scripts -->
-  <script src="safe-storage.js"></script>
-  <script src="bankode-core.js"></script>
-  <script src="local-asset-bus.js" type="module"></script>
-  <script src="safe-asset-list.js"></script>
-  <script src="safe-code-bridge.js"></script>
-  <script src="index.js"></script>
+  <!-- Scripts - Load Order: Event Bus → Global Store → Assets Direct → Safe Asset List -->
+  <script src="js/event-bus-simple.js"></script>
+  <script src="js/global-store.js"></script>
+  <script src="js/assets-direct.js"></script>
+  <script src="js/safe-asset-list.js"></script>
 
   <script>
+    // Counter update listener - bridges asset updates to UI
+    document.addEventListener('assets:updated', function(e) {
+        const assets = e.detail || {};
+        const codes = assets.codes || [];
+        const silver = assets.silver || [];
+        const gold = assets.gold || [];
+        
+        // Update all counter elements
+        const headerCount = document.getElementById('header-codes-count');
+        const overviewCount = document.getElementById('overview-codes-count');
+        if (headerCount) headerCount.textContent = codes.length;
+        if (overviewCount) overviewCount.textContent = codes.length;
+        
+        // Update silver/gold counters if they exist
+        const silverEl = document.getElementById('overview-silver-count');
+        const goldEl = document.getElementById('overview-gold-count');
+        if (silverEl) silverEl.textContent = silver.length;
+        if (goldEl) goldEl.textContent = gold.length;
+        
+        console.log('[Counters] Updated:', {codes: codes.length, silver: silver.length, gold: gold.length});
+    });
+
     // Global toast function
     window.showToast = function(message, type = 'info', duration = 3500) {
       const container = document.getElementById('toast-container');

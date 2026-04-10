@@ -22,6 +22,9 @@ dependencies {
     implementation project(':capacitor-clipboard')
     implementation project(':capacitor-device')
     implementation project(':capacitor-native-biometric')
+    implementation project(':capacitor-app-launcher')
+    implementation project(':capacitor-camera')
+    implementation project(':capacitor-community-contacts')
 
 }
 
