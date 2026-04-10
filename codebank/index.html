@@ -353,51 +353,93 @@
     </div>
   </header>
 
-  <!-- Settings Panel -->
-  <aside id="settings-panel" class="settings-panel" aria-hidden="true">
-    <div class="p-6 h-full flex flex-col">
-      <div class="flex items-center justify-between mb-6">
-        <h2 class="text-xl font-semibold text-white">Settings</h2>
-        <button id="settings-close" class="text-white text-2xl hover:bg-white/10 rounded-full w-10 h-10 flex items-center justify-center transition-colors">
-          &times;
-        </button>
+   <!-- Settings Panel -->
+   <aside id="settings-panel" class="settings-panel" aria-hidden="true">
+     <div class="p-6 h-full flex flex-col">
+       <div class="flex items-center justify-between mb-6">
+         <h2 class="text-xl font-semibold text-white">Settings</h2>
+         <button id="settings-close" class="text-white text-2xl hover:bg-white/10 rounded-full w-10 h-10 flex items-center justify-center transition-colors">
+           &times;
+         </button>
+       </div>
+
+       <!-- User Email Display - ADD THIS ENTIRE BLOCK -->
+       <div id="user-info-box" style="
+        background: linear-gradient(135deg, rgba(0,212,255,0.15) 0%, rgba(0,212,255,0.05) 100%);
+        border: 1px solid rgba(0,212,255,0.3);
+        border-radius: 12px;
+        padding: 15px;
+        margin: 15px;
+        text-align: center;
+        min-height: 60px;
+      ">
+        <div style="
+            font-size: 10px; 
+            color: #888; 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+            margin-bottom: 5px;
+        ">Logged in as</div>
+        <div id="side-panel-email" style="
+            font-size: 13px;
+            font-weight: 600;
+            color: #00d4ff;
+            word-break: break-all;
+        ">
+            <!-- Email will appear here -->
+        </div>
       </div>
 
-      <div class="overflow-auto flex-1 space-y-6">
-        <!-- Appearance -->
-        <section>
-          <h3 class="text-sm text-gray-400 mb-3 uppercase tracking-wider">Appearance</h3>
-          <div class="p-4 bg-white/5 rounded-xl space-y-4">
-            <div class="flex items-center justify-between">
-              <div>
-                <div class="font-medium text-white">Dark Mode</div>
-                <div class="text-xs text-gray-400">Toggle dark/light theme</div>
-              </div>
-              <label class="switch">
-                <input id="theme-toggle" type="checkbox" checked>
-                <span class="slider"></span>
-              </label>
-            </div>
-          </div>
-        </section>
+       <div class="overflow-auto flex-1 space-y-6">
+         <!-- Appearance -->
+         <section>
+           <h3 class="text-sm text-gray-400 mb-3 uppercase tracking-wider">Appearance</h3>
+           <div class="p-4 bg-white/5 rounded-xl space-y-4">
+             <div class="flex items-center justify-between">
+               <div>
+                 <div class="font-medium text-white">Dark Mode</div>
+                 <div class="text-xs text-gray-400">Toggle dark/light theme</div>
+               </div>
+               <label class="switch">
+                 <input id="theme-toggle" type="checkbox" checked>
+                 <span class="slider"></span>
+               </label>
+             </div>
+           </div>
+         </section>
 
-        <!-- Debug -->
-        <section>
-          <h3 class="text-sm text-gray-400 mb-3 uppercase tracking-wider">Debug</h3>
-          <div class="p-4 bg-white/5 rounded-xl space-y-3">
-            <label class="flex items-center justify-between cursor-pointer">
-              <span class="text-white">Debug Mode</span>
-              <input id="debug-toggle" type="checkbox">
-            </label>
-          </div>
-        </section>
-      </div>
+         <!-- Debug -->
+         <section>
+           <h3 class="text-sm text-gray-400 mb-3 uppercase tracking-wider">Debug</h3>
+           <div class="p-4 bg-white/5 rounded-xl space-y-3">
+             <label class="flex items-center justify-between cursor-pointer">
+               <span class="text-white">Debug Mode</span>
+               <input id="debug-toggle" type="checkbox">
+             </label>
+           </div>
+         </section>
+       </div>
 
-      <div class="text-xs text-gray-500 mt-4 pt-4 border-t border-white/10">
-        CodeBank v1.0 • SafeAssetList Enabled
-      </div>
-    </div>
-  </aside>
+       <!-- Sign Out Button -->
+       <button id="sign-out-btn" onclick="logout()" style="
+        width: calc(100% - 30px);
+        margin: 0 15px 15px 15px;
+        padding: 12px;
+        background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%);
+        border: none;
+        border-radius: 10px;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+       ">
+        Sign Out
+       </button>
+
+       <div class="text-xs text-gray-500 mt-4 pt-4 border-t border-white/10">
+         CodeBank v1.0 • SafeAssetList Enabled
+       </div>
+     </div>
+   </aside>
 
   <!-- Main Content -->
   <main class="container mx-auto py-8 px-4">
@@ -653,10 +695,80 @@
         window.showToast('Assets refreshed', 'info');
       });
 
-      // Initialize
-      console.log('[CodeBank] Page initialized successfully');
-      window.showToast('CodeBank loaded successfully!', 'success', 2000);
-    });
-  </script>
-</body>
+       // Initialize
+       console.log('[CodeBank] Page initialized successfully');
+       window.showToast('CodeBank loaded successfully!', 'success', 2000);
+     });
+   </script>
+
+   <!-- Email Display Script - ADD AT END OF BODY -->
+   <script>
+   (function() {
+       function updateEmailDisplay() {
+           const emailBox = document.getElementById('side-panel-email');
+           if (!emailBox) return;
+           
+           // Try to get email from multiple sources
+           let email = null;
+           
+           // Source 1: AuthCore state
+           if (window.AuthCore && typeof window.AuthCore.getState === 'function') {
+               try {
+                   const state = window.AuthCore.getState();
+                   email = state.user?.email || state.user?.user_metadata?.email;
+               } catch(e) {}
+           }
+           
+           // Source 2: AppState
+           if (!email && window.AppState?.user?.email) {
+               email = window.AppState.user.email;
+           }
+           
+           // Source 3: localStorage cache
+           if (!email) {
+               try {
+                   const cached = localStorage.getItem('bankode_user_cache');
+                   if (cached) {
+                       const user = JSON.parse(cached);
+                       email = user.email || user.user_metadata?.email;
+                   }
+               } catch(e) {}
+           }
+           
+           // Source 4: Check session cookie
+           if (!email) {
+               const match = document.cookie.match(/email=([^;]+)/);
+               if (match) email = decodeURIComponent(match[1]);
+           }
+           
+           if (email) {
+               emailBox.textContent = email;
+               console.log('[SidePanel] Email displayed:', email);
+           } else {
+               emailBox.innerHTML = '<span style="color:#ff6b6b">Not logged in</span>';
+               console.warn('[SidePanel] No email found');
+           }
+       }
+       
+       // Update immediately and on auth events
+       updateEmailDisplay();
+       window.addEventListener('auth:ready', updateEmailDisplay);
+       window.addEventListener('auth:changed', updateEmailDisplay);
+       document.addEventListener('DOMContentLoaded', updateEmailDisplay);
+       
+       // Retry every 2 seconds until found (for race conditions)
+       const retryInterval = setInterval(() => {
+           const emailBox = document.getElementById('side-panel-email');
+           if (emailBox && emailBox.textContent.includes('@')) {
+               clearInterval(retryInterval);
+           } else {
+               updateEmailDisplay();
+           }
+       }, 2000);
+       
+       // Stop after 10 seconds
+       setTimeout(() => clearInterval(retryInterval), 10000);
+   })();
+   </script>
+ </body>
 </html>

@@ -153,50 +153,57 @@
       this._syncInProgress = false;
     },
 
-    _setState(nextAuth, nextUser, nextSessionId, fullUser) {
-      if (this._authInitialized && nextAuth === this._authenticated && nextUser === this._userId && !fullUser) return; 
-      
-      if (typeof nextAuth === 'object' && nextAuth !== null) {
-        const payload = nextAuth;
-      let nextAuthenticated = !!payload.authenticated;
-      let nextStatus = payload.status || (nextAuthenticated ? 'authenticated' : 'unauthenticated');
-      let nextUserId = payload.userId || null;
-      let nextSessId = payload.sessionId || this._sessionId;
-      let nextFullUser = payload.user || fullUser || null;
-      
-      if (this._locked && nextAuthenticated === false) { return; }
-      
-      // [FIX] Auto-correct removed: stale token must not override server's unauthenticated response.
+     _setState(nextAuth, nextUser, nextSessionId, fullUser) {
+       if (this._authInitialized && nextAuth === this._authenticated && nextUser === this._userId && !fullUser) return; 
+       
+       if (typeof nextAuth === 'object' && nextAuth !== null) {
+         const payload = nextAuth;
+       let nextAuthenticated = !!payload.authenticated;
+       let nextStatus = payload.status || (nextAuthenticated ? 'authenticated' : 'unauthenticated');
+       let nextUserId = payload.userId || null;
+       let nextSessId = payload.sessionId || this._sessionId;
+       let nextFullUser = payload.user || fullUser || null;
+       
+       if (this._locked && nextAuthenticated === false) { return; }
+       
+       // [FIX] Auto-correct removed: stale token must not override server's unauthenticated response.
 
-      this._authenticated = nextAuthenticated;
-      this._status = nextStatus;
-      this._userId = nextUserId;
-      this._sessionId = nextSessId;
-      this._user = nextFullUser;
-      this._state = {
-        authenticated: this._authenticated,
-        status: this._status,
-        userId: this._userId,
-        sessionId: this._sessionId,
-        user: this._user
-      };
+       // FORCE clear previous user data first when setting authenticated state
+       if (nextAuthenticated) {
+         localStorage.removeItem('bankode_user_cache');
+         localStorage.removeItem('codebank_assets');
+         localStorage.removeItem('codebank_assets_user');
+       }
 
-      this._syncAuthState();
+       this._authenticated = nextAuthenticated;
+       this._status = nextStatus;
+       this._userId = nextUserId;
+       this._sessionId = nextSessId;
+       this._user = nextFullUser;
+       this._state = {
+         authenticated: this._authenticated,
+         status: this._status,
+         userId: this._userId,
+         sessionId: this._sessionId,
+         user: this._user
+       };
 
-      if (this._status === 'authenticated' && !this._initTriggered) {
-          this._initTriggered = true; // Only trigger init once
-          window.__resolveAuthReady && window.__resolveAuthReady(true);
-          this._authStartTime = Date.now();
+       this._syncAuthState();
 
-          window.dispatchEvent(new CustomEvent('auth:ready', { detail: this._state }));
-          window.dispatchEvent(new CustomEvent('auth:changed', { detail: this._state }));
+       if (this._status === 'authenticated' && !this._initTriggered) {
+           this._initTriggered = true; // Only trigger init once
+           window.__resolveAuthReady && window.__resolveAuthReady(true);
+           this._authStartTime = Date.now();
 
-          // [FIX] Auto-redirect from login page removed from _setState.
-          // login.html uses its own session_active check; this path fired too early
-          // (before server confirmation) and caused redirect loops with stale cached tokens.
-      }
-      return;
-    }
+           window.dispatchEvent(new CustomEvent('auth:ready', { detail: this._state }));
+           window.dispatchEvent(new CustomEvent('auth:changed', { detail: this._state }));
+
+           // [FIX] Auto-redirect from login page removed from _setState.
+           // login.html uses its own session_active check; this path fired too early
+           // (before server confirmation) and caused redirect loops with stale cached tokens.
+       }
+       return;
+     }
     
     this._authenticated = !!nextAuth;
     this._status = this._authenticated ? 'authenticated' : 'unauthenticated';
@@ -509,64 +516,99 @@
       });
     },
 
-    logout(){
-      this._authenticated = false;
-      this._status = 'unauthenticated';
-      this._userId = null;
-      this._user = null;
-      this._sessionId = null;
-      this._locked = false;
-      this._authInitialized = false;
-      this._initTriggered = false;
-      this._initPromise = null;
-      this._lastSyncedState = null;
+     logout(){
+       console.log('[Auth] Logging out, clearing all user data...');
+       
+       // 1. Clear ALL user-related localStorage
+       const keysToRemove = [
+         'bankode_user_cache',
+         'codebank_assets',
+         'codebank_assets_user',
+         'user',
+         'session',
+         'auth_state',
+         'cached_codes',
+         'last_sync'
+       ];
+       
+       keysToRemove.forEach(key => {
+         localStorage.removeItem(key);
+         sessionStorage.removeItem(key);
+       });
+       
+       // 2. Clear AppState
+       if (window.AppState) {
+         window.AppState.user = null;
+         window.AppState.assets = { codes: [], silver: [], gold: [] };
+         window.AppState.authenticated = false;
+         window.AppState.lastSync = null;
+       }
+       
+       // 3. Clear cookies
+       document.cookie.split(";").forEach(function(c) {
+         document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+       });
+       
+       this._authenticated = false;
+       this._status = 'unauthenticated';
+       this._userId = null;
+       this._user = null;
+       this._sessionId = null;
+       this._locked = false;
+       this._authInitialized = false;
+       this._initTriggered = false;
+       this._initPromise = null;
+       this._lastSyncedState = null;
 
-      // 🔧 FIX: Allow re-initialization after logout
-      window.__AUTH_CORE_LOADED__ = false;
-      window.__AUTH_INIT_DONE__ = false;
+       // 🔧 FIX: Allow re-initialization after logout
+       window.__AUTH_CORE_LOADED__ = false;
+       window.__AUTH_INIT_DONE__ = false;
 
-      this._syncAuthState();
-      
-      // 🔧 FIX: Reset ACCClient singleton so re-login creates a fresh instance
-      if (typeof ACCClient !== 'undefined' && ACCClient.reset) {
-        try { ACCClient.reset(); } catch(_) {}
-      }
-      if (window.ACCClient && window.ACCClient.reset) {
-        try { window.ACCClient.reset(); } catch(_) {}
-      }
-      
-      // 🔧 FIX: Clear AssetBusV2 state
-      if (window.AssetBusV2 && typeof window.AssetBusV2.clearState === 'function') {
-        try { window.AssetBusV2.clearState(); } catch(_) {}
-      }
-      if (window.AssetBus && typeof window.AssetBus.clearState === 'function') {
-        try { window.AssetBus.clearState(); } catch(_) {}
-      }
-      
-      // 🔧 FIX: Clear Bankode trusted user globals
-      window.CODEBANK_TRUSTED_USER_ID = null;
-      window.CODEBANK_TRUSTED_USER_EMAIL = null;
-      
-      // 🔧 FIX: Clear IndexedDB auth state
-      try { this._clearIDB(); } catch(_) {}
-      
-      // 🔧 FIX: Clear Bankode safe local storage
-      try {
-        localStorage.removeItem('asset_safe_password');
-        localStorage.removeItem('asset_safe_salt');
-        localStorage.removeItem('bankode_safe_state');
-      } catch(_) {}
+       this._syncAuthState();
+       
+       // 🔧 FIX: Reset ACCClient singleton so re-login creates a fresh instance
+       if (typeof ACCClient !== 'undefined' && ACCClient.reset) {
+         try { ACCClient.reset(); } catch(_) {}
+       }
+       if (window.ACCClient && window.ACCClient.reset) {
+         try { window.ACCClient.reset(); } catch(_) {}
+       }
+       
+       // 🔧 FIX: Clear AssetBusV2 state
+       if (window.AssetBusV2 && typeof window.AssetBusV2.clearState === 'function') {
+         try { window.AssetBusV2.clearState(); } catch(_) {}
+       }
+       if (window.AssetBus && typeof window.AssetBus.clearState === 'function') {
+         try { window.AssetBus.clearState(); } catch(_) {}
+       }
+       
+       // 🔧 FIX: Clear Bankode trusted user globals
+       window.CODEBANK_TRUSTED_USER_ID = null;
+       window.CODEBANK_TRUSTED_USER_EMAIL = null;
+       
+       // 🔧 FIX: Clear IndexedDB auth state
+       try { this._clearIDB(); } catch(_) {}
+       
+       // 🔧 FIX: Clear Bankode safe local storage
+       try {
+         localStorage.removeItem('asset_safe_password');
+         localStorage.removeItem('asset_safe_salt');
+         localStorage.removeItem('bankode_safe_state');
+       } catch(_) {}
 
-      // Notify all iframes
-      if (window.AuthBridge) {
-        window.AuthBridge.broadcast({
-          type: 'AUTH_LOGOUT',
-          timestamp: Date.now()
-        });
-      }
-      
-      window.dispatchEvent(new CustomEvent('auth:logout'));
-    },
+       // Notify all iframes
+       if (window.AuthBridge) {
+         window.AuthBridge.broadcast({
+           type: 'AUTH_LOGOUT',
+           timestamp: Date.now()
+         });
+       }
+       
+       window.dispatchEvent(new CustomEvent('auth:logout'));
+       
+       // 6. HARD RELOAD to clear all memory state
+       window.location.href = '/login.html';
+     },
 
     // 🛡️ IDB HELPER METHODS (Requirement from actly.md)
     async _saveToIDB(data) {
@@ -927,24 +969,55 @@
     }
   };
 
-  // Initialize bridge in parent window
-  if (window.self === window.top) {
-    AuthBridge.init();
-    AuthBridge.startCleanup();
-    window.AuthBridge = AuthBridge;
-  }
+   // Initialize bridge in parent window
+   if (window.self === window.top) {
+     AuthBridge.init();
+     AuthBridge.startCleanup();
+     window.AuthBridge = AuthBridge;
+   }
 
-  // ============================================
-  // SECTION 6: GLOBAL PROMISE & INIT
-  // ============================================
+   // 🔧 FIX: Send initialization data to iframes (SafeCode, etc.)
+   window.sendInitToIframe = function() {
+     console.log('[AuthCore] Sending init data to iframes');
+     
+     // Send auth state
+     const authState = {
+       type: 'AUTH_SYNC',
+       authenticated: AuthCore.isAuthenticated(),
+       userId: AuthCore.userId(),
+       sessionId: AuthCore.sessionId(),
+       user: AuthCore.getUser()
+     };
+     
+     // Broadcast to all iframes via AuthBridge
+     if (window.AuthBridge) {
+       window.AuthBridge.broadcast(authState);
+     }
+     
+     // Also send assets if available
+     if (window.AppState && window.AppState.assets) {
+       const assetsMsg = {
+         type: 'parent:assets-init',
+         assets: window.AppState.assets,
+         user: window.AppState.user
+       };
+       
+       if (window.AuthBridge) {
+         window.AuthBridge.broadcast(assetsMsg);
+       }
+     }
+   };
 
-  window.authReadyPromise = new Promise((resolve) => {
-    window.__resolveAuthReady = resolve;
-  });
+   // ============================================
+   // SECTION 6: GLOBAL PROMISE & INIT
+   // ============================================
 
-  // Initialize AuthCore
-  try { 
-    AuthCore.init();
-  } catch(_){}
+   window.authReadyPromise = new Promise((resolve) => {
+     window.__resolveAuthReady = resolve;
+   });
 
-})();
+   // Initialize AuthCore
+   try { 
+     AuthCore.init();
+   } catch(_){}
+ })();

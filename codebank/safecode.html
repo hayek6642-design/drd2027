@@ -2,701 +2,105 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; font-src * data: 'self'; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src * data: blob:; media-src *; frame-src *;">
-    <title>SafeCode Assets</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safe Assets</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- SafeCode iframe asset bridge - receives from parent -->
+    <!-- CRITICAL: Asset receiver MUST be first script -->
     <script>
-    (function() {
-        'use strict';
-        
-        // Create isolated AppState for iframe
-        window.AppState = window.AppState || { 
-            assets: { codes: [], silver: [], gold: [] },
-            user: null 
-        };
-        
-        console.log('[SafeCode] Asset bridge initializing...');
-        
-        // Listen for SNAPSHOT from parent (yt-new-clear.html)
-        window.addEventListener('message', function(e) {
-            console.log('[SafeCode] Received postMessage:', e.data?.type);
+        // SafeCode iframe asset receiver
+        (function() {
+            'use strict';
             
-            // Support multiple message formats
-            if (e.data && (e.data.type === 'sqlite:snapshot' || e.data.type === 'assets:updated')) {
-                const snapshot = e.data.assets || e.data.snapshot || e.data;
-                console.log('[SafeCode] Got snapshot with', snapshot.codes?.length, 'codes');
+            window.AppState = { 
+                assets: { codes: [], silver: [], gold: [] },
+                user: null,
+                loaded: false
+            };
+            
+            window.addEventListener('message', function(e) {
+                console.log('[SafeCode] Message received:', e.data?.type);
                 
-                if (snapshot.codes || snapshot.silver || snapshot.gold) {
-                    window.AppState.assets = {
-                        codes: snapshot.codes || [],
-                        silver: snapshot.silver || [],
-                        gold: snapshot.gold || []
-                    };
+                if (e.data?.type === 'parent:assets-init' || e.data?.assets) {
+                    window.AppState.assets = e.data.assets || { codes: [], silver: [], gold: [] };
+                    window.AppState.user = e.data.user;
+                    window.AppState.loaded = true;
                     
-                    // Notify components
+                    // Hide loading, show content
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('asset-container').style.display = 'block';
+                    
+                    // Dispatch ready event
                     window.dispatchEvent(new CustomEvent('safe-assets-ready', { 
                         detail: window.AppState.assets 
                     }));
                     
-                    console.log('[SafeCode] Assets ready:', window.AppState.assets.codes.length, 'codes');
+                    console.log('[SafeCode] Assets loaded:', window.AppState.assets);
                 }
-            }
-        });
-        
-        // Request assets from parent if needed
-        if (window.parent !== window) {
-            window.parent.postMessage({ 
-                type: 'safecode:ready',
-                request: 'assets'
-            }, '*');
-        }
-        
-        console.log('[SafeCode] Asset bridge ready');
-    })();
-    </script>
-    
-        <style>
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        :root {
-            --bg-dark: #0f172a;
-            --card-bg: rgba(255, 255, 255, 0.03);
-            --primary-color: #B043FF;
-            --secondary-color: #FF77E9;
-            --text-main: #f8fafc;
-            --text-muted: #8b949e;
-            --border-color: rgba(255, 255, 255, 0.1);
-        }
-
-        /* ✳️ Debug Overlay */
-        #safecode-debug {
-            position: fixed;
-            bottom: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.8);
-            color: #00ff00;
-            padding: 5px 10px;
-            font-family: monospace;
-            font-size: 10px;
-            border-radius: 4px;
-            z-index: 9999;
-            pointer-events: none;
-            border: 1px solid #00ff00;
-        }
-
-        body { 
-            background: var(--bg-dark); 
-            color: var(--text-main);
-            font-family: 'Poppins', 'Inter', system-ui, -apple-system, sans-serif;
-            height: 100vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        #loading {
-            position: fixed;
-            inset: 0;
-            background: var(--bg-dark);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            gap: 20px;
-            z-index: 1000;
-        }
-
-        #loading.hidden {
-            display: none;
-        }
-
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 3px solid #333;
-            border-top-color: var(--primary-color);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        #codebank-assets-tab {
-            flex: 1;
-            display: none; /* Shown after load */
-            flex-direction: column;
-            padding: 20px;
-            height: 100%;
-        }
-
-        .tabs-header {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 24px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .tab-btn {
-            padding: 10px 24px;
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border-color);
-            color: var(--text-muted);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .tab-btn.active {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            border-color: transparent;
-            box-shadow: 0 4px 15px rgba(176, 67, 255, 0.3);
-        }
-
-        .asset-list-container {
-            flex: 1;
-            overflow-y: auto;
-            padding-right: 8px;
-            scrollbar-width: thin;
-            scrollbar-color: var(--primary-color) transparent;
-        }
-
-        .asset-list-container::-webkit-scrollbar {
-            width: 6px;
-        }
-        .asset-list-container::-webkit-scrollbar-thumb {
-            background: var(--primary-color);
-            border-radius: 10px;
-        }
-
-        .asset-item {
-            display: flex;
-            align-items: center;
-            padding: 16px 20px;
-            border-radius: 12px;
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            margin-bottom: 12px;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            animation: fadeInUp 0.5s ease forwards;
-        }
-
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .asset-item:hover {
-            background: rgba(255, 255, 255, 0.08);
-            transform: translateX(4px);
-            border-color: var(--primary-color);
-        }
-
-        .asset-item.selected {
-            border-color: var(--primary-color);
-            background: rgba(176, 67, 255, 0.1);
-        }
-
-        .asset-thumbnail {
-            width: 64px;
-            height: 64px;
-            border-radius: 12px;
-            background: #1a1a1a;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 18px;
-            border: 2px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .asset-details { flex: 1; }
-        .asset-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; color: #fff; font-family: 'JetBrains Mono', monospace; }
-        .asset-meta { font-size: 13px; color: var(--text-muted); }
-
-        .pagination-controls {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
-            padding: 20px;
-            background: rgba(15, 23, 42, 0.95);
-            border-top: 1px solid var(--border-color);
-        }
-
-        .nav-btn {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            border: 1px solid var(--border-color);
-            background: rgba(255, 255, 255, 0.05);
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .nav-btn:hover:not(:disabled) {
-            background: var(--primary-color);
-            border-color: var(--primary-color);
-        }
-
-        .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-
-        .page-info { font-weight: 600; color: var(--secondary-color); font-size: 14px; }
-
-        #guardian-dog-container {
-            position: fixed;
-            bottom: 80px;
-            right: 20px;
-            width: 180px;
-            height: 180px;
-            z-index: 1000;
-            pointer-events: none;
-            filter: drop-shadow(0 0 15px rgba(176, 67, 255, 0.3));
-        }
-
-        .empty-state {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 200px;
-            opacity: 0.6;
-            text-align: center;
-            border: 2px dashed var(--border-color);
-            border-radius: 16px;
-            padding: 40px;
-        }
-    #safe-gate.asset-safe-container {
-      position: fixed;
-      inset: 0;
-      z-index: 500;
-      max-width: 100%;
-      height: 100vh;
-      background: #0f172a;
-      border-radius: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: opacity 0.6s ease, transform 0.6s ease;
-    }
-    #safe-gate.asset-safe-container.fade-out {
-      opacity: 0;
-      transform: scale(1.05);
-      pointer-events: none;
-    }
-    </style>
-    <link rel="stylesheet" href="/codebank/bankode/safe/bankode-safe.css">
-</head>
-<body>
-    <!-- 3D Safe Gate -->
-    <div id="safe-gate" class="asset-safe-container">
-      <div class="safe-3d-scene">
-        <div class="safe-frame">
-          <div class="safe-door-3d">
-            <div class="safe-bolts">
-              <div class="safe-bolt"></div>
-              <div class="safe-bolt"></div>
-              <div class="safe-bolt"></div>
-              <div class="safe-bolt"></div>
-            </div>
-            <div class="safe-dial">
-              <div class="safe-dial-ticks"></div>
-            </div>
-            <div class="safe-handle"></div>
-            <div class="safe-led"></div>
-            <div class="safe-inner-chamber">
-              <div class="safe-chamber-content"></div>
-            </div>
-          </div>
-        </div>
-        <p class="safe-instructions">🔐 Unlocking your assets...</p>
-        <button class="safe-close-btn" style="display:none;"></button>
-      </div>
-    </div>
-    <div id="loading"><div class="spinner"></div><p>Loading Safe Assets...</p></div>
-    <div id="codebank-assets-tab"> 
-        <div class="tabs-header">
-            <button class="tab-btn active" data-tab="codes">🔑 Codes</button>
-            <button class="tab-btn" data-tab="silver">🥈 Silver</button>
-            <button class="tab-btn" data-tab="gold">🥇 Gold</button>
-            <div id="asset-stats" style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
-                <span id="total-count" style="font-size: 13px; color: var(--text-muted); font-weight: 600; background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color);">0 Assets</span>
-                <button id="refresh-assets" class="nav-btn" style="width: 40px; height: 40px; border-radius: 10px;" title="Refresh Assets"><i class="fas fa-sync-alt"></i></button>
-            </div>
-        </div>
-        <div id="safe-assets-container" class="asset-list-container"></div>
-        <div class="pagination-controls" id="pagination">
-            <button id="prev-page" class="nav-btn"><i class="fas fa-chevron-left"></i></button>
-            <span class="page-info">Page <span id="current-page">1</span> / <span id="total-pages">1</span></span>
-            <button id="next-page" class="nav-btn"><i class="fas fa-chevron-right"></i></button>
-        </div>
-    </div>
-    <div id="guardian-dog-container"></div>
-    <div id="safecode-debug">SafeCode: Initializing...</div>
-
-    <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
-      }
-    }
-    </script>
-
-    <!-- AssetBus shim: delegates to parent window's GET_AUTHORITATIVE_ASSETS, with localStorage and API fallback -->
-    <script>
-    (function() {
-      window.AssetBus = {
-        _store: {},
-        _loading: false,
-        snapshot: function() {
-          // Try parent window first
-          if (window.top && window.top !== window && typeof window.top.GET_AUTHORITATIVE_ASSETS === 'function') {
-            const data = window.top.GET_AUTHORITATIVE_ASSETS();
-            if (data && (data.codes?.length > 0 || data.silver?.length > 0 || data.gold?.length > 0)) {
-              console.log('[AssetBus] Got assets from parent window');
-              window.AssetBus._store = data;
-              return data;
-            }
-          }
-          // Fall back to localStorage
-          try {
-            const raw = localStorage.getItem('codebank_assets');
-            const cachedUser = localStorage.getItem('codebank_assets_user');
-            const currentUser = window.AppState?.user?.id || window.AppState?.user?.userId;
-            if (raw && cachedUser === currentUser) {
-              const parsed = JSON.parse(raw);
-              if (parsed && (parsed.codes?.length > 0 || parsed.silver?.length > 0 || parsed.gold?.length > 0)) {
-                console.log('[AssetBus] Got assets from localStorage cache');
-                window.AssetBus._store = parsed;
-                return parsed;
-              }
-            }
-          } catch(_) {}
-          // Fall back to internal store (last known good data)
-          console.log('[AssetBus] Using cached store:', window.AssetBus._store);
-          return window.AssetBus._store;
-        },
-        sync: function() {
-          // Sync from parent
-          if (window.top && window.top !== window && typeof window.top.AssetsManager?.sync === 'function') {
-            window.top.AssetsManager.sync();
-          }
-        },
-        // NEW: Fetch from API directly (fallback when no parent)
-        fetchFromAPI: async function() {
-          if (window.AssetBus._loading) return window.AssetBus._store;
-          window.AssetBus._loading = true;
-          try {
-            const resp = await fetch('/api/codes', { credentials: 'include' });
-            const data = await resp.json();
-            if (data.success && data.codes) {
-              window.AssetBus._store.codes = data.codes;
-              console.log('[AssetBus] Loaded', data.codes.length, 'codes from API');
-            }
-          } catch(e) {
-            console.warn('[AssetBus] API fetch failed:', e.message);
-          } finally {
-            window.AssetBus._loading = false;
-          }
-          return window.AssetBus._store;
-        }
-      };
-      // Listen for assets updates from parent - support multiple message formats
-      window.addEventListener('message', function(e) {
-        const data = e.data || {};
-        
-        // Format 1: assets:updated with snapshot (old format)
-        if (data.type === 'assets:updated' && data.snapshot) {
-          const s = data.snapshot;
-          if (s.codes) window.AssetBus._store.codes = s.codes;
-          if (s.silver) window.AssetBus._store.silver = s.silver;
-          if (s.gold) window.AssetBus._store.gold = s.gold;
-          window.dispatchEvent(new CustomEvent('assets:updated', { detail: s }));
-        }
-        
-        // Format 2: CODEBANK_ASSETS_SYNC with payload
-        if (data.type === 'CODEBANK_ASSETS_SYNC' && data.payload) {
-          const p = data.payload;
-          if (p.codes) window.AssetBus._store.codes = p.codes;
-          if (p.silver) window.AssetBus._store.silver = p.silver;
-          if (p.gold) window.AssetBus._store.gold = p.gold;
-          window.dispatchEvent(new CustomEvent('assets:updated', { detail: p }));
-        }
-        
-        // Format 3: assetbus:snapshot with data
-        if (data.type === 'assetbus:snapshot' && data.data) {
-          const d = data.data;
-          if (d.codes) window.AssetBus._store.codes = d.codes;
-          if (d.silver) window.AssetBus._store.silver = d.silver;
-          if (d.gold) window.AssetBus._store.gold = d.gold;
-          window.dispatchEvent(new CustomEvent('assets:updated', { detail: d }));
-        }
-        
-        // Format 4: request:assets - respond to requests from iframes
-        if (data.type === 'request:assets') {
-          // This is handled in the parent, not needed here
-        }
-      });
-      console.log('[AssetBus] Shim initialized');
-    })();
-    
-    // Proactively request assets from parent after a short delay
-    setTimeout(() => {
-      if (window.parent && window.parent !== window) {
-        console.log('[SafeCode] Requesting assets from parent...');
-        window.parent.postMessage({ type: 'bridge:request-assets' }, '*');
-        
-        console.log('[SafeCode] Requesting auth from parent...');
-        window.parent.postMessage({ type: 'request:auth' }, '*');
-      }
-    }, 500);
-    
-    // Listen for auth update from parent
-    window.addEventListener('message', function(e) {
-      const data = e.data || {};
-      
-      // Auth response from parent
-      if (data.type === 'auth:update' || data.type === 'AUTH_CONTEXT') {
-        console.log('[SafeCode] Received auth from parent:', data);
-        
-        // Update global auth state
-        if (data.user) {
-          window.__AUTH_STATE__ = {
-            authenticated: data.authenticated || true,
-            userId: data.user?.id || data.user?.userId || data.sessionId,
-            ...data
-          };
-          window.authReady = true;
-          
-          // Dispatch auth ready event
-          window.dispatchEvent(new CustomEvent('auth:ready', { detail: window.__AUTH_STATE__ }));
-        }
-      }
-    });
-    </script>
-    <!-- Core globals MUST load first - before any modules -->
-    <script src="/codebank/js/event-bus-simple.js"></script>
-    <script src="/codebank/js/global-store.js"></script>
-    <script src="/codebank/js/assets-direct.js"></script>
-    
-    <!-- Safe asset list modules - load after globals -->
-    <script type="module" src="/codebank/js/safe-asset-list.js"></script>
-    <script type="module" src="/codebank/js/safe-list-actions.js"></script>
-
-    <script>
-        (function() {
-            const debugEl = document.getElementById('safecode-debug');
-            const updateDebug = (msg) => {
-                if (debugEl) debugEl.innerText = `SafeCode: ${msg}`;
-                console.log(`[SafeCode-Debug] ${msg}`);
-            };
-            updateDebug('DOM Loaded - Direct Access Mode');
-
-            // 🛡️ PREVENT UI BLOCK
-            window.addEventListener('error', (e) => {
-                console.warn('[SafeCode] Soft error caught:', e.message);
-                updateDebug(`Soft Error: ${e.message}`);
-            });
-
-            // دالة تفعيل كلب الحراسة
-            function activateWatchdog() {
-                const dog = document.getElementById('guardian-dog-container');
-                if (dog) {
-                    dog.style.display = 'block';
-                    if (typeof window.SafeActions?.initWatchDogGuardian === 'function') {
-                        window.SafeActions.initWatchDogGuardian();
-                    } else if (typeof initWatchDogGuardian === 'function') {
-                        initWatchDogGuardian();
-                    } else {
-                        console.warn('[SafeCode] WatchDog guardian function not found');
-                        updateDebug('WatchDog guardian not found');
-                    }
-                }
-            }
-
-            // Listen for the render event from safe-asset-list.js to activate watchdog
-            document.addEventListener('safe-assets-rendered', () => {
-                updateDebug('Assets rendered, activating watchdog');
-                // Show the assets tab
-                const tab = document.getElementById('codebank-assets-tab');
-                if (tab) tab.style.display = 'flex';
-                activateWatchdog();
-            });
-
-            // Also listen on window just in case
-            window.addEventListener('safe-assets-rendered', () => {
-                updateDebug('Window assets rendered, activating watchdog');
-                // Show the assets tab
-                const tab = document.getElementById('codebank-assets-tab');
-                if (tab) tab.style.display = 'flex';
-                activateWatchdog();
-            });
-
-            // Force watchdog activation after 3 seconds if not already done
-            // Check for both 3D canvas AND 2D fallback before retrying
-            setTimeout(() => {
-                const dogContainer = document.getElementById('guardian-dog-container');
-                const hasCanvas = dogContainer && dogContainer.querySelector('canvas');
-                const hasFallback = dogContainer && dogContainer.querySelector('.fallback-dog');
-                if (!hasCanvas && !hasFallback && !window.__DOG_INITIALIZING__) {
-                    updateDebug('Forcing watchdog activation after timeout');
-                    activateWatchdog();
-                }
-            }, 3000);
-
-            // Auto-open the 3D safe after assets are ready
-            let safeOpenAttempts = 0;
-            function tryOpenSafe() {
-              if (safeOpenAttempts > 10) {
-                console.warn('[SafeCode] Max attempts reached, forcing show assets');
-                // Force show assets anyway
-                const gate = document.getElementById('safe-gate');
-                if (gate) {
-                  gate.classList.add('fade-out');
-                  setTimeout(() => { gate.style.display = 'none'; }, 650);
-                }
-                const tab = document.getElementById('codebank-assets-tab');
-                if (tab) tab.style.display = 'flex';
-                return;
-              }
-              
-              if (window.AssetSafe && typeof window.AssetSafe.open === 'function') {
-                console.log('[SafeCode] Opening vault...');
-                window.AssetSafe.open();
-              } else {
-                safeOpenAttempts++;
-                console.log('[SafeCode] Waiting for AssetSafe to initialize... attempt ' + safeOpenAttempts);
-                setTimeout(tryOpenSafe, 500);
-              }
-            }
-            setTimeout(tryOpenSafe, 2000);
-
-            // Listen for safe:opened to hide gate and show assets
-            window.addEventListener('safe:opened', function() {
-              updateDebug('Safe opened - revealing assets');
-              const gate = document.getElementById('safe-gate');
-              if (gate) {
-                gate.classList.add('fade-out');
-                setTimeout(() => { gate.style.display = 'none'; }, 650);
-              }
-              const tab = document.getElementById('codebank-assets-tab');
-              if (tab) tab.style.display = 'flex';
-              activateWatchdog();
-              
-              // Show lock button to re-lock the vault
-              const closeBtn = document.querySelector('.safe-close-btn');
-              if (closeBtn) {
-                closeBtn.style.display = 'flex';
-                closeBtn.textContent = '🔒';
-                closeBtn.title = 'Lock Vault';
-              }
             });
             
-            // Listen for safe:closed to restore vault view
-            window.addEventListener('safe:closed', function() {
-              updateDebug('Safe locked - hiding assets');
-              const gate = document.getElementById('safe-gate');
-              const tab = document.getElementById('codebank-assets-tab');
-              
-              // Show vault door again
-              if (gate) {
-                gate.style.display = 'flex';
-                gate.classList.remove('fade-out');
-              }
-              
-              // Hide assets tab
-              if (tab) tab.style.display = 'none';
-            });
-
+            // Request assets after 1 second if not received (backup)
+            setTimeout(function() {
+                if (!window.AppState.loaded && window.parent !== window) {
+                    console.log('[SafeCode] Requesting assets from parent...');
+                    window.parent.postMessage({ type: 'safecode:request-assets' }, '*');
+                }
+            }, 1000);
         })();
     </script>
     
-    <!-- Listen for asset updates and update counter UI - with API fallback -->
-    <script>
-      // Function to load and display assets
-      async function loadAssets() {
-        console.log('[SafeCode] Loading assets...');
-        
-        // First try AssetBus.snapshot (parent window or localStorage)
-        var assets = window.AssetBus?.snapshot?.() || {};
-        
-        console.log('[SafeCode] AssetBus snapshot:', assets);
-        
-        // If no codes from snapshot, try API
-        if (!assets.codes || assets.codes.length === 0) {
-          console.log('[SafeCode] No codes from AssetBus, trying API...');
-          try {
-            var resp = await fetch('/api/codes', { credentials: 'include' });
-            var data = await resp.json();
-            if (data.success && data.codes) {
-              assets.codes = data.codes;
-              console.log('[SafeCode] Loaded', data.codes.length, 'codes from API');
-            }
-          } catch(e) {
-            console.warn('[SafeCode] API fetch failed:', e.message);
-          }
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #0f0f0f; 
+            color: #fff; 
+            font-family: system-ui, -apple-system, sans-serif; 
+            height: 100vh; 
+            overflow: hidden;
         }
-        
-        // Update the UI with what we have
-        updateAssetUI(assets);
-        
-        // Dispatch event for components that listen
-        window.dispatchEvent(new CustomEvent('safe-assets-rendered', { detail: assets }));
-        
-        return assets;
-      }
-      
-      function updateAssetUI(assets) {
-        console.log('[SafeCode] Updating UI with:', assets);
-        
-        // Update tab counters
-        var codesBtn = document.querySelector('button[data-tab="codes"]');
-        var silverBtn = document.querySelector('button[data-tab="silver"]');
-        var goldBtn = document.querySelector('button[data-tab="gold"]');
-        
-        var codesCount = assets.codes?.length || 0;
-        var silverCount = assets.silver?.length || 0;
-        var goldCount = assets.gold?.length || 0;
-        
-        if (codesBtn) codesBtn.innerHTML = '🔑 Codes (' + codesCount + ')';
-        if (silverBtn) silverBtn.innerHTML = '🥈 Silver (' + silverCount + ')';
-        if (goldBtn) goldBtn.innerHTML = '🥇 Gold (' + goldCount + ')';
-        
-        // Update total count display
-        var totalCountEl = document.getElementById('total-count');
-        if (totalCountEl) {
-          totalCountEl.textContent = codesCount + ' Codes';
+        #loading { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            flex-direction: column; 
+            gap: 20px; 
         }
-        
-        console.log('[SafeCode] UI updated - Codes:', codesCount, 'Silver:', silverCount, 'Gold:', goldCount);
-      }
-      
-      // Listen for assets:updated events from parent
-      document.addEventListener('assets:updated', function(e) {
-        console.log('[SafeCode] Received assets:updated event');
-        updateAssetUI(e.detail || {});
-      });
-      
-      // Auto-load assets when DOM is ready
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', loadAssets);
-      } else {
-        // Page already loaded, wait for scripts then load
-        setTimeout(loadAssets, 500);
-      }
-      
-      // Also load immediately as fallback
-      setTimeout(loadAssets, 2000);
-    </script>
+        .spinner { 
+            width: 50px; 
+            height: 50px; 
+            border: 3px solid #333; 
+            border-top-color: #00d4ff; 
+            border-radius: 50%; 
+            animation: spin 1s linear infinite; 
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #asset-container { 
+            width: 100%; 
+            height: 100vh; 
+            overflow-y: auto; 
+            padding: 20px; 
+            display: none; 
+        }
+        .error-box {
+            background: #ff4757;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div class="spinner"></div>
+        <p>Loading Safe Assets...</p>
+    </div>
+    <div id="asset-container">
+        <!-- Assets will render here -->
+    </div>
     
-    <script src="/codebank/bankode/safe/bankode-safe.js"></script>
+    <!-- Your existing safe-asset-list.js -->
+    <script src="js/safe-asset-list.js"></script>
 </body>
 </html>
