@@ -141,6 +141,12 @@
          * Record a transaction (spend/earn codes/silver/gold)
          */
         async transaction(type, action, amount, service, metadata = {}) {
+            // Check authentication first
+            if (!this.state.authenticated) {
+                console.warn('[AuthClient] Transaction blocked: not authenticated');
+                return { success: false, error: 'Not authenticated', code: 'NOT_AUTH' };
+            }
+            
             try {
                 const res = await fetch('/api/assets/transaction', {
                     method: 'POST',

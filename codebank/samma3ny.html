@@ -102,16 +102,41 @@
         }
         
         async function toggleAutoMode() {
-            const result = await window.AuthClient.transaction('code', 'spend', 1, 'samma3ny', {
-                feature: 'auto_mode'
-            });
+            // Guard: ensure AuthClient is initialized
+            if (window.AuthClient.isLoading()) {
+                alert('⏳ Loading... please wait a moment');
+                return;
+            }
             
-            if (result.success) {
-                alert('✅ Auto mode activated!');
-                const assets = window.AuthClient.getAssets();
-                updateBalance(assets);
-            } else {
-                alert('❌ Not enough codes!');
+            if (!window.AuthClient.isAuth()) {
+                goToLogin();
+                return;
+            }
+            
+            const assets = window.AuthClient.getAssets();
+            const codes = assets?.codes?.length || 0;
+            
+            if (codes < 1) {
+                alert('❌ You need at least 1 code to activate Auto Mode!');
+                return;
+            }
+            
+            try {
+                const result = await window.AuthClient.transaction('code', 'spend', 1, 'samma3ny', {
+                    feature: 'auto_mode'
+                });
+                
+                if (result.success) {
+                    alert('✅ Auto mode activated! 🎵');
+                    const newAssets = window.AuthClient.getAssets();
+                    updateBalance(newAssets);
+                } else {
+                    const error = result.error || 'Unknown error';
+                    alert(`❌ ${error}`);
+                }
+            } catch (err) {
+                console.error('[Samma3ny] Auto mode error:', err);
+                alert('❌ Something went wrong. Please try again.');
             }
         }
         
@@ -127,7 +152,7 @@
             if (window.AuthClient.isAuth()) {
                 initUI(window.AuthClient.getUser(), window.AuthClient.getAssets());
             }
-        }, 500);
+        }, 1000);
     </script>
 </body>
 </html>
