@@ -1,87 +1,44 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pebalaash Loader</title>
+    <title>Pebalaash - Barter Exchange</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #0f172a; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; }
-        #loader { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #0f172a; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; transition: opacity 0.3s; }
-        #loader.hidden { opacity: 0; pointer-events: none; }
-        .spinner { width: 50px; height: 50px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        #error-display { display: none; text-align: center; padding: 20px; max-width: 500px; }
-        #error-display.visible { display: block; }
-        .error-icon { font-size: 48px; margin-bottom: 16px; }
-        .retry-btn { margin-top: 20px; padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; }
-        .retry-btn:hover { background: #2563eb; }
-        #service-frame { flex: 1; width: 100%; border: none; display: none; }
-        #service-frame.loaded { display: block; }
+        body { background: #0f0f0f; color: white; font-family: system-ui; padding: 20px; }
+        .auth-check { text-align: center; padding: 50px; }
+        .barter-ui { display: none; }
+        h1 { background: linear-gradient(135deg, #00d4ff, #8a2be2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .asset-display { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin: 10px 0; }
     </style>
 </head>
 <body>
-    <div id="loader">
-        <div class="spinner"></div>
-        <p>Loading Pebalaash...</p>
-        <div id="error-display">
-            <div class="error-icon">⚠️</div>
-            <h2>Failed to Load Pebalaash</h2>
-            <p id="error-message">Unknown error occurred</p>
-            <button class="retry-btn" onclick="location.reload()">Retry</button>
-            <button class="retry-btn" onclick="forceLoad()" style="margin-left: 10px; background: #10b981;">Force Load (No Bridge)</button>
+    <div id="auth-check" style="text-align: center; padding: 50px;">Checking authentication...</div>
+    
+    <div id="barter-ui">
+        <h1>💱 Pebalaash - Barter</h1>
+        <div id="my-assets">
+            <h2>My Assets</h2>
+            <div class="asset-display">Codes: <span id="my-codes">0</span></div>
+            <div class="asset-display">Silver: <span id="my-silver">0</span></div>
+            <div class="asset-display">Gold: <span id="my-gold">0</span></div>
         </div>
     </div>
-    <iframe id="service-frame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-top-navigation-by-user-activation"></iframe>
-    <script src="/shared/assets-service-bridge.js"></script>
+
+    <script src="../shared/js/auth-client.js"></script>
     <script>
-        const ParentBridge = {
-            send: function(data) {
-                if (window.parent !== window) {
-                    window.parent.postMessage({ type: 'pebalaash-loader', ...data, timestamp: Date.now() }, '*');
-                }
-            },
-            receive: function(callback) {
-                window.addEventListener('message', (e) => {
-                    if (e.data?.type === 'auth:ready' || e.data?.type === 'codebank:init') { callback(e.data); }
-                });
+        window.AuthClient.on('auth:changed', (state) => {
+            if (!state.authenticated) {
+                document.getElementById('auth-check').innerHTML = '<p>Please <a href="/login.html?redirect=/codebank/pebalaash.html" style="color: #00d4ff;">login</a> to continue</p>';
+                return;
             }
-        };
-        async function init() {
-            ParentBridge.send({ status: 'loader-ready' });
-            ParentBridge.receive((data) => { loadService(data); });
-            setTimeout(() => { if (!window.loaded) loadService(null); }, 2000);
-        }
-        function loadService(authData) {
-            window.loaded = true;
-            const frame = document.getElementById('service-frame');
-            const loader = document.getElementById('loader');
-            const baseUrl = './pebalaash/dist/public/index.html';
-            // Safety net: hide spinner after 10s even if onload never fires
-            const loaderTimeout = setTimeout(() => {
-                loader.classList.add('hidden');
-                frame.classList.add('loaded');
-            }, 10000);
-            frame.onload = () => {
-                clearTimeout(loaderTimeout);
-                setTimeout(() => {
-                    if (frame.contentWindow) {
-                        frame.contentWindow.postMessage({ type: 'auth:ready', source: 'pebalaash-loader', payload: authData?.payload || authData || {} }, '*');
-                    }
-                }, 1000);
-                frame.classList.add('loaded'); loader.classList.add('hidden');
-                ParentBridge.send({ status: 'service-loaded' });
-            };
-            frame.src = baseUrl + '?_loader=' + Date.now();
-        }
-        function forceLoad() {
-            const frame = document.getElementById('service-frame');
-            frame.removeAttribute('sandbox');
-            frame.src = './pebalaash/dist/public/index.html?_force=' + Date.now();
-            document.getElementById('loader').classList.add('hidden');
-            frame.classList.add('loaded');
-        }
-        init();
+            document.getElementById('auth-check').style.display = 'none';
+            document.getElementById('barter-ui').style.display = 'block';
+            
+            const assets = state.assets || {};
+            document.getElementById('my-codes').textContent = assets.codes?.length || 0;
+            document.getElementById('my-silver').textContent = assets.silver?.reduce((a,b) => a + (b.amount || 0), 0) || 0;
+            document.getElementById('my-gold').textContent = assets.gold?.reduce((a,b) => a + (b.amount || 0), 0) || 0;
+        });
     </script>
 </body>
 </html>

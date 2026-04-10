@@ -1,148 +1,133 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Samma3ny Loader</title>
+    <title>Samma3ny - Music Player</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            background: #0f172a; 
-            color: #e2e8f0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-        #loader {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: #0f172a;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            transition: opacity 0.3s;
-        }
-        #loader.hidden { opacity: 0; pointer-events: none; }
-        .spinner {
-            width: 50px; height: 50px;
-            border: 3px solid rgba(255,255,255,0.1);
-            border-top-color: #3b82f6;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        #error-display {
-            display: none;
-            text-align: center;
-            padding: 20px;
-            max-width: 500px;
-        }
-        #error-display.visible { display: block; }
-        .error-icon { font-size: 48px; margin-bottom: 16px; }
-        .retry-btn {
-            margin-top: 20px;
-            padding: 12px 24px;
-            background: #3b82f6;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .retry-btn:hover { background: #2563eb; }
+        body { background: #0f0f0f; color: white; font-family: system-ui; }
         
-        #service-frame {
-            flex: 1;
-            width: 100%;
-            border: none;
-            display: none;
+        .auth-wall {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0f0f0f; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 9999;
         }
-        #service-frame.loaded { display: block; }
+        .auth-wall h2 { margin-bottom: 20px; color: #00d4ff; }
+        .auth-wall button {
+            padding: 15px 40px; background: linear-gradient(135deg, #00d4ff, #8a2be2);
+            border: none; color: white; border-radius: 10px; cursor: pointer; font-size: 16px;
+        }
+        
+        #main-ui { display: none; padding: 20px; }
+        #main-ui.active { display: block; }
+        
+        h1 { margin: 20px 0; background: linear-gradient(135deg, #00d4ff, #8a2be2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .player {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(0,212,255,0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .balance { font-size: 1.2em; margin: 20px 0; }
+        .balance span { color: #00d4ff; font-weight: bold; }
+        
+        .controls {
+            display: flex; gap: 10px; margin-top: 15px;
+        }
+        
+        button {
+            padding: 10px 20px; background: rgba(0,212,255,0.2); border: 1px solid #00d4ff;
+            color: #00d4ff; border-radius: 8px; cursor: pointer; transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #00d4ff; color: #0f0f0f;
+        }
     </style>
 </head>
 <body>
-    <div id="loader">
-        <div class="spinner"></div>
-        <p>Loading Samma3ny...</p>
-        <div id="error-display">
-            <div class="error-icon">⚠️</div>
-            <h2>Failed to Load Samma3ny</h2>
-            <p id="error-message">Unknown error occurred</p>
-            <button class="retry-btn" onclick="location.reload()">Retry</button>
-            <button class="retry-btn" onclick="forceLoad()" style="margin-left: 10px; background: #10b981;">Force Load (No Bridge)</button>
+    <div id="auth-wall" class="auth-wall">
+        <h2>🔒 Sign In to Samma3ny</h2>
+        <button onclick="goToLogin()">Go to Login</button>
+    </div>
+    
+    <div id="main-ui">
+        <h1>🎵 Samma3ny - Music</h1>
+        
+        <div class="balance">
+            Your Codes: <span id="code-balance">0</span>
         </div>
+        
+        <div class="player">
+            <h2>Now Playing</h2>
+            <div id="current-track" style="color: #aaa; margin: 20px 0;">Select a song...</div>
+            <div class="controls">
+                <button onclick="playMusic()">▶️ Play</button>
+                <button onclick="pauseMusic()">⏸ Pause</button>
+                <button onclick="toggleAutoMode()">🔄 Auto Mode</button>
+            </div>
+        </div>
+        
+        <div id="playlist" style="margin-top: 20px;"></div>
     </div>
 
-    <iframe id="service-frame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-top-navigation-by-user-activation"></iframe>
-
-    <script src="/shared/assets-service-bridge.js"></script>
+    <script src="../shared/js/auth-client.js"></script>
     <script>
-        const BRIDGE_TIMEOUT = 8000;
-        let bridgeConnected = false;
-        // 1️⃣ Fix AssetBus origin detection
-        const ParentBridge = {
-            send: function(data) {
-                if (window.parent !== window) {
-                    window.parent.postMessage({
-                        type: 'samma3ny-loader',
-                        ...data,
-                        timestamp: Date.now()
-                    }, '*'); // Handshake uses '*'
-                }
-            },
-            receive: function(callback) {
-                window.addEventListener('message', (e) => {
-                    if (e.data?.type === 'auth:ready' || e.data?.type === 'codebank:init') {
-                        callback(e.data);
-                    }
-                });
-            }
-        };
-        async function init() {
-            ParentBridge.send({ status: 'loader-ready' });
-            ParentBridge.receive((data) => {
-                bridgeConnected = true;
-                loadService(data);
+        function goToLogin() {
+            window.location.href = '/login.html?redirect=' + encodeURIComponent('/codebank/samma3ny.html');
+        }
+        
+        function initUI(user, assets) {
+            document.getElementById('auth-wall').style.display = 'none';
+            document.getElementById('main-ui').classList.add('active');
+            updateBalance(assets);
+            console.log('[Samma3ny] Ready for', user.email);
+        }
+        
+        function updateBalance(assets) {
+            const codes = assets?.codes?.length || 0;
+            document.getElementById('code-balance').textContent = codes;
+        }
+        
+        function playMusic() {
+            alert('▶️ Playing music...');
+        }
+        
+        function pauseMusic() {
+            alert('⏸ Music paused');
+        }
+        
+        async function toggleAutoMode() {
+            const result = await window.AuthClient.transaction('code', 'spend', 1, 'samma3ny', {
+                feature: 'auto_mode'
             });
-            setTimeout(() => {
-                if (!bridgeConnected) {
-                    loadService(null);
-                }
-            }, 2000);
+            
+            if (result.success) {
+                alert('✅ Auto mode activated!');
+                const assets = window.AuthClient.getAssets();
+                updateBalance(assets);
+            } else {
+                alert('❌ Not enough codes!');
+            }
         }
-        function loadService(authData) {
-            const frame = document.getElementById('service-frame');
-            const loader = document.getElementById('loader');
-            const baseUrl = './samma3ny/index.html';
-            const url = baseUrl + (baseUrl.includes('?') ? '&' : '?') + '_loader=' + Date.now();
-            frame.onload = () => {
-                setTimeout(() => {
-                    if (frame.contentWindow) {
-                        frame.contentWindow.postMessage({
-                            type: 'auth:ready',
-                            source: 'samma3ny-loader',
-                            payload: authData?.payload || authData || {}
-                        }, '*');
-                    }
-                }, 1000);
-                frame.classList.add('loaded');
-                loader.classList.add('hidden');
-                ParentBridge.send({ status: 'service-loaded' });
-            };
-            frame.src = url;
-        }
-        function forceLoad() {
-            const frame = document.getElementById('service-frame');
-            frame.removeAttribute('sandbox');
-            frame.src = './samma3ny/index.html?_force=' + Date.now();
-            document.getElementById('loader').classList.add('hidden');
-            frame.classList.add('loaded');
-        }
-        init();
+        
+        window.AuthClient.on('auth:changed', (state) => {
+            if (state.authenticated && state.assets) {
+                initUI(state.user, state.assets);
+            } else if (!state.authenticated && !state.loading) {
+                document.getElementById('auth-wall').style.display = 'flex';
+            }
+        });
+        
+        setTimeout(() => {
+            if (window.AuthClient.isAuth()) {
+                initUI(window.AuthClient.getUser(), window.AuthClient.getAssets());
+            }
+        }, 500);
     </script>
 </body>
 </html>
