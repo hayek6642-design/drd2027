@@ -42,6 +42,16 @@
                 window.dispatchEvent(new CustomEvent('sqlite:snapshot', { detail: snapshot }));
                 window.dispatchEvent(new CustomEvent('assets:updated', { detail: snapshot }));
 
+                // 🔄 Send to all iframes via postMessage (for SafeCode, etc)
+                try {
+                    const snapshotData = JSON.stringify({ type: 'assets:updated', snapshot: snapshot });
+                    document.querySelectorAll('iframe').forEach(iframe => {
+                        try {
+                            iframe.contentWindow?.postMessage(snapshotData, '*');
+                        } catch(e) {}
+                    });
+                } catch(e) {}
+
                 console.log('[AssetsManager] Synced:', snapshot.codes.length, 'codes,',
                     snapshot.silver.length, 'silver,', snapshot.gold.length, 'gold');
                 return snapshot;
