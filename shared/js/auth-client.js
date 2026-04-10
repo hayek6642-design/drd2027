@@ -13,8 +13,11 @@
             authenticated: false,
             user: null,
             assets: null,
-            loading: true
+            loading: true,
+            autoModeActive: false
         },
+        
+        autoModeCheckInterval: null,
         
         listeners: [],
         
@@ -166,6 +169,120 @@
             } catch (err) {
                 console.error('[AuthClient] Transaction failed:', err);
                 return { success: false, error: 'Network error' };
+            }
+        },
+        
+        /**
+         * Start auto-mode session (called when user activates auto-mode in Samma3ny)
+         */
+        async startAutoMode() {
+            if (!this.state.authenticated) {
+                return { success: false, error: 'Not authenticated' };
+            }
+            
+            try {
+                const res = await fetch('/api/auto-mode/start', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    console.log('[AuthClient] Auto-mode started');
+                    this.state.autoModeActive = true;
+                    
+                    // Start polling for silver awards every 60 seconds
+                    if (!this.autoModeCheckInterval) {
+                        this.autoModeCheckInterval = setInterval(() => this.checkAutoMode(), 60000);
+                    }
+                }
+                
+                return data;
+            } catch (err) {
+                console.error('[AuthClient] Auto-mode start failed:', err);
+                return { success: false, error: 'Network error' };
+            }
+        },
+        
+        /**
+         * Stop auto-mode session (called when user deactivates auto-mode)
+         */
+        async stopAutoMode() {
+            if (!this.state.authenticated) {
+                return { success: false, error: 'Not authenticated' };
+            }
+            
+            try {
+                // Clear polling interval
+                if (this.autoModeCheckInterval) {
+                    clearInterval(this.autoModeCheckInterval);
+                    this.autoModeCheckInterval = null;
+                }
+                
+                const res = await fetch('/api/auto-mode/stop', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    console.log('[AuthClient] Auto-mode stopped');
+                    this.state.autoModeActive = false;
+                }
+                
+                return data;
+            } catch (err) {
+                console.error('[AuthClient] Auto-mode stop failed:', err);
+                return { success: false, error: 'Network error' };
+            }
+        },
+        
+        /**
+         * Check auto-mode status and award silver if 2 hours elapsed
+         * Called periodically while auto-mode is active
+         */
+        async checkAutoMode() {
+            if (!this.state.authenticated) {
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/auto-mode/check', {
+                    credentials: 'include',
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    // If silver was awarded, refresh assets and notify
+                    if (data.silverAwarded > 0) {
+                        console.log(`[AuthClient] 🎉 ${data.silverAwarded} silver awarded!`);
+                        await this.fetchAssets();
+                        this.notify('silver:awarded', {
+                            amount: data.silverAwarded,
+                            totalAwards: data.totalAwards,
+                            newAssets: data.newAssets
+                        });
+                    }
+                    
+                    // Update auto-mode status
+                    if (!data.isActive) {
+                        this.state.autoModeActive = false;
+                        if (this.autoModeCheckInterval) {
+                            clearInterval(this.autoModeCheckInterval);
+                            this.autoModeCheckInterval = null;
+                        }
+                    }
+                }
+                
+                return data;
+            } catch (err) {
+                console.error('[AuthClient] Auto-mode check failed:', err);
             }
         },
         

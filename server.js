@@ -90,6 +90,7 @@ import sammAutoRouter from './api/modules/samma3ny-automode.js';
 import likesRouter from './api/modules/likes.js';
 import drmailRouter from './api/modules/drmail.js';
 import quotaRouter from './api/modules/quota.js';
+import autoModeRouter from './api/modules/auto-mode.js';
 import aiRouter from './server/routes/ai-routes.js';
 
 import { 
@@ -319,6 +320,7 @@ app.use('/api/samma3ny', sammAutoRouter);
 app.use('/api/likes', likesRouter);
 app.use('/api/drmail', drmailRouter);
 app.use('/api/quota',  quotaRouter);
+app.use('/api/auto-mode', autoModeRouter);
 
 // AUTH REMOVED — CLEAN RESET
 

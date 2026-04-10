@@ -113,6 +113,18 @@
                 return;
             }
             
+            // If already active, stop it
+            if (window.AuthClient.state.autoModeActive) {
+                const stopResult = await window.AuthClient.stopAutoMode();
+                if (stopResult.success) {
+                    alert('⏹️ Auto mode deactivated');
+                    document.querySelector('#autoModeBtn').textContent = '▶️ Start Auto Mode (Costs 1 Code, Earns 1 Silver per 2 hours)';
+                    document.querySelector('#autoModeBtn').style.background = '#4CAF50';
+                }
+                return;
+            }
+            
+            // Otherwise, activate it
             const assets = window.AuthClient.getAssets();
             const codes = assets?.codes?.length || 0;
             
@@ -127,9 +139,20 @@
                 });
                 
                 if (result.success) {
-                    alert('✅ Auto mode activated! 🎵');
-                    const newAssets = window.AuthClient.getAssets();
-                    updateBalance(newAssets);
+                    // Start auto-mode session on backend
+                    const autoModeResult = await window.AuthClient.startAutoMode();
+                    
+                    if (autoModeResult.success) {
+                        alert('✅ Auto mode activated! 🎵\nYou will earn 1 silver every 2 hours of continuous play.');
+                        const newAssets = window.AuthClient.getAssets();
+                        updateBalance(newAssets);
+                        
+                        // Update button UI
+                        document.querySelector('#autoModeBtn').textContent = '⏹️ Stop Auto Mode';
+                        document.querySelector('#autoModeBtn').style.background = '#ff6b6b';
+                    } else {
+                        alert('⚠️ Code spent but failed to activate auto-mode session. Contact support.');
+                    }
                 } else {
                     const error = result.error || 'Unknown error';
                     alert(`❌ ${error}`);
@@ -139,6 +162,26 @@
                 alert('❌ Something went wrong. Please try again.');
             }
         }
+        
+        // Listen for silver awards from auto-mode
+        window.AuthClient.on('silver:awarded', (data) => {
+            console.log('[Samma3ny] 🎉 Silver awarded!', data);
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.innerHTML = `
+                <div style="padding: 15px; background: #FFD700; color: #333; border-radius: 8px; margin: 10px 0; text-align: center; font-weight: bold;">
+                    🎉 Earned ${data.amount} Silver! (Total: ${data.totalAwards})
+                </div>
+            `;
+            const container = document.querySelector('.container') || document.body;
+            container.insertBefore(notification, container.firstChild);
+            
+            // Auto-remove notification after 5 seconds
+            setTimeout(() => notification.remove(), 5000);
+            
+            // Update balance
+            updateBalance(data.newAssets);
+        });
         
         window.AuthClient.on('auth:changed', (state) => {
             if (state.authenticated && state.assets) {
