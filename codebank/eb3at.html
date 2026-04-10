@@ -22,7 +22,30 @@
     </div>
 
     <script src="../shared/js/auth-client.js"></script>
-    <script>
+    <script>        // Listen for silver awards from auto-mode
+        window.AuthClient.on('silver:awarded', (data) => {
+            console.log('[Service] 🎉 Silver awarded!', data);
+            // Update assets if rendered
+            if (window.AuthClient.isAuth()) {
+                const assets = window.AuthClient.getAssets();
+                if (document.querySelector('.balance')) {
+                    const balanceHtml = `Codes: ${assets?.codes?.length || 0} | Silver: ${assets?.silver || 0} | Gold: ${assets?.gold || 0}`;
+                    document.querySelector('.balance').innerHTML = balanceHtml;
+                }
+            }
+            // Show notification
+            const notification = document.createElement('div');
+            notification.innerHTML = `
+                <div style="position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #FFD700, #FFA500); 
+                    color: #333; padding: 20px; border-radius: 10px; font-weight: bold; z-index: 9999; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+                    🎉 You earned ${data.amount} Silver! (Total: ${data.totalAwards})
+                </div>
+            `;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 4000);
+        });
+        
+
         window.AuthClient.on('auth:changed', (state) => {
             if (state.authenticated) {
                 document.getElementById('auth').style.display = 'none';
