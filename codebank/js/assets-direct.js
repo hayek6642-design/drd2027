@@ -74,11 +74,27 @@
         getSnapshot() { return Promise.resolve(window.AppState.assets); }
     };
 
-    // Handle write requests from services
-    window.EventBus.on('assets:update', async ({ type, action, data } = {}) => {
-        if (action === 'add' && data) await window.AssetsManager.writeCode(data);
-        else await window.AssetsManager.sync();
-    });
+    // Handle write requests from services - WITH SAFETY CHECK
+    if (window.EventBus && typeof window.EventBus.on === 'function') {
+        window.EventBus.on('assets:update', async ({ type, action, data } = {}) => {
+            if (action === 'add' && data) await window.AssetsManager.writeCode(data);
+            else await window.AssetsManager.sync();
+        });
+    } else {
+        console.error('[AssetsManager] EventBus not available! Retrying in 500ms...');
+        // Retry after delay
+        setTimeout(() => {
+            if (window.EventBus && typeof window.EventBus.on === 'function') {
+                window.EventBus.on('assets:update', async ({ type, action, data } = {}) => {
+                    if (action === 'add' && data) await window.AssetsManager.writeCode(data);
+                    else await window.AssetsManager.sync();
+                });
+                console.log('[AssetsManager] EventBus subscription successful after retry');
+            } else {
+                console.error('[AssetsManager] EventBus still not available after retry');
+            }
+        }, 500);
+    }
 
     // Legacy shims
     window.writeCodeToSQLite = async function(d) {
