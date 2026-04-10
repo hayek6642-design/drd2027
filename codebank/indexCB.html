@@ -709,6 +709,15 @@
                     <button id="settings-close" class="text-2xl">&times;</button>
                 </div>
                 <div class="space-y-6">
+                    <!-- User Account Info -->
+                    <section id="user-account-section" style="display:none;">
+                        <h3 class="text-xs font-bold text-gray-500 uppercase mb-4" data-i18n="account">Account</h3>
+                        <div class="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-4 text-center">
+                            <div style="font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;" data-i18n="logged_in_as">Logged in as</div>
+                            <div id="user-email-display" style="font-size: 13px; font-weight: 600; color: #00d4ff; word-break: break-all;">Loading...</div>
+                        </div>
+                    </section>
+
                     <section>
                         <h3 class="text-xs font-bold text-gray-500 uppercase mb-4" data-i18n="appearance">Appearance</h3>
                         <div class="bg-white/5 rounded-xl p-4 flex items-center justify-between">
@@ -1216,6 +1225,74 @@
     </script>
 
     <!-- 🌐 CodeBank Multi-Language Support -->
+    <script>
+    // Display logged-in user email
+    function displayUserEmail() {
+        const section = document.getElementById('user-account-section');
+        const emailDisplay = document.getElementById('user-email-display');
+        
+        if (!section || !emailDisplay) return;
+        
+        const email = getUserEmailFromSources();
+        
+        if (email) {
+            emailDisplay.textContent = email;
+            section.style.display = 'block';
+            console.log('[UserDisplay] Showing email:', email);
+        } else {
+            console.warn('[UserDisplay] No email found in auth sources');
+        }
+    }
+
+    function getUserEmailFromSources() {
+        // Source 1: LocalStorage (cached)
+        try {
+            const cached = localStorage.getItem('bankode_user_cache');
+            if (cached) {
+                const user = JSON.parse(cached);
+                if (user.email) return user.email;
+            }
+        } catch (e) {}
+        
+        // Source 2: Session ID from cookie (decode JWT if present)
+        try {
+            const sessionMatch = document.cookie.match(/sessionId=([^;]+)/);
+            if (sessionMatch && sessionMatch[1]) {
+                const sessionData = sessionMatch[1];
+                // Try to decode if it looks like JWT
+                if (sessionData.includes('.')) {
+                    const parts = sessionData.split('.');
+                    if (parts.length >= 2) {
+                        const decoded = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
+                        const payload = JSON.parse(decoded);
+                        if (payload.email) return payload.email;
+                        if (payload.user?.email) return payload.user.email;
+                    }
+                }
+            }
+        } catch (e) {}
+        
+        // Source 3: Check window objects
+        if (window.AuthCore && window.AuthCore.getState) {
+            try {
+                const state = window.AuthCore.getState();
+                if (state?.user?.email) return state.user.email;
+            } catch (e) {}
+        }
+        
+        if (window.currentUser && window.currentUser.email) {
+            return window.currentUser.email;
+        }
+        
+        return null;
+    }
+
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(displayUserEmail, 800);
+    });
+    </script>
+    
     <script src="/codebank/translate.js?v=1"></script>
 </body>
 </html>
