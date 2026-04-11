@@ -84,6 +84,7 @@ import watchdogRoutes from './routes/watchdog.js';
 import battaloodaRouter from './api/routes/battalooda.js';
 import aiRoutes from './api/routes/ai-routes.js';
 import transferApiRouter from './server/routes/transfer-api.js';
+import gamesApiRouter from './server/routes/games-api.js';
 import shotsRouter from './api/modules/shots.js';
 import biometricRouter from './api/modules/biometric.js';
 import gambleRouter from './api/modules/gamble.js';
@@ -323,6 +324,9 @@ app.use('/api/drmail', drmailRouter);
 app.use('/api/quota',  quotaRouter);
 app.use('/api/auto-mode', autoModeRouter);
 app.use('/api/assets', transferApiRouter);
+
+// Register Games Centre routes
+app.use('/api/games', gamesApiRouter);
 
 // AUTH REMOVED — CLEAN RESET
 
