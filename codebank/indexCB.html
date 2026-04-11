@@ -227,6 +227,115 @@
         }
         
         @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Login Overlay */
+        #login-overlay {
+            display: flex;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 100%);
+            z-index: 20000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .login-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 20px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .login-box h1 {
+            font-size: 2.5em;
+            text-align: center;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #00d4ff, #8a2be2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .login-box p {
+            text-align: center;
+            color: #aaa;
+            margin-bottom: 30px;
+            font-size: 0.95em;
+        }
+        
+        .login-box .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .login-box label {
+            display: block;
+            margin-bottom: 8px;
+            color: #ccc;
+            font-size: 0.95em;
+            font-weight: 500;
+        }
+        
+        .login-box input {
+            width: 100%;
+            padding: 12px 14px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 0.95em;
+            transition: all 0.3s;
+        }
+        
+        .login-box input:focus {
+            outline: none;
+            border-color: #00d4ff;
+            background: rgba(0, 212, 255, 0.05);
+        }
+        
+        .login-box input::placeholder {
+            color: #666;
+        }
+        
+        #codebank-login-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #00d4ff, #8a2be2);
+            border: none;
+            color: white;
+            font-weight: bold;
+            font-size: 0.95em;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+        
+        #codebank-login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+        }
+        
+        #codebank-login-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        
+        #codebank-error {
+            display: none;
+            background: rgba(255, 71, 87, 0.1);
+            border: 1px solid #ff4757;
+            color: #ff6b7a;
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -306,6 +415,42 @@
             <iframe id="service-iframe"></iframe>
         </div>
     </div>
+    
+    <!-- CodeBank Login Overlay -->
+    <div id="login-overlay">
+        <div class="login-box">
+            <h1>🏦 CodeBank</h1>
+            <p>Sign in to your account</p>
+            
+            <div id="codebank-error"></div>
+            
+            <form onsubmit="doCodeBankLogin(event)">
+                <div class="form-group">
+                    <label for="codebank-email">Gmail</label>
+                    <input 
+                        type="email" 
+                        id="codebank-email" 
+                        placeholder="your@gmail.com" 
+                        required
+                        autocomplete="email"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="codebank-password">Password</label>
+                    <input 
+                        type="password" 
+                        id="codebank-password" 
+                        placeholder="••••••••" 
+                        required
+                        autocomplete="current-password"
+                    >
+                </div>
+                
+                <button type="submit" id="codebank-login-btn">Sign In</button>
+            </form>
+        </div>
+    </div>
 
     <!-- Load Auth Client -->
     <script src="../shared/js/auth-client.js"></script>
@@ -318,18 +463,56 @@
             const userCard = document.getElementById('user-card');
             const emailDiv = document.getElementById('user-email');
             const logoutBtn = document.getElementById('logout-btn');
+            const loginOverlay = document.getElementById('login-overlay');
             
             if (state.authenticated && state.user) {
                 loading.style.display = 'none';
                 welcome.style.display = 'block';
+                loginOverlay.style.display = 'none';
                 
                 emailDiv.textContent = state.user.email;
                 userCard.style.display = 'block';
                 logoutBtn.style.display = 'block';
             } else if (!state.authenticated && !state.loading) {
-                window.location.href = '/login.html?redirect=' + encodeURIComponent('/codebank/indexCB.html');
+                loading.style.display = 'none';
+                welcome.style.display = 'none';
+                loginOverlay.style.display = 'flex';
+                document.getElementById('codebank-email').focus();
             }
         });
+        
+        // Handle CodeBank login
+        async function doCodeBankLogin(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('codebank-email').value;
+            const password = document.getElementById('codebank-password').value;
+            const errorDiv = document.getElementById('codebank-error');
+            const btn = document.getElementById('codebank-login-btn');
+            
+            btn.disabled = true;
+            btn.textContent = 'Signing in...';
+            errorDiv.style.display = 'none';
+            
+            try {
+                const result = await window.AuthClient.login(email, password);
+                
+                if (result.success) {
+                    // Auth state change will handle the UI update
+                    return;
+                } else {
+                    errorDiv.textContent = result.error || 'Sign in failed. Please try again.';
+                    errorDiv.style.display = 'block';
+                    btn.disabled = false;
+                    btn.textContent = 'Sign In';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Network error. Please try again.';
+                errorDiv.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Sign In';
+            }
+        }
         
         // Open service in modal
         function openService(name, title) {
