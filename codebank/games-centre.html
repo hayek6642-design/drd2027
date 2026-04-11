@@ -322,7 +322,269 @@
 
     <!-- Auth Client -->
     <script src="../shared/js/auth-client.js"></script>
-    <script src="games/game-engine.js"></script>
+
+    <script>
+// ==================== GAME ENGINE (EMBEDDED) ====================
+
+// GAME 1: NUMBER GUESS
+function getNumberGuessGame() {
+    return \`
+        <h2 style="color: #00d4ff; margin-bottom: 20px;">🎯 Number Guess</h2>
+        <p style="color: #aaa; margin-bottom: 20px;">Guess the secret number between 1-100. You have 7 attempts!</p>
+        <div style="background: rgba(0, 212, 255, 0.1); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+            <p style="margin-bottom: 10px;">Attempts Left: <strong id="ng-attempts" style="color: #00d4ff;">7</strong></p>
+            <p style="margin-bottom: 10px;">Current Guess: <strong id="ng-guess" style="color: #aaa;">-</strong></p>
+            <p style="margin-bottom: 0;">Feedback: <strong id="ng-feedback" style="color: #FFD700;">Enter your guess</strong></p>
+        </div>
+        <div style="margin-bottom: 20px;">
+            <input type="number" id="ng-input" min="1" max="100" placeholder="Enter number (1-100)" 
+                style="width: 100%; padding: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(0, 212, 255, 0.3); color: white; border-radius: 8px; font-size: 1em; margin-bottom: 10px;">
+            <button onclick="ngSubmitGuess()" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #00d4ff, #0099cc); color: black; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                Submit Guess
+            </button>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+            <button onclick="ngDifficulty('easy')" style="padding: 10px; background: rgba(0, 212, 255, 0.2); border: 1px solid rgba(0, 212, 255, 0.5); color: #00d4ff; border-radius: 8px; cursor: pointer;">
+                🟢 Easy (1-50)
+            </button>
+            <button onclick="ngDifficulty('hard')" style="padding: 10px; background: rgba(255, 69, 0, 0.2); border: 1px solid rgba(255, 69, 0, 0.5); color: #ff4500; border-radius: 8px; cursor: pointer;">
+                🔴 Hard (1-100)
+            </button>
+        </div>
+        <div style="background: rgba(0, 0, 0, 0.3); padding: 15px; border-radius: 8px;">
+            <p style="font-size: 0.9em; margin-bottom: 10px;">Reward: <span style="color: #FFD700;">5-20 Silver</span></p>
+            <p style="font-size: 0.9em; color: #aaa;">Difficulty affects your reward!</p>
+        </div>
+    \`;
+}
+
+function ngDifficulty(level) {
+    window.ngState.difficulty = level;
+    const max = level === 'easy' ? 50 : 100;
+    window.ngState.secret = Math.floor(Math.random() * max) + 1;
+    window.ngState.attempts = level === 'easy' ? 10 : 7;
+    window.ngState.guesses = [];
+    document.getElementById('ng-attempts').textContent = window.ngState.attempts;
+    document.getElementById('ng-feedback').textContent = \`Guess a number 1-\${max}\`;
+    document.getElementById('ng-feedback').style.color = '#FFD700';
+    document.getElementById('ng-input').max = max;
+    document.getElementById('ng-input').focus();
+}
+
+function ngSubmitGuess() {
+    const input = document.getElementById('ng-input');
+    const guess = parseInt(input.value);
+    if (isNaN(guess) || guess < 1 || guess > 100) {
+        document.getElementById('ng-feedback').textContent = '⚠️ Please enter a valid number';
+        document.getElementById('ng-feedback').style.color = '#ff6b6b';
+        return;
+    }
+    window.ngState.guesses.push(guess);
+    window.ngState.attempts--;
+    document.getElementById('ng-guess').textContent = guess;
+    document.getElementById('ng-attempts').textContent = window.ngState.attempts;
+    const diff = guess - window.ngState.secret;
+    let feedback = '', color = '';
+    if (diff === 0) {
+        const reward = window.ngState.difficulty === 'easy' ? 5 : 20;
+        feedback = \`🎉 CORRECT! You won \${reward} Silver!\`;
+        color = '#4ade80';
+        awardGameReward('silver', reward);
+        setTimeout(() => closeGame(), 2000);
+    } else if (window.ngState.attempts === 0) {
+        feedback = \`💔 Game Over! Secret was \${window.ngState.secret}\`;
+        color = '#ff6b6b';
+        setTimeout(() => closeGame(), 2500);
+    } else {
+        feedback = diff > 0 ? '⬇️ Too High' : '⬆️ Too Low';
+        color = diff > 0 ? '#ff9930' : '#8a2be2';
+    }
+    document.getElementById('ng-feedback').textContent = feedback;
+    document.getElementById('ng-feedback').style.color = color;
+    input.value = '';
+    input.focus();
+}
+
+// GAME 2: DICE ROLLER
+function getDiceRollGame() {
+    return \`
+        <h2 style="color: #00d4ff; margin-bottom: 20px;">🎲 Dice Roller</h2>
+        <p style="color: #aaa; margin-bottom: 20px;">Roll the dice and predict the outcome. Betting game!</p>
+        <div style="background: rgba(0, 212, 255, 0.1); padding: 20px; border-radius: 10px; margin-bottom: 20px; text-align: center;">
+            <p style="margin-bottom: 15px;">Dice Result: <span id="dr-result" style="font-size: 2em; color: #00d4ff;">?</span></p>
+            <p style="margin-bottom: 10px;">Your Prediction: <strong id="dr-prediction" style="color: #aaa;">-</strong></p>
+            <p style="margin-bottom: 0;">Multiplier: <strong id="dr-multiplier" style="color: #FFD700;">0x</strong></p>
+        </div>
+        <p style="color: #aaa; margin-bottom: 15px;">Select your prediction:</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+            <button onclick="drPredict('low')" id="dr-btn-low" style="padding: 15px; background: rgba(0, 212, 255, 0.2); border: 2px solid rgba(0, 212, 255, 0.3); color: #00d4ff; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                📉 Low (1-2)
+            </button>
+            <button onclick="drPredict('mid')" id="dr-btn-mid" style="padding: 15px; background: rgba(0, 212, 255, 0.2); border: 2px solid rgba(0, 212, 255, 0.3); color: #00d4ff; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                ⚖️ Mid (3-4)
+            </button>
+            <button onclick="drPredict('high')" id="dr-btn-high" style="padding: 15px; background: rgba(0, 212, 255, 0.2); border: 2px solid rgba(0, 212, 255, 0.3); color: #00d4ff; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                📈 High (5-6)
+            </button>
+        </div>
+        <div style="background: rgba(0, 0, 0, 0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <p style="font-size: 0.9em; margin-bottom: 5px;">💰 Bet Amount:</p>
+            <input type="number" id="dr-bet" min="1" max="100" value="10" placeholder="Enter bet amount"
+                style="width: 100%; padding: 10px; background: rgba(255,255,255,0.1); border: 1px solid rgba(0, 212, 255, 0.3); color: white; border-radius: 8px; margin-bottom: 10px;">
+            <button onclick="drRoll()" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #FFD700, #FFA500); color: #333; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                🎲 Roll Dice!
+            </button>
+        </div>
+        <div style="font-size: 0.85em; color: #aaa;">
+            <p style="margin-bottom: 8px;">📊 Odds:</p>
+            <p>Low: 2x multiplier | Mid: 1.5x multiplier | High: 2.5x multiplier</p>
+        </div>
+    \`;
+}
+
+function drPredict(prediction) {
+    window.drState = window.drState || {};
+    window.drState.prediction = prediction;
+    document.getElementById('dr-btn-low').style.borderColor = prediction === 'low' ? '#00d4ff' : 'rgba(0, 212, 255, 0.3)';
+    document.getElementById('dr-btn-mid').style.borderColor = prediction === 'mid' ? '#00d4ff' : 'rgba(0, 212, 255, 0.3)';
+    document.getElementById('dr-btn-high').style.borderColor = prediction === 'high' ? '#00d4ff' : 'rgba(0, 212, 255, 0.3)';
+    document.getElementById('dr-prediction').textContent = prediction.toUpperCase();
+}
+
+function drRoll() {
+    window.drState = window.drState || {};
+    if (!window.drState.prediction) { alert('Please select a prediction first!'); return; }
+    const bet = parseInt(document.getElementById('dr-bet').value);
+    if (isNaN(bet) || bet < 1) { alert('Invalid bet amount'); return; }
+    const result = Math.floor(Math.random() * 6) + 1;
+    document.getElementById('dr-result').textContent = result;
+    let category;
+    if (result <= 2) category = 'low';
+    else if (result <= 4) category = 'mid';
+    else category = 'high';
+    const won = category === window.drState.prediction;
+    const multipliers = { low: 2, mid: 1.5, high: 2.5 };
+    const multiplier = multipliers[category];
+    document.getElementById('dr-multiplier').textContent = multiplier + 'x';
+    const resultDiv = document.getElementById('dr-result').parentElement;
+    if (won) {
+        const reward = Math.floor(bet * multiplier);
+        resultDiv.style.background = 'rgba(74, 222, 128, 0.2)';
+        document.getElementById('dr-result').style.color = '#4ade80';
+        setTimeout(() => {
+            awardGameReward('gold', reward > 10 ? reward / 10 : 1);
+            alert(\`🎉 You WON \${reward} Silver!\`);
+            closeGame();
+        }, 1500);
+    } else {
+        resultDiv.style.background = 'rgba(255, 107, 107, 0.2)';
+        document.getElementById('dr-result').style.color = '#ff6b6b';
+        setTimeout(() => {
+            alert(\`💔 You LOST \${bet} Silver. Better luck next time!\`);
+            closeGame();
+        }, 1500);
+    }
+}
+
+// GAME 3: MEMORY MATCH
+function getMemoryMatchGame() {
+    return \`
+        <h2 style="color: #00d4ff; margin-bottom: 20px;">🎴 Memory Match</h2>
+        <p style="color: #aaa; margin-bottom: 20px;">Match pairs of cards. Complete it faster for better rewards!</p>
+        <div style="background: rgba(0, 212, 255, 0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+            <p style="margin-bottom: 10px;">Moves: <strong id="mm-moves" style="color: #00d4ff;">0</strong></p>
+            <p style="margin-bottom: 10px;">Matched: <strong id="mm-matched" style="color: #4ade80;">0</strong> / 8</p>
+            <p style="margin-bottom: 0;">Time: <strong id="mm-time" style="color: #FFD700;">0s</strong></p>
+        </div>
+        <div id="mm-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;"></div>
+        <button onclick="mmReset()" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #8a2be2, #00d4ff); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+            🔄 Reset Game
+        </button>
+        <div style="background: rgba(0, 0, 0, 0.3); padding: 15px; border-radius: 8px; margin-top: 20px;">
+            <p style="font-size: 0.9em; margin-bottom: 5px;">🏆 Rewards:</p>
+            <p style="font-size: 0.9em; color: #aaa;">Complete fast = more Silver! Perfect match = Bonus Gold!</p>
+        </div>
+    \`;
+}
+
+function mmReset() {
+    const emojis = ['🌟', '🎈', '🎭', '🎪', '🎨', '🎬', '🎸', '🎮'];
+    const cards = [...emojis, ...emojis].sort(() => Math.random() - 0.5);
+    window.mmState = { cards, flipped: [], matched: [], moves: 0, startTime: Date.now(), gameActive: true };
+    renderMemoryGrid();
+    startMemoryTimer();
+}
+
+function renderMemoryGrid() {
+    const grid = document.getElementById('mm-grid');
+    grid.innerHTML = '';
+    window.mmState.cards.forEach((emoji, index) => {
+        const card = document.createElement('div');
+        card.style.cssText = \`aspect-ratio: 1; background: linear-gradient(135deg, #00d4ff, #0099cc); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 2em; cursor: pointer; user-select: none; transition: all 0.2s; border: 2px solid rgba(0, 212, 255, 0.5);\`;
+        card.textContent = window.mmState.matched.includes(index) ? emoji : '?';
+        card.style.opacity = window.mmState.matched.includes(index) ? '1' : '0.8';
+        card.onclick = () => mmFlipCard(index, card);
+        grid.appendChild(card);
+    });
+}
+
+function mmFlipCard(index, cardElement) {
+    if (!window.mmState.gameActive || window.mmState.flipped.includes(index) || window.mmState.matched.includes(index)) return;
+    window.mmState.flipped.push(index);
+    cardElement.textContent = window.mmState.cards[index];
+    cardElement.style.background = 'rgba(0, 212, 255, 0.3)';
+    if (window.mmState.flipped.length === 2) {
+        window.mmState.gameActive = false;
+        window.mmState.moves++;
+        document.getElementById('mm-moves').textContent = window.mmState.moves;
+        const [idx1, idx2] = window.mmState.flipped;
+        setTimeout(() => {
+            if (window.mmState.cards[idx1] === window.mmState.cards[idx2]) {
+                window.mmState.matched.push(idx1, idx2);
+                document.getElementById('mm-matched').textContent = window.mmState.matched.length / 2;
+                if (window.mmState.matched.length === 16) mmGameComplete();
+                window.mmState.flipped = [];
+                window.mmState.gameActive = true;
+                renderMemoryGrid();
+            } else {
+                window.mmState.flipped = [];
+                window.mmState.gameActive = true;
+                renderMemoryGrid();
+            }
+        }, 600);
+    }
+}
+
+function startMemoryTimer() {
+    const timerInterval = setInterval(() => {
+        if (!window.mmState || !window.mmState.gameActive) { clearInterval(timerInterval); return; }
+        const elapsed = Math.floor((Date.now() - window.mmState.startTime) / 1000);
+        document.getElementById('mm-time').textContent = elapsed + 's';
+    }, 100);
+}
+
+function mmGameComplete() {
+    window.mmState.gameActive = false;
+    const time = Math.floor((Date.now() - window.mmState.startTime) / 1000);
+    const moves = window.mmState.moves;
+    let silverReward = Math.max(10, 30 - moves);
+    let goldReward = time < 60 ? 1 : 0;
+    awardGameReward('silver', silverReward);
+    if (goldReward > 0) awardGameReward('gold', goldReward);
+    const bonus = goldReward > 0 ? '👑 BONUS GOLD EARNED!' : '';
+    alert(\`🎉 COMPLETED!\\nTime: \${time}s | Moves: \${moves}\\nRewarded: \${silverReward} Silver \${bonus}\`);
+    closeGame();
+}
+
+function awardGameReward(type, amount) {
+    window.dispatchEvent(new CustomEvent('game:reward', {
+        detail: { type, amount, timestamp: new Date().toISOString() }
+    }));
+    if (window.AuthClient?.awardAsset) {
+        window.AuthClient.awardAsset(type, amount);
+    }
+}
+    </script>
 
     <script>
         // Games Centre State
