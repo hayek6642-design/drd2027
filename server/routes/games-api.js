@@ -284,4 +284,22 @@ router.get('/leaderboard', async (req, res) => {
     }
 });
 
+/**
+ * GET /api/games/online-players
+ * Get count of online players in games hub
+ */
+router.get('/online-players', async (req, res) => {
+    try {
+        // This is a placeholder - actual count comes from WebSocket connections
+        // Games Hub tracks this via Socket.io connections
+        res.json({
+            count: 0, // Real count would come from the GamesHub instance
+            message: 'Online player count from Games Hub'
+        });
+    } catch (error) {
+        console.error('Online players error:', error);
+        res.status(500).json({ error: 'Failed to fetch online players', details: error.message });
+    }
+});
+
 export default router;

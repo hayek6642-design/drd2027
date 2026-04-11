@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Games Centre - Social Gaming Hub</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: #0a0a0f;
+            color: #fff;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* Main Grid Layout */
+        .hub-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            grid-template-rows: 60px 1fr 80px;
+            height: 100vh;
+            gap: 1px;
+            background: #1a1a2e;
+        }
+        
+        /* Header */
+        .hub-header {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid rgba(0, 212, 255, 0.3);
+        }
+        
+        .hub-title {
+            font-size: 20px;
+            background: linear-gradient(135deg, #00d4ff 0%, #ff9f43 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: bold;
+        }
+        
+        .hub-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+        }
+        
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .stat-value {
+            color: #00d4ff;
+            font-weight: bold;
+        }
+        
+        /* Left Sidebar: Chat + Social */
+        .social-panel {
+            background: #0f0f1a;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(0, 212, 255, 0.2);
+        }
+        
+        .panel-tabs {
+            display: flex;
+            background: rgba(0,0,0,0.3);
+        }
+        
+        .panel-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        
+        .panel-tab:hover { background: rgba(255,255,255,0.05); }
+        .panel-tab.active {
+            border-bottom-color: #00d4ff;
+            color: #00d4ff;
+            background: rgba(0, 212, 255, 0.1);
+        }
+        
+        .panel-content {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .tab-content {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            overflow-y: auto;
+            padding: 15px;
+            display: none;
+        }
+        
+        .tab-content.active { display: block; }
+        
+        /* Chat Styles */
+        .chat-messages {
+            height: calc(100% - 120px);
+            overflow-y: auto;
+            margin-bottom: 15px;
+        }
+        
+        .chat-message {
+            margin-bottom: 12px;
+            padding: 10px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            border-left: 3px solid #00d4ff;
+        }
+        
+        .chat-message.system {
+            border-left-color: #ff9f43;
+            background: rgba(255, 159, 67, 0.1);
+        }
+        
+        .chat-user {
+            font-size: 12px;
+            color: #00d4ff;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        
+        .chat-text { font-size: 13px; line-height: 1.4; }
+        
+        .chat-input-area {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .chat-input {
+            flex: 1;
+            padding: 12px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: white;
+            outline: none;
+        }
+        
+        .chat-input:focus { border-color: #00d4ff; }
+        
+        .chat-send {
+            padding: 12px 20px;
+            background: #00d4ff;
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        /* Voice Chat */
+        .voice-users {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .voice-user {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .voice-user:hover { background: rgba(255,255,255,0.1); }
+        .voice-user.speaking {
+            background: rgba(0, 212, 255, 0.2);
+            border: 1px solid #00d4ff;
+        }
+        
+        .voice-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00d4ff, #8a2be2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        
+        .voice-info { flex: 1; }
+        .voice-name { font-weight: bold; font-size: 14px; }
+        .voice-status { font-size: 11px; color: #888; }
+        
+        .voice-controls {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .voice-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .voice-btn.mute { background: #ff4757; }
+        .voice-btn.deafen { background: #ff9f43; }
+        
+        /* Gamble System */
+        .gamble-panel {
+            padding: 15px;
+        }
+        
+        .bet-display {
+            background: linear-gradient(135deg, rgba(0,212,255,0.1), rgba(138,43,226,0.1));
+            border: 1px solid rgba(0,212,255,0.3);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .bet-amount {
+            font-size: 32px;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+        
+        .bet-label { font-size: 12px; color: #888; text-transform: uppercase; }
+        
+        .bet-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .bet-btn {
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .bet-btn.raise {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: white;
+        }
+        
+        .bet-btn.fold {
+            background: linear-gradient(135deg, #ff4757, #cc3333);
+            color: white;
+        }
+        
+        .bet-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
+        
+        /* Main Game Stage */
+        .game-stage {
+            background: #0a0a0f;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .game-selector {
+            display: flex;
+            gap: 10px;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            overflow-x: auto;
+        }
+        
+        .game-btn {
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .game-btn:hover { background: rgba(255,255,255,0.1); }
+        .game-btn.active {
+            background: rgba(0, 212, 255, 0.2);
+            border-color: #00d4ff;
+            color: #00d4ff;
+        }
+        
+        .game-btn .players {
+            font-size: 11px;
+            background: rgba(0,0,0,0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        
+        /* Game Iframe Container */
+        .game-viewport {
+            flex: 1;
+            position: relative;
+            background: #000;
+        }
+        
+        #game-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+        }
+        
+        .game-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        
+        .game-overlay.hidden { display: none; }
+        
+        .game-lobby {
+            text-align: center;
+            max-width: 600px;
+        }
+        
+        .game-lobby h2 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #00d4ff, #ff9f43);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .game-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .game-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .game-card:hover {
+            transform: translateY(-5px);
+            background: rgba(0, 212, 255, 0.1);
+            border-color: #00d4ff;
+        }
+        
+        .game-icon { font-size: 40px; margin-bottom: 10px; }
+        .game-name { font-weight: bold; margin-bottom: 5px; }
+        .game-desc { font-size: 12px; color: #888; }
+        
+        /* Bottom Control Bar */
+        .control-bar {
+            background: #0f0f1a;
+            border-top: 1px solid rgba(0, 212, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+        
+        .wallet-display {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .wallet-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+        }
+        
+        .wallet-icon { font-size: 18px; }
+        .wallet-value { font-weight: bold; color: #00d4ff; }
+        
+        .game-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .control-btn {
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+        
+        .control-btn:hover { background: rgba(255,255,255,0.2); }
+        .control-btn.leave { background: #ff4757; }
+        .control-btn.leave:hover { background: #ff6b81; }
+        
+        /* Scrollbars */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+        ::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.3); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0,212,255,0.5); }
+        
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .live-indicator {
+            width: 8px;
+            height: 8px;
+            background: #4ade80;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="hub-container">
+        <!-- Header -->
+        <header class="hub-header">
+            <div class="hub-title">🎮 Games Centre Hub</div>
+            <div class="hub-stats">
+                <div class="stat-item">
+                    <span class="live-indicator"></span>
+                    <span>Online: <span class="stat-value" id="online-count">0</span></span>
+                </div>
+                <div class="stat-item">
+                    <span>🎲 Active Games: <span class="stat-value" id="active-games">0</span></span>
+                </div>
+                <div class="stat-item">
+                    <span>💬 Messages: <span class="stat-value" id="msg-count">0</span></span>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Left Sidebar: Social Features -->
+        <aside class="social-panel">
+            <div class="panel-tabs">
+                <div class="panel-tab active" onclick="switchPanelTab('chat')">💬 Chat</div>
+                <div class="panel-tab" onclick="switchPanelTab('voice')">🎤 Voice</div>
+                <div class="panel-tab" onclick="switchPanelTab('gamble')">🎲 Bet</div>
+            </div>
+            
+            <div class="panel-content">
+                <!-- Text Chat -->
+                <div id="tab-chat" class="tab-content active">
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="chat-message system">
+                            <div class="chat-text">Welcome to Games Centre! Chat with players across all games.</div>
+                        </div>
+                    </div>
+                    <div class="chat-input-area">
+                        <input type="text" class="chat-input" id="chat-input" 
+                               placeholder="Type message..." 
+                               onkeypress="if(event.key==='Enter') sendChat()">
+                        <button class="chat-send" onclick="sendChat()">Send</button>
+                    </div>
+                </div>
+                
+                <!-- Voice Chat -->
+                <div id="tab-voice" class="tab-content">
+                    <div class="voice-users" id="voice-users">
+                        <!-- Populated dynamically -->
+                    </div>
+                    <div style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 10px;">
+                        <div style="font-size: 12px; color: #888; margin-bottom: 10px;">Your Controls</div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="voice-btn mute" onclick="toggleMute()" id="mute-btn">🎤</button>
+                            <button class="voice-btn deafen" onclick="toggleDeafen()" id="deafen-btn">🔊</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gamble/Bet Panel -->
+                <div id="tab-gamble" class="tab-content">
+                    <div class="gamble-panel">
+                        <div class="bet-display">
+                            <div class="bet-label">Current Pot / Your Bet</div>
+                            <div class="bet-amount" id="current-bet">0</div>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <div style="font-size: 12px; color: #888; margin-bottom: 8px;">Quick Bet</div>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button onclick="setBet(1)" class="bet-btn" style="padding: 8px 15px; font-size: 12px;">1 Code</button>
+                                <button onclick="setBet(5)" class="bet-btn" style="padding: 8px 15px; font-size: 12px;">5 Codes</button>
+                                <button onclick="setBet(10)" class="bet-btn" style="padding: 8px 15px; font-size: 12px;">10 Codes</button>
+                            </div>
+                        </div>
+                        
+                        <div class="bet-actions">
+                            <button class="bet-btn raise" onclick="placeBet('raise')">📈 Raise</button>
+                            <button class="bet-btn fold" onclick="placeBet('fold')">📉 Fold</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Main Game Stage -->
+        <main class="game-stage">
+            <!-- Game Selector -->
+            <div class="game-selector" id="game-selector">
+                <button class="game-btn active" onclick="showLobby()">
+                    🏠 Lobby
+                </button>
+                <button class="game-btn" onclick="loadGame('tictactoe')">
+                    ⭕ Tic-Tac-Toe <span class="players">12</span>
+                </button>
+                <button class="game-btn" onclick="loadGame('chess')">
+                    ♟️ Chess <span class="players">8</span>
+                </button>
+                <button class="game-btn" onclick="loadGame('poker')">
+                    🃏 Poker <span class="players">24</span>
+                </button>
+                <button class="game-btn" onclick="loadGame('slots')">
+                    🎰 Slots <span class="players">45</span>
+                </button>
+                <button class="game-btn" onclick="loadGame('roulette')">
+                    🎡 Roulette <span class="players">18</span>
+                </button>
+            </div>
+            
+            <!-- Game Viewport -->
+            <div class="game-viewport">
+                <!-- Lobby Overlay -->
+                <div id="game-lobby" class="game-overlay">
+                    <div class="game-lobby">
+                        <h2>🎮 Select a Game</h2>
+                        <p style="color: #888; margin-bottom: 10px;">All games support chat, voice, and betting</p>
+                        
+                        <div class="game-list">
+                            <div class="game-card" onclick="loadGame('tictactoe')">
+                                <div class="game-icon">⭕</div>
+                                <div class="game-name">Tic-Tac-Toe</div>
+                                <div class="game-desc">Classic strategy game</div>
+                            </div>
+                            <div class="game-card" onclick="loadGame('chess')">
+                                <div class="game-icon">♟️</div>
+                                <div class="game-name">Chess</div>
+                                <div class="game-desc">Battle of minds</div>
+                            </div>
+                            <div class="game-card" onclick="loadGame('poker')">
+                                <div class="game-icon">🃏</div>
+                                <div class="game-name">Poker</div>
+                                <div class="game-desc">Texas Hold'em</div>
+                            </div>
+                            <div class="game-card" onclick="loadGame('slots')">
+                                <div class="game-icon">🎰</div>
+                                <div class="game-name">Slots</div>
+                                <div class="game-desc">Test your luck</div>
+                            </div>
+                            <div class="game-card" onclick="loadGame('roulette')">
+                                <div class="game-icon">🎡</div>
+                                <div class="game-name">Roulette</div>
+                                <div class="game-desc">Spin to win</div>
+                            </div>
+                            <div class="game-card" onclick="loadGame('blackjack')">
+                                <div class="game-icon">🃏</div>
+                                <div class="game-name">Blackjack</div>
+                                <div class="game-desc">Beat the dealer</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Game Iframe -->
+                <iframe id="game-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+            </div>
+        </main>
+        
+        <!-- Bottom Control Bar -->
+        <footer class="control-bar">
+            <div class="wallet-display">
+                <div class="wallet-item">
+                    <span class="wallet-icon">🔷</span>
+                    <span>Codes: <span class="wallet-value" id="wallet-codes">0</span></span>
+                </div>
+                <div class="wallet-item">
+                    <span class="wallet-icon">⚪</span>
+                    <span>Silver: <span class="wallet-value" id="wallet-silver">0</span></span>
+                </div>
+                <div class="wallet-item">
+                    <span class="wallet-icon">🟡</span>
+                    <span>Gold: <span class="wallet-value" id="wallet-gold">0</span></span>
+                </div>
+            </div>
+            
+            <div class="game-controls">
+                <button class="control-btn" onclick="toggleFullscreen()">
+                    ⛶ Fullscreen
+                </button>
+                <button class="control-btn" onclick="showRules()">
+                    📜 Rules
+                </button>
+                <button class="control-btn leave" onclick="leaveGame()">
+                    🚪 Leave Game
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../shared/js/auth-client.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <script>
+        // Hub State
+        const HubState = {
+            currentGame: null,
+            user: null,
+            socket: null,
+            voice: {
+                muted: false,
+                deafened: false,
+                connected: false
+            },
+            bet: {
+                current: 0,
+                pot: 0
+            }
+        };
+        
+        // Initialize
+        async function initHub() {
+            // Check auth
+            if (!window.AuthClient || !window.AuthClient.isAuth()) {
+                window.location.href = '/login.html?redirect=' + encodeURIComponent(location.href);
+                return;
+            }
+            
+            HubState.user = window.AuthClient.getUser();
+            updateWallet();
+            
+            // Connect to real-time server (WebSocket)
+            connectSocket();
+            
+            // Initialize voice chat (WebRTC)
+            initVoiceChat();
+            
+            // Load initial player list
+            loadOnlinePlayers();
+            
+            console.log('[GamesHub] Initialized for user:', HubState.user.email);
+        }
+        
+        // Socket.io Connection
+        function connectSocket() {
+            HubState.socket = io('/games-hub', {
+                auth: { userId: HubState.user.id }
+            });
+            
+            HubState.socket.on('connect', () => {
+                console.log('[Socket] Connected to Games Hub');
+                HubState.socket.emit('join-hub', { userId: HubState.user.id });
+            });
+            
+            // Global chat
+            HubState.socket.on('chat-message', (data) => {
+                displayChatMessage(data.user, data.message, data.type);
+            });
+            
+            // Voice state updates
+            HubState.socket.on('voice-users', (users) => {
+                updateVoiceUsers(users);
+            });
+            
+            // Betting updates
+            HubState.socket.on('bet-update', (data) => {
+                HubState.bet.pot = data.pot;
+                document.getElementById('current-bet').textContent = data.pot;
+            });
+            
+            // Player count updates
+            HubState.socket.on('stats', (stats) => {
+                document.getElementById('online-count').textContent = stats.online;
+                document.getElementById('active-games').textContent = stats.games;
+            });
+        }
+        
+        // Panel Tab Switching
+        function switchPanelTab(tab) {
+            document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+        }
+        
+        // Chat Functions
+        function sendChat() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Send via socket
+            if (HubState.socket) {
+                HubState.socket.emit('chat-message', {
+                    user: HubState.user.username || HubState.user.email,
+                    message: message,
+                    game: HubState.currentGame || 'lobby'
+                });
+            }
+            
+            // Display locally
+            displayChatMessage('You', message, 'self');
+            input.value = '';
+        }
+        
+        function displayChatMessage(user, message, type = 'normal') {
+            const container = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = 'chat-message ' + (type === 'system' ? 'system' : '');
+            div.innerHTML = `
+                <div class="chat-user">${user}</div>
+                <div class="chat-text">${escapeHtml(message)}</div>
+            `;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+            
+            // Update count
+            const count = document.getElementById('msg-count');
+            count.textContent = parseInt(count.textContent) + 1;
+        }
+        
+        // Voice Chat (WebRTC)
+        async function initVoiceChat() {
+            // Request microphone permission
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                HubState.voice.stream = stream;
+                HubState.voice.connected = true;
+                
+                // Join voice channel
+                if (HubState.socket) {
+                    HubState.socket.emit('join-voice', { userId: HubState.user.id });
+                }
+                
+            } catch (err) {
+                console.log('[Voice] Microphone access denied or unavailable');
+            }
+        }
+        
+        function updateVoiceUsers(users) {
+            const container = document.getElementById('voice-users');
+            container.innerHTML = users.map(u => `
+                <div class="voice-user ${u.speaking ? 'speaking' : ''}" onclick="toggleMuteUser('${u.id}')">
+                    <div class="voice-avatar">${u.avatar || '👤'}</div>
+                    <div class="voice-info">
+                        <div class="voice-name">${u.name}</div>
+                        <div class="voice-status">${u.speaking ? '🔊 Speaking...' : (u.muted ? '🔇 Muted' : '⏸️ Idle')}</div>
+                    </div>
+                    <div class="voice-controls">
+                        ${u.muted ? '🔇' : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function toggleMute() {
+            HubState.voice.muted = !HubState.voice.muted;
+            document.getElementById('mute-btn').textContent = HubState.voice.muted ? '🔇' : '🎤';
+            document.getElementById('mute-btn').classList.toggle('mute', HubState.voice.muted);
+            
+            if (HubState.socket) {
+                HubState.socket.emit('voice-state', { muted: HubState.voice.muted });
+            }
+        }
+        
+        function toggleDeafen() {
+            HubState.voice.deafened = !HubState.voice.deafened;
+            document.getElementById('deafen-btn').textContent = HubState.voice.deafened ? '🔇' : '🔊';
+            document.getElementById('deafen-btn').classList.toggle('deafen', HubState.voice.deafened);
+        }
+        
+        // Betting System
+        function setBet(amount) {
+            HubState.bet.current = amount;
+            document.getElementById('current-bet').textContent = amount;
+        }
+        
+        function placeBet(action) {
+            if (!HubState.currentGame) {
+                alert('Join a game first!');
+                return;
+            }
+            
+            if (HubState.socket) {
+                HubState.socket.emit('place-bet', {
+                    action: action,
+                    amount: HubState.bet.current,
+                    game: HubState.currentGame,
+                    userId: HubState.user.id
+                });
+            }
+        }
+        
+        // Game Loading
+        function showLobby() {
+            document.getElementById('game-lobby').classList.remove('hidden');
+            document.getElementById('game-iframe').src = '';
+            HubState.currentGame = null;
+            
+            // Update active button
+            document.querySelectorAll('.game-btn').forEach(b => b.classList.remove('active'));
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
+        }
+        
+        function loadGame(gameId) {
+            console.log('[GamesHub] Loading game:', gameId);
+            
+            // Hide lobby
+            document.getElementById('game-lobby').classList.add('hidden');
+            
+            // Load game in iframe
+            const iframe = document.getElementById('game-iframe');
+            iframe.src = `/games/${gameId}/index.html?hub=true&user=${HubState.user.id}`;
+            
+            HubState.currentGame = gameId;
+            
+            // Update buttons
+            document.querySelectorAll('.game-btn').forEach(b => b.classList.remove('active'));
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
+            
+            // Notify server
+            if (HubState.socket) {
+                HubState.socket.emit('join-game', { game: gameId });
+            }
+            
+            // Post-message API for game iframe
+            iframe.onload = () => {
+                iframe.contentWindow.postMessage({
+                    type: 'hub:init',
+                    user: HubState.user,
+                    wallet: {
+                        codes: document.getElementById('wallet-codes').textContent,
+                        silver: document.getElementById('wallet-silver').textContent,
+                        gold: document.getElementById('wallet-gold').textContent
+                    }
+                }, '*');
+            };
+        }
+        
+        // Listen for messages from game iframe
+        window.addEventListener('message', (e) => {
+            if (e.data.type === 'game:bet') {
+                // Game requesting bet placement
+                placeBet(e.data.action);
+            }
+            else if (e.data.type === 'game:chat') {
+                // Game sending chat
+                displayChatMessage(e.data.user, e.data.message, 'game');
+            }
+            else if (e.data.type === 'game:result') {
+                // Game ended, update wallet
+                updateWallet();
+            }
+        });
+        
+        // Wallet
+        async function updateWallet() {
+            const assets = window.AuthClient.getAssets();
+            if (assets) {
+                document.getElementById('wallet-codes').textContent = assets.codes?.length || 0;
+                document.getElementById('wallet-silver').textContent = 
+                    assets.silver?.reduce((a,b) => a + (b.amount || 0), 0) || 0;
+                document.getElementById('wallet-gold').textContent = 
+                    assets.gold?.reduce((a,b) => a + (b.amount || 0), 0) || 0;
+            }
+        }
+        
+        // Controls
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+        
+        function showRules() {
+            alert('Game rules would open in a modal');
+        }
+        
+        function leaveGame() {
+            if (confirm('Leave current game?')) {
+                showLobby();
+                document.querySelectorAll('.game-btn')[0].click();
+            }
+        }
+        
+        // Utilities
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function loadOnlinePlayers() {
+            // Fetch from API
+            fetch('/api/games/online-players')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('online-count').textContent = data.count;
+                })
+                .catch(err => console.log('[API] Could not load online players:', err));
+        }
+        
+        // Init on page load
+        window.addEventListener('load', initHub);
+    </script>
+</body>
+</html>

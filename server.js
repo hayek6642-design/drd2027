@@ -88,6 +88,7 @@ import gamesApiRouter from './server/routes/games-api.js';
 import shotsRouter from './api/modules/shots.js';
 import biometricRouter from './api/modules/biometric.js';
 import gambleRouter from './api/modules/gamble.js';
+import { GamesHub } from './server/websocket/games-hub.js';
 import sammAutoRouter from './api/modules/samma3ny-automode.js';
 import likesRouter from './api/modules/likes.js';
 import drmailRouter from './api/modules/drmail.js';
@@ -5457,6 +5458,15 @@ server.once('listening', async () => {
 
     await __startEventProcessor();
     await ensureQarsanVirtualUsers();
+    
+    // Initialize Games Hub WebSocket
+    try {
+      const gamesHub = new GamesHub(server);
+      console.log('[OK] [GamesHub] WebSocket server initialized');
+    } catch (hubErr) {
+      console.error('[WARN] [GamesHub] Failed to initialize WebSocket:', hubErr.message);
+    }
+    
     console.log('[OK] [INIT] All systems ready');
   } catch (err) {
     console.error('[ERROR] [INIT] Startup sequence failed:', err);
