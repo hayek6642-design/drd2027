@@ -1,0 +1,196 @@
+/* Zagel Visual Styles */
+
+.zagel-flying {
+  position: fixed;
+  top: 20px;
+  right: -400px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  z-index: 9999;
+  transition: transform 0.6s ease;
+}
+
+.zagel-flying.active {
+  transform: translateX(-420px);
+}
+
+.zagel-flying.leaving {
+  transform: translateX(0);
+  opacity: 0;
+}
+
+.zagel-bird {
+  font-size: 50px;
+  animation: wingFlap 0.3s infinite;
+  filter: drop-shadow(0 0 10px rgba(255,105,180,0.5));
+}
+
+@keyframes wingFlap {
+  0%, 100% { transform: rotate(-10deg) translateY(0); }
+  50% { transform: rotate(10deg) translateY(-5px); }
+}
+
+.zagel-speech-bubble {
+  background: linear-gradient(135deg, #ff69b4, #ff1493);
+  color: white;
+  padding: 15px 20px;
+  border-radius: 20px 20px 20px 0;
+  box-shadow: 0 5px 20px rgba(255,20,147,0.3);
+  max-width: 300px;
+  animation: slideIn 0.4s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.zagel-header {
+  font-size: 12px;
+  opacity: 0.9;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.zagel-body {
+  font-size: 14px;
+  font-weight: bold;
+  line-height: 1.4;
+}
+
+/* Thinking indicator */
+#zagel-thinking {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.8);
+  color: #ff69b4;
+  padding: 15px 25px;
+  border-radius: 25px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 9998;
+  animation: popIn 0.3s ease;
+}
+
+@keyframes popIn {
+  from {
+    transform: translateX(-50%) scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.thinking-dots span {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #ff69b4;
+  border-radius: 50%;
+  animation: bounce 1s infinite;
+  margin: 0 2px;
+}
+
+.thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+/* Trigger button */
+#zagel-trigger {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff69b4, #ff1493);
+  border: 3px solid white;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 5px 25px rgba(255,105,180,0.4);
+  transition: all 0.3s;
+  z-index: 100;
+}
+
+#zagel-trigger:hover {
+  transform: scale(1.1);
+  box-shadow: 0 8px 35px rgba(255,105,180,0.5);
+}
+
+#zagel-trigger.listening {
+  animation: pulse-pink 1s infinite;
+}
+
+@keyframes pulse-pink {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,105,180,0.7); }
+  50% { box-shadow: 0 0 0 20px rgba(255,105,180,0); }
+}
+
+/* Notifications */
+.zagel-notification {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100px);
+  background: rgba(0,0,0,0.9);
+  color: #ff69b4;
+  padding: 15px 25px;
+  border-radius: 30px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 10000;
+  transition: transform 0.3s ease;
+  border: 2px solid #ff69b4;
+}
+
+.zagel-notification.show {
+  transform: translateX(-50%) translateY(0);
+}
+
+.zagel-notif-icon {
+  font-size: 20px;
+  animation: bounce 1s infinite;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .zagel-flying {
+    top: 10px;
+    right: -350px;
+  }
+
+  .zagel-flying.active {
+    transform: translateX(-360px);
+  }
+
+  .zagel-speech-bubble {
+    max-width: 250px;
+    padding: 12px 15px;
+  }
+
+  #zagel-trigger {
+    width: 60px;
+    height: 60px;
+    bottom: 15px;
+    right: 15px;
+  }
+}
