@@ -95,6 +95,8 @@ import drmailRouter from './api/modules/drmail.js';
 import quotaRouter from './api/modules/quota.js';
 import autoModeRouter from './api/modules/auto-mode.js';
 import aiRouter from './server/routes/ai-routes.js';
+import e7kiRouter from './api/e7ki/index.js';
+import { setupE7kiSocket } from './api/e7ki/socket-io-handlers.js';
 
 import { 
   getAllCountries, 
@@ -174,6 +176,50 @@ app.get('/api/countries/search', (req, res) => {
   }
 });
 
+// Initialize E7ki database tables
+async function initializeE7kiDatabase() {
+  try {
+    // Create tables if they don't exist
+    await query(`
+      CREATE TABLE IF NOT EXISTS e7ki_rooms (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        creator_id TEXT NOT NULL,
+        is_private INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT
+      )
+    `);
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS e7ki_room_members (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        room_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        joined_at TEXT NOT NULL,
+        UNIQUE(room_id, user_id),
+        FOREIGN KEY(room_id) REFERENCES e7ki_rooms(id)
+      )
+    `);
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS e7ki_messages (
+        id TEXT PRIMARY KEY,
+        room_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT,
+        FOREIGN KEY(room_id) REFERENCES e7ki_rooms(id)
+      )
+    `);
+
+    console.log('[E7ki] Database tables initialized');
+  } catch (err) {
+    console.error('[E7ki] Database initialization error:', err);
+  }
+}
 // Get single country details
 app.get('/api/countries/:code', (req, res) => {
   try {
@@ -273,6 +319,9 @@ io.use((socket, next) => {
   }
 });
 
+// Initialize E7ki Socket.IO event handlers
+setupE7kiSocket(io);
+
 // Initialize WatchDog with the dbQuery helper
 watchdog.setDb(query);
 
@@ -296,6 +345,9 @@ app.use('/abc123-unique-test', (req, res, next) => {
 
 // Register WatchDog routes
 app.use('/api/watchdog', watchdogRoutes);
+
+// Register E7ki Messenger API routes
+app.use('/api/e7ki', e7kiRouter);
 
 // Register Trust Engine routes
 app.use('/api/trust', trustRouter);
@@ -2790,11 +2842,11 @@ app.get('/farragna/*', (req, res) => {
 
 // E7ki! routes
 app.get('/e7ki', (req, res) => {
-  res.sendFile(path.join(__dirname, 'services/codebank/e7ki/frontend/build/index.html'));
+  res.sendFile(path.join(__dirname, 'services/e7ki/index.html'));
 });
 
 // Serve E7ki! static files
-app.use('/e7ki/static', express.static(path.join(__dirname, 'services/codebank/e7ki/frontend/build/static'), {
+app.use('/e7ki/static', express.static(path.join(__dirname, 'services/e7ki/static'), {
   maxAge: '1d',
   etag: true,
   lastModified: true
