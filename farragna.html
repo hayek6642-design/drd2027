@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎬 Farragna - Video Sharing Platform</title>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      overflow-x: hidden;
+    }
+    
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: #ff2b54;
+      border-radius: 3px;
+    }
+    
+    /* Loading Animation */
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .loader {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #ff2b54;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+    
+    /* Toast Notifications */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #333;
+      color: white;
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      z-index: 5000;
+      animation: slideIn 0.3s ease-out;
+    }
+    
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    
+    .toast.error {
+      background: #e74c3c;
+    }
+    
+    .toast.success {
+      background: #27ae60;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  
+  <script type="module">
+    // ============================================
+    // 🎬 FARRAGNA APP - Main Entry Point
+    // ============================================
+    
+    // Mock dependencies (replace with real imports)
+    window.AuthCore = {
+      getState: () => ({
+        userId: 'user_' + Math.random().toString(36).substr(2, 9),
+        token: 'mock_token'
+      })
+    }
+    
+    window.StorageManager = {
+      data: new Map(),
+      async save(key, value) {
+        localStorage.setItem(key, JSON.stringify(value))
+        this.data.set(key, value)
+      },
+      async get(key) {
+        const value = localStorage.getItem(key)
+        return value ? JSON.parse(value) : null
+      },
+      async set(key, value) {
+        localStorage.setItem(key, value)
+      },
+      async remove(key) {
+        localStorage.removeItem(key)
+      }
+    }
+    
+    window.NotificationEngine = {
+      notify(userId, options) {
+        console.log('🔔 Notification:', options)
+        
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification(options.title, {
+            body: options.body,
+            icon: options.icon
+          })
+        }
+      }
+    }
+    
+    // Import main modules
+    import { initFarragna } from './farragna-ui.js'
+    import { initAdminSystem } from './farragna-admin.js'
+    
+    // Initialize app
+    document.addEventListener('DOMContentLoaded', async () => {
+      const appContainer = document.getElementById('app')
+      
+      // Request notification permission
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission()
+      }
+      
+      // Initialize Farragna
+      await initFarragna(appContainer)
+      
+      console.log('✅ Farragna app ready!')
+      console.log('👑 TIP: Click "🎬 Farragna" title 7 times for admin dashboard')
+      console.log('🔐 Admin Password: doitasap2025')
+    })
+  </script>
+  
+  <!-- Main app scripts -->
+  <script src="./farragna-core.js"></script>
+  <script src="./farragna-ui.js"></script>
+  <script src="./farragna-admin.js"></script>
+</body>
+</html>
