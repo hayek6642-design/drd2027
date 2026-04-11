@@ -91,22 +91,22 @@
         },
         
         /**
-         * Sign up with email and password
+         * Sign up with email, password, and profile data
          */
-        async signup(email, password) {
+        async signup(signupData) {
             try {
                 const res = await fetch('/api/auth/signup', {
                     method: 'POST',
                     credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
+                    body: JSON.stringify(signupData)
                 });
                 
                 const data = await res.json();
                 
-                if (data.success) {
-                    console.log('[AuthClient] Signup successful, redirecting to login');
-                    this.notify('auth:signup', { email });
+                if (data.status === 'success' || data.success) {
+                    console.log('[AuthClient] Signup successful:', data);
+                    this.notify('auth:signup', { email: signupData.email });
                 }
                 
                 return data;
