@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeBank - Sign Up</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 100%);
+            color: white;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .signup-container {
+            width: 100%;
+            max-width: 450px;
+        }
+        
+        #loading {
+            text-align: center;
+        }
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(0, 212, 255, 0.2);
+            border-top-color: #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        #signup-form {
+            display: none;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 20px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .logo {
+            font-size: 3em;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #00d4ff, #8a2be2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #aaa;
+            margin-bottom: 30px;
+            font-size: 0.95em;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #ccc;
+            font-size: 0.95em;
+            font-weight: 500;
+        }
+        
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 10px;
+            color: white;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #00d4ff;
+            background: rgba(0, 212, 255, 0.05);
+        }
+        
+        input::placeholder {
+            color: #666;
+        }
+        
+        #signup-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #00d4ff, #8a2be2);
+            border: none;
+            color: white;
+            font-weight: bold;
+            font-size: 1em;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+        
+        #signup-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+        }
+        
+        #signup-btn:active {
+            transform: translateY(0);
+        }
+        
+        #signup-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .login-link {
+            text-align: center;
+            margin-top: 20px;
+            color: #aaa;
+        }
+        
+        .login-link a {
+            color: #00d4ff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+        
+        #error-message {
+            display: none;
+            background: rgba(255, 71, 87, 0.1);
+            border: 1px solid #ff4757;
+            color: #ff6b7a;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.95em;
+        }
+        
+        #success-message {
+            display: none;
+            background: rgba(74, 222, 128, 0.1);
+            border: 1px solid #4ade80;
+            color: #86efac;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.95em;
+        }
+
+        .password-strength {
+            margin-top: 8px;
+            font-size: 0.85em;
+            color: #aaa;
+        }
+
+        .password-strength .bar {
+            height: 4px;
+            background: rgba(0, 212, 255, 0.1);
+            border-radius: 2px;
+            margin-top: 4px;
+            overflow: hidden;
+        }
+
+        .password-strength .fill {
+            height: 100%;
+            width: 0%;
+            background: #ff4757;
+            transition: all 0.3s;
+        }
+
+        .password-strength.weak .fill { width: 25%; background: #ff4757; }
+        .password-strength.fair .fill { width: 50%; background: #ffa502; }
+        .password-strength.good .fill { width: 75%; background: #ffb700; }
+        .password-strength.strong .fill { width: 100%; background: #4ade80; }
+    </style>
+</head>
+<body>
+    <div class="signup-container">
+        <div id="loading">
+            <div class="loading-spinner"></div>
+            <p>Loading...</p>
+        </div>
+        
+        <div id="signup-form">
+            <div class="logo">🏦</div>
+            <h1>CodeBank</h1>
+            <p class="subtitle">Create your account</p>
+            
+            <div id="error-message"></div>
+            <div id="success-message"></div>
+            
+            <form onsubmit="doSignup(event)">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        placeholder="you@example.com" 
+                        required
+                        autocomplete="email"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        placeholder="••••••••" 
+                        required
+                        minlength="8"
+                        autocomplete="new-password"
+                        onchange="checkPasswordStrength()"
+                        oninput="checkPasswordStrength()"
+                    >
+                    <div class="password-strength" id="strength">
+                        <span id="strength-text">Weak password</span>
+                        <div class="bar"><div class="fill"></div></div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password-confirm">Confirm Password</label>
+                    <input 
+                        type="password" 
+                        id="password-confirm" 
+                        placeholder="••••••••" 
+                        required
+                        minlength="8"
+                        autocomplete="new-password"
+                    >
+                </div>
+                
+                <button type="submit" id="signup-btn">Create Account</button>
+            </form>
+            
+            <p class="login-link">
+                Already have an account? <a href="/login.html">Sign in here</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Load Auth Client -->
+    <script src="/shared/js/auth-client.js"></script>
+    
+    <script>
+        // Check if already authenticated
+        function init() {
+            // If already logged in, redirect to app
+            if (window.AuthClient.isAuth()) {
+                window.location.href = '/codebank/indexCB.html';
+                return;
+            }
+            
+            // If loading, wait a bit longer
+            if (window.AuthClient.isLoading()) {
+                setTimeout(init, 300);
+                return;
+            }
+            
+            // Show signup form
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('signup-form').style.display = 'block';
+            document.getElementById('email').focus();
+        }
+        
+        // Check password strength
+        function checkPasswordStrength() {
+            const password = document.getElementById('password').value;
+            const strengthDiv = document.getElementById('strength');
+            const strengthText = document.getElementById('strength-text');
+            let strength = 0;
+            
+            // Length check
+            if (password.length >= 8) strength++;
+            if (password.length >= 12) strength++;
+            
+            // Has uppercase
+            if (/[A-Z]/.test(password)) strength++;
+            
+            // Has lowercase
+            if (/[a-z]/.test(password)) strength++;
+            
+            // Has numbers
+            if (/[0-9]/.test(password)) strength++;
+            
+            // Has special chars
+            if (/[!@#$%^&*]/.test(password)) strength++;
+            
+            strengthDiv.className = 'password-strength';
+            
+            if (strength < 2) {
+                strengthDiv.classList.add('weak');
+                strengthText.textContent = 'Weak password';
+            } else if (strength < 3) {
+                strengthDiv.classList.add('fair');
+                strengthText.textContent = 'Fair password';
+            } else if (strength < 4) {
+                strengthDiv.classList.add('good');
+                strengthText.textContent = 'Good password';
+            } else {
+                strengthDiv.classList.add('strong');
+                strengthText.textContent = 'Strong password';
+            }
+        }
+        
+        // Handle signup
+        async function doSignup(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const passwordConfirm = document.getElementById('password-confirm').value;
+            const errorDiv = document.getElementById('error-message');
+            const successDiv = document.getElementById('success-message');
+            const btn = document.getElementById('signup-btn');
+            
+            // Validation
+            if (password !== passwordConfirm) {
+                errorDiv.textContent = 'Passwords do not match';
+                errorDiv.style.display = 'block';
+                successDiv.style.display = 'none';
+                return;
+            }
+            
+            if (password.length < 8) {
+                errorDiv.textContent = 'Password must be at least 8 characters';
+                errorDiv.style.display = 'block';
+                successDiv.style.display = 'none';
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.textContent = 'Creating account...';
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+            
+            try {
+                // Call signup API
+                const res = await fetch('/api/auth/signup', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const result = await res.json();
+                
+                if (result.success) {
+                    successDiv.textContent = 'Account created successfully! Redirecting to login...';
+                    successDiv.style.display = 'block';
+                    
+                    // Redirect to login after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = '/login.html';
+                    }, 2000);
+                } else {
+                    errorDiv.textContent = result.error || 'Sign up failed. Please try again.';
+                    errorDiv.style.display = 'block';
+                    btn.disabled = false;
+                    btn.textContent = 'Create Account';
+                }
+            } catch (err) {
+                console.error('[Signup] Error:', err);
+                errorDiv.textContent = 'Network error. Please check your connection and try again.';
+                errorDiv.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Create Account';
+            }
+        }
+        
+        // Initialize on page load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            setTimeout(init, 500);
+        }
+    </script>
+</body>
+</html>

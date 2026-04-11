@@ -91,6 +91,32 @@
         },
         
         /**
+         * Sign up with email and password
+         */
+        async signup(email, password) {
+            try {
+                const res = await fetch('/api/auth/signup', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    console.log('[AuthClient] Signup successful, redirecting to login');
+                    this.notify('auth:signup', { email });
+                }
+                
+                return data;
+            } catch (err) {
+                console.error('[AuthClient] Signup failed:', err);
+                return { success: false, error: 'Network error' };
+            }
+        },
+        
+        /**
          * Login with email and password
          */
         async login(email, password) {
