@@ -861,7 +861,10 @@ async function sqliteFindUserByEmail(email){
     throw e;
   }
 }
-function memFindUserByEmail(email){ return __authUsers.get(email) || null }
+function memFindUserByEmail(email){ 
+  const normalized = String(email).toLowerCase().trim();
+  return __authUsers.get(normalized) || null 
+}
 async function memCreateUser(email, username, password, profile = {}){
   const normalizedEmail = String(email).toLowerCase().trim();
   const hash = await bcrypt.hash(password, 10); 
