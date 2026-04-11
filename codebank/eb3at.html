@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Eb3at - Share Thoughts</title>
+    <style>
+        body { background: #0f0f0f; color: white; font-family: system-ui; padding: 20px; }
+        .auth { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f0f0f; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
+        .auth button { padding: 15px 40px; background: linear-gradient(135deg, #00d4ff, #8a2be2); border: none; color: white; border-radius: 10px; cursor: pointer; }
+        .app { display: none; }
+        h1 { background: linear-gradient(135deg, #00d4ff, #8a2be2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    </style>
+</head>
+<body>
+    <div id="auth" class="auth">
+        <h2>🔒 Sign In to Eb3at</h2>
+        <button onclick="location.href='/login.html?redirect=/codebank/eb3at.html'">Go to Login</button>
+    </div>
+    
+    <div id="app" class="app">
+        <h1>💭 Eb3at</h1>
+        <p style="color: #aaa;">Share your thoughts and ideas</p>
+    </div>
+
+    <script src="../shared/js/auth-client.js"></script>
+    <script>        // Listen for silver awards from auto-mode
+        window.AuthClient.on('silver:awarded', (data) => {
+            console.log('[Service] 🎉 Silver awarded!', data);
+            // Update assets if rendered
+            if (window.AuthClient.isAuth()) {
+                const assets = window.AuthClient.getAssets();
+                if (document.querySelector('.balance')) {
+                    const balanceHtml = `Codes: ${assets?.codes?.length || 0} | Silver: ${assets?.silver || 0} | Gold: ${assets?.gold || 0}`;
+                    document.querySelector('.balance').innerHTML = balanceHtml;
+                }
+            }
+            // Show notification
+            const notification = document.createElement('div');
+            notification.innerHTML = `
+                <div style="position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #FFD700, #FFA500); 
+                    color: #333; padding: 20px; border-radius: 10px; font-weight: bold; z-index: 9999; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+                    🎉 You earned ${data.amount} Silver! (Total: ${data.totalAwards})
+                </div>
+            `;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 4000);
+        });
+        
+
+        window.AuthClient.on('auth:changed', (state) => {
+            if (state.authenticated) {
+                document.getElementById('auth').style.display = 'none';
+                document.getElementById('app').style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
