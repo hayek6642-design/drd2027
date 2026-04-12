@@ -40,7 +40,17 @@
             console.log('[ServiceLoader] Loading service into iframe:', serviceUrl);
 
             return new Promise((resolve) => {
+                // [EMERGENCY FIX] Add timeout to prevent hanging forever
+                let loadTimeout = setTimeout(() => {
+                    console.error('[ServiceLoader] Iframe load timeout after 15s:', serviceUrl);
+                    // Force cleanup and resolve
+                    this._iframe.onload = null;
+                    this._iframe.onerror = null;
+                    resolve();
+                }, 15000); // 15 second timeout
+                
                 this._iframe.onload = () => {
+                    clearTimeout(loadTimeout);
                     // Expose AppState/EventBus/AuthManager to service via parent reference
                     try {
                         const iwin = this._iframe.contentWindow;
@@ -73,7 +83,11 @@
                     window.EventBus && window.EventBus.dispatch('service:ready', { name: title, url: serviceUrl });
                     resolve();
                 };
-                this._iframe.onerror = () => { resolve(); };
+                this._iframe.onerror = () => {
+                    clearTimeout(loadTimeout);
+                    console.error('[ServiceLoader] Iframe load error:', serviceUrl);
+                    resolve();
+                };
                 this._iframe.src = serviceUrl;
             });
         },

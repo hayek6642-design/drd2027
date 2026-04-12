@@ -12,10 +12,35 @@
     window.AssetsManager = {
         async sync() {
             try {
-                const res = await fetch('/api/codes/list', { credentials: 'include' });
-                if (!res.ok) return null;
-                const data = await res.json();
-                if (!data.success) return null;
+                // [EMERGENCY FIX] Add timeout to prevent hanging forever
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+                
+                try {
+                    const res = await fetch('/api/codes/list', { 
+                        credentials: 'include',
+                        signal: controller.signal 
+                    });
+                    clearTimeout(timeout);
+                    
+                    if (!res.ok) {
+                        console.warn('[AssetsManager] API returned', res.status);
+                        return null;
+                    }
+                    const data = await res.json();
+                    if (!data.success) {
+                        console.warn('[AssetsManager] API returned success:false');
+                        return null;
+                    }
+                } catch(fetchErr) {
+                    clearTimeout(timeout);
+                    if (fetchErr.name === 'AbortError') {
+                        console.error('[AssetsManager] Sync timed out after 8s');
+                    } else {
+                        console.error('[AssetsManager] Fetch error:', fetchErr.message);
+                    }
+                    return null;
+                }
 
                 const rows = Array.isArray(data.codes) ? data.codes : [];
                 const toCode = r => (typeof r === 'string' ? r : r.code);
