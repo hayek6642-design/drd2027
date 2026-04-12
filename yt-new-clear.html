@@ -2358,7 +2358,41 @@
                         
                         // Also proactively send bridge request since iframe may load before listener is ready
                         if (window.DEBUG_MODE) console.log('[SNAPSHOT] Sending proactive assetbus:snapshot');
-                        frame.contentWindow.postMessage({ type: 'assetbus:snapshot', data: out2 }, window.location.origin); } catch (_) { } } } catch (_) { } }); } } catch (_) { }
+                        frame.contentWindow.postMessage({ type: 'assetbus:snapshot', data: out2 }, window.location.origin);
+                        
+                        // [EMERGENCY FIX] Re-send snapshot after assets load
+                        // This ensures iframe gets populated codes, not empty ones
+                        var resendSnapTimeout = setTimeout(function() {
+                            try {
+                                var freshSnap = AssetBus && typeof AssetBus.snapshot === 'function' ? AssetBus.snapshot() : null;
+                                if (freshSnap && frame.contentWindow) {
+                                    var freshOut = sanitizeUISnapshot(Object.assign({}, freshSnap, { source: 'ui' }));
+                                    if (freshOut && (freshOut.codes?.length > 0 || freshOut.silver?.length > 0 || freshOut.gold?.length > 0)) {
+                                        console.log('[SNAPSHOT] Re-sending with populated assets:', freshOut);
+                                        frame.contentWindow.postMessage({ type: 'CODEBANK_ASSETS_SYNC', payload: freshOut }, window.location.origin);
+                                        frame.contentWindow.postMessage({ type: 'assetbus:snapshot', data: freshOut }, window.location.origin);
+                                    }
+                                }
+                            } catch(_) {}
+                        }, 1000);
+                        
+                        // If assets update event fires, send updated snapshot immediately
+                        var assetsUpdateHandler = function(e) {
+                            try {
+                                clearTimeout(resendSnapTimeout);
+                                if (frame.contentWindow) {
+                                    var updatedSnap = AssetBus && typeof AssetBus.snapshot === 'function' ? AssetBus.snapshot() : null;
+                                    if (updatedSnap) {
+                                        var updatedOut = sanitizeUISnapshot(Object.assign({}, updatedSnap, { source: 'ui' }));
+                                        console.log('[SNAPSHOT] Sending after assets:updated event:', updatedOut);
+                                        frame.contentWindow.postMessage({ type: 'CODEBANK_ASSETS_SYNC', payload: updatedOut }, window.location.origin);
+                                        frame.contentWindow.postMessage({ type: 'assetbus:snapshot', data: updatedOut }, window.location.origin);
+                                    }
+                                }
+                            } catch(_) {}
+                        };
+                        try { window.addEventListener('assets:updated', assetsUpdateHandler, { once: true }); } catch(_) {}
+                        } catch (_) { } } } catch (_) { } }); } } catch (_) { }
         })();
     </script>
     <script>
