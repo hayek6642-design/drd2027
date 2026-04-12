@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Chat — Multi-Provider</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    :root {
+      --bg: #0a0a16;
+      --surface: #12122a;
+      --surface2: #1c1c38;
+      --border: rgba(255,255,255,0.07);
+      --accent: #7c3aed;
+      --text: #f0f0ff;
+      --muted: #8888aa;
+    }
+    
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #0d0d22 0%, #130d2e 100%);
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(124,58,237,0.3);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+    
+    .header h1 {
+      font-size: 18px;
+      font-weight: 700;
+      background: linear-gradient(90deg,#7c3aed,#06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .provider-selector {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .provider-selector select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      outline: none;
+    }
+    
+    .provider-selector select:focus {
+      border-color: var(--accent);
+    }
+    
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .message {
+      display: flex;
+      gap: 12px;
+      animation: slideIn 0.3s ease;
+    }
+    
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .message.user { justify-content: flex-end; }
+    
+    .message-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    
+    .message.user .message-avatar {
+      background: var(--accent);
+      color: #fff;
+    }
+    
+    .message.ai .message-avatar {
+      background: #06b6d4;
+      color: #fff;
+    }
+    
+    .message-content {
+      max-width: 70%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+    
+    .message.user .message-content {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    
+    .input-area {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+      display: flex;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    
+    #messageInput {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      padding: 12px 16px;
+      font-size: 14px;
+      outline: none;
+      resize: none;
+      max-height: 100px;
+    }
+    
+    #messageInput:focus {
+      border-color: var(--accent);
+    }
+    
+    #messageInput::placeholder {
+      color: var(--muted);
+    }
+    
+    .send-btn {
+      background: linear-gradient(135deg, var(--accent), #06b6d4);
+      border: none;
+      color: #fff;
+      border-radius: 12px;
+      padding: 12px 24px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: opacity 0.2s;
+      flex-shrink: 0;
+    }
+    
+    .send-btn:hover { opacity: 0.9; }
+    .send-btn:active { opacity: 0.8; }
+    .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .loading {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    
+    .loading span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: blink 1.4s infinite;
+    }
+    
+    .loading span:nth-child(2) { animation-delay: 0.2s; }
+    .loading span:nth-child(3) { animation-delay: 0.4s; }
+    
+    @keyframes blink {
+      0%, 60%, 100% { opacity: 0.3; }
+      30% { opacity: 1; }
+    }
+    
+    /* Scrollbar */
+    .messages::-webkit-scrollbar { width: 6px; }
+    .messages::-webkit-scrollbar-track { background: transparent; }
+    .messages::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 10px; }
+    
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      color: var(--muted);
+      text-align: center;
+      padding: 40px;
+    }
+    
+    .empty-state-icon {
+      font-size: 48px;
+      opacity: 0.5;
+    }
+    
+    .empty-state p {
+      font-size: 14px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div style="font-size: 24px;">💬</div>
+  <h1>AI Chat</h1>
+  <div class="provider-selector">
+    <label for="providerSelect" style="font-size: 12px; color: var(--muted);">Provider:</label>
+    <select id="providerSelect" onchange="changeProvider()">
+      <option value="chatgpt">ChatGPT (OpenAI)</option>
+      <option value="claude">Claude (Anthropic)</option>
+      <option value="gemini">Gemini (Google)</option>
+      <option value="groq">Groq (Fast)</option>
+      <option value="local">Local (Browser)</option>
+    </select>
+  </div>
+</div>
+
+<div class="chat-container">
+  <div class="messages" id="messages">
+    <div class="empty-state">
+      <div class="empty-state-icon">🤖</div>
+      <p>Select an AI provider above and start chatting</p>
+      <p style="font-size: 12px;">Messages are local to your browser unless using external providers</p>
+    </div>
+  </div>
+  
+  <div class="input-area">
+    <textarea id="messageInput" placeholder="Type your message... (Shift+Enter for new line)" rows="1"></textarea>
+    <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+      <span id="sendBtnText">Send</span>
+    </button>
+  </div>
+</div>
+
+<script>
+let currentProvider = 'local';
+let conversationHistory = [];
+let isLoading = false;
+
+// Auto-resize textarea
+const textarea = document.getElementById('messageInput');
+textarea.addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+});
+
+// Send on Ctrl/Cmd+Enter, new line on Shift+Enter
+textarea.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+function changeProvider() {
+  currentProvider = document.getElementById('providerSelect').value;
+  conversationHistory = [];
+  document.getElementById('messages').innerHTML = `
+    <div class="empty-state">
+      <div class="empty-state-icon">🤖</div>
+      <p>Now using: <strong>${document.getElementById('providerSelect').options[document.getElementById('providerSelect').selectedIndex].text}</strong></p>
+      <p style="font-size: 12px;">Start a new conversation</p>
+    </div>
+  `;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('messageInput');
+  const message = input.value.trim();
+  
+  if (!message || isLoading) return;
+  
+  isLoading = true;
+  document.getElementById('sendBtn').disabled = true;
+  
+  // Add user message to UI
+  addMessageUI(message, 'user');
+  input.value = '';
+  input.style.height = 'auto';
+  
+  try {
+    let response;
+    
+    if (currentProvider === 'local') {
+      response = await handleLocalAI(message);
+    } else if (currentProvider === 'chatgpt') {
+      response = await handleChatGPT(message);
+    } else if (currentProvider === 'claude') {
+      response = await handleClaude(message);
+    } else if (currentProvider === 'gemini') {
+      response = await handleGemini(message);
+    } else if (currentProvider === 'groq') {
+      response = await handleGroq(message);
+    }
+    
+    if (response) {
+      addMessageUI(response, 'ai');
+      conversationHistory.push({ role: 'user', content: message });
+      conversationHistory.push({ role: 'assistant', content: response });
+    }
+  } catch (error) {
+    addMessageUI(`❌ Error: ${error.message}`, 'ai');
+  }
+  
+  isLoading = false;
+  document.getElementById('sendBtn').disabled = false;
+  document.getElementById('messageInput').focus();
+}
+
+function addMessageUI(text, role) {
+  const messagesDiv = document.getElementById('messages');
+  
+  // Remove empty state if exists
+  const empty = messagesDiv.querySelector('.empty-state');
+  if (empty) empty.remove();
+  
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `message ${role}`;
+  messageDiv.innerHTML = `
+    <div class="message-avatar">${role === 'user' ? '👤' : '🤖'}</div>
+    <div class="message-content">${escapeHtml(text)}</div>
+  `;
+  
+  messagesDiv.appendChild(messageDiv);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+/* ─ Local AI (Client-side) ─ */
+async function handleLocalAI(message) {
+  // Simple echo + pattern matching
+  const msg = message.toLowerCase();
+  
+  if (msg.includes('hello') || msg.includes('hi')) {
+    return '👋 Hello! I\'m your local AI assistant. I can\'t access external AI services, but I can help with simple questions!';
+  } else if (msg.includes('who are you')) {
+    return '🤖 I\'m your AI Chat assistant. In local mode, I\'m using basic pattern matching. Switch to ChatGPT, Claude, or Gemini for more advanced AI capabilities!';
+  } else if (msg.includes('time')) {
+    return `⏰ Current time: ${new Date().toLocaleTimeString()}`;
+  } else if (msg.includes('date')) {
+    return `📅 Today is: ${new Date().toLocaleDateString()}`;
+  } else if (msg.includes('weather')) {
+    return '🌤️ I can\'t check the weather without external APIs. Try asking ChatGPT or Gemini!';
+  } else {
+    return '💭 I received your message: "' + message + '" - Switch to an external provider for more intelligent responses!';
+  }
+}
+
+/* ─ ChatGPT ─ */
+async function handleChatGPT(message) {
+  // Note: This requires a backend with OpenAI API key
+  // For demo, show placeholder
+  addMessageUI('🔄 Connecting to ChatGPT...', 'ai');
+  
+  // In production, call: fetch('/api/chat/openai', { method: 'POST', body: JSON.stringify({...}) })
+  return 'This would connect to ChatGPT. Set up OpenAI API integration in your backend.';
+}
+
+/* ─ Claude ─ */
+async function handleClaude(message) {
+  addMessageUI('🔄 Connecting to Claude...', 'ai');
+  return 'This would connect to Claude. Set up Anthropic API integration in your backend.';
+}
+
+/* ─ Gemini ─ */
+async function handleGemini(message) {
+  addMessageUI('🔄 Connecting to Gemini...', 'ai');
+  return 'This would connect to Gemini. Set up Google Gemini API integration in your backend.';
+}
+
+/* ─ Groq ─ */
+async function handleGroq(message) {
+  addMessageUI('🔄 Connecting to Groq...', 'ai');
+  return 'This would connect to Groq (ultra-fast LLM). Set up Groq API integration in your backend.';
+}
+
+// Load previous conversations if any
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('ai_chat_history');
+  if (saved) {
+    conversationHistory = JSON.parse(saved);
+  }
+});
+
+// Save on unload
+window.addEventListener('beforeunload', () => {
+  localStorage.setItem('ai_chat_history', JSON.stringify(conversationHistory));
+});
+</script>
+
+</body>
+</html>
