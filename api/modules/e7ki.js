@@ -146,7 +146,7 @@ async function runE7kiSchemaSetup() {
 
   // Then: Add missing columns to existing tables (fix for tables created before migration)
   const columnMigrations = [
-    { table: 'e7ki_conversations', col: 'user_id', type: 'TEXT NOT NULL' },
+    { table: 'e7ki_conversations', col: 'user_id', type: 'TEXT' },
     { table: 'e7ki_messages', col: 'conversation_id', type: 'TEXT' },
     { table: 'zagel_messages', col: 'conversation_id', type: 'TEXT' }
   ]
@@ -160,7 +160,7 @@ async function runE7kiSchemaSetup() {
     }
   }
 
-  // Finally: Create indices (only after tables exist)
+  // Finally: Create indices (only after tables exist with columns)
   const indexMigrations = [
     `CREATE INDEX IF NOT EXISTS idx_e7ki_conversations_user_id ON e7ki_conversations(user_id)`,
     `CREATE INDEX IF NOT EXISTS idx_e7ki_participants_user_id ON e7ki_participants(user_id)`,
@@ -176,11 +176,26 @@ async function runE7kiSchemaSetup() {
     `CREATE INDEX IF NOT EXISTS idx_zagel_avatars_user ON zagel_avatars(user_id)`
   ]
   
+  // Check if column exists before creating index
+  async function columnExists(table, col) {
+    try {
+      const result = await query(`PRAGMA table_info(${table})`, [], { silent: true })
+      return result.rows?.some(r => r.name === col || r[1] === col)
+    } catch { return false }
+  }
+  
   for (const migration of indexMigrations) {
     try {
+      // Extract table and column from index SQL
+      const match = migration.match(/idx_\w+ ON (\w+)\((\w+)\)/)
+      if (match) {
+        const [, table, col] = match
+        const hasColumn = await columnExists(table, col)
+        if (!hasColumn) continue // Skip if column doesn't exist
+      }
       await query(migration)
     } catch (err) {
-      // Ignore index errors
+      // Ignore errors
     }
   }
   
