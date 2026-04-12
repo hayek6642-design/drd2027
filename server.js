@@ -2237,6 +2237,13 @@ app.use(express.static(path.join(__dirname, 'public'), {
   lastModified: true,
 }));
 
+// Serve AI-Hub platforms from codebank/components
+app.use('/ai-hub', express.static(path.join(__dirname, 'codebank', 'components'), {
+  maxAge: '1d',
+  etag: true,
+  lastModified: true,
+}));
+
 // Service-specific routes
 
 // YT-Clear Default Route
