@@ -288,7 +288,7 @@ window._NativeBio = {
         'align-items:center', 'justify-content:center', 'gap:10px'
       ].join(';');
       banner.innerHTML = '<span>📱</span><span>' + msg + '</span>' +
-        '<button onclick="document.getElementById('kickout-banner').remove()" ' +
+        '<button onclick="this.parentElement.remove()" ' +
         'style="background:rgba(255,255,255,0.2);border:none;color:#fff;' +
         'padding:4px 10px;border-radius:4px;cursor:pointer;font-size:13px;margin-left:8px">✕</button>';
       document.body.insertBefore(banner, document.body.firstChild);
@@ -490,9 +490,13 @@ console.log('🔥 Window origin:', window.location.origin);
       } else {
         // Cookie exists — ask the server if it's still valid
         fetch('/api/auth/me', { credentials: 'include' })
-          .then(function(r) { return r.json(); })
+          .then(function(r) { 
+            if (r.status === 200) return r.json();
+            throw new Error('not authenticated');
+          })
           .then(function(data) {
-            if (data.success || data.authenticated || data.ok) {
+            console.log('[Session] /auth/me response:', data);
+            if (data.success && data.user) {
               // 🔄 SYNC ASSETS ON SESSION RESTORE
               if (window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
                 console.log('[Session] Syncing restored session assets...');
@@ -501,6 +505,7 @@ console.log('🔥 Window origin:', window.location.origin);
               window.location.href = "/yt-new-clear.html";
             } else {
               // Server says NO — nuke stale client state
+              console.log('[Session] No valid user, clearing state');
               localStorage.removeItem("session_active");
               localStorage.removeItem("session_token");
               localStorage.removeItem("user_data");
