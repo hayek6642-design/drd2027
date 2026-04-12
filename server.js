@@ -1851,16 +1851,46 @@ app.post('/api/auth/google', async (req, res) => {
   }
 });
 
-app.get('/api/auth/me', requireAuth, (req, res) => {
+app.get('/api/auth/me', async (req, res) => {
+  // [FIX] Was using requireAuth which checked req.cookies.token (JWT),
+  // but the app sets req.cookies.session_token (UUID). Changed to use
+  // the same session-lookup logic as /api/me for consistency.
   try {
-    return res.json({ 
+    const token = (req.cookies && req.cookies.session_token) ||
+                  (req.headers.authorization && req.headers.authorization.replace('Bearer ', '').trim()) ||
+                  null;
+    if (!token) return res.json({ success: false, user: null });
+
+    // Fast path: in-memory session (populated on login)
+    let session = devSessions.get(token);
+
+    // DB fallback: handles server restarts and cross-device sessions
+    if (!session || !session.userId) {
+      try {
+        const dbSess = await query('SELECT user_id, expires_at FROM auth_sessions WHERE token = $1', [token]);
+        if (dbSess.rows && dbSess.rows.length > 0 && new Date() < new Date(dbSess.rows[0].expires_at)) {
+          const userId = dbSess.rows[0].user_id;
+          const userRes = await query('SELECT id, email, user_type, username FROM users WHERE id = $1', [userId]);
+          if (userRes.rows && userRes.rows.length > 0) {
+            const u2 = userRes.rows[0];
+            session = { userId, email: u2.email, role: u2.user_type || 'user', sessionId: token, username: u2.username };
+            devSessions.set(token, session); // Re-hydrate in-memory for future fast-path requests
+          }
+        }
+      } catch(dbErr) { console.error('[AUTH/ME DB ERROR]', dbErr.message); }
+    }
+
+    if (!session || !session.userId) return res.json({ success: false, user: null });
+
+    return res.json({
       success: true,
-      user: { 
-        id: req.user.id, 
-        email: req.user.email,
-        sessionId: req.user.sessionId, 
-        role: req.user.role 
-      } 
+      user: {
+        id: session.userId,
+        email: session.email,
+        username: session.username,
+        sessionId: token,
+        role: session.role
+      }
     });
   } catch (_) {
     return res.json({ success: false, user: null });
