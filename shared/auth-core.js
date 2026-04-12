@@ -132,12 +132,23 @@
         localStorage.setItem('__cached_session_id__', this._sessionId);
         localStorage.setItem('session_active', '1');
       } else if (this._status === 'unauthenticated') {
+        // [EMERGENCY FIX] Only clear session_active if there's no valid session token
+        var currentToken = localStorage.getItem('session_token') || 
+                          (document.cookie.match(/session_token=([^;]+)/) || [])[1];
+        
         localStorage.removeItem('session_token');
         localStorage.removeItem('user_data');
         localStorage.removeItem('auth_timestamp');
         localStorage.removeItem('__cached_user__');
         localStorage.removeItem('__cached_session_id__');
-        localStorage.removeItem('session_active');
+        
+        // ONLY remove session_active if no valid token exists
+        if (!currentToken) {
+          localStorage.removeItem('session_active');
+        } else {
+          console.warn('[AuthCore] Protecting session_active — valid token still exists');
+          localStorage.setItem('session_active', '1');
+        }
         // [FIX] Expire the session cookie so auth-core won't find a stale token on next load
         try { document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax'; } catch(_){}
       }
@@ -262,6 +273,8 @@
             userId: u.id, 
             sessionId: u.sessionId || this._sessionId 
           }, null, null, u);
+          // [EMERGENCY FIX] Ensure session_active is always set when authenticated
+          localStorage.setItem('session_active', '1');
           this._authInitialized = true; // 🔧 Mark as initialized
           
         } else {
@@ -383,6 +396,8 @@
                   sessionId: this._sessionId,
                   user: cachedUser
                 });
+                // [EMERGENCY FIX] Ensure session_active is set when restoring session
+                localStorage.setItem('session_active', '1');
                 this._authInitialized = true;
                 // Still fetch in background to verify
                 this._fetchMeAndApply().catch(() => {});

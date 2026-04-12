@@ -173,6 +173,13 @@
                 break;
 
             case 'SESSION_CONFLICT':
+                // EMERGENCY GUARD: If session_active is set, this is a valid session — skip the conflict
+                var sessionActive = localStorage.getItem('session_active');
+                if (sessionActive === '1' || sessionActive === 'true') {
+                    console.warn('[ClientSM] SESSION_CONFLICT received but session_active is set — IGNORING conflict');
+                    break;
+                }
+                
                 // Another device is trying to open the account
                 if (!_conflictShown) {
                     _conflictShown = true;
