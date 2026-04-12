@@ -407,16 +407,17 @@
 
   // ── API calls ────────────────────────────────────────────────
   async function apiCall(path, method = 'GET', body = null) {
-    // 🔧 FIX: Same-origin iframe shares localStorage with parent.
-    // Read the session token directly — no postMessage/cookie dance needed.
+    const csrfToken =
+      (document.cookie.match(/XSRF-TOKEN=([^;]*)/) || [])[1] ||
+      (document.cookie.match(/csrf_token=([^;]*)/) || [])[1] || '';
+    // Resolve session token from window.Auth (set by iframe-auth-client.js),
+    // or fall back to cookie, or localStorage — whichever is available.
     const sessionToken =
-      localStorage.getItem('session_token') ||
-      localStorage.getItem('__cached_session_id__') ||
-      '';
-    const headers = { 'Content-Type': 'application/json' };
-    if (sessionToken) {
-      headers['Authorization'] = `Bearer ${sessionToken}`;
-    }
+      (window.Auth && typeof window.Auth.getToken === 'function' && window.Auth.getToken()) ||
+      (document.cookie.match(/session_token=([^;]*)/) || [])[1] ||
+      (typeof localStorage !== 'undefined' && localStorage.getItem('session_token')) || '';
+    const headers = { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken };
+    if (sessionToken) headers['Authorization'] = 'Bearer ' + sessionToken;
     const opts = {
       method,
       credentials: 'include',
