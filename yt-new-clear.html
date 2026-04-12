@@ -34,6 +34,59 @@
         localStorage.setItem(reloadKey, now.toString());
       })();
     </script>
+    
+    <!-- EMERGENCY AUTH LOCK - Prevents redirect loop -->
+    <script>
+    (function() {
+        let authLocked = false;
+        let lockTimeout;
+        
+        // Watch for authenticated state
+        window.addEventListener('auth:ready', (e) => {
+            if (e.detail?.authenticated || localStorage.getItem('session_active') === 'true') {
+                authLocked = true;
+                console.log('[AUTH LOCK] State locked as authenticated');
+                clearTimeout(lockTimeout);
+                lockTimeout = setTimeout(() => { authLocked = false; }, 30000);
+            }
+        });
+        
+        // Block redirects back to login if authenticated
+        const originalReplace = window.location.replace;
+        window.location.replace = function(url) {
+            if (authLocked && url && url.includes('login')) {
+                console.warn('[AUTH LOCK] Blocked redirect to login.html');
+                return;
+            }
+            return originalReplace.call(this, url);
+        };
+        
+        const originalAssign = window.location.assign;
+        window.location.assign = function(url) {
+            if (authLocked && url && url.includes('login')) {
+                console.warn('[AUTH LOCK] Blocked assign to login.html');
+                return;
+            }
+            return originalAssign.call(this, url);
+        };
+        
+        // Intercept state changes
+        if (window.AuthCore) {
+            const origSetState = window.AuthCore._setState;
+            window.AuthCore._setState = function(newState) {
+                if (this.state?.authenticated === true && newState?.authenticated === false && this.state?.sessionId) {
+                    console.warn('[AUTH LOCK] Blocked flip to unauthenticated');
+                    newState.authenticated = true;
+                    newState.status = 'authenticated';
+                }
+                return origSetState.call(this, newState);
+            };
+        }
+        
+        console.log('[AUTH LOCK] Protection active');
+    })();
+    </script>
+    
     <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; font-src * data: 'self'; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src * data: blob:; media-src *; frame-src *;">
     <title>YouTube Embed App</title>
     <link rel="stylesheet" href="/styles/style.css">
@@ -2454,6 +2507,28 @@
     <!-- modules: migrated from yt-coder to yt-clear -->
     <!-- 1. Core -->
     <script src="/shared/auth-core.js"></script>
+    <script>
+    // Force session restoration if AuthCore doesn't do it
+    window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            const sessionId = localStorage.getItem('sessionId') || 
+                             localStorage.getItem('session_token') ||
+                             sessionStorage.getItem('sessionId');
+            const sessionActive = localStorage.getItem('session_active') === 'true';
+            
+            console.log('[AUTH] Restore check - sessionId:', !!sessionId, 'session_active:', sessionActive);
+            
+            if (sessionId && sessionActive && window.AuthCore && !window.AuthCore.isAuthenticated?.()) {
+                console.log('[AUTH] Force-restoring authenticated state');
+                window.AuthCore._setState({
+                    authenticated: true,
+                    status: 'authenticated',
+                    sessionId: sessionId
+                });
+            }
+        }, 2000);
+    });
+    </script>
     <script src="/shared/single-session.js"></script>
     <script src="/shared/client-session-manager.js?v=1"></script>
     
