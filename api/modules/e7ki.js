@@ -10,7 +10,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'secret-demo'
 // SCHEMA MIGRATION: E7ki Messenger Tables + ZAGEL
 // ─────────────────────────────────────────
 async function runE7kiSchemaSetup() {
-  const migrations = [
+  // First: Create all tables (in order)
+  const tableMigrations = [
     // Conversations table
     `CREATE TABLE IF NOT EXISTS e7ki_conversations (
       id TEXT PRIMARY KEY,
@@ -69,6 +70,20 @@ async function runE7kiSchemaSetup() {
     // ZAGEL: 3D AVATAR BIRD MESSENGER TABLES
     // ═══════════════════════════════════════════════════════
     
+    // ZAGEL messages table (separate from e7ki)
+    `CREATE TABLE IF NOT EXISTS zagel_messages (
+      id TEXT PRIMARY KEY,
+      conversation_id TEXT NOT NULL,
+      sender_id TEXT NOT NULL,
+      content TEXT,
+      message_type TEXT DEFAULT 'text',
+      avatar_id TEXT,
+      is_delivered BOOLEAN DEFAULT 0,
+      delivered_at TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY(conversation_id) REFERENCES e7ki_conversations(id)
+    )`,
+    
     // Voice messages (ZAGEL can deliver audio)
     `CREATE TABLE IF NOT EXISTS zagel_voice_messages (
       id TEXT PRIMARY KEY,
@@ -117,15 +132,43 @@ async function runE7kiSchemaSetup() {
       last_seen TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
-    )`,
+    )`
+  ]
 
-    // Add indices for performance
+  // Run table migrations first
+  for (const migration of tableMigrations) {
+    try {
+      await query(migration)
+    } catch (err) {
+      console.log('[E7ki/ZAGEL Table] Skipped:', err.message.slice(0, 40))
+    }
+  }
+
+  // Then: Add missing columns to existing tables (fix for tables created before migration)
+  const columnMigrations = [
+    { table: 'e7ki_conversations', col: 'user_id', type: 'TEXT NOT NULL' },
+    { table: 'e7ki_messages', col: 'conversation_id', type: 'TEXT' },
+    { table: 'zagel_messages', col: 'conversation_id', type: 'TEXT' }
+  ]
+  
+  for (const { table, col, type } of columnMigrations) {
+    try {
+      await query(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`)
+      console.log(`[E7ki] Added ${col} to ${table}`)
+    } catch (err) {
+      // Ignore if column exists or table missing
+    }
+  }
+
+  // Finally: Create indices (only after tables exist)
+  const indexMigrations = [
     `CREATE INDEX IF NOT EXISTS idx_e7ki_conversations_user_id ON e7ki_conversations(user_id)`,
     `CREATE INDEX IF NOT EXISTS idx_e7ki_participants_user_id ON e7ki_participants(user_id)`,
     `CREATE INDEX IF NOT EXISTS idx_e7ki_messages_conversation_id ON e7ki_messages(conversation_id)`,
     `CREATE INDEX IF NOT EXISTS idx_e7ki_messages_created_at ON e7ki_messages(created_at)`,
     
     // ZAGEL indices
+    `CREATE INDEX IF NOT EXISTS idx_zagel_messages_conversation ON zagel_messages(conversation_id)`,
     `CREATE INDEX IF NOT EXISTS idx_zagel_voice_conversation ON zagel_voice_messages(conversation_id)`,
     `CREATE INDEX IF NOT EXISTS idx_zagel_voice_sender ON zagel_voice_messages(sender_id)`,
     `CREATE INDEX IF NOT EXISTS idx_zagel_deliveries_recipient ON zagel_deliveries(recipient_id)`,
@@ -133,13 +176,15 @@ async function runE7kiSchemaSetup() {
     `CREATE INDEX IF NOT EXISTS idx_zagel_avatars_user ON zagel_avatars(user_id)`
   ]
   
-  for (const migration of migrations) {
+  for (const migration of indexMigrations) {
     try {
       await query(migration)
     } catch (err) {
-      console.log('[E7ki/ZAGEL Schema] Migration skipped (already exists or error):', err.message.slice(0, 50))
+      // Ignore index errors
     }
   }
+  
+  console.log('[E7ki/ZAGEL Schema] Setup complete')
 }
 
 // Run schema setup on module load
