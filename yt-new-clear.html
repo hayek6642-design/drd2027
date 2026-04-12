@@ -3341,9 +3341,9 @@ document.addEventListener('DOMContentLoaded', async function(){
         
         // Method 1: Set flags in all possible locations
         localStorage.setItem('session_active', 'true');
-        localStorage.setItem('session_active', '1');
         sessionStorage.setItem('session_active', 'true');
         localStorage.setItem('session_valid', 'true');
+        window.__SESSION_OVERRIDE_ACTIVE__ = true;
         
         // Method 2: Override ClientSessionManager if it exists
         if (window.ClientSessionManager) {
@@ -3398,6 +3398,59 @@ document.addEventListener('DOMContentLoaded', async function(){
                 Object.setPrototypeOf(window.WebSocket, originalWS);
             }
         }, 100);
+        
+        // Method 3b: Block SSE SESSION_TAKEN_OVER messages (single-session.js attack vector)
+        setTimeout(() => {
+            const originalEventSource = window.EventSource;
+            if (originalEventSource) {
+                window.EventSource = function(url) {
+                    const es = new originalEventSource(url);
+                    const originalOnmessage = es.onmessage;
+                    
+                    es.onmessage = function(e) {
+                        try {
+                            const data = JSON.parse(e.data);
+                            if (data && data.type === 'SESSION_TAKEN_OVER') {
+                                console.warn('[Session Override] BLOCKED SESSION_TAKEN_OVER message - session_active is set');
+                                return; // Prevent processing
+                            }
+                        } catch (ex) {
+                            // Not JSON
+                        }
+                        
+                        if (originalOnmessage) {
+                            return originalOnmessage.call(this, e);
+                        }
+                    };
+                    
+                    return es;
+                };
+                Object.setPrototypeOf(window.EventSource, originalEventSource);
+                window.EventSource.CONNECTING = 0;
+                window.EventSource.OPEN = 1;
+                window.EventSource.CLOSED = 2;
+            }
+        }, 50);
+        
+        // Method 3c: Also block the window event listener for SSE forwarding
+        setTimeout(() => {
+            const originalAddEventListener = window.addEventListener;
+            window.addEventListener = function(event, handler, options) {
+                if (event === 'sse:message') {
+                    // Wrap the handler to block SESSION_TAKEN_OVER
+                    const wrappedHandler = function(e) {
+                        const data = e.detail || {};
+                        if (data.type === 'SESSION_TAKEN_OVER') {
+                            console.warn('[Session Override] BLOCKED sse:message SESSION_TAKEN_OVER');
+                            return; // Don't call the original handler
+                        }
+                        return handler.call(this, e);
+                    };
+                    return originalAddEventListener.call(window, event, wrappedHandler, options);
+                }
+                return originalAddEventListener.call(window, event, handler, options);
+            };
+        }, 50);
         
         // Method 4: Intercept the popup DOM element if it gets created
         const observer = new MutationObserver((mutations) => {

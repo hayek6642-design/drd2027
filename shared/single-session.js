@@ -31,6 +31,12 @@
   }
 
   function _clearAllSession() {
+    // [EMERGENCY FIX] Do NOT clear session if user is legitimately authenticated
+    if (localStorage.getItem('session_active') === 'true' && window.AuthCore && window.AuthCore.isAuthenticated?.()) {
+      console.warn('[SingleSession] BLOCKED _clearAllSession - user is legitimately authenticated with session_active');
+      return; // Don't clear anything
+    }
+    
     var keys = [
       'session_token', 'user_data', 'auth_timestamp',
       '__cached_user__', '__cached_session_id__', 'session_active',
@@ -57,6 +63,13 @@
 
   function _handleKickout(newDevice) {
     if (_takenOver) return; // only once
+    
+    // [EMERGENCY FIX] Do NOT kickout if user is legitimately authenticated with session_active
+    if (localStorage.getItem('session_active') === 'true' && window.AuthCore && window.AuthCore.isAuthenticated?.()) {
+      console.warn('[SingleSession] BLOCKED _handleKickout - user is legitimately authenticated with session_active');
+      return;
+    }
+    
     _takenOver = true;
 
     _stopAll();
@@ -135,6 +148,13 @@
         headers: { 'Content-Type': 'application/json' }
       }).then(function(r) {
         if (r.status === 401 || r.status === 403) {
+          // [EMERGENCY FIX] If session_active is set, don't count this as a real failure
+          if (localStorage.getItem('session_active') === 'true') {
+            console.warn('[SingleSession] Got 401/403 but session_active is set - ignoring heartbeat failure');
+            _heartbeatFailCount = 0; // reset to prevent kickout
+            return;
+          }
+          
           _heartbeatFailCount++;
           if (_heartbeatFailCount >= MAX_HEARTBEAT_FAILS) {
             _handleKickout(null);
