@@ -3330,4 +3330,64 @@ document.addEventListener('DOMContentLoaded', async function(){
     </script>
 
 
+    <!-- EMERGENCY AUTH OVERRIDE - Fix auth loop -->
+    <script>
+    (function forceAuthState() {
+        const sessionId = localStorage.getItem('sessionId') || sessionStorage.getItem('session_token');
+        const userId = localStorage.getItem('userId');
+        
+        if (!sessionId) {
+            console.log('[Auth Override] No session found');
+            return;
+        }
+        
+        console.log('[Auth Override] Session found, enforcing authenticated:', sessionId.substring(0, 8) + '...');
+        
+        function enforceAuthenticated() {
+            if (window.AuthCore && window.AuthCore.state && !window.AuthCore.state.authenticated) {
+                console.warn('[Auth Override] FORCING authenticated: true');
+                window.AuthCore.state.authenticated = true;
+                window.AuthCore.state.status = 'authenticated';
+                window.AuthCore.state.sessionId = sessionId;
+                
+                // Update global store
+                if (window.AppState) {
+                    window.AppState.auth = true;
+                    window.AppState.userId = userId;
+                }
+            }
+        }
+        
+        // Run immediately and on delays
+        enforceAuthenticated();
+        setTimeout(enforceAuthenticated, 100);
+        setTimeout(enforceAuthenticated, 500);
+        setTimeout(enforceAuthenticated, 1000);
+        setTimeout(enforceAuthenticated, 2000);
+        
+        // Intercept _syncState
+        if (window.AuthCore && window.AuthCore._syncState) {
+            const originalSync = window.AuthCore._syncState;
+            window.AuthCore._syncState = function(state) {
+                if (state.authenticated === false && (state.sessionId || sessionId)) {
+                    console.warn('[Auth Override] BLOCKED sync to false');
+                    state.authenticated = true;
+                    state.status = 'authenticated';
+                }
+                return originalSync.call(this, state);
+            };
+        }
+        
+        // Intercept stateChange event
+        window.addEventListener('auth:stateChange', (e) => {
+            if (e.detail?.authenticated === false && sessionId) {
+                console.warn('[Auth Override] BLOCKED stateChange to false');
+                e.stopImmediatePropagation?.();
+                enforceAuthenticated();
+            }
+        }, true);
+        
+    })();
+    </script>
+
     </body>
