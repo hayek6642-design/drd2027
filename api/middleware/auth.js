@@ -1,79 +1,74 @@
+// /api/middleware/auth.js
 import jwt from 'jsonwebtoken';
-import { query } from '../config/db.js';
 
-export const devSessions = new Map();
+const JWT_SECRET = process.env.JWT_SECRET || 'your-fallback-secret-change-in-production';
 
-export const requireAuth = async (req, res, next) => {
-  try {
-    let token = (req.cookies && req.cookies.session_token) || null;
+/**
+ * Hard authentication - requires valid token
+ * Returns 401 if no token or invalid
+ */
+export const requireAuth = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.replace('Bearer ', '') || req.cookies?.token;
     
-    // Check Authorization header if cookie is missing
-    if (!token && req.headers.authorization) {
-      const parts = req.headers.authorization.split(' ');
-      if (parts.length === 2 && parts[0] === 'Bearer') {
-        token = parts[1];
-      }
-    }
-
     if (!token) {
-      return res.status(401).json({ ok: false, error: 'unauthorized', message: 'No session token' });
-    }
-
-    // 🛡️ MODIFIED: Check in-memory devSessions FIRST (used by /api/auth/signup and /api/auth/login)
-    const memSession = devSessions.get(token);
-    if (memSession) {
-      req.user = {
-        id: memSession.userId,
-        email: memSession.email,
-        role: memSession.role || 'user',
-        isUntrusted: memSession.isUntrusted || false,
-        sessionId: token
-      };
-      return next();
+        return res.status(401).json({ 
+            error: 'Authentication required',
+            code: 'NO_TOKEN'
+        });
     }
     
-    // Check database auth_sessions
     try {
-      const dbSession = await query('SELECT user_id, expires_at FROM auth_sessions WHERE token = $1 OR token_hash = $2', [token, token]);
-      if (dbSession.rows && dbSession.rows.length > 0 && new Date() < new Date(dbSession.rows[0].expires_at)) {
-        const userId = dbSession.rows[0].user_id;
-        const userRes = await query('SELECT email, user_type, is_untrusted FROM users WHERE id = $1', [userId]);
-        if (userRes.rows && userRes.rows.length > 0) {
-          req.user = {
-            id: userId,
-            email: userRes.rows[0].email,
-            role: userRes.rows[0].user_type,
-            isUntrusted: userRes.rows[0].is_untrusted || false,
-            sessionId: token
-          };
-          return next();
-        }
-      }
-    } catch (e) {
-      console.error('[AUTH DB ERROR]', e);
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = decoded;
+        req.userId = decoded.userId || decoded.id || decoded.sub;
+        next();
+    } catch (error) {
+        return res.status(401).json({ 
+            error: 'Invalid or expired token',
+            code: 'INVALID_TOKEN'
+        });
     }
-
-    // Also check for JWT (for Farragna or others)
-    try {
-      const JWT_SECRET = process.env.JWT_SECRET || 'secret-demo';
-      const decoded = jwt.verify(token, JWT_SECRET);
-      if (decoded && decoded.userId) {
-        req.user = { 
-          id: decoded.userId, 
-          email: decoded.email,
-          role: decoded.role || 'user',
-          sessionId: token
-        };
-        return next();
-      }
-    } catch (e) {
-      // Ignore JWT errors if it's not a JWT
-    }
-
-    return res.status(401).json({ ok: false, error: 'unauthorized', message: 'Invalid session' });
-    
-  } catch (err) {
-    console.error('[AUTH ERROR]', err);
-    res.status(500).json({ ok: false, error: 'internal_error' });
-  }
 };
+
+/**
+ * Soft authentication - sets user if token exists but doesn't require it
+ * Always calls next() - never returns 401
+ */
+export const softAuth = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.replace('Bearer ', '') || req.cookies?.token;
+    
+    // Initialize user as null (unauthenticated)
+    req.user = null;
+    req.userId = null;
+    
+    if (token) {
+        try {
+            const decoded = jwt.verify(token, JWT_SECRET);
+            req.user = decoded;
+            req.userId = decoded.userId || decoded.id || decoded.sub;
+        } catch (error) {
+            // Token invalid - continue as anonymous
+            // Don't throw error, just stay unauthenticated
+        }
+    }
+    
+    next();
+};
+
+/**
+ * Optional: Admin check middleware
+ */
+export const requireAdmin = (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+    if (!req.user.isAdmin && req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+    }
+    next();
+};
+
+// Default export for compatibility
+export default { requireAuth, softAuth, requireAdmin };
