@@ -2230,6 +2230,13 @@ app.use(express.static(path.join(__dirname), {
   }
 }));
 
+// Serve /public directory (AI-Hub platforms & static assets)
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '1d',
+  etag: true,
+  lastModified: true,
+}));
+
 // Service-specific routes
 
 // YT-Clear Default Route
