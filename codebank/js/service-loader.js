@@ -49,6 +49,26 @@
                             iwin.EventBus   = window.EventBus;
                             iwin.AuthManager = window.AuthManager;
                         }
+                        
+                        // 🔧 FIX: Directly inject window.Auth so services can access auth synchronously
+                        // This ensures automode.js apiCall can call window.Auth.getToken() immediately
+                        if (iwin && window.AuthManager) {
+                            try {
+                                const authState = window.AuthManager.getState ? window.AuthManager.getState() : {};
+                                const sessionToken = authState.sessionToken || '';
+                                const userData = authState.user || {};
+                                const isAuthenticated = !!(userData.id || userData.uid || userData.email);
+                                
+                                iwin.Auth = {
+                                    isAuthenticated: () => isAuthenticated,
+                                    getToken: () => sessionToken,
+                                    getUser: () => userData,
+                                    getState: () => authState
+                                };
+                            } catch (e) {
+                                console.warn('[ServiceLoader] Failed to inject Auth:', e.message);
+                            }
+                        }
                     } catch(e) { /* cross-origin guard */ }
                     window.EventBus && window.EventBus.dispatch('service:ready', { name: title, url: serviceUrl });
                     resolve();
