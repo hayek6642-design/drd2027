@@ -72,6 +72,7 @@ import * as adminMod from './api/modules/admin.js';
 import * as testMod from './api/modules/test.js';
 import * as rewardsMod from './api/modules/rewards.js';
 import farragnaDefault, { webhookCloudflare as farragnaWebhook } from './api/modules/farragna.js';
+import e7kiDefault from './api/modules/e7ki.js';
 import * as logicodeMod from './api/modules/logicode.js';
 import * as corsaMod from './api/modules/corsa.js';
 import * as codesMod from './api/modules/codes.js';
@@ -298,6 +299,7 @@ app.use('/api/trust', trustRouter);
 
 // Register Farragna routes
 app.use('/api/farragna', farragnaDefault);
+app.use('/api/e7ki', e7kiDefault);
 
 // Register Pebalaash routes
 app.use('/api/pebalaash', pebalaashMod.default || pebalaashMod);
