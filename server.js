@@ -5781,6 +5781,31 @@ app.use((err, req, res, next) => {
 
 // Apply DDL (Unified Schema Verification)
 async function applyNeonCompressionDDL(){
+  // Fix missing conversation_id in message tables
+  try {
+    const msgTables = [
+      { table: 'e7ki_messages', col: 'conversation_id' },
+      { table: 'zagel_messages', col: 'conversation_id' }
+    ];
+    for (const { table, col } of msgTables) {
+      try {
+        await query(`ALTER TABLE ${table} ADD COLUMN ${col} TEXT`, [], { silent: true });
+        console.log(`[DB] Added ${col} to ${table}`);
+      } catch (e) {
+        if (!e.message.includes('duplicate column name') && !e.message.includes('no such table')) {
+          console.warn(`[DB] ${table}:`, e.message);
+        }
+      }
+      // Create index
+      try {
+        await query(`CREATE INDEX IF NOT EXISTS idx_${table}_${col} ON ${table}(${col})`, [], { silent: true });
+      } catch (e) { /* ignore index errors */ }
+    }
+    console.log('[DB] Message schema migration complete');
+  } catch (e) {
+    console.warn('[DB] Message schema migration error:', e.message);
+  }
+
   // [SECURITY] Ensure columns exist (Fix for "no column named religion")
   try {
     const columns = ['religion', 'country', 'phone'];
