@@ -78,6 +78,10 @@
             window.EventBus.dispatch('auth:changed', {
                 user, isAuthenticated: window.AppState.isAuthenticated, sessionId
             });
+            // 🔧 FIX: Automatically sync assets when user is authenticated
+            if (window.AppState.isAuthenticated && window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
+                window.AssetsManager.sync().catch(e => console.warn('[AuthManager] Asset sync on auth:', e.message));
+            }
             console.log('[AuthManager] User set:', user?.email || user?.uid || 'unknown');
         },
 

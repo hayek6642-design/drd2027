@@ -43,6 +43,17 @@
                 // [EMERGENCY FIX] Add timeout to prevent hanging forever
                 let loadTimeout = setTimeout(() => {
                     console.error('[ServiceLoader] Iframe load timeout after 15s:', serviceUrl);
+                    // 🔧 FIX: Hide loading spinner on timeout
+                    try {
+                        // Hide loading indicator
+                        const spinner = document.querySelector('[class*="loading"], [class*="spinner"], [id*="loading"], [id*="spinner"]');
+                        if (spinner) spinner.style.display = 'none';
+                        // Hide modal overlay if present
+                        const overlay = document.querySelector('[class*="modal-overlay"], [class*="backdrop"]');
+                        if (overlay) overlay.style.display = 'none';
+                        // Fire service-ready event anyway so UI can continue
+                        window.EventBus && window.EventBus.dispatch('service:ready', { name: title, url: serviceUrl, timeout: true });
+                    } catch(e) {}
                     // Force cleanup and resolve
                     this._iframe.onload = null;
                     this._iframe.onerror = null;
@@ -51,6 +62,11 @@
                 
                 this._iframe.onload = () => {
                     clearTimeout(loadTimeout);
+                    // 🔧 FIX: Hide loading spinner on successful load
+                    try {
+                        const spinner = document.querySelector('[class*="loading"], [class*="spinner"], [id*="loading"], [id*="spinner"]');
+                        if (spinner) spinner.style.display = 'none';
+                    } catch(e) {}
                     // Expose AppState/EventBus/AuthManager to service via parent reference
                     try {
                         const iwin = this._iframe.contentWindow;
@@ -86,6 +102,12 @@
                 this._iframe.onerror = () => {
                     clearTimeout(loadTimeout);
                     console.error('[ServiceLoader] Iframe load error:', serviceUrl);
+                    // 🔧 FIX: Hide loading spinner on error
+                    try {
+                        const spinner = document.querySelector('[class*="loading"], [class*="spinner"], [id*="loading"], [id*="spinner"]');
+                        if (spinner) spinner.style.display = 'none';
+                    } catch(e) {}
+                    window.EventBus && window.EventBus.dispatch('service:ready', { name: title, url: serviceUrl, error: true });
                     resolve();
                 };
                 this._iframe.src = serviceUrl;

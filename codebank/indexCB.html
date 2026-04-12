@@ -1245,7 +1245,21 @@
     }
 
     function getUserEmailFromSources() {
-        // Source 1: LocalStorage (cached)
+        // Source 1: Check AppState (from auth-unified.js)
+        if (window.AppState && window.AppState.user && window.AppState.user.email) {
+            return window.AppState.user.email;
+        }
+
+        // Source 2: LocalStorage (cached)
+        try {
+            const cached = localStorage.getItem('__cached_user__');
+            if (cached) {
+                const user = JSON.parse(cached);
+                if (user.email) return user.email;
+            }
+        } catch (e) {}
+        
+        // Source 3: Check old cache location
         try {
             const cached = localStorage.getItem('bankode_user_cache');
             if (cached) {
@@ -1254,7 +1268,7 @@
             }
         } catch (e) {}
         
-        // Source 2: Session ID from cookie (decode JWT if present)
+        // Source 4: Session ID from cookie (decode JWT if present)
         try {
             const sessionMatch = document.cookie.match(/sessionId=([^;]+)/);
             if (sessionMatch && sessionMatch[1]) {
@@ -1272,7 +1286,7 @@
             }
         } catch (e) {}
         
-        // Source 3: Check window objects
+        // Source 5: Check window objects
         if (window.AuthCore && window.AuthCore.getState) {
             try {
                 const state = window.AuthCore.getState();
@@ -1287,9 +1301,40 @@
         return null;
     }
 
-    // Initialize when DOM is ready
+    // Initialize when DOM is ready - Listen for auth changes instead of fixed timeout
     document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(displayUserEmail, 800);
+        // Try immediately (auth may have cached)
+        setTimeout(displayUserEmail, 100);
+        
+        // 🔧 FIX: Sync assets when auth is ready (for code bar display)
+        if (window.EventBus) {
+            window.EventBus.on('auth:changed', (data) => {
+                if (data && data.user && data.user.email) {
+                    displayUserEmail();
+                    // Sync assets when authenticated
+                    if (window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
+                        window.AssetsManager.sync().catch(e => {
+                            console.error('[CodeBank] Asset sync error:', e);
+                        });
+                    }
+                }
+            });
+        }
+        
+        // Fallback: retry every 200ms for up to 5 seconds
+        let retries = 0;
+        const retryInterval = setInterval(() => {
+            if (++retries > 25) { clearInterval(retryInterval); return; }
+            const email = getUserEmailFromSources();
+            if (email) {
+                displayUserEmail();
+                clearInterval(retryInterval);
+                // Also try to sync assets
+                if (window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
+                    window.AssetsManager.sync().catch(e => {});
+                }
+            }
+        }, 200);
     });
     </script>
     
