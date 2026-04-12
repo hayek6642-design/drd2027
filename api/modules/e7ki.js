@@ -7,7 +7,7 @@ import { grantReward } from './rewards.js'
 const JWT_SECRET = process.env.JWT_SECRET || 'secret-demo'
 
 // ─────────────────────────────────────────
-// SCHEMA MIGRATION: E7ki Messenger Tables
+// SCHEMA MIGRATION: E7ki Messenger Tables + ZAGEL
 // ─────────────────────────────────────────
 async function runE7kiSchemaSetup() {
   const migrations = [
@@ -64,19 +64,80 @@ async function runE7kiSchemaSetup() {
       expires_at TEXT,
       UNIQUE(conversation_id, user_id)
     )`,
+
+    // ═══════════════════════════════════════════════════════
+    // ZAGEL: 3D AVATAR BIRD MESSENGER TABLES
+    // ═══════════════════════════════════════════════════════
     
+    // Voice messages (ZAGEL can deliver audio)
+    `CREATE TABLE IF NOT EXISTS zagel_voice_messages (
+      id TEXT PRIMARY KEY,
+      conversation_id TEXT NOT NULL,
+      sender_id TEXT NOT NULL,
+      audio_url TEXT NOT NULL,
+      duration INTEGER,
+      transcription TEXT,
+      is_delivered BOOLEAN DEFAULT 0,
+      delivered_at TEXT,
+      delivery_method TEXT DEFAULT 'vocal',
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY(conversation_id) REFERENCES e7ki_conversations(id)
+    )`,
+
+    // ZAGEL avatar delivery log (tracks message transfers)
+    `CREATE TABLE IF NOT EXISTS zagel_deliveries (
+      id TEXT PRIMARY KEY,
+      message_id TEXT NOT NULL,
+      voice_message_id TEXT,
+      sender_id TEXT NOT NULL,
+      recipient_id TEXT NOT NULL,
+      delivery_type TEXT DEFAULT 'message_transfer',
+      delivery_method TEXT DEFAULT 'avatar_bird',
+      animation_style TEXT DEFAULT 'fly',
+      start_time TEXT,
+      end_time TEXT,
+      is_vocal_delivery BOOLEAN DEFAULT 0,
+      vocal_played BOOLEAN DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY(message_id) REFERENCES e7ki_messages(id),
+      FOREIGN KEY(voice_message_id) REFERENCES zagel_voice_messages(id)
+    )`,
+
+    // ZAGEL avatar states and customization
+    `CREATE TABLE IF NOT EXISTS zagel_avatars (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL UNIQUE,
+      avatar_model TEXT DEFAULT 'bird_phoenix',
+      avatar_color TEXT DEFAULT '#FF6B35',
+      animation_style TEXT DEFAULT 'smooth_flight',
+      voice_enabled BOOLEAN DEFAULT 1,
+      voice_type TEXT DEFAULT 'default',
+      notification_sound TEXT DEFAULT 'chime',
+      is_active BOOLEAN DEFAULT 1,
+      last_seen TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )`,
+
     // Add indices for performance
     `CREATE INDEX IF NOT EXISTS idx_e7ki_conversations_user_id ON e7ki_conversations(user_id)`,
     `CREATE INDEX IF NOT EXISTS idx_e7ki_participants_user_id ON e7ki_participants(user_id)`,
     `CREATE INDEX IF NOT EXISTS idx_e7ki_messages_conversation_id ON e7ki_messages(conversation_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_e7ki_messages_created_at ON e7ki_messages(created_at)`
+    `CREATE INDEX IF NOT EXISTS idx_e7ki_messages_created_at ON e7ki_messages(created_at)`,
+    
+    // ZAGEL indices
+    `CREATE INDEX IF NOT EXISTS idx_zagel_voice_conversation ON zagel_voice_messages(conversation_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_zagel_voice_sender ON zagel_voice_messages(sender_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_zagel_deliveries_recipient ON zagel_deliveries(recipient_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_zagel_deliveries_created ON zagel_deliveries(created_at)`,
+    `CREATE INDEX IF NOT EXISTS idx_zagel_avatars_user ON zagel_avatars(user_id)`
   ]
   
   for (const migration of migrations) {
     try {
       await query(migration)
     } catch (err) {
-      console.log('[E7ki Schema] Migration skipped (already exists or error):', err.message.slice(0, 50))
+      console.log('[E7ki/ZAGEL Schema] Migration skipped (already exists or error):', err.message.slice(0, 50))
     }
   }
 }
@@ -192,11 +253,12 @@ router.get('/conversations/:conversationId', requireAuth, async (req, res) => {
       [conversationId]
     )
     
-    // Get participants
+    // Get participants with ZAGEL avatar info
     const participants = await query(
-      `SELECT p.user_id, u.username, u.avatar 
+      `SELECT p.user_id, u.username, u.avatar, z.avatar_model, z.voice_enabled
        FROM e7ki_participants p
        LEFT JOIN users u ON p.user_id = u.id
+       LEFT JOIN zagel_avatars z ON p.user_id = z.user_id
        WHERE p.conversation_id = ?`,
       [conversationId]
     )
@@ -253,6 +315,24 @@ router.post('/messages', requireAuth, async (req, res) => {
     
     // Grant reward for sending message
     await grantReward(userId, 'e7ki_message_sent', 5, 'Sent message in E7ki')
+    
+    // ZAGEL: Log message delivery through avatar
+    if (message_type === 'text' || message_type === 'transfer') {
+      // Get recipient for this conversation
+      const recipients = await query(
+        `SELECT DISTINCT user_id FROM e7ki_participants WHERE conversation_id = ? AND user_id != ?`,
+        [conversation_id, userId]
+      )
+      
+      for (const rec of recipients) {
+        const deliveryId = `zagel_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        await query(
+          `INSERT INTO zagel_deliveries (id, message_id, sender_id, recipient_id, delivery_type, delivery_method)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [deliveryId, messageId, userId, rec.user_id, 'message_transfer', 'avatar_bird']
+        )
+      }
+    }
     
     res.json({
       success: true,
@@ -369,6 +449,243 @@ router.delete('/messages/:messageId/reactions/:emoji', requireAuth, async (req, 
   } catch (err) {
     console.error('[E7ki] Remove reaction error:', err)
     res.status(500).json({ error: 'Failed to remove reaction' })
+  }
+})
+
+// ═══════════════════════════════════════════════════════
+// ZAGEL: 3D AVATAR BIRD MESSENGER ENDPOINTS
+// ═══════════════════════════════════════════════════════
+
+// Initialize ZAGEL avatar for user
+router.post('/zagel/avatar/init', requireAuth, async (req, res) => {
+  try {
+    const { avatar_model = 'bird_phoenix', avatar_color = '#FF6B35', voice_type = 'default' } = req.body
+    const userId = req.user.id
+    
+    const avatarId = `zagel_${userId}`
+    
+    // Create or update ZAGEL avatar
+    await query(
+      `INSERT OR REPLACE INTO zagel_avatars (id, user_id, avatar_model, avatar_color, voice_type, is_active)
+       VALUES (?, ?, ?, ?, ?, 1)`,
+      [avatarId, userId, avatar_model, avatar_color, voice_type]
+    )
+    
+    // Grant reward for initializing ZAGEL
+    await grantReward(userId, 'zagel_avatar_activated', 25, 'Activated ZAGEL 3D avatar messenger bird')
+    
+    res.json({
+      success: true,
+      avatar: {
+        id: avatarId,
+        user_id: userId,
+        avatar_model,
+        avatar_color,
+        voice_type,
+        is_active: true
+      }
+    })
+  } catch (err) {
+    console.error('[ZAGEL] Avatar init error:', err)
+    res.status(500).json({ error: 'Failed to initialize ZAGEL avatar' })
+  }
+})
+
+// Get ZAGEL avatar info
+router.get('/zagel/avatar', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id
+    
+    const avatar = await query(
+      `SELECT * FROM zagel_avatars WHERE user_id = ?`,
+      [userId]
+    )
+    
+    if (!avatar || avatar.length === 0) {
+      return res.json({ success: true, avatar: null, message: 'ZAGEL avatar not initialized' })
+    }
+    
+    res.json({ success: true, avatar: avatar[0] })
+  } catch (err) {
+    console.error('[ZAGEL] Get avatar error:', err)
+    res.status(500).json({ error: 'Failed to get ZAGEL avatar' })
+  }
+})
+
+// Send voice message via ZAGEL (vocal delivery)
+router.post('/zagel/voice-message', requireAuth, async (req, res) => {
+  try {
+    const { conversation_id, audio_url, duration, transcription } = req.body
+    const userId = req.user.id
+    
+    if (!conversation_id || !audio_url) {
+      return res.status(400).json({ error: 'Missing required fields' })
+    }
+    
+    // Check if user is participant
+    const participant = await query(
+      `SELECT * FROM e7ki_participants WHERE conversation_id = ? AND user_id = ?`,
+      [conversation_id, userId]
+    )
+    
+    if (!participant || participant.length === 0) {
+      return res.status(403).json({ error: 'Not a participant' })
+    }
+    
+    const voiceMessageId = `voice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    
+    // Create voice message
+    await query(
+      `INSERT INTO zagel_voice_messages (id, conversation_id, sender_id, audio_url, duration, transcription, delivery_method)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [voiceMessageId, conversation_id, userId, audio_url, duration, transcription, 'vocal']
+    )
+    
+    // Log ZAGEL delivery for each recipient
+    const recipients = await query(
+      `SELECT DISTINCT user_id FROM e7ki_participants WHERE conversation_id = ? AND user_id != ?`,
+      [conversation_id, userId]
+    )
+    
+    for (const rec of recipients) {
+      const deliveryId = `zagel_vocal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      await query(
+        `INSERT INTO zagel_deliveries (id, voice_message_id, sender_id, recipient_id, delivery_method, is_vocal_delivery)
+         VALUES (?, ?, ?, ?, ?, 1)`,
+        [deliveryId, voiceMessageId, userId, rec.user_id, 'vocal_delivery']
+      )
+    }
+    
+    // Grant reward for sending voice message
+    await grantReward(userId, 'zagel_voice_sent', 10, 'Sent vocal message via ZAGEL avatar')
+    
+    res.json({
+      success: true,
+      voice_message: {
+        id: voiceMessageId,
+        conversation_id,
+        sender_id: userId,
+        audio_url,
+        duration,
+        created_at: new Date().toISOString(),
+        delivery_method: 'vocal'
+      }
+    })
+  } catch (err) {
+    console.error('[ZAGEL] Voice message error:', err)
+    res.status(500).json({ error: 'Failed to send voice message' })
+  }
+})
+
+// Get ZAGEL delivery history (message transfers)
+router.get('/zagel/deliveries/:conversationId', requireAuth, async (req, res) => {
+  try {
+    const { conversationId } = req.params
+    const userId = req.user.id
+    
+    // Check if user is participant
+    const participant = await query(
+      `SELECT * FROM e7ki_participants WHERE conversation_id = ? AND user_id = ?`,
+      [conversationId, userId]
+    )
+    
+    if (!participant || participant.length === 0) {
+      return res.status(403).json({ error: 'Not a participant' })
+    }
+    
+    // Get all message transfers (ZAGEL deliveries)
+    const deliveries = await query(
+      `SELECT z.*, u.username, u.avatar 
+       FROM zagel_deliveries z
+       LEFT JOIN users u ON z.sender_id = u.id
+       WHERE z.delivery_method IN ('avatar_bird', 'vocal_delivery')
+       AND (z.sender_id = ? OR z.recipient_id = ?)
+       ORDER BY z.created_at DESC
+       LIMIT 50`,
+      [userId, userId]
+    )
+    
+    res.json({
+      success: true,
+      deliveries: deliveries || []
+    })
+  } catch (err) {
+    console.error('[ZAGEL] Get deliveries error:', err)
+    res.status(500).json({ error: 'Failed to get ZAGEL deliveries' })
+  }
+})
+
+// Mark ZAGEL vocal message as played
+router.post('/zagel/voice-message/:voiceMessageId/played', requireAuth, async (req, res) => {
+  try {
+    const { voiceMessageId } = req.params
+    const userId = req.user.id
+    
+    // Find the delivery for this user
+    const delivery = await query(
+      `SELECT * FROM zagel_deliveries WHERE voice_message_id = ? AND recipient_id = ?`,
+      [voiceMessageId, userId]
+    )
+    
+    if (!delivery || delivery.length === 0) {
+      return res.status(404).json({ error: 'Delivery not found' })
+    }
+    
+    // Mark as played
+    await query(
+      `UPDATE zagel_deliveries SET vocal_played = 1 WHERE id = ?`,
+      [delivery[0].id]
+    )
+    
+    res.json({ success: true })
+  } catch (err) {
+    console.error('[ZAGEL] Mark played error:', err)
+    res.status(500).json({ error: 'Failed to mark message as played' })
+  }
+})
+
+// Update ZAGEL avatar appearance
+router.put('/zagel/avatar', requireAuth, async (req, res) => {
+  try {
+    const { avatar_model, avatar_color, animation_style, voice_enabled } = req.body
+    const userId = req.user.id
+    
+    const updates = []
+    const values = []
+    
+    if (avatar_model) {
+      updates.push('avatar_model = ?')
+      values.push(avatar_model)
+    }
+    if (avatar_color) {
+      updates.push('avatar_color = ?')
+      values.push(avatar_color)
+    }
+    if (animation_style) {
+      updates.push('animation_style = ?')
+      values.push(animation_style)
+    }
+    if (voice_enabled !== undefined) {
+      updates.push('voice_enabled = ?')
+      values.push(voice_enabled ? 1 : 0)
+    }
+    
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' })
+    }
+    
+    updates.push('updated_at = datetime("now")')
+    values.push(userId)
+    
+    await query(
+      `UPDATE zagel_avatars SET ${updates.join(', ')} WHERE user_id = ?`,
+      values
+    )
+    
+    res.json({ success: true, message: 'ZAGEL avatar updated' })
+  } catch (err) {
+    console.error('[ZAGEL] Update avatar error:', err)
+    res.status(500).json({ error: 'Failed to update ZAGEL avatar' })
   }
 })
 
