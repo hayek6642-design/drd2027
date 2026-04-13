@@ -122,6 +122,10 @@
     <!-- 2. Auth-ready component (optional but recommended) -->
     <script src="/shared/auth-ready-component.js"></script>
 
+    <!-- 3. React App MUST load BEFORE E7kiApp to avoid initialization race condition -->
+    <!-- React mounts first and prepares the DOM, then E7kiApp takes control -->
+    <script type="module" src="./e7ki/client/dist/index.js"></script>
+
     <script>
         // E7ki Application
         class E7kiApp extends AuthReadyComponent {
@@ -195,14 +199,17 @@
         }
         
         // Start app when DOM ready
+        // Delay initialization slightly to ensure React has finished mounting
+        const initE7ki = () => new E7kiApp();
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => new E7kiApp());
+            document.addEventListener('DOMContentLoaded', () => {
+                // Give React a chance to mount first
+                setTimeout(initE7ki, 100);
+            });
         } else {
-            new E7kiApp();
+            // DOM already loaded, give React a chance to mount
+            setTimeout(initE7ki, 100);
         }
     </script>
-    
-    <!-- React App - ensure this path is correct after build -->
-    <script type="module" src="./e7ki/client/dist/index.js"></script>
 </body>
 </html>
