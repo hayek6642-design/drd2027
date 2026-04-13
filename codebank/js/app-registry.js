@@ -36,7 +36,7 @@ export const AppRegistry = {
             category: 'media',
             icon: 'fa-microphone-alt',
             color: '#e74c3c',
-            url: '/codebank/battalooda.html',
+            url: '/codebank/battaloosa-modern.html',
             description: 'Vocal talent discovery platform',
             status: 'online',
             badge: null
@@ -47,7 +47,7 @@ export const AppRegistry = {
             category: 'media',
             icon: 'fa-chart-line',
             color: '#ec4899',
-            url: '/codebank/farragna.html',
+            url: '/codebank/farragna-modern.html',
             description: 'Trading platform',
             status: 'online',
             badge: null
@@ -115,8 +115,8 @@ export const AppRegistry = {
             category: 'finance',
             icon: 'fa-gamepad',
             color: '#f59e0b',
-            url: '/codebank/pebalaash.html',
-            description: 'Gaming platform',
+            url: '/codebank/pebalaash-modern.html',
+            description: 'Marketplace platform',
             status: 'online',
             badge: null
         },
