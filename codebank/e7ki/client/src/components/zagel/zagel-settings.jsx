@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useZagel } from "@/lib/zagel-context";
+import { useAuth } from "@/lib/auth-context";
 import { ZagelAvatar } from "./zagel-avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +32,7 @@ const VOICE_OPTIONS = [
 
 export function ZagelSettings() {
   const { userAvatar, updateAvatarSettings } = useZagel();
+  const { user, getAuthHeaders } = useAuth();
   const [selectedBird, setSelectedBird] = useState(userAvatar.birdType);
   const [selectedVoice, setSelectedVoice] = useState(userAvatar.voiceType);
   const [enableVocal, setEnableVocal] = useState(
@@ -44,6 +46,15 @@ export function ZagelSettings() {
     setSaveStatus(null);
 
     try {
+      if (!user || !user.id) {
+        setSaveStatus({
+          type: "error",
+          message: "Not authenticated - cannot save settings",
+        });
+        setIsSaving(false);
+        return;
+      }
+
       // Update local context
       updateAvatarSettings({
         birdType: selectedBird,
@@ -51,16 +62,19 @@ export function ZagelSettings() {
         enableVocalNotifications: enableVocal,
       });
 
-      // Sync to backend
+      // Sync to backend using auth headers and current user ID
       const response = await fetch(
-        `/api/e7ki/zagel/avatar/${userAvatar.userId}`,
+        `/api/e7ki/zagel/avatar`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            ...getAuthHeaders()
+          },
           body: JSON.stringify({
-            birdType: selectedBird,
-            voiceType: selectedVoice,
-            enableVocalNotifications: enableVocal,
+            avatar_model: selectedBird,
+            voice_type: selectedVoice,
+            voice_enabled: enableVocal,
           }),
         }
       );

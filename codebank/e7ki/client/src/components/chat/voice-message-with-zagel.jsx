@@ -48,16 +48,27 @@ export function VoiceMessageWithZagel({ activeChat, onClose }) {
       const messageId = uuidv4();
       setCurrentMessageId(messageId);
 
-      // Create FormData for audio upload
-      const formData = new FormData();
-      formData.append("audio", audioBlob);
-      formData.append("duration", duration);
-      formData.append("conversationId", activeChat.id);
+      // Convert audio blob to base64
+      const reader = new FileReader();
+      reader.readAsDataURL(audioBlob);
+      
+      const audioData = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+      });
 
-      // Upload audio file
+      // Upload audio file (send as base64)
       const uploadResponse = await fetch("/api/e7ki/upload-voice", {
         method: "POST",
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          conversation_id: activeChat.id,
+          audioData: audioData,
+          audioFormat: "wav",
+          duration
+        }),
       });
 
       if (!uploadResponse.ok) {

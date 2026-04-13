@@ -7,12 +7,13 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 
 const ZagelContext = createContext(null);
 
-export function ZagelProvider({ children }) {
+export function ZagelProvider({ children, userId }) {
   const [userAvatar, setUserAvatar] = useState(() => {
     const saved = localStorage.getItem("zagel_avatar_settings");
     return saved
       ? JSON.parse(saved)
       : {
+          userId: userId,
           birdType: "phoenix",
           voiceType: "soprano",
           enableVocalNotifications: true,
@@ -21,6 +22,16 @@ export function ZagelProvider({ children }) {
   });
 
   const [deliveries, setDeliveries] = useState(new Map());
+
+  // Update userId in userAvatar when userId prop changes
+  React.useEffect(() => {
+    if (userId) {
+      setUserAvatar(prev => ({
+        ...prev,
+        userId: userId
+      }));
+    }
+  }, [userId]);
 
   // Save avatar settings to localStorage
   const updateAvatarSettings = useCallback((newSettings) => {

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { ThemeProvider } from "@/lib/theme-provider.jsx";
 import { WebSocketProvider } from "@/lib/websocket-context.jsx";
 import { ChatProvider, useChat } from "@/lib/chat-context.jsx";
+import { ZagelProvider } from "@/lib/zagel-context.jsx";
 import { ChatList, ConversationView, NewChatDialog } from "@/components/chat";
 import { ThemeToggle } from "@/components/theme-toggle.jsx";
 import { useIsMobile } from "@/hooks/use-mobile.jsx";
@@ -77,7 +78,9 @@ function ChatPage() {
     return (<ThemeProvider defaultTheme="dark">
       <WebSocketProvider userId={currentUser.id}>
         <ChatProvider currentUser={currentUser}>
-          <ChatLayoutContent />
+          <ZagelProvider userId={currentUser.id}>
+            <ChatLayoutContent />
+          </ZagelProvider>
         </ChatProvider>
       </WebSocketProvider>
     </ThemeProvider>);

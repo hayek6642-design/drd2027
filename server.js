@@ -2148,6 +2148,7 @@ app.use('/codebank', express.static(path.join(__dirname, 'codebank'), {
 
 app.use('/uploads/images', express.static(path.join(__dirname, 'codebank', 'setta', 'server', 'uploads', 'images')))
 app.use('/uploads/piccarboon', express.static(path.join(__dirname, 'codebank', 'setta', 'server', 'uploads', 'piccarboon')))
+app.use('/uploads/voices', express.static(path.join(__dirname, 'uploads', 'voices')))
 
 try {
   const dirs = [

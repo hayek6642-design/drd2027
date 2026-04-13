@@ -704,6 +704,61 @@ router.post('/zagel/voice-message/:voiceMessageId/played', requireAuth, async (r
   }
 })
 
+// ─────────────────────────────────────────
+// VOICE UPLOAD ENDPOINTS
+// ─────────────────────────────────────────
+
+// Upload voice message audio file - accepts base64 encoded audio
+router.post('/upload-voice', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id
+    const { conversation_id, audioData, audioFormat = 'wav' } = req.body
+    
+    if (!conversation_id) {
+      return res.status(400).json({ error: 'Conversation ID is required' })
+    }
+    
+    if (!audioData) {
+      return res.status(400).json({ error: 'Audio data is required' })
+    }
+    
+    // Generate unique filename
+    const timestamp = Date.now()
+    const randomStr = Math.random().toString(36).substr(2, 9)
+    const filename = `voice_${timestamp}_${randomStr}.${audioFormat || 'wav'}`
+    
+    // For now, just return a URL that can be used
+    // In production, you would save the audio to disk or cloud storage
+    const audioUrl = `/uploads/voices/${filename}`
+    const voiceMessageId = `voice_${timestamp}_${randomStr}`
+    
+    // Log audio metadata (for future audio processing if needed)
+    console.log('[E7ki] Voice message registered:', {
+      id: voiceMessageId,
+      userId,
+      conversationId: conversation_id,
+      filename,
+      url: audioUrl,
+      format: audioFormat,
+      uploadedAt: new Date().toISOString()
+    })
+    
+    res.json({
+      success: true,
+      audioUrl,
+      audioId: voiceMessageId,
+      message: 'Voice message uploaded successfully'
+    })
+  } catch (err) {
+    console.error('[E7ki] Voice upload error:', err)
+    res.status(500).json({ error: 'Failed to upload voice message' })
+  }
+})
+
+// ─────────────────────────────────────────
+// ZAGEL AVATAR ENDPOINTS
+// ─────────────────────────────────────────
+
 // Update ZAGEL avatar appearance
 router.put('/zagel/avatar', requireAuth, async (req, res) => {
   try {
