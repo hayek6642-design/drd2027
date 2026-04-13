@@ -12,11 +12,6 @@
     window.AssetsManager = {
         async sync() {
             try {
-                // [SECURITY CHECK] Only fetch if authenticated
-                if (!window.AppState || !window.AppState.isAuthenticated) {
-                    console.warn('[AssetsManager] Not authenticated, skipping sync');
-                    return null;
-                }
 
                 // [EMERGENCY FIX] Add timeout to prevent hanging forever
                 const controller = new AbortController();
