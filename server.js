@@ -677,7 +677,7 @@ app.get('/api/rewards/balance', async (req, res) => {
 
 app.get('/api/watchdog/status', requireAuth, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
     const { getWatchDogState, updateDogStateByTime } = WatchDogGuardian;
     
     // Refresh state based on time
@@ -1090,7 +1090,7 @@ policyEngine.register('creatorIncentive', new CreatorIncentivePolicy(transaction
 // Register this device as the active session (or detect conflict)
 app.post('/api/session/register-device', requireAuth, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
     const sessionToken = (req.cookies && req.cookies.session_token) || null;
     const deviceLabel = getDeviceLabel(req);
     if (!sessionToken) return res.json({ status: 'conflict' });
@@ -1136,7 +1136,7 @@ app.post('/api/session/register-device', requireAuth, async (req, res) => {
 // Heartbeat — keeps the active session alive
 app.post('/api/session/heartbeat', requireAuth, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
     const sessionToken = (req.cookies && req.cookies.session_token) || null;
     await query(
       'UPDATE active_device_sessions SET last_seen_at = CURRENT_TIMESTAMP WHERE user_id = $1 AND session_token = $2',
@@ -1151,7 +1151,7 @@ app.post('/api/session/heartbeat', requireAuth, async (req, res) => {
 // Take over — kick old device via SSE, become the active device
 app.post('/api/session/takeover', requireAuth, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
     const sessionToken = (req.cookies && req.cookies.session_token) || null;
     const deviceLabel = getDeviceLabel(req);
 
@@ -1195,7 +1195,7 @@ app.post('/api/session/takeover', requireAuth, async (req, res) => {
 // QR Generate — generates a one-time link token for this device
 app.get('/api/session/qr/generate', requireAuth, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
     const token = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
@@ -1288,7 +1288,7 @@ a{color:#58a6ff;text-decoration:none;font-size:14px}</style></head>
 app.get('/api/session/qr/status/:token', requireAuth, async (req, res) => {
   try {
     const { token } = req.params;
-    const userId = String(req.user.id);
+    const userId = String(req.userId || req.user?.id || req.user?.userId || req.user?.sub);
 
     const row = await query(
       'SELECT user_id, expires_at, used FROM qr_link_tokens WHERE token = $1',
@@ -2434,7 +2434,7 @@ async function autoCompressUserCodes(userId) {
 // ================================================================
 app.post('/api/sync/restore-codes', requireAuth, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
     const { codes: incomingCodes } = req.body || {};
 
     if (!Array.isArray(incomingCodes) || incomingCodes.length === 0) {
@@ -2504,7 +2504,7 @@ app.post('/api/sync/restore-codes', requireAuth, async (req, res) => {
 app.post('/api/sync', requireAuth, async (req, res) => {
   try {
     const { delta_codes, delta_silver, delta_gold, sync_id } = req.body || {}
-    const userId = req.user.id;
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
 
     console.log(`[SYNC REQUEST] User: ${userId}, SyncID: ${sync_id}, Deltas: C:${delta_codes} S:${delta_silver} G:${delta_gold}`);
 
@@ -2622,7 +2622,7 @@ app.post('/api/sync', requireAuth, async (req, res) => {
 
 app.get('/api/ledger/verify', requireAuth, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
     const result = await query(
       "SELECT COALESCE(codes_count, 0) as codes, COALESCE(silver_count, 0) as silver, COALESCE(gold_count, 0) as gold FROM users WHERE id = $1",
       [userId]
@@ -2654,7 +2654,7 @@ app.get('/api/assets/balance', requireAuth, async (req, res) => {
 app.post('/api/assets/transaction', requireAuth, async (req, res) => {
   try {
     const { type, action, amount, service, metadata } = req.body;
-    const userId = req.user.id;
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
     
     if (!type || !action || !service) {
       return res.status(400).json({ error: 'Missing required fields: type, action, service' });
@@ -3069,7 +3069,7 @@ app.post('/api/sqlite/codes', async (req, res) => {
 // Called by bankode-core.js and yt-new-clear.html
 app.get('/api/sqlite/codes', requireAuth, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
 
     // Fetch counts from users table
     const userRes = await query(
@@ -3179,7 +3179,7 @@ app.get('/api/codes/list', requireAuth, async (req, res) => {
 // Purge old-format codes from DB (client calls this once on startup)
 app.delete('/api/codes/purge-old-format', requireAuth, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
     const result = await query(
       `DELETE FROM codes WHERE user_id = $1 AND code NOT LIKE '____-____-____-____-____-____-P_'`,
       [userId]
@@ -3713,7 +3713,7 @@ console.log('[INIT] Tables will be created on first use')
 // POST /api/watchdog/feed - Feed the watchdog (costs 10 codes) - Enhanced Security
 app.post('/api/watchdog/feed', requireAuth, enforceFinancialSecurity, async (req, res) => {
   try {
-    const userId = req.user && req.user.id
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub
     if (!userId) return res.status(401).json({ success: false, error: 'unauthorized' })
     
     // Get idempotency key from request
@@ -3755,7 +3755,7 @@ app.post('/api/watchdog/feed', requireAuth, enforceFinancialSecurity, async (req
 // POST /api/watchdog/buy-dog - Buy a new dog from Pebalaash (costs 1000 codes)
 app.post('/api/watchdog/buy-dog', requireAuth, enforceFinancialSecurity, async (req, res) => {
   try {
-    const userId = req.user && req.user.id;
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
     if (!userId) return res.status(401).json({ success: false, error: 'unauthorized' });
 
     const BUY_DOG_COST = 1000;
@@ -3847,7 +3847,7 @@ app.post('/api/watchdog/buy-dog', requireAuth, enforceFinancialSecurity, async (
 // POST /api/watchdog/debug-kill — DEBUG ONLY: Force dog to DEAD state for testing
 app.post('/api/watchdog/debug-kill', requireAuth, async (req, res) => {
   try {
-    const userId = req.user && req.user.id;
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
     if (!userId) return res.status(401).json({ success: false, error: 'unauthorized' });
     const pastDate = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString();
     // Upsert: try update first, then insert
@@ -3872,7 +3872,7 @@ console.log('[QARSAN] Tables auto-created on first use')
 // GET /api/qarsan/status - Get Qarsan status for current user
 app.get('/api/qarsan/status', requireAuth, async (req, res) => {
   try {
-    const userId = req.user && req.user.id
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub
     if (!userId) return res.status(401).json({ success: false, error: 'unauthorized' })
     
     const userEmailRes = await query(
@@ -3931,7 +3931,7 @@ app.get('/api/qarsan/status', requireAuth, async (req, res) => {
 
 app.post('/api/qarsan/mode', requireAuth, enforceFinancialSecurity, async (req, res) => {
   try {
-    const userId = req.user && req.user.id
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub
     if (!userId) return res.status(401).json({ success: false, error: 'unauthorized' })
     const { mode, depositAmount } = req.body || {}
     if (!mode || !['OFF', 'RANGED', 'EXPOSURE'].includes(mode)) {
@@ -4019,7 +4019,7 @@ app.post('/api/qarsan/mode', requireAuth, enforceFinancialSecurity, async (req, 
 // POST /api/qarsan/activate - legacy alias
 app.post('/api/qarsan/activate', requireAuth, enforceFinancialSecurity, async (req, res) => {
   try {
-    const userId = req.user && req.user.id
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub
     if (!userId) return res.status(401).json({ success: false, error: 'unauthorized' })
     
     const { mode, depositAmount } = req.body || {}
@@ -4127,7 +4127,7 @@ app.post('/api/qarsan/activate', requireAuth, enforceFinancialSecurity, async (r
 // POST /api/qarsan/deactivate - Deactivate Qarsan
 app.post('/api/qarsan/deactivate', requireAuth, enforceFinancialSecurity, async (req, res) => {
   try {
-    const userId = req.user && req.user.id
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub
     if (!userId) return res.status(401).json({ success: false, error: 'unauthorized' })
     
     const client = await pool.connect()
@@ -4315,7 +4315,7 @@ app.post('/api/qarsan/attack', requireAuth, enforceFinancialSecurity, async (req
 // GET /api/qarsan/users - Get virtual users for attack targets
 app.get('/api/qarsan/users', requireAuth, async (req, res) => {
   try {
-    const userId = req.user && req.user.id
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub
     if (!userId) return res.status(401).json({ success: false, error: 'unauthorized' })
     
     // Get virtual users with email information
@@ -4404,7 +4404,7 @@ app.get('/api/qarsan/users', requireAuth, async (req, res) => {
 
 app.post('/api/qarsan/feed-dog', requireAuth, enforceFinancialSecurity, async (req, res) => {
   try {
-    const userId = req.user && req.user.id
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub
     if (!userId) return res.status(401).json({ success: false, error: 'unauthorized' })
     const idempotencyKey = req.headers['x-idempotency-key'] || req.body.idempotencyKey || null
     const result = await feedWatchDog(userId, idempotencyKey)
@@ -4482,7 +4482,7 @@ async function compressToGold(userId) {
 // Mint endpoint - Server generates codes only when requested
 app.post('/api/mint', requireAuth, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
     const amount = 5;
     const codes = [];
 
@@ -4532,7 +4532,7 @@ app.post('/api/mint', requireAuth, async (req, res) => {
 
 app.post('/api/rewards/claim', requireAuth, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
     const { type } = req.body; // 'silver' or 'gold'
 
     if (!type || (type !== 'silver' && type !== 'gold')) {
@@ -4576,7 +4576,7 @@ setInterval(async () => {
 
 app.get('/api/balances', requireAuth, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
     const r = await query(
       'SELECT codes_count, silver_count, gold_count FROM balances WHERE user_id=$1',
       [userId]
@@ -4777,7 +4777,7 @@ app.post('/api/events/ack', async (req, res) => {
 // Balances endpoint (Unified)
 app.get('/api/balances', requireAuth, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
     const r = await query(
       'SELECT codes_count, silver_count, gold_count FROM balances WHERE user_id=$1',
       [userId]

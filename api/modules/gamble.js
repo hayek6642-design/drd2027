@@ -77,7 +77,7 @@ async function creditCodes(userId, amount, roomId, type, note) {
 router.post('/room', requireAuth, async (req, res) => {
   try {
     const { gameId, gameName, numPlayers } = req.body;
-    const userId = req.user.id;
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
     const n = parseInt(numPlayers, 10);
     if (!gameId || isNaN(n) || n < 2 || n > 8)
       return res.status(400).json({ success: false, error: 'gameId required; numPlayers must be 2–8' });
@@ -99,7 +99,7 @@ router.post('/room', requireAuth, async (req, res) => {
 router.post('/room/:id/join', requireAuth, async (req, res) => {
   try {
     const roomId = req.params.id;
-    const userId = req.user.id;
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
     const username = (req.body.username || 'Player').slice(0, 32);
 
     const roomRes = await query('SELECT * FROM gamble_rooms WHERE id=$1', [roomId]);
@@ -141,7 +141,7 @@ router.post('/room/:id/join', requireAuth, async (req, res) => {
 router.post('/room/:id/score', requireAuth, async (req, res) => {
   try {
     const roomId = req.params.id;
-    const userId = req.user.id;
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
     const score = parseInt(req.body.score, 10) || 0;
 
     const roomRes = await query('SELECT status FROM gamble_rooms WHERE id=$1', [roomId]);
@@ -160,7 +160,7 @@ router.post('/room/:id/declare-winner', requireAuth, async (req, res) => {
   try {
     const roomId = req.params.id;
     const { winnerId, winnerScore } = req.body;
-    const userId = req.user.id;
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
 
     const roomRes = await query('SELECT * FROM gamble_rooms WHERE id=$1', [roomId]);
     if (!roomRes.rows.length) return res.status(404).json({ success: false, error: 'Room not found' });
@@ -188,7 +188,7 @@ router.post('/room/:id/declare-winner', requireAuth, async (req, res) => {
 router.post('/room/:id/cancel', requireAuth, async (req, res) => {
   try {
     const roomId = req.params.id;
-    const userId = req.user.id;
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
 
     const roomRes = await query('SELECT * FROM gamble_rooms WHERE id=$1', [roomId]);
     if (!roomRes.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
