@@ -10,6 +10,7 @@ import ChatPage from "@/pages/chat";
 import AuthPage from "@/pages/login";
 import NotFound from "@/pages/not-found";
 import { startIndexedDBCleanup } from "@/lib/indexeddb-cleaner";
+import { ZagelProvider } from "@/lib/zagel-context";
 startIndexedDBCleanup();
 
 function Router() {
@@ -30,7 +31,9 @@ export default function App() {
       <AuthProvider>
         <TooltipProvider>
           <Toaster />
-          <Router />
+          <ZagelProvider>
+            <Router />
+          </ZagelProvider>
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>);
