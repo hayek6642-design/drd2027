@@ -2397,71 +2397,103 @@
             // Handle AUTH_REFRESH from iframe-auth-client.js
             try { window.addEventListener('message', function (ev) { try { var data = ev && ev.data || {}; if (data && data.type === 'AUTH_REFRESH') { try { var targetOrigin = (ev.origin && ev.origin !== 'null') ? ev.origin : window.location.origin; var user = null; var sessionId = null; var authenticated = false; try { authenticated = (window.Auth && typeof window.Auth.isAuthenticated==='function' && window.Auth.isAuthenticated()) || (window.AuthCore && typeof window.AuthCore.isAuthenticated==='function' && window.AuthCore.isAuthenticated()) || (!!window.__AUTH_READY__ && !!(window.APP_AUTH && window.APP_AUTH.user)); } catch(_){ authenticated = false } try { user = (window.APP_AUTH && window.APP_AUTH.user) || (window.Auth && window.Auth.user) || null; sessionId = localStorage.getItem('sessionId') || (window.APP_AUTH && window.APP_AUTH.sessionId) || null; } catch(_){} if (window.DEBUG_MODE) console.log('[AUTH REFRESH] Refreshing for iframe'); ev.source.postMessage({ type: 'AUTH_RESPONSE', authenticated: authenticated, user: user, userId: user?.id || sessionId, sessionId: sessionId, requestId: data.requestId }, targetOrigin); } catch (_) { } } } catch (_) { } }); } catch (_) {}
             try { window.addEventListener('message', function (ev) { try { var data = ev && ev.data || {}; if (data && data.type === 'CODEBANK_INTENT') { try { var intent = data.intent || ''; var detail = data.detail || {}; console.log('[CODEBANK INTENT]', intent, detail); if (intent === 'compress') { window.dispatchEvent(new CustomEvent('intent:compress', { detail: detail })); } else if (intent === 'convert') { window.dispatchEvent(new CustomEvent('intent:convert', { detail: detail })); } else if (intent === 'grind') { window.dispatchEvent(new CustomEvent('intent:grind', { detail: detail })); } } catch(_){} } } catch(_){} }); } catch(_){}
-            try { var frame = document.getElementById('code-popup-iframe'); if (frame) { frame.addEventListener('load', function () { try { 
-                        // [FIX] Wait for assets to sync before sending snapshot
-                        var waitForAssets = function() {
-                            var snap = AssetBus.snapshot();
-                            if (snap && snap.codes && snap.codes.length > 0) {
-                                // Assets loaded, send snapshot
-                                sendSnapshot();
-                            } else if (!snap || snap.codes.length === 0) {
-                                // Trigger sync if not done yet
-                                if (window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
-                                    window.AssetsManager.sync().then(() => {
-                                        setTimeout(sendSnapshot, 100);
-                                    }).catch(() => {
-                                        setTimeout(sendSnapshot, 100);
-                                    });
-                                } else {
-                                    setTimeout(sendSnapshot, 100);
+            try { var frame = document.getElementById('code-popup-iframe'); if (frame) { frame.addEventListener('load', function () { 
+                try {
+                    // [FIX] Retrieve last code from storage
+                    var lastCode = null;
+                    try {
+                        // Try IndexedDB first
+                        if (window.db && typeof window.db.get === 'function') {
+                            lastCode = window.db.get('last_generated_code');
+                        }
+                    } catch(_) {}
+                    
+                    // Fallback to localStorage
+                    if (!lastCode) {
+                        try {
+                            lastCode = localStorage.getItem('last_generated_code');
+                        } catch(_) {}
+                    }
+                    
+                    // Fallback to sessionStorage
+                    if (!lastCode) {
+                        try {
+                            lastCode = sessionStorage.getItem('last_generated_code');
+                        } catch(_) {}
+                    }
+                    
+                    // Send snapshot with last code
+                    var sendSnapshotWithLastCode = function() {
+                        try {
+                            var snap = AssetBus && typeof AssetBus.snapshot === 'function' ? AssetBus.snapshot() : {};
+                            if (!snap) snap = { codes: [], silver: [], gold: [] };
+                            
+                            // Include last generated code if found
+                            if (lastCode && (!snap.codes || snap.codes.length === 0)) {
+                                console.log('[CODE RECOVERY] Adding last generated code:', lastCode);
+                                snap.lastGeneratedCode = lastCode;
+                            }
+                            
+                            if (frame && frame.contentWindow) {
+                                var out2 = sanitizeUISnapshot(Object.assign({}, snap, { source: 'ui' }));
+                                var authed2 = false;
+                                try {
+                                    authed2 = (window.Auth && typeof window.Auth.isAuthenticated === 'function' && window.Auth.isAuthenticated()) || 
+                                              (window.AuthCore && typeof window.AuthCore.isAuthenticated === 'function' && window.AuthCore.isAuthenticated()) || 
+                                              (!!window.__AUTH_READY__ && !!(window.APP_AUTH && window.APP_AUTH.user));
+                                } catch(_) { authed2 = false; }
+                                
+                                if (!authed2) { 
+                                    console.warn('[SNAPSHOT BLOCKED] not authenticated (frame load)');
+                                    return;
+                                }
+                                
+                                console.log('[SNAPSHOT] Sending to iframe on load, snap:', out2);
+                                frame.contentWindow.postMessage({ type: 'CODEBANK_ASSETS_SYNC', payload: out2 }, window.location.origin);
+                                frame.contentWindow.postMessage({ type: 'assetbus:snapshot', data: out2 }, window.location.origin);
+                            }
+                        } catch(e) {
+                            console.error('[SNAPSHOT ERROR]', e);
+                        }
+                    };
+                    
+                    sendSnapshotWithLastCode();
+                    
+                    // Re-send after 1s if assets load
+                    var resendSnapTimeout = setTimeout(function() {
+                        try {
+                            var freshSnap = AssetBus && typeof AssetBus.snapshot === 'function' ? AssetBus.snapshot() : null;
+                            if (freshSnap && frame && frame.contentWindow) {
+                                var freshOut = sanitizeUISnapshot(Object.assign({}, freshSnap, { source: 'ui' }));
+                                if (freshOut && (freshOut.codes?.length > 0 || freshOut.silver?.length > 0 || freshOut.gold?.length > 0)) {
+                                    console.log('[SNAPSHOT] Re-sending with populated assets:', freshOut);
+                                    frame.contentWindow.postMessage({ type: 'CODEBANK_ASSETS_SYNC', payload: freshOut }, window.location.origin);
+                                    frame.contentWindow.postMessage({ type: 'assetbus:snapshot', data: freshOut }, window.location.origin);
                                 }
                             }
-                        };
-                        
-                        var sendSnapshot = function() {
-                            var snap = AssetBus.snapshot(); if (snap && frame.contentWindow) { try { var out2 = sanitizeUISnapshot(Object.assign({}, snap, { source: 'ui' })); if (out2 && out2.count === 0) { console.warn('[UI SNAPSHOT] zero-count snapshot blocked', out2); }
-                        var authed2 = false; try { authed2 = (window.Auth && typeof window.Auth.isAuthenticated==='function' && window.Auth.isAuthenticated()) || (window.AuthCore && typeof window.AuthCore.isAuthenticated==='function' && window.AuthCore.isAuthenticated()) || (!!window.__AUTH_READY__ && !!(window.APP_AUTH && window.APP_AUTH.user)); } catch(_){ authed2 = false }
-                        if (!authed2) { console.warn('[SNAPSHOT BLOCKED] not authenticated (frame load)'); return; }
-                        console.log('[SNAPSHOT] Sending to iframe on load, snap:', out2);
-                        frame.contentWindow.postMessage({ type: 'CODEBANK_ASSETS_SYNC', payload: out2 }, window.location.origin); 
-                        
-                        // Also proactively send bridge request since iframe may load before listener is ready
-                        if (window.DEBUG_MODE) console.log('[SNAPSHOT] Sending proactive assetbus:snapshot');
-                        frame.contentWindow.postMessage({ type: 'assetbus:snapshot', data: out2 }, window.location.origin);
-                        
-                        // [EMERGENCY FIX] Re-send snapshot after assets load
-                        // This ensures iframe gets populated codes, not empty ones
-                        var resendSnapTimeout = setTimeout(function() {
-                            try {
-                                var freshSnap = AssetBus && typeof AssetBus.snapshot === 'function' ? AssetBus.snapshot() : null;
-                                if (freshSnap && frame.contentWindow) {
-                                    var freshOut = sanitizeUISnapshot(Object.assign({}, freshSnap, { source: 'ui' }));
-                                    if (freshOut && (freshOut.codes?.length > 0 || freshOut.silver?.length > 0 || freshOut.gold?.length > 0)) {
-                                        console.log('[SNAPSHOT] Re-sending with populated assets:', freshOut);
-                                        frame.contentWindow.postMessage({ type: 'CODEBANK_ASSETS_SYNC', payload: freshOut }, window.location.origin);
-                                        frame.contentWindow.postMessage({ type: 'assetbus:snapshot', data: freshOut }, window.location.origin);
-                                    }
+                        } catch(_) {}
+                    }, 1000);
+                    
+                    // Listen for asset updates
+                    var assetsUpdateHandler = function(e) {
+                        try {
+                            clearTimeout(resendSnapTimeout);
+                            if (frame && frame.contentWindow) {
+                                var updatedSnap = AssetBus && typeof AssetBus.snapshot === 'function' ? AssetBus.snapshot() : null;
+                                if (updatedSnap) {
+                                    var updatedOut = sanitizeUISnapshot(Object.assign({}, updatedSnap, { source: 'ui' }));
+                                    console.log('[SNAPSHOT] Sending after assets:updated event:', updatedOut);
+                                    frame.contentWindow.postMessage({ type: 'CODEBANK_ASSETS_SYNC', payload: updatedOut }, window.location.origin);
+                                    frame.contentWindow.postMessage({ type: 'assetbus:snapshot', data: updatedOut }, window.location.origin);
                                 }
-                            } catch(_) {}
-                        }, 1000);
-                        
-                        // If assets update event fires, send updated snapshot immediately
-                        var assetsUpdateHandler = function(e) {
-                            try {
-                                clearTimeout(resendSnapTimeout);
-                                if (frame.contentWindow) {
-                                    var updatedSnap = AssetBus && typeof AssetBus.snapshot === 'function' ? AssetBus.snapshot() : null;
-                                    if (updatedSnap) {
-                                        var updatedOut = sanitizeUISnapshot(Object.assign({}, updatedSnap, { source: 'ui' }));
-                                        console.log('[SNAPSHOT] Sending after assets:updated event:', updatedOut);
-                                        frame.contentWindow.postMessage({ type: 'CODEBANK_ASSETS_SYNC', payload: updatedOut }, window.location.origin);
-                                        frame.contentWindow.postMessage({ type: 'assetbus:snapshot', data: updatedOut }, window.location.origin);
-                                    }
-                                }
-                            } catch(_) {}
-                        };
-                        try { window.addEventListener('assets:updated', assetsUpdateHandler, { once: true }); } catch(_) {}
-                        } catch (_) { } } } catch (_) { } }); } } catch (_) { }
+                            }
+                        } catch(_) {}
+                    };
+                    window.addEventListener('assets:updated', assetsUpdateHandler, { once: true });
+                } catch (e) {
+                    console.error('[FRAME LOAD ERROR]', e);
+                }
+            }); } } catch (_) { }
         })();
     </script>
     <script>

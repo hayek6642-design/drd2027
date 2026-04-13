@@ -13,9 +13,12 @@
         async sync() {
             try {
 
-                // [EMERGENCY FIX] Add timeout to prevent hanging forever
+                // [CRITICAL FIX] Fetch from API with timeout and storage fallback
                 const controller = new AbortController();
                 const timeout = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+                
+                let data = null;
+                let snapshot = null;
                 
                 try {
                     const res = await fetch('/api/codes/list', { 
@@ -24,34 +27,59 @@
                     });
                     clearTimeout(timeout);
                     
-                    if (!res.ok) {
-                        console.warn('[AssetsManager] API returned', res.status);
-                        return null;
-                    }
-                    const data = await res.json();
-                    if (!data.success) {
-                        console.warn('[AssetsManager] API returned success:false');
-                        return null;
+                    if (res.ok) {
+                        data = await res.json();
+                        if (data.success) {
+                            const rows = Array.isArray(data.codes) ? data.codes : [];
+                            const toCode = r => (typeof r === 'string' ? r : r.code);
+                            snapshot = {
+                                codes:  rows.filter(r => !r.type || r.type === 'codes' || r.type === 'normal').map(toCode),
+                                silver: rows.filter(r => r.type === 'silver').map(toCode),
+                                gold:   rows.filter(r => r.type === 'gold').map(toCode),
+                                lastSync: Date.now(),
+                                source: 'api'
+                            };
+                        }
                     }
                 } catch(fetchErr) {
                     clearTimeout(timeout);
                     if (fetchErr.name === 'AbortError') {
-                        console.error('[AssetsManager] Sync timed out after 8s');
+                        console.error('[AssetsManager] Sync timed out after 8s, trying fallback...');
                     } else {
-                        console.error('[AssetsManager] Fetch error:', fetchErr.message);
+                        console.error('[AssetsManager] Fetch error, trying fallback:', fetchErr.message);
                     }
-                    return null;
                 }
-
-                const rows = Array.isArray(data.codes) ? data.codes : [];
-                const toCode = r => (typeof r === 'string' ? r : r.code);
-
-                const snapshot = {
-                    codes:  rows.filter(r => !r.type || r.type === 'codes' || r.type === 'normal').map(toCode),
-                    silver: rows.filter(r => r.type === 'silver').map(toCode),
-                    gold:   rows.filter(r => r.type === 'gold').map(toCode),
-                    lastSync: Date.now()
-                };
+                
+                // [FALLBACK] If API failed, try to load from localStorage
+                if (!snapshot) {
+                    try {
+                        const cached = localStorage.getItem('codebank_assets');
+                        if (cached) {
+                            snapshot = JSON.parse(cached);
+                            snapshot.source = 'cache';
+                            console.log('[AssetsManager] Loaded from localStorage cache');
+                        }
+                    } catch(cacheErr) {
+                        console.error('[AssetsManager] Cache load failed:', cacheErr);
+                    }
+                }
+                
+                // [LAST RESORT] If still no data, create minimal snapshot with stored last code
+                if (!snapshot) {
+                    let lastCode = null;
+                    try {
+                        lastCode = localStorage.getItem('last_generated_code');
+                    } catch(_) {}
+                    
+                    snapshot = {
+                        codes: lastCode ? [lastCode] : [],
+                        silver: [],
+                        gold: [],
+                        lastSync: Date.now(),
+                        source: 'last_generated'
+                    };
+                    console.log('[AssetsManager] Using last generated code fallback');
+                }
 
                 window.AppState.assets  = snapshot;
                 window.AppState.lastSync = snapshot.lastSync;
@@ -61,6 +89,10 @@
                 try { 
                     localStorage.setItem('codebank_assets', JSON.stringify(snapshot)); 
                     localStorage.setItem('codebank_assets_user', userId);
+                    // Also store the first code as last generated code
+                    if (snapshot.codes && snapshot.codes.length > 0) {
+                        localStorage.setItem('last_generated_code', snapshot.codes[0]);
+                    }
                 } catch(_) {}
 
                 window.EventBus.dispatch('assets:updated', {
