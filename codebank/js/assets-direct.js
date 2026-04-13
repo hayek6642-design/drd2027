@@ -88,11 +88,13 @@
                 const userId = window.AppState.user?.id || window.AppState.user?.userId || 'anonymous';
                 try { 
                     localStorage.setItem('codebank_assets', JSON.stringify(snapshot)); 
+                    localStorage.setItem('acc_assets', JSON.stringify(snapshot));
                     localStorage.setItem('codebank_assets_user', userId);
                     // Also store the first code as last generated code
                     if (snapshot.codes && snapshot.codes.length > 0) {
                         localStorage.setItem('last_generated_code', snapshot.codes[0]);
                     }
+                    console.log('[PIPELINE STEP 1] Generated and stored:', snapshot);
                 } catch(_) {}
 
                 window.EventBus.dispatch('assets:updated', {
