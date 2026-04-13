@@ -1,200 +1,175 @@
-// service-base.js
-// Base functionality for all CodeBank services
-// Include as FIRST script in every service HTML
+/**
+ * SERVICE-BASE.js — Universal service bootstrap
+ *
+ * Combines ServiceAuth + UnifiedStorage into a single init pattern.
+ * Every service should use this instead of manually wiring auth + storage.
+ *
+ * USAGE:
+ *   <script src="/shared/service-auth.js"></script>
+ *   <script src="/shared/unified-storage.js"></script>
+ *   <script src="/shared/service-base.js"></script>
+ *   <script>
+ *     ServiceBase.init({
+ *       name: 'SafeCode',
+ *       onReady: function(ctx) {
+ *         // ctx.userId, ctx.email, ctx.storage, ctx.auth, ctx.balance
+ *         console.log('Ready!', ctx.userId);
+ *       },
+ *       onBalanceChange: function(balance) {
+ *         // Called when code balance changes
+ *       }
+ *     });
+ *   </script>
+ */
 
-(function() {
+(function (global) {
   'use strict';
 
-  const ServiceBase = {
-    serviceId: null,
-    parentOrigin: null,
-    authState: null,
-    isReady: false,
+  var ServiceBase = {
+    auth: null,
+    userId: null,
+    email: null,
+    balance: 0,
+    _config: null,
+    _ready: false,
 
-    init(serviceName) {
-      this.serviceId = serviceName;
-      this.detectParentOrigin();
-      this.setupMessageBridge();
-      this.setupAuth();
-      this.signalReady();
-      
-      console.log(`[${serviceName}] Service base initialized`);
-    },
+    init: function (config) {
+      this._config = config || {};
+      var self = this;
 
-    // ============================================
-    // PARENT COMMUNICATION
-    // ============================================
+      // 1. Initialize auth
+      this.auth = new ServiceAuth();
 
-    detectParentOrigin() {
-      const params = new URLSearchParams(location.search);
-      const origin = params.get('auth_origin');
-      this.parentOrigin = origin ? decodeURIComponent(origin) : document.referrer || '*';
-    },
-
-    setupMessageBridge() {
-      window.addEventListener('message', (e) => {
-        if (this.parentOrigin !== '*' && e.origin !== this.parentOrigin) return;
-        
-        switch(e.data.type) {
-          case 'auth:response':
-          case 'auth:updated':
-            this.authState = e.data.payload;
-            this.onAuthUpdate(this.authState);
-            break;
-            
-          case 'service:activated':
-            this.onActivate();
-            break;
-            
-          case 'service:deactivated':
-            this.onDeactivate();
-            break;
-            
-          case 'service:pause':
-            this.onPause();
-            break;
-            
-          case 'service:resume':
-            this.onResume();
-            break;
-            
-          case 'service:destroy':
-            this.onDestroy();
-            break;
-        }
-      });
-    },
-
-    sendToParent(type, payload = {}) {
-      if (window.parent === window) return;
-      
-      window.parent.postMessage({
-        type: type,
-        service: this.serviceId,
-        payload: payload,
-        timestamp: Date.now()
-      }, this.parentOrigin);
-    },
-
-    // ============================================
-    // AUTHENTICATION
-    // ============================================
-
-    setupAuth() {
-      // Request auth from parent
-      this.sendToParent('service:request-auth');
-      
-      // Also check URL params for initial auth
-      const params = new URLSearchParams(location.search);
-      const authToken = params.get('auth_token');
-      if (authToken) {
-        this.authState = { token: authToken };
-      }
-    },
-
-    requireAuth() {
-      return new Promise((resolve) => {
-        if (this.authState) {
-          resolve(this.authState);
+      this.auth.onReady = function (session) {
+        if (!session || !session.userId) {
+          console.error('[' + (config.name || 'Service') + '] No valid session');
           return;
         }
-        
-        const check = setInterval(() => {
-          if (this.authState) {
-            clearInterval(check);
-            resolve(this.authState);
+
+        self.userId = session.userId;
+        self.email = session.email || '';
+
+        // 2. Wait for storage
+        UnifiedStorage.ready.then(function () {
+          // 3. Load code balance
+          return self._loadBalance();
+        }).then(function () {
+          // 4. Subscribe to updates
+          self._subscribeUpdates();
+          self._ready = true;
+
+          // 5. Call service-specific onReady
+          if (typeof config.onReady === 'function') {
+            config.onReady({
+              userId: self.userId,
+              email: self.email,
+              storage: UnifiedStorage,
+              auth: self.auth,
+              balance: self.balance
+            });
           }
-        }, 100);
-        
-        setTimeout(() => {
-          clearInterval(check);
-          resolve(null);
-        }, 5000);
-      });
-    },
-
-    // ============================================
-    // LIFECYCLE HOOKS (Override in service)
-    // ============================================
-
-    onAuthUpdate(auth) {
-      // Override in service
-      console.log(`[${this.serviceId}] Auth updated:`, auth?.isAuthenticated);
-    },
-
-    onActivate() {
-      // Override in service
-      document.body.style.display = 'block';
-    },
-
-    onDeactivate() {
-      // Override in service
-      document.body.style.display = 'none';
-    },
-
-    onPause() {
-      // Override in service - pause heavy operations
-      console.log(`[${this.serviceId}] Paused`);
-    },
-
-    onResume() {
-      // Override in service - resume operations
-      console.log(`[${this.serviceId}] Resumed`);
-    },
-
-    onDestroy() {
-      // Override in service - cleanup
-      console.log(`[${this.serviceId}] Destroying...`);
-      // Cleanup event listeners, intervals, etc.
-    },
-
-    signalReady() {
-      this.isReady = true;
-      this.sendToParent('service:ready', { serviceId: this.serviceId });
-      
-      // Dispatch DOM event for internal use
-      window.dispatchEvent(new CustomEvent('service:ready', { 
-        detail: { serviceId: this.serviceId } 
-      }));
-    },
-
-    // ============================================
-    // PERFORMANCE UTILITIES
-    // ============================================
-
-    debounce(fn, delay) {
-      let timeout;
-      return (...args) => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => fn(...args), delay);
+        }).catch(function (err) {
+          console.error('[' + (config.name || 'Service') + '] Init failed:', err);
+        });
       };
-    },
 
-    throttle(fn, limit) {
-      let inThrottle;
-      return (...args) => {
-        if (!inThrottle) {
-          fn(...args);
-          inThrottle = true;
-          setTimeout(() => inThrottle = false, limit);
+      this.auth.onAuthFailed = function () {
+        if (typeof config.onAuthFailed === 'function') {
+          config.onAuthFailed();
         }
       };
     },
 
-    // Lazy load images/components
-    lazyLoad(selector, callback) {
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            callback(entry.target);
-            observer.unobserve(entry.target);
+    _loadBalance: function () {
+      var self = this;
+      return UnifiedStorage.getAll('codes').then(function (codes) {
+        var active = (codes || []).filter(function (c) { return c.status === 'active'; });
+        self.balance = active.reduce(function (sum, c) { return sum + (c.value || 1); }, 0);
+      });
+    },
+
+    _subscribeUpdates: function () {
+      var self = this;
+      var config = this._config;
+
+      UnifiedStorage.subscribe('codes:new', function () {
+        self._loadBalance().then(function () {
+          if (typeof config.onBalanceChange === 'function') {
+            config.onBalanceChange(self.balance);
           }
         });
       });
-      
-      document.querySelectorAll(selector).forEach(el => observer.observe(el));
+
+      UnifiedStorage.subscribe('assets:updated', function (data) {
+        if (data && typeof data.codes === 'number') {
+          self.balance = data.codes;
+        }
+        if (typeof config.onBalanceChange === 'function') {
+          config.onBalanceChange(self.balance);
+        }
+      });
+
+      UnifiedStorage.subscribe('storage:refreshed', function (data) {
+        if (data.type === 'codes') {
+          self._loadBalance().then(function () {
+            if (typeof config.onBalanceChange === 'function') {
+              config.onBalanceChange(self.balance);
+            }
+          });
+        }
+      });
+    },
+
+    /**
+     * Spend codes for a service action.
+     * Returns a Promise that resolves with { success, remaining } or rejects if insufficient.
+     */
+    spendCodes: function (amount, description) {
+      var self = this;
+
+      if (this.balance < amount) {
+        return Promise.reject(new Error('Insufficient codes. Need ' + amount + ', have ' + self.balance));
+      }
+
+      self.balance = Math.max(0, self.balance - amount);
+
+      var tx = {
+        id: 'tx_' + (this._config.name || 'svc').toLowerCase() + '_' + Date.now(),
+        type: 'spend',
+        service: (this._config.name || 'unknown').toLowerCase(),
+        amount: amount,
+        description: description || 'Service usage',
+        userId: self.userId,
+        timestamp: Date.now()
+      };
+
+      return UnifiedStorage.set(tx.id, tx, 'transactions').then(function () {
+        UnifiedStorage.broadcast('assets:updated', { codes: self.balance });
+        return { success: true, remaining: self.balance };
+      });
+    },
+
+    /**
+     * Make an authenticated API call via ServiceAuth.
+     */
+    apiCall: function (endpoint, options) {
+      return this.auth.apiCall(endpoint, options);
+    },
+
+    /**
+     * Quick notification helper.
+     */
+    notify: function (text, type) {
+      var el = document.createElement('div');
+      el.style.cssText = 'position:fixed;top:16px;right:16px;padding:12px 20px;border-radius:10px;z-index:99999;font-size:0.85rem;font-family:sans-serif;box-shadow:0 4px 20px rgba(0,0,0,0.3);transition:all 0.3s;max-width:350px;' +
+        (type === 'error' ? 'background:#dc2626;color:#fff;' :
+         type === 'warning' ? 'background:#f59e0b;color:#000;' :
+         'background:#22c55e;color:#fff;');
+      el.textContent = text;
+      document.body.appendChild(el);
+      setTimeout(function () { el.style.opacity = '0'; setTimeout(function () { el.remove(); }, 300); }, 3500);
     }
   };
 
-  window.ServiceBase = ServiceBase;
-})();
+  global.ServiceBase = ServiceBase;
+})(window);
