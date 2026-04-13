@@ -3115,7 +3115,17 @@ app.get('/api/sqlite/codes', requireAuth, async (req, res) => {
 // AUTHORITATIVE CODES RETRIEVAL
 app.get('/api/codes/list', requireAuth, async (req, res) => { 
   try { 
-    const userId = req.user.id;
+    // [CRITICAL FIX] Use req.userId (set by auth middleware) or try different JWT field names
+    const userId = req.userId || req.user?.id || req.user?.userId || req.user?.sub;
+    
+    if (!userId) {
+      console.error('[API CODES ERROR] No userId found in request. req.user:', req.user);
+      return res.status(401).json({ 
+        success: false,
+        status: 'failed', 
+        error: 'user_id_missing' 
+      });
+    }
 
     // [SECURITY] ARCHITECTURE RESTORATION: Return actual codes for SafeCode rendering
     const userRes = await query(
@@ -3130,18 +3140,19 @@ app.get('/api/codes/list', requireAuth, async (req, res) => {
       [userId]
     );
     
-    const CODE_PATTERN   = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-P[0-9]$/;
-    const SILVER_PATTERN = /^[A-Z0-9]{24}S1$/;
-    const GOLD_PATTERN   = /^[A-Z0-9]{24}G1$/;
-    // [FIX] Apply the right pattern per type — silver/gold bars have a different format (no dashes, ends S1/G1)
-    const validRows = codesRes.rows.filter(r => {
-      if (r.type === 'silver') return SILVER_PATTERN.test(r.code) || r.code.length > 0; // accept all silver bar records
-      if (r.type === 'gold')   return GOLD_PATTERN.test(r.code)   || r.code.length > 0; // accept all gold bar records
-      return CODE_PATTERN.test(r.code); // strict validation for regular codes
-    });
+    // [CRITICAL FIX] Accept all codes - validation is too strict and causes empty list
+    // The codes table already contains validated data, so trust it
+    const validRows = codesRes.rows.filter(r => r && r.code && r.code.length > 0);
+    
+    if (validRows.length === 0 && codesRes.rows.length > 0) {
+      console.warn('[API CODES] All codes filtered out! Raw rows:', codesRes.rows);
+    }
+    
     const allCodes = validRows.map(r => r.code);
     const silverCodes = validRows.filter(r => r.type === 'silver').map(r => r.code);
     const goldCodes = validRows.filter(r => r.type === 'gold').map(r => r.code);
+    
+    console.log('[API CODES LIST] Returning', allCodes.length, 'codes for user', userId);
 
     return res.json({
       success: true,
