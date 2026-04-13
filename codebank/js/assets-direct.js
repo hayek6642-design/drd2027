@@ -225,6 +225,25 @@
         console.log('[AssetsManager] Signup detected, syncing...');
         window.AssetsManager.sync();
     });
+    
+    // [FIX] Auto-sync on page load if authenticated
+    if (document.readyState === 'loading') {
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.Auth && window.Auth.isAuthenticated && window.Auth.isAuthenticated()) {
+                console.log('[AssetsManager] Auto-syncing on DOMContentLoaded...');
+                window.AssetsManager.sync();
+            } else if (window.AuthCore && window.AuthCore.isAuthenticated && window.AuthCore.isAuthenticated()) {
+                console.log('[AssetsManager] Auto-syncing on DOMContentLoaded (AuthCore)...');
+                window.AssetsManager.sync();
+            }
+        });
+    } else {
+        // Document already loaded
+        if (window.Auth && window.Auth.isAuthenticated && window.Auth.isAuthenticated()) {
+            console.log('[AssetsManager] Auto-syncing immediately...');
+            window.AssetsManager.sync();
+        }
+    }
 
     console.log('[AssetsManager] Direct asset manager initialized.');
 
