@@ -1714,24 +1714,21 @@ function createExtraModeUI() {
 function updateExtraModeDisplay() {
     const isActive = extraModeActive;
     const codeDisplay = document.getElementById('code-display');
+    const pt = document.getElementById('progress-text');
     
-    if (codeDisplay) {
-        if (isActive) {
-            if (extraBarMode === 'silver') {
-                codeDisplay.textContent = 'EXTRA SILVER';
-            } else if (extraBarMode === 'gold') {
-                codeDisplay.textContent = 'EXTRA GOLD';
-            } else {
-                codeDisplay.textContent = 'EXTRA MODE';
-            }
-            const pt = document.getElementById('progress-text');
-            if (pt) pt.style.display = 'inline-block';
+    if (isActive && codeDisplay) {
+        // ONLY update code-display when extra mode is ACTIVE
+        if (extraBarMode === 'silver') {
+            codeDisplay.textContent = 'EXTRA SILVER';
+        } else if (extraBarMode === 'gold') {
+            codeDisplay.textContent = 'EXTRA GOLD';
         } else {
-            const savedCode = localStorage.getItem('uniqueCode') || '';
-            codeDisplay.textContent = savedCode;
-            const pt = document.getElementById('progress-text');
-            if (pt) pt.style.display = 'none';
+            codeDisplay.textContent = 'EXTRA MODE';
         }
+        if (pt) pt.style.display = 'inline-block';
+    } else if (!isActive && pt) {
+        // When NOT active, just hide progress text and let code display handler manage the code
+        pt.style.display = 'none';
     }
 }
 
