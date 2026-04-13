@@ -1786,11 +1786,11 @@ if (isFirstRun()) {
     // Accept messages from parent or same origin
     if (!e.data || !e.data.type) return;
     
-    if (e.data.type === 'parent:assets-init' || e.data.assets) {
+    if (e.data.type === 'assets:response' || e.data.type === 'parent:assets-init' || e.data.assets) {
       window.AppState = window.AppState || {};
       window.AppState.assets = e.data.assets || { codes: [], silver: [], gold: [] };
       window.AppState.user = e.data.user;
-      console.log('[SafeCode] Received assets via postMessage:', window.AppState.assets);
+      console.log('[PIPELINE STEP 4] SafeCode received assets via postMessage:', window.AppState.assets);
       
       // Reload interior with new assets if vault is open
       if (typeof loadInteriorAssets === 'function' && typeof isVaultOpen !== 'undefined' && isVaultOpen) {
@@ -1799,12 +1799,14 @@ if (isFirstRun()) {
     }
   });
   
-  // Request assets from parent after 1 second
-  setTimeout(function() {
-    if (window.self !== window.parent) {
-      try { window.parent.postMessage({ type: 'safecode:request-assets' }, '*'); } catch(_) {}
-    }
-  }, 1000);
+  // Register with parent and request assets immediately (non-blocking)
+  if (window.self !== window.parent) {
+    try {
+      window.parent.postMessage({ type: 'register:service', name: 'safecode' }, '*');
+      window.parent.postMessage({ type: 'assets:request' }, '*');
+      console.log('[SafeCode] Registered and requested assets immediately (non-blocking)');
+    } catch(_) {}
+  }
 })();
 </script>
 </body>
