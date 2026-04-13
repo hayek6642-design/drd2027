@@ -33,6 +33,7 @@
         </div>
     </div>
     <iframe id="service-frame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-top-navigation-by-user-activation"></iframe>
+    <script src="/shared/codebank-service-sync.js"></script>
     <script src="/shared/assets-service-bridge.js"></script>
     <script>
         const ParentBridge = {
@@ -43,13 +44,27 @@
             },
             receive: function(callback) {
                 window.addEventListener('message', (e) => {
-                    if (e.data?.type === 'auth:ready' || e.data?.type === 'codebank:init') { callback(e.data); }
+                    if (e.data?.type === 'auth:ready' || e.data?.type === 'codebank:init' || e.data?.type === 'codebank:auth-response') { 
+                        callback(e.data); 
+                    }
                 });
             }
         };
+        
         async function init() {
             ParentBridge.send({ status: 'loader-ready' });
-            ParentBridge.receive((data) => { loadService(data); });
+            
+            // Try unified sync first, fallback to manual request
+            if (window.CodeBankServiceSync) {
+                CodeBankServiceSync.onAuthReady((auth) => {
+                    console.log('[Pebalaash] Auth ready from CodeBankServiceSync:', auth.user?.id);
+                    loadService(auth);
+                });
+                CodeBankServiceSync.refreshAuth();
+            } else {
+                ParentBridge.receive((data) => { loadService(data); });
+            }
+            
             setTimeout(() => { if (!window.loaded) loadService(null); }, 2000);
         }
         function loadService(authData) {

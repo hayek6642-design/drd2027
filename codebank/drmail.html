@@ -578,11 +578,36 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<!-- Service Sync Module (for auth & storage) -->
+<script src="/shared/codebank-service-sync.js"></script>
+
 <script>
+// ─────────────────────────────────────────────────────────────────────────────
+// Service Sync Setup
+// ─────────────────────────────────────────────────────────────────────────────
+let IS_ADMIN = false;
+
+// Listen for auth updates
+CodeBankServiceSync.onAuthReady((auth) => {
+  if (auth.authenticated) {
+    console.log('[DrMail] Auth ready:', auth.user?.id || auth.user?.email);
+    IS_ADMIN = auth.user?.role === 'admin';
+    // Trigger UI update if needed
+    document.body.dispatchEvent(new CustomEvent('drmail:auth-updated', { detail: auth }));
+  }
+});
+
+// Listen for storage updates from parent
+CodeBankServiceSync.onStorageChange((key, value) => {
+  console.log('[DrMail] Storage updated:', key);
+  if (key === 'codebank_assets' || key === 'user') {
+    document.body.dispatchEvent(new CustomEvent('drmail:storage-updated', { detail: { key, value } }));
+  }
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // State
 // ─────────────────────────────────────────────────────────────────────────────
-let IS_ADMIN = false
 let currentUser = null
 let allUsers = []      // admin only: list of users
 let allConvs = []      // conversations / inbox items
