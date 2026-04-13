@@ -55,6 +55,11 @@ function tryOpenService(app, fallbackIndex = 0) {
         console.log("⚠️ App already open, focusing:", app.id);
         const modal = document.getElementById('service-modal');
         if (modal) modal.classList.add('active');
+        
+        // Set data attributes for auth bridge communication
+        modalIframe.setAttribute('data-service', app.id);
+        modalIframe.setAttribute('data-origin', window.location.origin);
+        console.log('[CodeBank] Set iframe data:', { service: app.id, origin: window.location.origin });
         return;
     }
 
@@ -85,6 +90,11 @@ function tryOpenService(app, fallbackIndex = 0) {
 
     if (modal && modalIframe) {
         modal.classList.add('active');
+        
+        // Set data attributes for auth bridge communication
+        modalIframe.setAttribute('data-service', app.id);
+        modalIframe.setAttribute('data-origin', window.location.origin);
+        console.log('[CodeBank] Set iframe data:', { service: app.id, origin: window.location.origin });
         if (modalTitle) modalTitle.textContent = app.name;
         modalLoading?.classList.remove('hidden');
 
@@ -143,6 +153,20 @@ function tryOpenService(app, fallbackIndex = 0) {
 
         // Set the source to load the service
         modalIframe.src = url;
+        
+        // Notify iframe that auth system is ready
+        setTimeout(() => {
+            try {
+                modalIframe.contentWindow.postMessage({ 
+                    type: 'auth:ready',
+                    service: app.id,
+                    origin: window.location.origin
+                }, window.location.origin);
+                console.log('[CodeBank] Sent auth:ready to iframe');
+            } catch(e) { 
+                console.warn('[CodeBank] Could not notify iframe:', e);
+            }
+        }, 500);
     } else {
         // Fallback: open in new window
         window.open(url, app.name, 'width=800,height=600');
