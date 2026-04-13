@@ -93,6 +93,7 @@ import drmailRouter from './api/modules/drmail.js';
 import quotaRouter from './api/modules/quota.js';
 import aiRouter from './server/routes/ai-routes.js';
 import assetRoutes from './server/routes/assets.js';
+import dbAdapter from './server/database/db-adapter.js';
 
 import { 
   getAllCountries, 
@@ -125,6 +126,9 @@ const { feedWatchDog } = WatchDogGuardian;
 const app = express();
 // Share devSessions with all routers via req.app.get('devSessions')
 app.set('devSessions', devSessions);
+
+// Make dbAdapter available to all routes
+app.locals.dbAdapter = dbAdapter;
 
 // Trust Render's reverse proxy (required for express-rate-limit behind proxy)
 app.set('trust proxy', 1);
@@ -5535,6 +5539,13 @@ server.once('listening', async () => {
       }
     }, 30000);
   }
+});
+
+// Initialize database adapter (will use Turso if env vars set, otherwise local SQLite)
+dbAdapter.init().then(() => {
+  console.log('[DB] Database adapter initialized');
+}).catch(err => {
+  console.error('[DB] Failed to initialize:', err.message);
 });
 
 server.listen(PORT, '0.0.0.0');

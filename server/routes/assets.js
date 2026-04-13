@@ -104,17 +104,30 @@ router.get('/all', async (req, res) => {
   if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
-    // Fetch all asset types
-    const [codesResult, silverResult, goldResult] = await Promise.all([
-      req.app.locals.db.execute({ sql: 'SELECT * FROM codes WHERE user_id = ? ORDER BY created_at DESC', args: [userId] }),
-      req.app.locals.db.execute({ sql: 'SELECT * FROM silver WHERE user_id = ? ORDER BY created_at DESC', args: [userId] }),
-      req.app.locals.db.execute({ sql: 'SELECT * FROM gold WHERE user_id = ? ORDER BY created_at DESC', args: [userId] })
-    ]);
+    // Use db-adapter if available, otherwise fallback to app.locals.db
+    let codes = [], silver = [], gold = [];
+    
+    if (req.app.locals.dbAdapter) {
+      const assets = await req.app.locals.dbAdapter.getUserAssets(userId);
+      codes = assets.codes || [];
+      silver = assets.silver || [];
+      gold = assets.gold || [];
+    } else if (req.app.locals.db) {
+      // Fallback to existing db
+      const [codesResult, silverResult, goldResult] = await Promise.all([
+        req.app.locals.db.execute({ sql: 'SELECT * FROM codes WHERE user_id = ? ORDER BY created_at DESC', args: [userId] }),
+        req.app.locals.db.execute({ sql: 'SELECT * FROM silver WHERE user_id = ? ORDER BY created_at DESC', args: [userId] }),
+        req.app.locals.db.execute({ sql: 'SELECT * FROM gold WHERE user_id = ? ORDER BY created_at DESC', args: [userId] })
+      ]);
+      codes = codesResult.rows || [];
+      silver = silverResult.rows || [];
+      gold = goldResult.rows || [];
+    }
 
     res.json({
-      codes: codesResult.rows || [],
-      silver: silverResult.rows || [],
-      gold: goldResult.rows || [],
+      codes,
+      silver,
+      gold,
       userId,
       timestamp: Date.now()
     });
