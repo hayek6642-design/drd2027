@@ -8,9 +8,11 @@
     
     <!-- CRITICAL: Asset receiver MUST be first script -->
     <script>
-        // SafeCode iframe asset receiver
+        // SafeCode iframe asset receiver - NON-BLOCKING
         (function() {
             'use strict';
+            
+            console.log('[SafeCode] Script loaded');
             
             window.AppState = { 
                 assets: { codes: [], silver: [], gold: [] },
@@ -18,10 +20,28 @@
                 loaded: false
             };
             
+            // NON-BLOCKING INIT - start immediately
+            function startApp() {
+                console.log('[SafeCode] Starting app immediately');
+                
+                // 1. Register with parent bridge FIRST
+                const parent = window.parent !== window ? window.parent : window;
+                parent.postMessage({ type: 'register:service', name: 'safecode' }, '*');
+                
+                // 2. Request assets (async, non-blocking)
+                parent.postMessage({ type: 'assets:request' }, '*');
+                
+                console.log('[SafeCode] Init complete, waiting for assets...');
+            }
+            
+            // Listen for asset responses
             window.addEventListener('message', function(e) {
+                if (!e.data || !e.data.type) return;
+                
                 console.log('[SafeCode] Message received:', e.data?.type);
                 
-                if (e.data?.type === 'parent:assets-init' || e.data?.assets) {
+                // Handle asset responses from parent
+                if (e.data?.type === 'assets:response' || e.data?.type === 'parent:assets-init' || e.data?.assets) {
                     window.AppState.assets = e.data.assets || { codes: [], silver: [], gold: [] };
                     window.AppState.user = e.data.user;
                     window.AppState.loaded = true;
@@ -35,17 +55,15 @@
                         detail: window.AppState.assets 
                     }));
                     
-                    console.log('[SafeCode] Assets loaded:', window.AppState.assets);
+                    console.log('[PIPELINE STEP 4] SafeCode received assets:', window.AppState.assets);
                 }
             });
             
-            // Request assets after 1 second if not received (backup)
-            setTimeout(function() {
-                if (!window.AppState.loaded && window.parent !== window) {
-                    console.log('[SafeCode] Requesting assets from parent...');
-                    window.parent.postMessage({ type: 'safecode:request-assets' }, '*');
-                }
-            }, 1000);
+            // ALWAYS start immediately - never wait for data
+            document.addEventListener('DOMContentLoaded', startApp);
+            window.addEventListener('load', () => {
+                console.log('[SafeCode] Window fully loaded');
+            });
         })();
     </script>
     
