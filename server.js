@@ -92,6 +92,7 @@ import likesRouter from './api/modules/likes.js';
 import drmailRouter from './api/modules/drmail.js';
 import quotaRouter from './api/modules/quota.js';
 import aiRouter from './server/routes/ai-routes.js';
+import assetRoutes from './server/routes/assets.js';
 
 import { 
   getAllCountries, 
@@ -321,6 +322,7 @@ app.use('/api/samma3ny', sammAutoRouter);
 app.use('/api/likes', likesRouter);
 app.use('/api/drmail', drmailRouter);
 app.use('/api/quota',  quotaRouter);
+app.use('/api/assets', assetRoutes);
 
 // AUTH REMOVED — CLEAN RESET
 

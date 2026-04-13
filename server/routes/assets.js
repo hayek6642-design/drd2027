@@ -11,10 +11,6 @@
 
 const express = require('express');
 const router = express.Router();
-const { verifyAuth } = require('../middleware/auth');
-
-// Apply auth to all asset routes
-router.use(verifyAuth);
 
 const VALID_TYPES = ['codes', 'silver', 'gold', 'transactions'];
 
@@ -25,6 +21,26 @@ function validateType(req, res, next) {
   }
   next();
 }
+
+// ── Auth middleware for assets routes ───────────────────────────
+function verifyAuth(req, res, next) {
+  const jwt = require('jsonwebtoken');
+  const JWT_SECRET = process.env.JWT_SECRET || 'CHANGE_THIS_IN_PRODUCTION';
+  
+  const token = req.cookies?.cb_token || (req.headers.authorization || '').replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: 'Authentication required' });
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.userId = decoded.userId;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
+// Apply auth to all routes
+router.use(verifyAuth);
 
 // ── GET all assets of a type ──────────────────────────────
 
@@ -82,7 +98,33 @@ router.get('/:type/:id', validateType, async (req, res) => {
   }
 });
 
-// ── POST single sync ─────────────────────────────────────
+// ── GET all assets for user (combined) ───────────────────────────
+router.get('/all', async (req, res) => {
+  const userId = req.userId;
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    // Fetch all asset types
+    const [codesResult, silverResult, goldResult] = await Promise.all([
+      req.app.locals.db.execute({ sql: 'SELECT * FROM codes WHERE user_id = ? ORDER BY created_at DESC', args: [userId] }),
+      req.app.locals.db.execute({ sql: 'SELECT * FROM silver WHERE user_id = ? ORDER BY created_at DESC', args: [userId] }),
+      req.app.locals.db.execute({ sql: 'SELECT * FROM gold WHERE user_id = ? ORDER BY created_at DESC', args: [userId] })
+    ]);
+
+    res.json({
+      codes: codesResult.rows || [],
+      silver: silverResult.rows || [],
+      gold: goldResult.rows || [],
+      userId,
+      timestamp: Date.now()
+    });
+  } catch (err) {
+    console.error('[Assets] GET /all failed:', err.message);
+    res.status(500).json({ error: 'Failed to fetch assets' });
+  }
+});
+
+// ── POST sync assets to server ───────────────────────────────────
 
 router.post('/sync', async (req, res) => {
   const { type, key, value, timestamp } = req.body;
