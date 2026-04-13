@@ -119,17 +119,27 @@
 
                 // 🔄 Send to all iframes via postMessage (for SafeCode, etc)
                 try {
-                    // Send in format SafeCode expects: { type: 'parent:assets-init', assets: {...} }
-                    const msgData = { 
+                    // Send in multiple formats to support different iframe implementations
+                    const msgData1 = { 
                         type: 'parent:assets-init', 
                         assets: snapshot,
                         user: window.AppState.user
                     };
+                    
+                    // Also send in assetbus:snapshot format for SafeCode bridge
+                    const msgData2 = {
+                        type: 'assetbus:snapshot',
+                        data: snapshot
+                    };
+                    
                     document.querySelectorAll('iframe').forEach(iframe => {
                         try {
-                            iframe.contentWindow?.postMessage(msgData, '*');
+                            iframe.contentWindow?.postMessage(msgData1, '*');
+                            iframe.contentWindow?.postMessage(msgData2, '*');
                         } catch(e) {}
                     });
+                    
+                    console.log('[AssetsManager] Broadcast assets to', document.querySelectorAll('iframe').length, 'iframes');
                 } catch(e) {}
 
                 console.log('[AssetsManager] Synced:', snapshot.codes.length, 'codes,',

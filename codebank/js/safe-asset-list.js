@@ -48,14 +48,87 @@
         if (cont) renderSafeAssets(window.ACTIVE_ASSET_TAB || 'codes', cont);
     });
 
+  // ========================================
+  // BRIDGE INTEGRATION - Auth & Assets Sync
+  // ========================================
+  
+  // Wait for SafeCodeBridge to be ready
+  function waitForBridge(timeout = 3000) {
+    return new Promise((resolve) => {
+      if (window.SafeCodeBridge) {
+        console.log('[SafeCode] SafeCodeBridge already ready');
+        resolve(window.SafeCodeBridge);
+        return;
+      }
+
+      const handleBridgeReady = (event) => {
+        window.removeEventListener('safecode:bridge-ready', handleBridgeReady);
+        console.log('[SafeCode] Bridge ready event received');
+        resolve(window.SafeCodeBridge);
+      };
+
+      window.addEventListener('safecode:bridge-ready', handleBridgeReady);
+
+      setTimeout(() => {
+        window.removeEventListener('safecode:bridge-ready', handleBridgeReady);
+        console.warn('[SafeCode] Bridge ready timeout, proceeding with fallback');
+        resolve(window.SafeCodeBridge || null);
+      }, timeout);
+    });
+  }
+
+  // Listen for auth updates from bridge
+  if (window.SafeCodeBridge) {
+    window.SafeCodeBridge.onAuthUpdate?.((authState) => {
+      console.log('[SafeCode] Auth state updated via bridge:', { authenticated: authState.authenticated });
+      window.__AUTH_STATE__ = authState;
+      window.dispatchEvent(new CustomEvent('safecode:auth-changed', { detail: authState }));
+    });
+
+    window.SafeCodeBridge.onAssetsUpdate?.((assets) => {
+      console.log('[SafeCode] Assets updated via bridge, rendering...');
+      const cont = document.querySelector(CODEBANK_CONTAINER_SELECTOR);
+      if (cont) {
+        renderSafeAssets(window.ACTIVE_ASSET_TAB || 'codes', cont, assets);
+      }
+    });
+  }
+
+  // Listen for bridge-triggered updates
+  window.addEventListener('safecode:bridge-ready', async (event) => {
+    console.log('[SafeCode] Bridge ready with data:', event.detail);
+    const { auth, assets } = event.detail;
+    
+    // Update global auth state
+    if (auth) {
+      window.__AUTH_STATE__ = auth;
+      console.log('[SafeCode] Auth state set from bridge:', { authenticated: auth.authenticated });
+    }
+
+    // Render assets if available
+    if (assets && assets.codes && assets.codes.length > 0) {
+      const cont = document.querySelector(CODEBANK_CONTAINER_SELECTOR);
+      if (cont) {
+        console.log('[SafeCode] Rendering assets from bridge:', assets.codes.length, 'codes');
+        renderSafeAssets(window.ACTIVE_ASSET_TAB || 'codes', cont, assets);
+      }
+    }
+  });
+
   // Initial data load
   if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => {
+      document.addEventListener('DOMContentLoaded', async () => {
           console.log('[SafeCode] Initial render triggered');
+          
+          // Wait briefly for bridge
+          await waitForBridge(2000);
+          
           initialRender();
       }, { once: true });
   } else {
-      initialRender();
+      waitForBridge(2000).then(() => {
+        initialRender();
+      });
   }
 
     // Prevent duplicate initialization
