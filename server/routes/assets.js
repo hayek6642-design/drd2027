@@ -23,8 +23,9 @@ function validateType(req, res, next) {
 }
 
 // ── Auth middleware for assets routes ───────────────────────────
+import jwt from 'jsonwebtoken';
+
 function verifyAuth(req, res, next) {
-  import jwt from
   const JWT_SECRET = process.env.JWT_SECRET || 'CHANGE_THIS_IN_PRODUCTION';
   
   const token = req.cookies?.cb_token || (req.headers.authorization || '').replace('Bearer ', '');
