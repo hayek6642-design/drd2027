@@ -9,7 +9,7 @@
  *   app.use('/api/assets', assetRoutes);
  */
 
-const express = require('express');
+import express from 'express';
 const router = express.Router();
 
 const VALID_TYPES = ['codes', 'silver', 'gold', 'transactions'];
@@ -24,7 +24,7 @@ function validateType(req, res, next) {
 
 // ── Auth middleware for assets routes ───────────────────────────
 function verifyAuth(req, res, next) {
-  const jwt = require('jsonwebtoken');
+  import jwt from
   const JWT_SECRET = process.env.JWT_SECRET || 'CHANGE_THIS_IN_PRODUCTION';
   
   const token = req.cookies?.cb_token || (req.headers.authorization || '').replace('Bearer ', '');
@@ -232,4 +232,4 @@ router.delete('/:type/:id', validateType, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
