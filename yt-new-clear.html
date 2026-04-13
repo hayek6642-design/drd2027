@@ -35,6 +35,36 @@
       })();
     </script>
     
+    <!-- FORCE CODES INTO SNAPSHOT - Fix code bar showing 0 -->
+    <script>
+    (function ensureCodesInSnapshot() {
+        // Get codes from localStorage cache
+        let cache = null;
+        try { cache = localStorage.getItem('assets_cache'); } catch(e) {}
+        let assets = cache ? JSON.parse(cache) : { codes: [], silver: [], gold: [] };
+        
+        // If cache is empty but codes exist in memory, use those
+        if (assets.codes.length === 0 && window.writtenCodes) {
+            assets.codes = Array.from(window.writtenCodes);
+        }
+        
+        // Also check other storage keys
+        try {
+            const legacyCodes = localStorage.getItem('codes');
+            if (legacyCodes) {
+                const parsed = JSON.parse(legacyCodes);
+                assets.codes = [...new Set([...assets.codes, ...parsed])];
+            }
+        } catch(e) {}
+        
+        // Save back to ensure snapshot picks it up
+        try { localStorage.setItem('assets_cache', JSON.stringify(assets)); } catch(e) {}
+        window.__forcedAssets = assets;
+        
+        console.log('[Code Fix] Forced', assets.codes.length, 'codes into snapshot');
+    })();
+    </script>
+    
     <!-- EMERGENCY AUTH LOCK - Prevents redirect loop -->
     <script>
     (function() {
@@ -88,6 +118,11 @@
     </script>
     
     <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; font-src * data: 'self'; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src * data: blob:; media-src *; frame-src *;">
+    
+    <!-- Matter.js for balloon engine -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <script>window.Matter = window.Matter || {};</script>
+    
     <title>YouTube Embed App</title>
     <link rel="stylesheet" href="/styles/style.css">
     <link rel="stylesheet" href="/styles/youtube-embed-responsive.css">
@@ -3591,6 +3626,58 @@ document.addEventListener('DOMContentLoaded', async function(){
             }
         }, true);
         
+    })();
+    </script>
+
+    <!-- SAFECODE IFRAME FIX -->
+    <script>
+    (function fixSafeCode() {
+        const SAFE_CODE_URL = './safecode.html';
+        
+        window.launchSafeCode = function() {
+            console.log('[SafeCode Fix] Launching...');
+            
+            let container = document.getElementById('safecode-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'safecode-container';
+                container.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;background:#000;display:block;';
+                document.body.appendChild(container);
+            }
+            
+            container.innerHTML = '';
+            const iframe = document.createElement('iframe');
+            iframe.id = 'safecode-iframe';
+            iframe.src = SAFE_CODE_URL;
+            iframe.style.cssText = 'width:100%;height:100%;border:none;display:block;';
+            iframe.sandbox = 'allow-scripts allow-same-origin allow-forms allow-popups';
+            
+            iframe.onload = function() {
+                console.log('[SafeCode Fix] Iframe loaded, sending assets...');
+                const assets = window.__forcedAssets || JSON.parse(localStorage.getItem('assets_cache') || '{"codes":[]}');
+                
+                setTimeout(() => {
+                    iframe.contentWindow.postMessage({ type: 'assets:update', assets: assets, timestamp: Date.now() }, '*');
+                }, 500);
+                
+                setTimeout(() => {
+                    iframe.contentWindow.postMessage({ type: 'assets:full', assets: assets, force: true }, '*');
+                }, 1500);
+            };
+            
+            container.appendChild(iframe);
+            container.style.display = 'block';
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = '✕';
+            closeBtn.style.cssText = 'position:absolute;top:10px;right:10px;z-index:10000;background:#ff4444;color:white;border:none;padding:10px 15px;border-radius:50%;cursor:pointer;font-size:20px;';
+            closeBtn.onclick = () => container.style.display = 'none';
+            container.appendChild(closeBtn);
+        };
+        
+        if (location.search.includes('safecode')) {
+            setTimeout(() => window.launchSafeCode?.(), 1000);
+        }
     })();
     </script>
 
