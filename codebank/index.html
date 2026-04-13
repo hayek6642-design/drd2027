@@ -560,6 +560,31 @@
   <script src="js/assets-direct.js"></script>
   <script src="js/safe-asset-list.js"></script>
 
+  <!-- ACCBridge Bootstrap -->
+  <script>
+    (function() {
+      console.log('[CodeBank] App loading...');
+      
+      // Wait for assets to sync then notify iframes
+      window.addEventListener('assets:updated', function() {
+        console.log('[CodeBank] Assets synced, notifying iframes...');
+        if (window.ACCBridge) {
+          const assets = window.ACCBridge.getAssets();
+          window.ACCBridge.broadcast(assets);
+        }
+      });
+      
+      // Trigger initial sync
+      if (window.AssetsManager && window.AssetsManager.sync) {
+        window.AssetsManager.sync().then(() => {
+          console.log('[CodeBank] Initial sync complete');
+        });
+      }
+      
+      console.log('[CodeBank] Bootstrap complete');
+    })();
+  </script>
+
   <script>
     // Counter update listener - bridges asset updates to UI
     document.addEventListener('assets:updated', function(e) {
