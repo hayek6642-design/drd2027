@@ -1,6 +1,6 @@
 /**
  * app-registry.js - Central registry for all CodeBank applications
- * DIAGNOSTIC VERSION - With path fallbacks and error handling
+ * BADGES REMOVED - Clean app grid display
  */
 
 export const AppRegistry = {
@@ -11,11 +11,11 @@ export const AppRegistry = {
             category: 'core',
             icon: 'fa-shield-alt',
             color: '#10b981',
-            url: '/codebank/safecode.html',      // ✅ المسار المطلق بعد النقل 
-            fallbackUrls: [],                     // أفرغ المصفوفة لتجنب أي التباس 
+            url: '/codebank/safecode.html',
+            fallbackUrls: [],
             description: 'Secure code storage',
             status: 'online',
-            badge: 'Core'
+            badge: null
         }
     ],
     media: [
@@ -25,21 +25,21 @@ export const AppRegistry = {
             category: 'media',
             icon: 'fa-music',
             color: '#8b5cf6',
-            url: './samma3ny.html',
+            url: '/codebank/samma3ny.html',
             description: 'Audio platform',
             status: 'online',
             badge: null
         },
         {
             id: 'battalooda',
-            name: 'Battalooda (بطلودة)',
+            name: 'Battalooda',
             category: 'media',
             icon: 'fa-microphone-alt',
             color: '#e74c3c',
             url: '/codebank/battalooda.html',
-            description: 'منصة لاكتشاف المواهب الصوتية',
+            description: 'Vocal talent discovery platform',
             status: 'online',
-            badge: 'جديد'
+            badge: null
         },
         {
             id: 'farragna',
@@ -47,10 +47,10 @@ export const AppRegistry = {
             category: 'media',
             icon: 'fa-chart-line',
             color: '#ec4899',
-            url: './farragna.html',
+            url: '/codebank/farragna.html',
             description: 'Trading platform',
             status: 'online',
-            badge: 'New'
+            badge: null
         },
         {
             id: 'oneworld',
@@ -58,7 +58,7 @@ export const AppRegistry = {
             category: 'media',
             icon: 'fa-globe',
             color: '#8b5cf6',
-            url: './oneworld/index.html',
+            url: '/codebank/oneworld/index.html',
             status: 'online',
             description: 'Global content hub',
             badge: null
@@ -69,7 +69,7 @@ export const AppRegistry = {
             category: 'media',
             icon: 'fa-compact-disc',
             color: '#8b5cf6',
-            url: './nostaglia.html',
+            url: '/codebank/nostaglia.html',
             status: 'maintenance',
             description: 'Retro music collection',
             badge: null
@@ -80,10 +80,10 @@ export const AppRegistry = {
             category: 'media',
             icon: 'fa-camera',
             color: '#8b5cf6',
-            url: './setta.html',
+            url: '/codebank/setta.html',
             status: 'maintenance',
             description: 'Photo & video gallery',
-            badge: 'Beta'
+            badge: null
         },
         {
             id: 'shots',
@@ -91,7 +91,7 @@ export const AppRegistry = {
             category: 'media',
             icon: 'fa-image',
             color: '#8b5cf6',
-            url: './shots.html',
+            url: '/codebank/shots.html',
             status: 'online',
             description: 'Screenshot manager',
             badge: null
@@ -104,7 +104,7 @@ export const AppRegistry = {
             category: 'finance',
             icon: 'fa-paper-plane',
             color: '#3b82f6',
-            url: './eb3at.html',
+            url: '/codebank/eb3at.html',
             description: 'Messaging service',
             status: 'online',
             badge: null
@@ -115,17 +115,17 @@ export const AppRegistry = {
             category: 'finance',
             icon: 'fa-gamepad',
             color: '#f59e0b',
-            url: './pebalaash.html',
+            url: '/codebank/pebalaash.html',
             description: 'Gaming platform',
             status: 'online',
-            badge: 'Hot'
+            badge: null
         },
         {
             id: 'qarsan',
             name: 'Qarsan',
             icon: 'fa-shield-alt',
             color: '#3b82f6',
-            url: './qarsan/index.html',
+            url: '/codebank/qarsan/index.html',
             status: 'online',
             description: 'Security & protection',
             badge: null
@@ -138,7 +138,7 @@ export const AppRegistry = {
             category: 'games',
             icon: 'fa-gamepad',
             color: '#f59e0b',
-            url: './Games-Centre.html',
+            url: '/codebank/Games-Centre.html',
             status: 'online',
             description: 'Gaming hub',
             badge: null
@@ -149,10 +149,10 @@ export const AppRegistry = {
             category: 'games',
             icon: 'fa-map-marked-alt',
             color: '#10b981',
-            url: './yahood.html',
+            url: '/codebank/yahood.html',
             status: 'online',
             description: 'Geo-based treasure mining & PvP world',
-            badge: 'New'
+            badge: null
         },
         {
             id: 'piston',
@@ -160,10 +160,10 @@ export const AppRegistry = {
             category: 'games',
             icon: 'fa-cog',
             color: '#f59e0b',
-            url: './piston.html',
+            url: '/codebank/piston.html',
             status: 'offline',
             description: 'Game engine',
-            badge: 'Soon'
+            badge: null
         }
     ],
     tools: [
@@ -173,10 +173,10 @@ export const AppRegistry = {
             category: 'tools',
             icon: 'fa-brain',
             color: '#7c3aed',
-            url: './corsa.html',
+            url: '/codebank/corsa.html',
             status: 'online',
             description: 'AI Assistant',
-            badge: 'AI'
+            badge: null
         },
         {
             id: 'aihub',
@@ -184,10 +184,10 @@ export const AppRegistry = {
             category: 'tools',
             icon: 'fa-robot',
             color: '#7c3aed',
-            url: './aihub.html',
+            url: '/codebank/aihub.html',
             description: 'Gateway to the AI World',
             status: 'online',
-            badge: 'AI'
+            badge: null
         },
         {
             id: 'openHands',
@@ -198,7 +198,7 @@ export const AppRegistry = {
             url: 'https://docs.openhands.dev/overview/welcome',
             description: 'AI Software Agent - Open in iframe',
             status: 'online',
-            badge: 'New',
+            badge: null,
             target: '_self'
         },
         {
@@ -207,7 +207,7 @@ export const AppRegistry = {
             category: 'tools',
             icon: 'fa-calculator',
             color: '#10b981',
-            url: './calculator.html',
+            url: '/codebank/calculator.html',
             description: 'Scientific Calculator',
             status: 'online',
             badge: null
@@ -218,8 +218,8 @@ export const AppRegistry = {
             category: 'tools',
             icon: 'fa-comments',
             color: '#06b6d4',
-            url: './e7ki.html',
-            description: 'Chat platform',
+            url: '/codebank/e7ki.html',
+            description: 'Chat platform with ZAGEL messenger',
             status: 'online',
             badge: null
         }
