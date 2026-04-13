@@ -6,11 +6,14 @@ import { cn } from "@/lib/utils";
 import { Paperclip, Image, Video, FileText, Mic, X, Smile, Send } from "lucide-react";
 import { VoiceRecorder } from "./voice-recorder";
 import { EmojiPicker } from "./emoji-picker";
+import { useZagel } from "@/lib/zagel-context";
+import VoiceMessageWithZagel from "./voice-message-with-zagel";
 
 export function MessageInput({ replyTo, onCancelReply }) {
     const { sendMessage, setTyping, activeChat } = useChat();
     const [message, setMessage] = useState("");
     const [isRecording, setIsRecording] = useState(false);
+    const [showZagelVoice, setShowZagelVoice] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [showAttachMenu, setShowAttachMenu] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
