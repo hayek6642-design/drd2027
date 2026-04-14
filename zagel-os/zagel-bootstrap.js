@@ -1,5 +1,5 @@
 /**
- * ZAGEL OS Bootstrap v2.0.0
+ * ZAGEL OS Bootstrap v2.1.0
  * Load order manager — ensures all modules load in correct sequence
  * Include this LAST in your HTML after all zagel-*.js scripts
  */
@@ -13,6 +13,11 @@
   const moduleCheck = {
     'ZagelStore (Storage)': !!window.ZagelStore,
     'ZagelBus (EventBus)': !!window.ZagelBus,
+    // Mode System
+    'ZagelModeManager': !!window.ZagelModeManager,
+    'ZagelDeveloperGate': !!window.ZagelDeveloperGate,
+    'ZagelLearningEngine': !!window.ZagelLearningEngine,
+    // Core Engines
     'ZagelIntelligence': !!window.ZagelIntelligence,
     'ZagelPriority': !!window.ZagelPriority,
     'ZagelBrain': !!window.ZagelBrain,
@@ -21,11 +26,13 @@
     'ZagelMemory': !!window.ZagelMemory,
     'ZagelEvolution': !!window.ZagelEvolution,
     'ZagelFlow': !!window.ZagelFlow,
+    // Interaction
     'ZagelConversation': !!window.ZagelConversation,
     'ZagelVoice': !!window.ZagelVoice,
     'ZagelAutomation': !!window.ZagelAutomation,
     'ZagelNotification': !!window.ZagelNotification,
     'ZagelTrigger': !!window.ZagelTrigger,
+    // Core
     'Zagel (Core)': !!window.Zagel
   };
 

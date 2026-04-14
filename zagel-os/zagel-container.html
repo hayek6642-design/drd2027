@@ -3,28 +3,48 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZAGEL OS v2.0.0</title>
+  <title>ZAGEL OS v2.1.0</title>
 </head>
 <body>
-  <!-- Load order matters! Infrastructure → Intelligence → Emotional → Evolution → Interaction → Action → Connectors → Core → Bootstrap -->
+  <!-- Load order matters! Infrastructure → Mode System → Intelligence → Emotional → Evolution → Interaction → Action → Connectors → Core → Bootstrap -->
+  <!-- Infrastructure -->
   <script src="zagel-storage.js"></script>
   <script src="zagel-event-bus.js"></script>
+  
+  <!-- Mode System (must load before core) -->
+  <script src="modes/modeManager.js"></script>
+  <script src="security/developerGate.js"></script>
+  <script src="learning/learningEngine.js"></script>
+  
+  <!-- Intelligence Layer -->
   <script src="zagel-intelligence-engine.js"></script>
   <script src="zagel-priority-engine.js"></script>
   <script src="zagel-brain.js"></script>
+  
+  <!-- Emotional Layer -->
   <script src="zagel-emotion-engine.js"></script>
   <script src="zagel-personality-engine.js"></script>
+  
+  <!-- Evolution Layer -->
   <script src="zagel-memory-engine.js"></script>
   <script src="zagel-evolution-engine.js"></script>
   <script src="zagel-flow-engine.js"></script>
+  
+  <!-- Interaction Layer -->
   <script src="zagel-conversation-engine.js"></script>
   <script src="zagel-voice-layer.js"></script>
   <script src="zagel-automation.js"></script>
+  
+  <!-- Action Layer -->
   <script src="zagel-notification-engine.js"></script>
   <script src="zagel-trigger-engine.js"></script>
+  
+  <!-- Connectors -->
   <script src="connectors/zagel-connector-base.js"></script>
   <script src="connectors/zagel-connector-farghna.js"></script>
   <script src="connectors/zagel-connector-e7ki.js"></script>
+  
+  <!-- Core & Bootstrap -->
   <script src="zagel-core.js"></script>
   <script src="zagel-bootstrap.js"></script>
 </body>

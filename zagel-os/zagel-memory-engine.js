@@ -1,7 +1,11 @@
 /**
- * ZAGEL Memory Engine v2.0.0
+ * ZAGEL Memory Engine v2.1.0
  * Human-like memory: short/mid/long-term with decay and reinforcement
  * Memories fade naturally and get stronger with repetition
+ * 
+ * Memory Permissions:
+ * - Runtime Mode: Read-only (with limited writes like chat history)
+ * - Learning Mode: Full read/write access
  */
 
 (function () {
@@ -26,6 +30,24 @@
 
       this._startCleanupCycle();
       console.log('🧠 [Zagel-Memory] Engine initialized');
+    }
+
+    // Check if in learning mode (for write operations)
+    _canWrite() {
+      const mode = window.ZagelModeManager?.getMode();
+      return mode === 'learning';
+    }
+
+    // Check if can perform specific action
+    _checkPermission(action) {
+      if (this._canWrite()) return true;
+      
+      // Runtime mode - allow limited writes (chat history, session data)
+      const allowedInRuntime = ['remember_chat', 'store_session'];
+      if (allowedInRuntime.includes(action)) return true;
+      
+      console.warn(`[Memory] Permission denied: ${action} requires learning mode`);
+      return false;
     }
 
     remember(content, options = {}) {

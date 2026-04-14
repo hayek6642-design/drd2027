@@ -1,14 +1,15 @@
 /**
- * ZAGEL OS Core v2.0.0
+ * ZAGEL OS Core v2.1.0
  * Global orchestrator for all intelligence layers
  * Boot sequence: Storage → EventBus → Engines → Connectors → UI
+ * Mode System: runtime (default), learning (owner), locked (emergency)
  */
 
 (function () {
   'use strict';
   if (window.__ZAGEL_CORE__) return;
 
-  const VERSION = '2.0.0';
+  const VERSION = '2.1.0';
 
   class ZagelCore {
     constructor() {
@@ -31,6 +32,18 @@
       this._log('boot_start', `ZAGEL OS v${VERSION} boot sequence started`);
 
       try {
+        // Phase 0: Mode System (must be first!)
+        await this._bootPhase('mode', () => {
+          this._register('mode', window.ZagelModeManager);
+          this._register('developerGate', window.ZagelDeveloperGate);
+          this._register('learning', window.ZagelLearningEngine);
+          
+          // Initialize developer gate
+          if (window.ZagelDeveloperGate) {
+            window.ZagelDeveloperGate.initDeveloperGate();
+          }
+        });
+
         // Phase 1: Infrastructure
         await this._bootPhase('infrastructure', () => {
           this._register('storage', window.ZagelStore);
@@ -178,6 +191,18 @@
     async speak(text) { return window.ZagelVoice?.speak(text); }
     async notify(opts) { return window.ZagelNotification?.notify(opts); }
     async getIntel() { return window.ZagelIntelligence?.getSummary(); }
+    
+    // Mode System methods
+    getMode() { return window.ZagelModeManager?.getMode() || 'runtime'; }
+    isLearning() { return window.ZagelModeManager?.isLearning() || false; }
+    isRuntime() { return window.ZagelModeManager?.isRuntime() !== false; }
+    setMode(mode) { return window.ZagelModeManager?.setMode(mode); }
+    
+    // Developer Gate
+    recordTap() { return window.ZagelDeveloperGate?.recordZagelTap(); }
+    
+    // Learning Engine
+    getLearningEngine() { return window.ZagelLearningEngine; }
   }
 
   window.__ZAGEL_CORE__ = new ZagelCore();
