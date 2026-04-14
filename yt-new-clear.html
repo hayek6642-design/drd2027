@@ -8,7 +8,14 @@
     <script>
       (function() {
         const reloadKey = 'last_reload_time';
-        const minReloadInterval = 5000; 
+        const minReloadInterval = 120000; // Allow login redirect time 
+        
+        // SKIP reload detection when coming from login.html
+        if (document.referrer && document.referrer.includes("login.html")) {
+          console.log("[RELOAD CHECK] Skipping - coming from login");
+          localStorage.setItem(reloadKey, Date.now().toString());
+          return;
+        }
         const lastReload = parseInt(localStorage.getItem(reloadKey) || '0');
         const now = Date.now();
         if (now - lastReload < minReloadInterval) {
