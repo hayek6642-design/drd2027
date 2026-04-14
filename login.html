@@ -273,6 +273,7 @@ window._NativeBio = {
 };
 </script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="/shared/session-manager.js"></script>
 </head>
 <body>
 <!-- Single-Session Kickout Banner -->
@@ -981,6 +982,12 @@ async function handleSignup() {
       localStorage.setItem('user_data', JSON.stringify(data.user));
       // [FIX] Store full session data for auth-global.js
       const sessionData = { sessionId: data.sessionId, user: data.user, userId: data.userId, expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000) };
+      // [NEW] Upgrade session to user using session-manager
+      if (window.sessionManager && data.user && data.token) {
+        window.sessionManager.upgradeToUser(data.user, data.token, 7);
+        console.log("[Login] Session upgraded to user via sessionManager");
+      }
+
       localStorage.setItem('codebank_session', JSON.stringify(sessionData));
       
       // 🧠 Auth Flow Control
@@ -1054,6 +1061,12 @@ async function handleLogin() {
       localStorage.setItem('session_token', data.sessionId);
       // [FIX] Store full session data for auth-global.js
       const sessionData = { sessionId: data.sessionId, user: data.user, userId: data.userId, expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000) };
+      // [NEW] Upgrade session to user using session-manager
+      if (window.sessionManager && data.user && data.token) {
+        window.sessionManager.upgradeToUser(data.user, data.token, 7);
+        console.log("[Login] Session upgraded to user via sessionManager");
+      }
+
       localStorage.setItem('codebank_session', JSON.stringify(sessionData));
       if (data.user) {
         localStorage.setItem('user_data', JSON.stringify(data.user));
@@ -1063,6 +1076,12 @@ async function handleLogin() {
       localStorage.setItem('session_active', 'true');
       // [FIX] Store full session data for auth-global.js
       const sessionData = { sessionId: data.sessionId, user: data.user, userId: data.userId, expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000) };
+      // [NEW] Upgrade session to user using session-manager
+      if (window.sessionManager && data.user && data.token) {
+        window.sessionManager.upgradeToUser(data.user, data.token, 7);
+        console.log("[Login] Session upgraded to user via sessionManager");
+      }
+
       localStorage.setItem('codebank_session', JSON.stringify(sessionData));
 
       // 📱 NATIVE: Persist to Capacitor Preferences so session survives app kill

@@ -287,6 +287,10 @@
 
   // 🛡️ Send Lock
   window.__sendLock = false;
+  
+  // [NEW] Session-based sync properties
+  window.syncEnabled = false;
+  window.userId = null;
 
   const Bankode = {
     _generatedCodes: new Set(), // 🛡️ Prevent session duplicates
@@ -312,6 +316,9 @@
         console.warn('[Bankode] Initialization proceeding without auth promise resolution');
       }
       
+      // [NEW] Subscribe to session changes from session-manager
+      this._setupSessionListener();
+
       await this._initFromStorage(); 
       this._loadSyncQueue();
       
@@ -359,6 +366,46 @@
     resumeNormalGeneration() {
       this.isPaused = false;
       if (window.DEBUG_MODE) console.log('[Bankode] Normal code generation resumed');
+    },
+
+    // [NEW] Setup session listener for session-manager integration
+    _setupSessionListener() {
+      if (!window.sessionManager) {
+        console.warn('[Bankode] sessionManager not available, skipping session listener');
+        return;
+      }
+
+      // Subscribe to session changes
+      window.sessionManager.subscribe((session) => {
+        this._handleSessionChange(session);
+      });
+
+      // Also listen for the custom event
+      window.addEventListener('session:changed', (e) => {
+        this._handleSessionChange(e.detail);
+      });
+
+      console.log('[Bankode] Session listener registered');
+    },
+
+    // [NEW] Handle session changes from session-manager
+    _handleSessionChange(session) {
+      if (!session) return;
+
+      if (session.type === 'user') {
+        // User mode - enable sync
+        this.syncEnabled = true;
+        this.userId = session.userId;
+        if (window.DEBUG_MODE) console.log('[Bankode] Session: user mode, sync enabled', session.userId);
+        
+        // Trigger sync with server
+        this.syncWithServer().catch(_ => {});
+      } else {
+        // Guest mode - disable sync
+        this.syncEnabled = false;
+        this.userId = null;
+        if (window.DEBUG_MODE) console.log('[Bankode] Session: guest mode, sync disabled');
+      }
     },
 
     // Unified Asset Generator
