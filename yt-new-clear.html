@@ -9,17 +9,41 @@
 
 // LOGOUT FIX: Clear session BEFORE redirect to prevent loop
 function clearSessionAndLogout() {
-  console.log('[LOGOUT] Clearing session data...');
+  console.log('[LOGOUT] Clearing ALL session data...');
+  
+  // 1. Clear localStorage
   localStorage.removeItem('session_active');
   localStorage.removeItem('session_token');
   localStorage.removeItem('user_data');
   localStorage.removeItem('__cached_user__');
+  localStorage.removeItem('__cached_session_id__');
+  localStorage.removeItem('sessionId');
+  localStorage.removeItem('last_login_email');
+  
+  // 2. Clear sessionStorage
   sessionStorage.clear();
-  document.cookie.split(";").forEach((c) => {
-    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-  });
-  console.log('[LOGOUT] Session cleared, redirecting to login...');
-  window.location.href = '/login.html';
+  
+  // 3. Properly clear ALL cookies
+  const cookies = document.cookie.split(";");
+  for (let i = 0; i < cookies.length; i++) {
+    const cookie = cookies[i];
+    const cookieName = cookie.split("=")[0].trim();
+    if (cookieName) {
+      console.log('[LOGOUT] Clearing cookie:', cookieName);
+      // Clear with path=/ (root)
+      document.cookie = cookieName + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax";
+      // Also try with domain
+      document.cookie = cookieName + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=dr-d-h51l.onrender.com; SameSite=Lax";
+    }
+  }
+  
+  console.log('[LOGOUT] All session data cleared');
+  console.log('[LOGOUT] Redirecting to login.html in 500ms...');
+  
+  // Give cookies time to be cleared before redirect
+  setTimeout(function() {
+    window.location.href = '/login.html';
+  }, 500);
 }
 
 </script>
