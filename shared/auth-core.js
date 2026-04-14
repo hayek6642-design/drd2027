@@ -145,12 +145,15 @@
         // ONLY remove session_active if no valid token exists
         if (!currentToken) {
           localStorage.removeItem('session_active');
+          // [FIX] Only expire the session cookie if there's no valid token
+          try { document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax'; } catch(_){}
         } else {
-          console.warn('[AuthCore] Protecting session_active — valid token still exists');
+          console.warn('[AuthCore] ⚠️ Server returned unauthenticated but valid token exists in localStorage');
+          console.warn('[AuthCore] Token:', currentToken.substring(0, 8) + '...');
+          console.warn('[AuthCore] Keeping token and session_active for next verification attempt');
           localStorage.setItem('session_active', '1');
+          // DO NOT expire the cookie - we need it for the next request
         }
-        // [FIX] Expire the session cookie so auth-core won't find a stale token on next load
-        try { document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax'; } catch(_){}
       }
       
       // Update Auth interface if exists
