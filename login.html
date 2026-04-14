@@ -237,7 +237,8 @@ window._NativeBio = {
   async saveSession(sessionId, userData) {
     localStorage.setItem('session_active', 'true');
       // [FIX] Store full session data for auth-global.js
-      const sessionData = { sessionId, user: userData, expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000) };
+      // [FIX] Add authenticated: true so auth-global.js syncs AppState correctly
+      const sessionData = { sessionId, user: userData, authenticated: true, expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000) };
       localStorage.setItem('codebank_session', JSON.stringify(sessionData));
     if (sessionId) localStorage.setItem('session_token', sessionId);
     if (userData) localStorage.setItem('user_data', typeof userData === 'string' ? userData : JSON.stringify(userData));
@@ -264,7 +265,7 @@ window._NativeBio = {
       if (u.value) localStorage.setItem('user_data', u.value);
       localStorage.setItem('session_active', 'true');
       // [FIX] Store full session data for auth-global.js
-      const sessionData = { sessionId: t?.value, user: u?.value, expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000) };
+      const sessionData = { sessionId: t?.value, user: u?.value, authenticated: true, expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000) };
       localStorage.setItem('codebank_session', JSON.stringify(sessionData));
       return true;
     } catch(e) { return false; }

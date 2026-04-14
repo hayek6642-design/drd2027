@@ -46,6 +46,15 @@
         const session = JSON.parse(stored);
         if (session.expiresAt && session.expiresAt > Date.now()) {
           window.AUTH_GLOBAL = session;
+          
+          // [FIX] Sync AppState with AUTH_GLOBAL for CodeBank iframe compatibility
+          // CodeBank's auth-unified.js checks window.AppState.isAuthenticated
+          if (session.authenticated) {
+            window.AppState = window.AppState || {};
+            window.AppState.isAuthenticated = true;
+            window.AppState.user = session.user || null;
+            window.AppState.sessionId = session.sessionId || null;
+          }
         } else {
           clearAuth();
           window.location.href = LOGIN_URL;
