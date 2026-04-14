@@ -383,3 +383,33 @@ export default {
   applyAuthenticationFixes,
   clientAuthFix
 };
+
+// E7ki Auth - Request from parent instead of server
+window.addEventListener('load', () => {
+    console.log('[E7ki] Requesting auth from parent');
+    
+    window.parent.postMessage({
+        type: 'auth:request'
+    }, '*');
+});
+
+// Listen for auth response
+window.addEventListener('message', (e) => {
+    if (e.data?.type === 'auth:response') {
+        console.log('[E7ki] Received auth:', {
+            authenticated: e.data.authenticated,
+            userId: e.data.userId
+        });
+        
+        window.__E7KI_AUTH__ = {
+            authenticated: e.data.authenticated,
+            sessionId: e.data.sessionId,
+            userId: e.data.userId,
+            email: e.data.email
+        };
+        
+        if (typeof initE7kiApp === 'function') {
+            initE7kiApp();
+        }
+    }
+});
