@@ -2021,6 +2021,17 @@ if (document.readyState === 'loading') {
   }
 
   console.log('[SafeAssetList] Ready.');
+
+
+    // Register with parent bridge
+    console.log('[SafeCode] Registering with parent bridge');
+    try {
+        window.parent.postMessage({
+            type: 'register:service',
+            name: 'SafeCode'
+        }, '*');
+    } catch (e) {
+        console.warn('[SafeCode] Bridge registration failed:', e);
+    }
+
 })();
-
-
