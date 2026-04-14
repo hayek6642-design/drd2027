@@ -236,6 +236,9 @@ window._NativeBio = {
   // Persist session to BOTH localStorage AND Capacitor Preferences
   async saveSession(sessionId, userData) {
     localStorage.setItem('session_active', 'true');
+      // [FIX] Store full session data for auth-global.js
+      const sessionData = { sessionId, user: userData, expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000) };
+      localStorage.setItem('codebank_session', JSON.stringify(sessionData));
     if (sessionId) localStorage.setItem('session_token', sessionId);
     if (userData) localStorage.setItem('user_data', typeof userData === 'string' ? userData : JSON.stringify(userData));
     const pr = this.prefs();
@@ -260,6 +263,9 @@ window._NativeBio = {
       if (t.value) localStorage.setItem('session_token', t.value);
       if (u.value) localStorage.setItem('user_data', u.value);
       localStorage.setItem('session_active', 'true');
+      // [FIX] Store full session data for auth-global.js
+      const sessionData = { sessionId: t?.value, user: u?.value, expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000) };
+      localStorage.setItem('codebank_session', JSON.stringify(sessionData));
       return true;
     } catch(e) { return false; }
   }
@@ -972,6 +978,9 @@ async function handleSignup() {
       };
       localStorage.setItem('session_token', data.sessionId);
       localStorage.setItem('user_data', JSON.stringify(data.user));
+      // [FIX] Store full session data for auth-global.js
+      const sessionData = { sessionId: data.sessionId, user: data.user, userId: data.userId, expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000) };
+      localStorage.setItem('codebank_session', JSON.stringify(sessionData));
       
       // 🧠 Auth Flow Control
       localStorage.setItem('session_active', 'true');
@@ -1042,12 +1051,18 @@ async function handleLogin() {
       
       // 🛡️ CRITICAL: Store session and update auth state
       localStorage.setItem('session_token', data.sessionId);
+      // [FIX] Store full session data for auth-global.js
+      const sessionData = { sessionId: data.sessionId, user: data.user, userId: data.userId, expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000) };
+      localStorage.setItem('codebank_session', JSON.stringify(sessionData));
       if (data.user) {
         localStorage.setItem('user_data', JSON.stringify(data.user));
       }
       
       // 🧠 Auth Flow Control
       localStorage.setItem('session_active', 'true');
+      // [FIX] Store full session data for auth-global.js
+      const sessionData = { sessionId: data.sessionId, user: data.user, userId: data.userId, expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000) };
+      localStorage.setItem('codebank_session', JSON.stringify(sessionData));
 
       // 📱 NATIVE: Persist to Capacitor Preferences so session survives app kill
       if (window._NativeBio) window._NativeBio.saveSession(data.sessionId, data.user);
@@ -1154,6 +1169,9 @@ async function handleBiometricLogin() {
 
     // Restore to localStorage
     localStorage.setItem('session_token', tokenResult.value);
+      // [FIX] Store full session data for auth-global.js
+      const sessionData = { sessionId: tokenResult.value, user: userData.value, expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000) };
+      localStorage.setItem('codebank_session', JSON.stringify(sessionData));
     const userData = await prefs.get({ key: 'user_data' });
     if (userData.value) localStorage.setItem('user_data', userData.value);
     localStorage.setItem('session_active', 'true');
@@ -1316,6 +1334,9 @@ async function handleGoogleCredential(response) {
       body: JSON.stringify({ credential: response.credential })
     });
 
+      // [FIX] Store full session data for auth-global.js
+      const sessionData = { sessionId: data.sessionId, user: data.user, expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000) };
+      localStorage.setItem('codebank_session', JSON.stringify(sessionData));
     const data = await res.json();
 
     if (data.status === 'success') {

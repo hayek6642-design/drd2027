@@ -1,11 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
 
+<!-- DEBUG: Override window.location to trace all redirects -->
+<script>
+(function() {
+  const originalAssign = window.location.assign;
+  const originalReplace = window.location.replace;
+  const originalHrefDesc = Object.getOwnPropertyDescriptor(window.Location.prototype, "href");
+  
+  window.location.assign = function(url) {
+    console.trace("[REDIRECT assign]", url);
+    originalAssign.call(this, url);
+  };
+  
+  window.location.replace = function(url) {
+    console.trace("[REDIRECT replace]", url);
+    originalReplace.call(this, url);
+  };
+  
+  Object.defineProperty(window.location, "href", {
+    set: function(url) {
+      console.trace("[REDIRECT href]", url);
+      originalHrefDesc.set.call(this, url);
+    },
+    get: function() {
+      return originalHrefDesc.get.call(this);
+    }
+  });
+  
+  console.log("[DEBUG] Redirect interception enabled");
+})();
+</script>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!--  RELOAD PROTECTION (from actly.md) -->
     <script>
+
+// DEBUG: Log auth state on every change
+<script>
+(function() {
+  const keysToWatch = ["session_token", "session_active", "codebank_session", "user_data"];
+  const originalSetItem = localStorage.setItem;
+  localStorage.setItem = function(key, value) {
+    if (key === "session_active" || key === "session_token" || key === "codebank_session") {
+      console.log("[LOCALSTORAGE SET]", key, "=", value);
+      console.trace("Stack trace");
+    }
+    originalSetItem.call(this, key, value);
+  };
+  
+  // Log current auth state
+  console.log("[AUTH DEBUG] Current state:", {
+    session_token: localStorage.getItem("session_token"),
+
+// DEBUG: Log auth:logout events
+<script>
+window.addEventListener("auth:logout", function(e) {
+  console.trace("[AUTH:LOGOUT EVENT FIRED]");
+  console.log("Stack trace for auth:logout event");
+});
+</script>
+    session_active: localStorage.getItem("session_active"),
+    codebank_session: localStorage.getItem("codebank_session"),
+    user_data: localStorage.getItem("user_data") ? "exists" : null
+  });
+})();
+</script>
       (function() {
         const reloadKey = 'last_reload_time';
         const minReloadInterval = 999999999;  // Effectively disabled // Allow login redirect time

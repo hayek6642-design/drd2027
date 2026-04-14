@@ -1,0 +1,33 @@
+<!-- DEBUG: Override window.location to trace all redirects -->
+<script>
+(function() {
+  const originalAssign = window.location.assign;
+  const originalReplace = window.location.replace;
+  const originalHrefDesc = Object.getOwnPropertyDescriptor(window.Location.prototype, 'href');
+  
+  window.location.assign = function(url) {
+    console.trace('[REDIRECT assign]', url);
+    debugger;
+    originalAssign.call(this, url);
+  };
+  
+  window.location.replace = function(url) {
+    console.trace('[REDIRECT replace]', url);
+    debugger;
+    originalReplace.call(this, url);
+  };
+  
+  Object.defineProperty(window.location, 'href', {
+    set: function(url) {
+      console.trace('[REDIRECT href]', url);
+      debugger;
+      originalHrefDesc.set.call(this, url);
+    },
+    get: function() {
+      return originalHrefDesc.get.call(this);
+    }
+  });
+  
+  console.log('[DEBUG] Redirect interception enabled');
+})();
+</script>

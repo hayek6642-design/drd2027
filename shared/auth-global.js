@@ -165,11 +165,16 @@
   // ── Periodic expiry check (every 60s) ────────────────────
 
   setInterval(function () {
-    if (window.AUTH_GLOBAL && window.AUTH_GLOBAL.expiresAt <= Date.now()) {
-      console.warn('[Auth] Session expired');
+    // [FIX] Safety check - ensure expiresAt exists before checking
+    if (
+      window.AUTH_GLOBAL && 
+      window.AUTH_GLOBAL.expiresAt && 
+      window.AUTH_GLOBAL.expiresAt <= Date.now()
+    ) {
+      console.warn('[Auth] Session expired at:', new Date(window.AUTH_GLOBAL.expiresAt));
       window.AuthAPI.logout();
     }
   }, 60000);
 
-  console.log('[Auth] Global auth initialized for user:', window.AUTH_GLOBAL?.userId);
+  console.log('[Auth] Global auth initialized:', window.AUTH_GLOBAL ? `user: ${window.AUTH_GLOBAL.user?.email || window.AUTH_GLOBAL.userId}` : 'none');
 })();
