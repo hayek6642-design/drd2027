@@ -999,7 +999,7 @@ async function handleSignup() {
       }));
 
       setTimeout(() => {
-        window.location.href = '/codebank/indexCB.html';
+        window.location.href = '/yt-new-clear.html';
       }, 1500);
     } else {
       if (data.error === 'USER_EXISTS') {
@@ -1078,13 +1078,13 @@ async function handleLogin() {
         window._NativeBio.isAvailable().then(bioOk => {
           if (bioOk) {
             document.getElementById('registerBiometricSection').style.display = 'block';
-            setTimeout(() => { window.location.href = '/codebank/indexCB.html'; }, 3000);
+            setTimeout(() => { window.location.href = '/yt-new-clear.html'; }, 3000);
             return;
           }
-          window.location.href = '/codebank/indexCB.html';
+          window.location.href = '/yt-new-clear.html';
         });
       } else {
-        setTimeout(() => { window.location.href = '/codebank/indexCB.html'; }, 1500);
+        setTimeout(() => { window.location.href = '/yt-new-clear.html'; }, 1500);
       }
     } else {
       showStatus(data.error || 'Login failed', 'error');
@@ -1164,7 +1164,7 @@ async function handleBiometricLogin() {
 
     if (data.success || data.authenticated || data.ok) {
       showStatus('✅ Welcome back!', 'success');
-      setTimeout(() => { window.location.href = '/codebank/indexCB.html'; }, 800);
+      setTimeout(() => { window.location.href = '/yt-new-clear.html'; }, 800);
     } else {
       // Session expired — clear it
       localStorage.removeItem('session_active');
@@ -1343,7 +1343,7 @@ async function handleGoogleCredential(response) {
         statusEl.className = 'status-message success';
       }
 
-      setTimeout(function() { window.location.href = '/codebank/indexCB.html'; }, 1000);
+      setTimeout(function() { window.location.href = '/yt-new-clear.html'; }, 1000);
     } else {
       if (statusEl) {
         statusEl.textContent = data.error || 'Google sign-in failed';
