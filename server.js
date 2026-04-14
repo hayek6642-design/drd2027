@@ -1525,6 +1525,29 @@ app.post('/api/auth/resend-otp', async (req, res) => {
   }
 });
 
+// POST /api/auth/merge-guest - Merge guest data to user account
+app.post('/api/auth/merge-guest', async (req, res) => {
+  try {
+    const { guestId, userId } = req.body;
+    
+    if (!guestId || !userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'guestId and userId are required'
+      });
+    }
+    
+    // TODO: Implement actual guest data merging logic
+    // For now, just log and return success
+    console.log('[Merge Guest]', guestId, '→', userId);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[Merge Guest] Error:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // TEMP ADMIN: password reset (to be removed after use)
 app.post('/api/admin/reset-pw', async (req, res) => {
   const { secret, email, newPassword } = req.body;
