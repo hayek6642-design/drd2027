@@ -11,8 +11,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'CHANGE_THIS_IN_PRODUCTION';
 
 function verifyAuth(req, res, next) {
   // Extract token from cookie or Authorization header
+  // Accept both cb_token (new) and session_token (legacy)
   const token =
     req.cookies?.cb_token ||
+    req.cookies?.session_token ||
     (req.headers.authorization || '').replace('Bearer ', '');
 
   if (!token) {
@@ -36,8 +38,10 @@ function verifyAuth(req, res, next) {
  * Optional auth — sets req.userId if token present, but doesn't block.
  */
 function optionalAuth(req, res, next) {
+  // Accept both cb_token (new) and session_token (legacy)
   const token =
     req.cookies?.cb_token ||
+    req.cookies?.session_token ||
     (req.headers.authorization || '').replace('Bearer ', '');
 
   if (token) {
