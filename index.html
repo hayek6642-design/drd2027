@@ -106,69 +106,77 @@
 
   <!-- Module scripts (loaded asynchronously) -->
   <script type="module">
-    // 🌐 Platform Detection: Add native class for CSS targeting
-    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-      document.body.classList.add('native-platform');
-      document.body.classList.add('platform-' + window.Capacitor.getPlatform());
-      console.log('[CodeBank] Running on native:', window.Capacitor.getPlatform());
-    }
-
-    // 🧠 Auth Flow Control: Skip grid if session is active
-    // On native, also check NativeStorage for persisted session
-    const sessionActive = localStorage.getItem("session_active") === "true";
-    const nativeSession = window.NativeStorage ? await window.NativeStorage.syncGet("session_active") : null;
-    
-    if (sessionActive || nativeSession === "true" || nativeSession === true) {
-      console.log("Active session found, redirecting to app...");
-      // Show loading screen is already handled by the HTML
-      setTimeout(() => {
-        window.location.href = "/yt-new-clear.html";
-      }, 1500);
-      // Stop further execution
-      throw new Error("REDIRECTING");
-    }
-
-    // Dynamic imports for code splitting
-    const loadApp = async () => {
+    (async () => {
       try {
-        // Core first
-        const [{ serviceManager }, { assetBus }, { watchDog }] = await Promise.all([
-          import('./src/core/service-manager-v2.js'),
-          import('./src/core/assetbus-v2.js'),
-          import('./src/core/watch-dog-optimized.js')
-        ]);
-        
-        // UI components (lazy)
-        const { renderAppGrid } = await import('./src/components/app-grid.js');
-        
-        // Initialize
-        window.serviceManager = serviceManager;
-        window.assetBus = assetBus;
-        window.watchDog = watchDog;
-        
-        // Render
-        renderAppGrid(document.getElementById('app'));
-        
-        // Remove loading screen
-        document.getElementById('loading').remove();
-        
-        // Load performance monitor (dev only)
-        if (location.hostname === 'localhost' || location.search.includes('debug')) {
-          await import('./src/utils/performance-monitor.js');
+        // 🌐 Platform Detection: Add native class for CSS targeting
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+          document.body.classList.add('native-platform');
+          document.body.classList.add('platform-' + window.Capacitor.getPlatform());
+          console.log('[CodeBank] Running on native:', window.Capacitor.getPlatform());
         }
+
+        // 🧠 Auth Flow Control: Skip grid if session is active
+        // On native, also check NativeStorage for persisted session
+        const sessionActive = localStorage.getItem("session_active") === "true";
+        const nativeSession = window.NativeStorage ? await window.NativeStorage.syncGet("session_active") : null;
         
+        if (sessionActive || nativeSession === "true" || nativeSession === true) {
+          console.log("Active session found, redirecting to app...");
+          // Show loading screen is already handled by the HTML
+          setTimeout(() => {
+            window.location.href = "/yt-new-clear.html";
+          }, 1500);
+          return; // Stop further execution
+        }
+
+        // Dynamic imports for code splitting
+        const loadApp = async () => {
+          try {
+            // Core first
+            const [{ serviceManager }, { assetBus }, { watchDog }] = await Promise.all([
+              import('./src/core/service-manager-v2.js'),
+              import('./src/core/assetbus-v2.js'),
+              import('./src/core/watch-dog-optimized.js')
+            ]);
+            
+            // UI components (lazy)
+            const { renderAppGrid } = await import('./src/components/app-grid.js');
+            
+            // Initialize
+            window.serviceManager = serviceManager;
+            window.assetBus = assetBus;
+            window.watchDog = watchDog;
+            
+            // Render
+            renderAppGrid(document.getElementById('app'));
+            
+            // Remove loading screen
+            document.getElementById('loading').remove();
+            
+            // Load performance monitor (dev only)
+            if (location.hostname === 'localhost' || location.search.includes('debug')) {
+              await import('./src/utils/performance-monitor.js');
+            }
+            
+          } catch (err) {
+            console.error('Failed to load app:', err);
+            const loadingEl = document.getElementById('loading');
+            if (loadingEl) {
+              loadingEl.innerHTML = '<p>فشل التحميل. يرجى تحديث الصفحة.</p>';
+            }
+          }
+        };
+        
+        // Use requestIdleCallback for non-critical start
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(loadApp, { timeout: 2000 });
+        } else {
+          setTimeout(loadApp, 0);
+        }
       } catch (err) {
-        console.error('Failed to load app:', err);
-        document.getElementById('loading').innerHTML = '<p>فشل التحميل. يرجى تحديث الصفحة.</p>';
+        console.error('Script initialization error:', err);
       }
-    };
-    
-    // Use requestIdleCallback for non-critical start
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(loadApp, { timeout: 2000 });
-    } else {
-      setTimeout(loadApp, 0);
-    }
+    })();
   </script>
 
   <!-- Service Worker -->
