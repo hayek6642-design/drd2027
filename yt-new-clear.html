@@ -65,6 +65,29 @@ window.addEventListener("auth:logout", function(e) {
     codebank_session: localStorage.getItem("codebank_session"),
     user_data: localStorage.getItem("user_data") ? "exists" : null
   });
+<!-- DEBUG: Monitor localStorage REMOVE and CLEAR -->
+<script>
+(function() {
+  const originalRemoveItem = localStorage.removeItem;
+  const originalClear = localStorage.clear;
+  
+  localStorage.removeItem = function(key) {
+    if (key === "session_active" || key === "session_token" || key === "codebank_session" || key === "user_data") {
+      console.warn("[LOCALSTORAGE REMOVE]", key);
+      console.trace("Stack trace");
+    }
+    return originalRemoveItem.call(this, key);
+  };
+  
+  localStorage.clear = function() {
+    console.warn("[LOCALSTORAGE CLEAR] ALL");
+    console.trace("Stack trace");
+    return originalClear.call(this);
+  };
+  
+  console.log("[DEBUG] localStorage remove/clear interception enabled");
+})();
+</script>
 })();
 </script>
       (function() {
