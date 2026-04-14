@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auth System Test Suite</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+      color: #333;
+    }
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+    }
+    header h1 { margin: 0; font-size: 28px; }
+    header p { margin: 10px 0 0 0; opacity: 0.9; }
+    
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    @media (max-width: 768px) {
+      .container { grid-template-columns: 1fr; }
+    }
+    
+    .panel {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .panel h2 {
+      margin-top: 0;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 10px;
+      font-size: 18px;
+    }
+    
+    .test-grid {
+      display: grid;
+      gap: 10px;
+    }
+    
+    .test-item {
+      padding: 12px;
+      border-radius: 6px;
+      background: #f9f9f9;
+      border-left: 4px solid #ddd;
+      font-size: 14px;
+    }
+    
+    .test-item.pending {
+      border-left-color: #ffc107;
+      background: #fffbf0;
+    }
+    
+    .test-item.success {
+      border-left-color: #28a745;
+      background: #f0f8f5;
+    }
+    
+    .test-item.error {
+      border-left-color: #dc3545;
+      background: #fdf5f5;
+    }
+    
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+    
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+    .btn-primary:hover { background: #5568d3; }
+    .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+    
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+    .btn-secondary:hover { background: #5a6268; }
+    
+    .btn-danger {
+      background: #dc3545;
+      color: white;
+    }
+    .btn-danger:hover { background: #c82333; }
+    
+    .status {
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+    
+    .status.running {
+      background: #e7f3ff;
+      color: #0066cc;
+      border: 1px solid #0066cc;
+    }
+    
+    .status.complete {
+      background: #f0f8f5;
+      color: #28a745;
+      border: 1px solid #28a745;
+    }
+    
+    .status.error {
+      background: #fdf5f5;
+      color: #dc3545;
+      border: 1px solid #dc3545;
+    }
+    
+    .debug-info {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .endpoint-test {
+      border: 1px solid #ddd;
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+    }
+    
+    .endpoint-test h3 {
+      margin-top: 0;
+      font-size: 14px;
+    }
+    
+    .endpoint-test input {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    
+    .endpoint-test button {
+      width: 100%;
+      margin-top: 10px;
+    }
+    
+    .response {
+      background: #f9f9f9;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+      font-family: monospace;
+      font-size: 11px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🚀 Auth System Test Suite</h1>
+    <p>Testing JWT authentication, session management, and guest data merging</p>
+  </header>
+
+  <div class="container">
+    <!-- Left Panel: Tests -->
+    <div class="panel">
+      <h2>🧪 Test Suite</h2>
+      
+      <div class="controls">
+        <button class="btn-primary" onclick="runAllTests()">Run All Tests</button>
+        <button class="btn-secondary" onclick="clearConsole()">Clear Console</button>
+      </div>
+      
+      <div id="status" class="status" style="display: none;"></div>
+      
+      <div class="test-grid" id="testResults"></div>
+    </div>
+
+    <!-- Right Panel: Session Info & Endpoints -->
+    <div class="panel">
+      <h2>📋 Session Manager</h2>
+      
+      <div id="sessionDebug" class="debug-info">Loading...</div>
+      
+      <button class="btn-secondary" onclick="refreshSessionInfo()" style="width: 100%; margin-top: 15px;">Refresh Info</button>
+    </div>
+  </div>
+
+  <!-- Endpoint Tester -->
+  <div class="panel">
+    <h2>🔌 Endpoint Tests</h2>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+      <!-- Login Test -->
+      <div class="endpoint-test">
+        <h3>POST /api/auth/login</h3>
+        <input type="email" id="loginEmail" placeholder="Email" value="test@example.com">
+        <input type="password" id="loginPassword" placeholder="Password" value="password">
+        <button class="btn-primary" onclick="testLogin()">Test Login</button>
+        <div id="loginResponse" class="response" style="display: none;"></div>
+      </div>
+
+      <!-- /api/auth/me Test -->
+      <div class="endpoint-test">
+        <h3>GET /api/auth/me</h3>
+        <button class="btn-primary" onclick="testAuthMe()">Test Auth/Me</button>
+        <div id="authMeResponse" class="response" style="display: none;"></div>
+      </div>
+
+      <!-- Status Test -->
+      <div class="endpoint-test">
+        <h3>GET /api/auth-v2/status</h3>
+        <button class="btn-primary" onclick="testStatus()">Test Status</button>
+        <div id="statusResponse" class="response" style="display: none;"></div>
+      </div>
+
+      <!-- Merge Guest Test -->
+      <div class="endpoint-test">
+        <h3>POST /api/auth-v2/merge-guest</h3>
+        <input type="text" id="mergeGuestId" placeholder="Guest ID">
+        <button class="btn-primary" onclick="testMergeGuest()">Test Merge</button>
+        <div id="mergeResponse" class="response" style="display: none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SessionManager Script -->
+  <script>
+    // SessionManager implementation (inline)
+    class SessionManager {
+      constructor() {
+        this.STORAGE_KEY = 'zagelsession';
+        this.session = null;
+        this.listeners = [];
+        this.apiBase = '/api';
+        this.init();
+      }
+
+      async init() {
+        try {
+          const stored = localStorage.getItem(this.STORAGE_KEY);
+          if (stored) {
+            this.session = JSON.parse(stored);
+            console.log('[SessionManager] Loaded existing session:', this.session.type);
+          }
+          if (!this.session) {
+            await this.createGuestSession();
+          }
+          await this.validateWithBackend();
+          this.notify();
+        } catch (error) {
+          console.error('[SessionManager] Init error:', error);
+          await this.createGuestSession();
+        }
+      }
+
+      async createGuestSession() {
+        const guestId = this.generateId('guest');
+        this.session = {
+          type: 'guest',
+          guestId: guestId,
+          version: '2.0',
+          createdAt: Date.now(),
+          metadata: { userAgent: navigator.userAgent, locale: navigator.language }
+        };
+        this.saveSession();
+        console.log('[SessionManager] Created new guest session:', guestId);
+        this.notify();
+      }
+
+      async upgradeToUser(userData, token) {
+        const oldGuestId = this.session?.guestId;
+        this.session = {
+          type: 'user',
+          userId: userData.id,
+          email: userData.email,
+          token: token,
+          version: '2.0',
+          createdAt: Date.now(),
+          metadata: { upgradedFrom: oldGuestId, upgradedAt: Date.now(), userAgent: navigator.userAgent }
+        };
+        this.saveSession();
+        console.log('[SessionManager] Upgraded to user:', userData.email);
+        this.notify();
+        if (oldGuestId) this.mergeGuestData(oldGuestId, token);
+      }
+
+      async downgradeToGuest() {
+        const oldUserId = this.session?.userId;
+        await this.createGuestSession();
+        if (oldUserId) {
+          this.session.metadata.downgradedFrom = oldUserId;
+          this.saveSession();
+        }
+        console.log('[SessionManager] Downgraded to guest');
+        this.notify();
+      }
+
+      async mergeGuestData(guestId, userToken) {
+        try {
+          const response = await fetch(`${this.apiBase}/auth-v2/merge-guest`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${userToken}`
+            },
+            body: JSON.stringify({ guestId: guestId, timestamp: Date.now() })
+          });
+          if (response.ok) console.log('[SessionManager] Guest data merged successfully');
+        } catch (error) {
+          console.warn('[SessionManager] Guest merge failed:', error);
+        }
+      }
+
+      async validateWithBackend() {
+        try {
+          const response = await fetch(`${this.apiBase}/auth/me`, {
+            headers: { 'Authorization': `Bearer ${this.session?.token || ''}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.user) { console.log('[SessionManager] Session validated'); return true; }
+          }
+        } catch (error) {
+          console.warn('[SessionManager] Validation failed:', error);
+        }
+        return false;
+      }
+
+      saveSession() { localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.session)); }
+      getSession() { return this.session; }
+      getId() { return this.session?.guestId || this.session?.userId; }
+      getToken() { return this.session?.token || null; }
+      isUser() { return this.session?.type === 'user' && !!this.session?.userId; }
+      isGuest() { return this.session?.type === 'guest' && !!this.session?.guestId; }
+      getEmail() { return this.session?.email || null; }
+      subscribe(callback) {
+        this.listeners.push(callback);
+        return () => { const i = this.listeners.indexOf(callback); if (i > -1) this.listeners.splice(i, 1); };
+      }
+      notify() { this.listeners.forEach(l => { try { l(this.session); } catch(e) { console.error(e); } }); }
+      generateId(prefix = 'id') { return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`; }
+      getDebugInfo() {
+        return {
+          type: this.session?.type,
+          id: this.getId(),
+          isUser: this.isUser(),
+          isGuest: this.isGuest(),
+          email: this.getEmail(),
+          token: this.getToken() ? '***' : null,
+          createdAt: this.session?.createdAt,
+          metadata: this.session?.metadata
+        };
+      }
+      async logout() {
+        try { await fetch(`${this.apiBase}/auth/logout`, { method: 'POST', headers: { 'Authorization': `Bearer ${this.session?.token || ''}` } }); } catch(e) {}
+        await this.downgradeToGuest();
+      }
+      async login(email, password) {
+        try {
+          const response = await fetch(`${this.apiBase}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.user && data.token) {
+              await this.upgradeToUser(data.user, data.token);
+              return { success: true, user: data.user };
+            }
+          }
+          return { success: false, error: 'Login failed' };
+        } catch (error) {
+          return { success: false, error: error.message };
+        }
+      }
+    }
+
+    // Initialize SessionManager globally
+    window.sessionManager = new SessionManager();
+
+    // Test functions
+    async function runAllTests() {
+      const status = document.getElementById('status');
+      const results = document.getElementById('testResults');
+      
+      status.className = 'status running';
+      status.textContent = '⏳ Running tests...';
+      status.style.display = 'block';
+      results.innerHTML = '';
+
+      const tests = [
+        { name: 'Guest Auto-Creation', fn: testGuestCreate },
+        { name: 'Session Persistence', fn: testPersistence },
+        { name: 'No Redirect Loops', fn: testNoLoops },
+        { name: 'Upgrade to User', fn: testUpgrade },
+        { name: 'Downgrade to Guest', fn: testDowngrade },
+        { name: 'Token Management', fn: testTokens },
+        { name: 'Debug Info', fn: testDebugInfo }
+      ];
+
+      let passed = 0, failed = 0;
+
+      for (const test of tests) {
+        const item = document.createElement('div');
+        item.className = 'test-item pending';
+        item.textContent = `⏳ ${test.name}`;
+        results.appendChild(item);
+
+        try {
+          await test.fn();
+          item.className = 'test-item success';
+          item.textContent = `✅ ${test.name}`;
+          passed++;
+        } catch (error) {
+          item.className = 'test-item error';
+          item.textContent = `❌ ${test.name}: ${error.message}`;
+          failed++;
+          console.error(`Test "${test.name}" failed:`, error);
+        }
+      }
+
+      status.className = `status ${failed === 0 ? 'complete' : 'error'}`;
+      status.textContent = `📊 Results: ${passed} passed, ${failed} failed`;
+      
+      refreshSessionInfo();
+    }
+
+    async function testGuestCreate() {
+      const sm = window.sessionManager;
+      if (sm.session.type !== 'guest') throw new Error('Not a guest session');
+      if (!sm.session.guestId) throw new Error('No guestId');
+    }
+
+    async function testPersistence() {
+      const stored = localStorage.getItem('zagelsession');
+      if (!stored) throw new Error('Session not persisted');
+      const parsed = JSON.parse(stored);
+      if (parsed.type !== 'guest') throw new Error('Wrong type');
+    }
+
+    async function testNoLoops() {
+      const initialUrl = window.location.href;
+      await new Promise(r => setTimeout(r, 1000));
+      if (window.location.href !== initialUrl) throw new Error('Redirect detected');
+    }
+
+    async function testUpgrade() {
+      const sm = window.sessionManager;
+      await sm.upgradeToUser({ id: 'test_user', email: 'test@example.com' }, 'test_token');
+      if (sm.session.type !== 'user') throw new Error('Not upgraded');
+      if (sm.session.email !== 'test@example.com') throw new Error('Email mismatch');
+    }
+
+    async function testDowngrade() {
+      const sm = window.sessionManager;
+      await sm.downgradeToGuest();
+      if (sm.session.type !== 'guest') throw new Error('Not downgraded');
+    }
+
+    async function testTokens() {
+      const sm = window.sessionManager;
+      await sm.downgradeToGuest();
+      if (sm.getToken() !== null) throw new Error('Guest should not have token');
+      await sm.upgradeToUser({ id: 'u1', email: 'e@e.com' }, 'token123');
+      if (sm.getToken() !== 'token123') throw new Error('Token mismatch');
+    }
+
+    async function testDebugInfo() {
+      const sm = window.sessionManager;
+      const debug = sm.getDebugInfo();
+      if (!debug.type || !debug.id) throw new Error('Missing debug info');
+    }
+
+    function refreshSessionInfo() {
+      const sm = window.sessionManager;
+      const debug = sm.getDebugInfo();
+      document.getElementById('sessionDebug').textContent = JSON.stringify(debug, null, 2);
+    }
+
+    async function testLogin() {
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const responseDiv = document.getElementById('loginResponse');
+      responseDiv.style.display = 'block';
+      responseDiv.textContent = '⏳ Testing...';
+
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await response.json();
+        responseDiv.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        responseDiv.textContent = `Error: ${error.message}`;
+      }
+    }
+
+    async function testAuthMe() {
+      const responseDiv = document.getElementById('authMeResponse');
+      responseDiv.style.display = 'block';
+      responseDiv.textContent = '⏳ Testing...';
+
+      try {
+        const response = await fetch('/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${window.sessionManager.getToken() || ''}` }
+        });
+        const data = await response.json();
+        responseDiv.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        responseDiv.textContent = `Error: ${error.message}`;
+      }
+    }
+
+    async function testStatus() {
+      const responseDiv = document.getElementById('statusResponse');
+      responseDiv.style.display = 'block';
+      responseDiv.textContent = '⏳ Testing...';
+
+      try {
+        const response = await fetch('/api/auth-v2/status');
+        const data = await response.json();
+        responseDiv.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        responseDiv.textContent = `Error: ${error.message}`;
+      }
+    }
+
+    async function testMergeGuest() {
+      const guestId = document.getElementById('mergeGuestId').value;
+      const responseDiv = document.getElementById('mergeResponse');
+      responseDiv.style.display = 'block';
+      responseDiv.textContent = '⏳ Testing...';
+
+      try {
+        const response = await fetch('/api/auth-v2/merge-guest', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${window.sessionManager.getToken() || ''}`
+          },
+          body: JSON.stringify({ guestId: guestId })
+        });
+        const data = await response.json();
+        responseDiv.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        responseDiv.textContent = `Error: ${error.message}`;
+      }
+    }
+
+    function clearConsole() {
+      document.getElementById('testResults').innerHTML = '';
+      document.getElementById('status').style.display = 'none';
+      console.clear();
+    }
+
+    // Initialize display
+    window.addEventListener('load', refreshSessionInfo);
+  </script>
+</body>
+</html>
