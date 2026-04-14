@@ -95,6 +95,11 @@ import aiRouter from './server/routes/ai-routes.js';
 import assetRoutes from './server/routes/assets.js';
 import dbAdapter from './server/database/db-adapter.js';
 
+// ── Auth Refactor v2 Routes & Middleware ──────────────────────────
+import authV2Routes from './server/routes/auth-v2.js';
+import { validateSession, validateJWT } from './server/middleware/session-validation.js';
+import { mergeGuestData } from './server/utils/guest-merger.js';
+
 import { 
   getAllCountries, 
   getCountryByCode, 
@@ -126,6 +131,17 @@ const { feedWatchDog } = WatchDogGuardian;
 const app = express();
 // Share devSessions with all routers via req.app.get('devSessions')
 app.set('devSessions', devSessions);
+
+// ── Phase 3: Auth Utilities Middleware ──────────────────────────
+// Make auth utilities available globally for all routes
+app.use((req, res, next) => {
+  req.auth = {
+    validateJWT,
+    mergeGuestData,
+    validateSession
+  };
+  next();
+});
 
 // Make dbAdapter available to all routes
 app.locals.dbAdapter = dbAdapter;
@@ -327,6 +343,11 @@ app.use('/api/likes', likesRouter);
 app.use('/api/drmail', drmailRouter);
 app.use('/api/quota',  quotaRouter);
 app.use('/api/assets', assetRoutes);
+
+// ── Phase 5: Mount Auth V2 Routes ──────────────────────────────
+// Auth Refactor v2 - Guest/User Session Management
+app.use('/api/auth-v2', authV2Routes);
+console.log('[AUTH] v2.0 routes mounted at /api/auth-v2');
 
 // AUTH REMOVED — CLEAN RESET
 
