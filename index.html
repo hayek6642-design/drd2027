@@ -118,7 +118,7 @@
         // 🧠 Auth Flow Control: Skip grid if session is active
         // On native, also check NativeStorage for persisted session
         const sessionActive = localStorage.getItem("session_active") === "true";
-        const nativeSession = window.NativeStorage ? await window.NativeStorage.syncGet("session_active") : null;
+        const nativeSession = window.NativeStorage ? window.NativeStorage.syncGet("session_active") : null;
         
         if (sessionActive || nativeSession === "true" || nativeSession === true) {
           console.log("Active session found, redirecting to app...");
