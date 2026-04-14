@@ -1,13 +1,14 @@
 /**
  * Guest Data Merger Utility
  * Handles merging guest session data into authenticated user accounts
+ * Uses ES6 export syntax for server.js compatibility
  */
 
 /**
  * Merge guest data into user data
  * Handles conflicts with configurable strategies
  */
-function mergeGuestDataIntoUser(userData, guestData, options = {}) {
+export function mergeGuestData(userData, guestData, options = {}) {
   const {
     guestId,
     mergeTimestamp = new Date(),
@@ -80,7 +81,7 @@ function mergeGuestDataIntoUser(userData, guestData, options = {}) {
 /**
  * Deep merge objects recursively
  */
-function deepMerge(userObj, guestObj, conflictStrategy = 'user-priority') {
+export function deepMerge(userObj, guestObj, conflictStrategy = 'user-priority') {
   const result = { ...userObj };
   
   if (!guestObj || typeof guestObj !== 'object') {
@@ -110,7 +111,7 @@ function deepMerge(userObj, guestObj, conflictStrategy = 'user-priority') {
 /**
  * Create merge audit entry
  */
-function createMergeAudit(guestId, userId, guestData, mergedData, mergeLog) {
+export function createMergeAudit(guestId, userId, guestData, mergedData, mergeLog) {
   return {
     id: `merge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     guestId,
@@ -128,7 +129,7 @@ function createMergeAudit(guestId, userId, guestData, mergedData, mergeLog) {
 /**
  * Validate guest data before merge
  */
-function validateGuestData(guestData) {
+export function validateGuestData(guestData) {
   const errors = [];
   
   if (!guestData || typeof guestData !== 'object') {
@@ -153,8 +154,8 @@ function validateGuestData(guestData) {
   return errors;
 }
 
-module.exports = {
-  mergeGuestDataIntoUser,
+export default { 
+  mergeGuestData,
   deepMerge,
   createMergeAudit,
   validateGuestData
