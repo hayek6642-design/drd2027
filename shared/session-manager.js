@@ -1,94 +1,344 @@
-// ===============================
-// 🔐 SESSION MANAGER - Guest to User Flow
-// ===============================
+/**
+ * Session Manager - Zagel OS Authentication Core
+ * Unified session handling: Guest Mode + Authenticated Mode
+ * No redirects, no loops, clean state management
+ */
+
+// Session storage key
+const SESSION_KEY = 'zagelsession';
+const SESSION_VERSION = '2.0';
 
 class SessionManager {
   constructor() {
-    this.session = null
-    this.listeners = new Map()
-    this.initSession()
+    this.currentSession = null;
+    this.listeners = new Set();
+    this.validationInProgress = false;
+    
+    // Initialize immediately
+    this.init();
   }
 
-  initSession() {
-    const stored = localStorage.getItem('zagel_session')
+  /**
+   * Initialize session on app start
+   */
+  init() {
+    console.log('[Session] Initializing...');
     
-    if (!stored) {
-      // Create guest session
-      this.session = {
-        id: 'guest_' + Date.now(),
-        type: 'guest',
-        userId: null,
-        createdAt: Date.now(),
-        lastActivity: Date.now()
-      }
-      this.saveSession()
-      console.log('[SessionManager] Created guest session:', this.session.id)
+    const stored = this.getStoredSession();
+    
+    if (stored) {
+      // Validate and restore
+      this.restoreSession(stored);
     } else {
-      this.session = JSON.parse(stored)
-      this.session.lastActivity = Date.now()
-      this.saveSession()
-      console.log('[SessionManager] Restored session:', this.session.id)
+      // Create new guest session
+      this.createGuestSession();
+    }
+    
+    // Background validation
+    this.validateWithServer();
+  }
+
+  /**
+   * Get session from storage
+   */
+  getStoredSession() {
+    try {
+      const data = localStorage.getItem(SESSION_KEY);
+      if (!data) return null;
+      
+      const parsed = JSON.parse(data);
+      
+      // Version check for migrations
+      if (parsed.version !== SESSION_VERSION) {
+        console.log('[Session] Version mismatch, treating as new');
+        return null;
+      }
+      
+      return parsed;
+    } catch (err) {
+      console.error('[Session] Parse error:', err);
+      return null;
     }
   }
 
-  saveSession() {
-    localStorage.setItem('zagel_session', JSON.stringify(this.session))
-    this.emit('session:updated', this.session)
+  /**
+   * Create new guest session
+   */
+  createGuestSession() {
+    const session = {
+      version: SESSION_VERSION,
+      type: 'guest',
+      guestId: `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      createdAt: Date.now(),
+      lastActive: Date.now(),
+      metadata: {
+        visits: 1,
+        firstVisit: Date.now()
+      }
+    };
+    
+    this.setSession(session);
+    console.log('[Session] Guest session created:', session.guestId);
+    
+    return session;
   }
 
-  upgradeToUser(userId, userData = {}) {
-    console.log('[SessionManager] Upgrading to user:', userId)
+  /**
+   * Restore existing session
+   */
+  restoreSession(session) {
+    // Check expiration for user sessions
+    if (session.type === 'user' && session.expiresAt) {
+      if (Date.now() > session.expiresAt) {
+        console.log('[Session] User session expired, converting to guest');
+        this.createGuestSession();
+        return;
+      }
+    }
     
-    this.session = {
-      ...this.session,
+    // Update last active
+    session.lastActive = Date.now();
+    if (session.metadata) {
+      session.metadata.visits = (session.metadata.visits || 0) + 1;
+    }
+    
+    this.setSession(session);
+    console.log('[Session] Restored:', session.type, session.type === 'user' ? session.userId : session.guestId);
+  }
+
+  /**
+   * Set session and notify listeners
+   */
+  setSession(session) {
+    this.currentSession = session;
+    
+    try {
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    } catch (err) {
+      console.error('[Session] Storage failed:', err);
+    }
+    
+    this.notifyListeners(session);
+  }
+
+  /**
+   * Upgrade guest to user (called from login.html only)
+   */
+  upgradeToUser(userData, token, expiresInDays = 7) {
+    const oldSession = this.currentSession;
+    
+    const newSession = {
+      version: SESSION_VERSION,
       type: 'user',
-      userId,
-      userData,
-      upgradedAt: Date.now()
+      userId: userData.id,
+      email: userData.email,
+      token: token,
+      expiresAt: Date.now() + (expiresInDays * 24 * 60 * 60 * 1000),
+      createdAt: Date.now(),
+      lastActive: Date.now(),
+      metadata: {
+        ...userData,
+        upgradedFrom: oldSession?.guestId || null,
+        upgradedAt: Date.now()
+      }
+    };
+    
+    // Merge guest data if exists
+    if (oldSession?.type === 'guest') {
+      this.mergeGuestData(oldSession.guestId, userData.id);
     }
     
-    this.saveSession()
-    this.emit('session:upgraded', this.session)
+    this.setSession(newSession);
+    console.log('[Session] Upgraded to user:', userData.id);
     
-    return this.session
+    return newSession;
   }
 
+  /**
+   * Downgrade to guest (logout)
+   */
+  downgradeToGuest() {
+    console.log('[Session] Downgrading to guest');
+    this.createGuestSession();
+  }
+
+  /**
+   * Merge guest data to user account
+   */
+  async mergeGuestData(guestId, userId) {
+    try {
+      // Call API to merge data
+      const response = await fetch('/api/auth/merge-guest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guestId, userId })
+      });
+      
+      if (response.ok) {
+        console.log('[Session] Guest data merged:', guestId, '→', userId);
+      }
+    } catch (err) {
+      console.error('[Session] Merge failed:', err);
+    }
+  }
+
+  /**
+   * Silent server validation
+   */
+  async validateWithServer() {
+    if (this.validationInProgress) return;
+    this.validationInProgress = true;
+    
+    try {
+      const session = this.currentSession;
+      
+      // Skip validation for fresh guests
+      if (session?.type === 'guest' && !session.metadata?.upgradedAt) {
+        this.validationInProgress = false;
+        return;
+      }
+      
+      const response = await fetch('/api/auth/me', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.token ? { 'Authorization': `Bearer ${session.token}` } : {})
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.success && data.user) {
+          // Valid user session
+          if (session?.type !== 'user' || session.userId !== data.user.id) {
+            // Session mismatch, upgrade
+            this.upgradeToUser(data.user, data.token || session?.token);
+          }
+          console.log('[Session] Server validation: valid user');
+        } else {
+          // Invalid, fallback to guest
+          if (session?.type === 'user') {
+            console.log('[Session] Server validation: invalid, falling back to guest');
+            this.downgradeToGuest();
+          }
+        }
+      } else {
+        // Server error, keep current session but mark as offline
+        console.warn('[Session] Validation failed, operating offline');
+      }
+    } catch (err) {
+      console.error('[Session] Validation error:', err);
+    } finally {
+      this.validationInProgress = false;
+    }
+  }
+
+  /**
+   * Get current session (safe)
+   */
   getSession() {
-    return { ...this.session }
+    return this.currentSession;
   }
 
+  /**
+   * Check if authenticated user
+   */
+  isUser() {
+    return this.currentSession?.type === 'user';
+  }
+
+  /**
+   * Check if guest
+   */
   isGuest() {
-    return this.session.type === 'guest'
+    return this.currentSession?.type === 'guest';
   }
 
-  isAuthenticated() {
-    return this.session.type === 'user' && this.session.userId
+  /**
+   * Get auth token (null for guests)
+   */
+  getToken() {
+    return this.currentSession?.type === 'user' ? this.currentSession.token : null;
   }
 
-  on(event, callback) {
-    if (!this.listeners.has(event)) {
-      this.listeners.set(event, [])
-    }
-    this.listeners.get(event).push(callback)
+  /**
+   * Get user/guest ID
+   */
+  getId() {
+    const s = this.currentSession;
+    return s?.type === 'user' ? s.userId : s?.guestId;
+  }
+
+  /**
+   * Subscribe to session changes
+   */
+  subscribe(listener) {
+    this.listeners.add(listener);
+    // Immediate callback with current state
+    listener(this.currentSession);
+    return () => this.listeners.delete(listener);
+  }
+
+  /**
+   * Notify all listeners
+   */
+  notifyListeners(session) {
+    this.listeners.forEach(listener => {
+      try {
+        listener(session);
+      } catch (err) {
+        console.error('[Session] Listener error:', err);
+      }
+    });
+  }
+
+  /**
+   * Update session metadata
+   */
+  updateMetadata(updates) {
+    if (!this.currentSession) return;
     
-    return () => {
-      const callbacks = this.listeners.get(event)
-      const index = callbacks.indexOf(callback)
-      if (index > -1) callbacks.splice(index, 1)
-    }
+    this.currentSession.metadata = {
+      ...this.currentSession.metadata,
+      ...updates
+    };
+    this.currentSession.lastActive = Date.now();
+    
+    this.setSession(this.currentSession);
   }
 
-  emit(event, data) {
-    if (this.listeners.has(event)) {
-      this.listeners.get(event).forEach(cb => cb(data))
-    }
+  /**
+   * Clear session (logout)
+   */
+  clear() {
+    localStorage.removeItem(SESSION_KEY);
+    this.currentSession = null;
+    this.createGuestSession();
   }
 
-  logout() {
-    localStorage.removeItem('zagel_session')
-    this.initSession()
-    this.emit('session:logout', null)
+  /**
+   * Get session info for debugging
+   */
+  getDebugInfo() {
+    return {
+      type: this.currentSession?.type,
+      id: this.getId(),
+      isUser: this.isUser(),
+      isGuest: this.isGuest(),
+      expiresAt: this.currentSession?.expiresAt,
+      lastActive: this.currentSession?.lastActive
+    };
   }
 }
 
-export const sessionManager = new SessionManager()
+// Singleton instance
+const sessionManager = new SessionManager();
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = sessionManager;
+} else if (typeof window !== 'undefined') {
+  window.sessionManager = sessionManager;
+}

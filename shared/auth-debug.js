@@ -1,62 +1,60 @@
-// ===============================
-// 🔍 AUTH DEBUG LOGGING
-// ===============================
+/**
+ * Auth Debug Logger
+ * Temporary for refactor verification
+ */
 
-const authEvents = []
-
-export class AuthDebugger {
-  static log(event, details = {}) {
-    const entry = {
-      timestamp: new Date().toISOString(),
-      event,
-      details,
-      userAgent: navigator.userAgent.substring(0, 50)
-    }
-    
-    authEvents.push(entry)
-    console.log('[AuthDebug]', event, details)
-    
-    // Keep last 100 events
-    if (authEvents.length > 100) {
-      authEvents.shift()
-    }
-    
-    // Store in sessionStorage for debugging
-    sessionStorage.setItem('auth_debug_log', JSON.stringify(authEvents))
-  }
-
-  static getLog() {
-    return [...authEvents]
-  }
-
-  static clearLog() {
-    authEvents.length = 0
-    sessionStorage.removeItem('auth_debug_log')
-  }
-
-  static exportLog() {
-    return JSON.stringify(authEvents, null, 2)
+function logAuthEvent(event, data) {
+  const timestamp = new Date().toISOString();
+  const logEntry = {
+    timestamp,
+    event,
+    data,
+    url: typeof window !== 'undefined' ? window.location.href : 'N/A',
+    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A'
+  };
+  
+  console.log(`[AuthDebug] ${event}:`, data);
+  
+  // Store last 50 events
+  if (typeof localStorage !== 'undefined') {
+    const logs = JSON.parse(localStorage.getItem('auth_debug_logs') || '[]');
+    logs.push(logEntry);
+    if (logs.length > 50) logs.shift();
+    localStorage.setItem('auth_debug_logs', JSON.stringify(logs));
   }
 }
 
-// Global error handler for auth issues
-window.addEventListener('error', (event) => {
-  if (event.message.includes('auth') || event.message.includes('Auth')) {
-    AuthDebugger.log('error', {
-      message: event.message,
-      filename: event.filename,
-      lineno: event.lineno
-    })
-  }
-})
+function getAuthLogs() {
+  if (typeof localStorage === 'undefined') return [];
+  return JSON.parse(localStorage.getItem('auth_debug_logs') || '[]');
+}
 
-// Monitor unhandled promise rejections
-window.addEventListener('unhandledrejection', (event) => {
-  if (event.reason?.includes?.('auth') || event.reason?.message?.includes?.('auth')) {
-    AuthDebugger.log('unhandled_rejection', {
-      reason: String(event.reason)
-    })
+function clearAuthLogs() {
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem('auth_debug_logs');
   }
-})
+}
 
-export default AuthDebugger
+function printAuthLogs() {
+  const logs = getAuthLogs();
+  console.table(logs);
+}
+
+// Auto-log session changes
+if (typeof window !== 'undefined' && typeof addEventListener !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'zagelsession') {
+      logAuthEvent('session_changed', {
+        oldValue: e.oldValue ? JSON.parse(e.oldValue) : null,
+        newValue: e.newValue ? JSON.parse(e.newValue) : null
+      });
+    }
+  });
+}
+
+// Export
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { logAuthEvent, getAuthLogs, clearAuthLogs, printAuthLogs };
+} else if (typeof window !== 'undefined') {
+  window.authDebug = { logAuthEvent, getAuthLogs, clearAuthLogs, printAuthLogs };
+}
