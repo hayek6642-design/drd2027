@@ -8,21 +8,33 @@
     <script>
       (function() {
         const reloadKey = 'last_reload_time';
-        const minReloadInterval = 120000; // Allow login redirect time 
+        const minReloadInterval = 999999999;  // Effectively disabled // Allow login redirect time 
+        
+        
+        // NEW: Always preserve auth tokens if they exist
+        const hasValidSession = localStorage.getItem('session_active') === 'true' || 
+                                localStorage.getItem('session_token');
+        if (hasValidSession) {
+            console.log('[AUTH PRESERVED] Session tokens found, skipping reload checks');
+            localStorage.setItem(reloadKey, Date.now().toString());
+            return;
+        }
         
         // SKIP reload detection when coming from login.html
         if (document.referrer && document.referrer.includes("login.html")) {
-          console.log("[RELOAD CHECK] Skipping - coming from login");
-          localStorage.setItem(reloadKey, Date.now().toString());
-          return;
+            console.log('[RELOAD CHECK] Skipping - coming from login.html');
+            localStorage.setItem(reloadKey, Date.now().toString());
+            return;
         }
+        
         const lastReload = parseInt(localStorage.getItem(reloadKey) || '0');
         const now = Date.now();
         if (now - lastReload < minReloadInterval) {
+
           console.error(' RELOAD LOOP DETECTED - Breaking cycle');
           localStorage.setItem('reload_loop_detected', 'true');
           localStorage.removeItem('auth_session');
-          sessionStorage.clear();
+          sessionStorage.clear(); // DISABLED - Was clearing auth data
           document.addEventListener('DOMContentLoaded', () => {
             document.body.innerHTML = `
               <div style="padding: 40px; text-align: center; font-family: sans-serif; background: #0d1117; color: white; height: 100vh;">
