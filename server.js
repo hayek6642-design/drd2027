@@ -2200,23 +2200,13 @@ app.use('/src', express.static(path.join(__dirname, 'services/codebank/src'), {
 // env.js removed
 
 // Service-specific routes
-app.get(['/', '/yt-new-clear.html'], (req, res) => {
-  const session = readSessionFromCookie(req);
-  if (!session || !session.userId) {
-    // [SECURITY] FIX: Clear stale cookie to break client-side redirect loops
-    if (req.cookies && req.cookies.session_token) {
-      res.clearCookie('session_token', { path: '/' });
-    }
-    console.log(`[route] ${req.path} → Redirecting to login.html (Session missing)`);
-    return res.redirect('/login.html');
-  }
-  console.log(`[route] ${req.path} → yt-new-clear.html (Session: ${session.userId})`);
+app.get(['/yt-new-clear.html'], (req, res) => {
+  console.log(`[route] /yt-new-clear.html → Serving (frontend will validate auth)`);
   try {
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.set('Pragma', 'no-cache');
     res.set('Expires', '0');
   } catch(_) {}
-
   res.sendFile(path.join(__dirname, 'yt-new-clear.html'));
 });
 
