@@ -54,7 +54,7 @@ function clearSessionAndLogout() {
 
         // FIX: Check session_token FIRST - login.html sets this immediately after login
         // Don't check session_active here as auth-core.js hasn't loaded yet
-        const sessionToken = localStorage.getItem('session_token');
+        const sessionToken = localStorage.getItem('session_token') || localStorage.getItem('__cached_session_id__');
         if (sessionToken) {
             console.log('[AUTH PRESERVED] session_token found, skipping reload check');
             localStorage.setItem(reloadKey, Date.now().toString());

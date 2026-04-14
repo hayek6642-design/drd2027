@@ -970,6 +970,8 @@ async function handleSignup() {
         user: data.user
       };
       localStorage.setItem('session_token', data.sessionId);
+      localStorage.setItem('__cached_session_id__', data.sessionId);
+      localStorage.setItem('session_active', 'true');
       localStorage.setItem('user_data', JSON.stringify(data.user));
       
       // 🧠 Auth Flow Control
@@ -1041,6 +1043,8 @@ async function handleLogin() {
       
       // 🛡️ CRITICAL: Store session and update auth state
       localStorage.setItem('session_token', data.sessionId);
+      localStorage.setItem('__cached_session_id__', data.sessionId);
+      localStorage.setItem('session_active', 'true');
       if (data.user) {
         localStorage.setItem('user_data', JSON.stringify(data.user));
       }
@@ -1319,6 +1323,8 @@ async function handleGoogleCredential(response) {
 
     if (data.status === 'success') {
       localStorage.setItem('session_token', data.sessionId);
+      localStorage.setItem('__cached_session_id__', data.sessionId);
+      localStorage.setItem('session_active', 'true');
       if (data.user) localStorage.setItem('user_data', JSON.stringify(data.user));
       localStorage.setItem('session_active', 'true');
       if (data.user && data.user.email) localStorage.setItem('last_login_email', data.user.email);
