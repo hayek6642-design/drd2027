@@ -1,16 +1,17 @@
 /**
  * Session Validation Middleware
  * Validates JWT tokens and attaches user data to requests
+ * ES6 Module Format
  */
 
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-min-32-chars';
 
 /**
  * Extract token from Authorization header or cookies
  */
-function extractToken(req) {
+export function extractToken(req) {
   // Try Authorization header first
   const authHeader = req.headers.authorization || '';
   if (authHeader.startsWith('Bearer ')) {
@@ -28,7 +29,7 @@ function extractToken(req) {
 /**
  * Verify JWT token
  */
-function verifyToken(token) {
+export function verifyToken(token) {
   try {
     return jwt.verify(token, JWT_SECRET);
   } catch (error) {
@@ -37,9 +38,14 @@ function verifyToken(token) {
 }
 
 /**
+ * Alias for verifyToken - used as validateJWT
+ */
+export const validateJWT = verifyToken;
+
+/**
  * Create JWT token
  */
-function createToken(userId, email, options = {}) {
+export function createToken(userId, email, options = {}) {
   const payload = {
     id: userId,
     email: email,
@@ -48,17 +54,17 @@ function createToken(userId, email, options = {}) {
   
   const tokenOptions = {
     expiresIn: options.expiresIn || '7d',
-    algorithm: 'HS256'
+    ...options
   };
   
   return jwt.sign(payload, JWT_SECRET, tokenOptions);
 }
 
 /**
- * Middleware: Validate session (optional)
- * Doesn't reject, just populates req.session
+ * Middleware: Optional session validation
+ * Validates token if present, doesn't fail if missing
  */
-function validateSessionOptional(req, res, next) {
+export function validateSessionOptional(req, res, next) {
   const token = extractToken(req);
   
   if (token) {
@@ -71,9 +77,13 @@ function validateSessionOptional(req, res, next) {
         authenticated: true
       };
     } catch (error) {
+      // Invalid token, but we continue anyway
+      // (this is the "optional" part)
+      if (req.cookies && req.cookies.authToken) {
+        res.clearCookie('authToken');
+      }
       req.session = {
-        authenticated: false,
-        error: error.message
+        authenticated: false
       };
     }
   } else {
@@ -86,10 +96,15 @@ function validateSessionOptional(req, res, next) {
 }
 
 /**
+ * Alias for validateSessionOptional - used as validateSession
+ */
+export const validateSession = validateSessionOptional;
+
+/**
  * Middleware: Require valid session
  * Rejects request if no valid token
  */
-function requireSession(req, res, next) {
+export function requireSession(req, res, next) {
   const token = extractToken(req);
   
   if (!token) {
@@ -116,11 +131,13 @@ function requireSession(req, res, next) {
   }
 }
 
-module.exports = {
+export default {
   extractToken,
   verifyToken,
+  validateJWT,
   createToken,
   validateSessionOptional,
+  validateSession,
   requireSession,
   JWT_SECRET
 };
