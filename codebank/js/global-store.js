@@ -111,3 +111,25 @@
     window.ACCBridge.init();
 
 })(window);
+
+
+function persistAssets(assets) {
+    try {
+        localStorage.setItem('acc_assets', JSON.stringify(assets));
+        localStorage.setItem('bankode_assets', JSON.stringify(assets));
+        
+        console.log('[AssetPersist] Saved to localStorage:', {
+            codes: assets.codes?.length || 0,
+            silver: assets.silver?.length || 0,
+            gold: assets.gold?.length || 0
+        });
+        
+        if (window.ACC_BRIDGE) {
+            window.ACC_BRIDGE.broadcast(assets);
+        }
+        
+        window.dispatchEvent(new CustomEvent('assets:updated', { detail: assets }));
+    } catch (e) {
+        console.error('[AssetPersist] Failed:', e);
+    }
+}
