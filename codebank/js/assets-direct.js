@@ -1,3 +1,8 @@
+
+console.log('[AssetsDirectBus] Checking localStorage for acc_assets');
+const stored = localStorage.getItem('acc_assets');
+console.log('[AssetsDirectBus] Found:', stored ? 'YES' : 'NO', stored ? JSON.parse(stored) : 'EMPTY');
+
 /**
  * assets-direct.js
  * Unified asset management — no bridge, no postMessage.
