@@ -6,6 +6,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!--  RELOAD PROTECTION (from actly.md) -->
     <script>
+
+// LOGOUT FIX: Clear session BEFORE redirect to prevent loop
+function clearSessionAndLogout() {
+  console.log('[LOGOUT] Clearing session data...');
+  localStorage.removeItem('session_active');
+  localStorage.removeItem('session_token');
+  localStorage.removeItem('user_data');
+  localStorage.removeItem('__cached_user__');
+  sessionStorage.clear();
+  document.cookie.split(";").forEach((c) => {
+    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+  });
+  console.log('[LOGOUT] Session cleared, redirecting to login...');
+  window.location.href = '/login.html';
+}
+
+</script>
+<script>
       (function() {
         const reloadKey = 'last_reload_time';
         const minReloadInterval = 999999999;  // Effectively disabled // Allow login redirect time
@@ -2100,7 +2118,7 @@
     <button onclick="window.location.reload()" style="width:100%;padding:15px;background:#238636;border:none;border-radius:10px;color:white;font-size:15px;font-weight:bold;cursor:pointer;margin-bottom:12px;">
       🔄 Use DR.D on This Device
     </button>
-    <button onclick="window.location.href='/login.html'" style="width:100%;padding:14px;background:transparent;border:1.5px solid #30363d;border-radius:10px;color:#8b949e;font-size:13px;cursor:pointer;">
+    <button onclick="clearSessionAndLogout()" style="width:100%;padding:14px;background:transparent;border:1.5px solid #30363d;border-radius:10px;color:#8b949e;font-size:13px;cursor:pointer;">
       Log Out
     </button>
   </div>
