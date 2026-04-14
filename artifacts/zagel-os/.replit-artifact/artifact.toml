@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Zagel OS"
+version = "1.0.0"
+id = "artifacts/zagel-os"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22929
+
+[services.development]
+run = "pnpm --filter @workspace/zagel-os run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/zagel-os", "run", "build" ]
+publicDir = "artifacts/zagel-os/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22929"
+BASE_PATH = "/"

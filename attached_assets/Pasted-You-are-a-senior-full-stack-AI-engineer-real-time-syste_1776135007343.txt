@@ -1,0 +1,296 @@
+You are a senior full-stack AI engineer, real-time systems architect, and 3D web/mobile developer.
+
+Your task is to build and integrate a complete system called:
+
+=======================================
+🕊 ZAGEL OS + VOICE ENGINE + 3D AVATAR
+======================================
+
+This is NOT a simple app.
+
+This is a modular AI ecosystem where Zagel acts as a central intelligent agent controlling and interacting with all services.
+
+---
+
+## 🧠 PROJECT CONTEXT (CRITICAL)
+
+Zagel OS is a platform that contains multiple services (apps/modules), such as:
+
+* safecode (code assets)
+* samma3ny (audio/media)
+* farragna (video/media)
+* e7ki (chat system)
+* others (modular services)
+
+These services already exist and are rendered as modules or iframe-based apps.
+
+---
+
+## 🎯 OBJECTIVE
+
+Transform Zagel into:
+
+A CENTRAL AI AGENT that:
+
+* communicates with users via voice
+* learns from user input
+* controls and navigates between services
+* has memory, personality, and behavior
+* is represented visually as a 3D animated avatar
+
+---
+
+## ⚙️ CORE SYSTEMS TO BUILD
+
+You MUST build and integrate:
+
+1. 🧠 Zagel Core Engine
+2. 🎤 Voice Engine (input + output)
+3. 💾 Memory System
+4. 🎭 Behavior & Personality Engine
+5. 🔁 Automation Engine
+6. 📱 Mobile-ready UI
+7. 🧊 3D Avatar System (interactive)
+
+---
+
+## 🧱 ARCHITECTURE REQUIREMENT
+
+Use modular architecture:
+
+/zagel-core/
+/voice-engine/
+/memory/
+/behavior/
+/automation/
+/ui/
+/avatar-3d/
+/integration/
+
+Each module must be isolated and connected via clean interfaces.
+
+---
+
+## 🎤 VOICE ENGINE
+
+Features:
+
+* microphone input (mobile + web)
+
+* speech-to-text
+
+* classification:
+  → instruction
+  → normal chat
+  → onboarding
+  → scenario/template creation
+
+* text-to-speech output
+
+---
+
+## 🧠 MEMORY SYSTEM
+
+Persistent storage (start simple):
+
+{
+user: {
+name,
+job,
+interests
+},
+preferences: {},
+behaviorRules: [],
+templates: [],
+scenarios: []
+}
+
+Must support:
+
+* save
+* update
+* retrieve
+* context injection
+
+---
+
+## 🎭 BEHAVIOR ENGINE
+
+* modifies responses based on:
+
+  * personality
+  * mood
+  * user preferences
+
+* supports:
+
+  * playful
+  * serious
+  * emotional tones
+
+---
+
+## 🔁 AUTOMATION ENGINE
+
+Zagel must:
+
+* react to events
+* trigger actions
+* suggest actions to user
+
+Examples:
+
+* "Do you want to open safecode?"
+* auto-follow user interests
+
+---
+
+## 🎬 ONBOARDING SYSTEM
+
+Voice-based conversational onboarding:
+
+Flow:
+
+1. User taps Zagel button
+
+2. Zagel says:
+   "Hi... I am Zagel 🕊
+   Can I get to know you?"
+
+3. Sequential questions:
+
+   * name
+   * job
+   * interests
+
+4. Store responses
+
+---
+
+## 📱 UI SYSTEM
+
+* Mobile-first design
+* Chat interface
+* Mic button
+* Status indicators
+* Toast messages
+
+---
+
+## 🔘 ZAGEL FLOATING BUTTON
+
+* bottom center circle
+* animated (pulse)
+* on press:
+  → vibration
+  → toast: "Zagel is waking up..."
+  → start system
+
+---
+
+## 🧊 3D AVATAR SYSTEM (CRITICAL)
+
+Use:
+
+* Three.js or React Three Fiber
+
+Build:
+
+A 3D bird/dove avatar representing Zagel:
+
+Features:
+
+* idle animation (breathing)
+
+* talking animation (beak movement)
+
+* mood-based animation:
+
+  * happy
+  * sad
+  * playful
+
+* camera focus interaction
+
+* simple environment (sky / light)
+
+---
+
+## 🔊 VOICE + AVATAR SYNC
+
+When Zagel speaks:
+
+* avatar animates
+* lip/mouth sync (basic is fine)
+* emotion reflected visually
+
+---
+
+## 🔗 INTEGRATION WITH SERVICES
+
+Zagel must act as a controller layer:
+
+* communicate with:
+  safecode, samma3ny, farragna, e7ki
+
+via:
+integration/zagelBridge.js
+
+Functions:
+
+* openService(name)
+* sendData(service, payload)
+* receiveData()
+
+---
+
+## 🧠 DECISION FLOW
+
+On user input:
+
+1. classify input
+2. check:
+
+   * scenario?
+   * template?
+   * onboarding?
+3. else → AI response
+
+---
+
+## 📁 OUTPUT REQUIREMENTS
+
+You MUST provide:
+
+1. Full project structure
+2. All files with REAL code (no pseudo)
+3. Working demo entry point
+4. Comments for each module
+
+---
+
+## 🚫 CONSTRAINTS
+
+* Must run on Replit
+* Use free tools only
+* Keep system scalable
+* Keep code clean and modular
+
+---
+
+## 🔥 FINAL GOAL
+
+Zagel should feel like:
+
+A living digital character that:
+
+* talks
+* listens
+* learns
+* remembers
+* acts
+* and visually exists
+
+---
+
+## END.

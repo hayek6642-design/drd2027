@@ -1,0 +1,1976 @@
+I'll extend the Zajel Voice Engine with the 3 advanced features: Conversational Onboarding, Voice-Driven Flow, and Zagel Circle Automation. Let me build these as clean, modular additions.
+I'll create the complete extended system with all 3 features:
+
+---
+
+# 🚀 ZAJEL VOICE ENGINE - EXTENDED VERSION
+
+## New Folder Structure
+
+```
+zajel-voice-engine/
+├── src/
+│   ├── onboarding/
+│   │   └── onboardingEngine.js      # NEW: Conversational onboarding
+│   ├── state/
+│   │   └── appMode.js               # NEW: Global mode manager
+│   ├── ui/
+│   │   ├── ZagelButton.js           # NEW: Animated circle button
+│   │   └── ToastMessage.js          # NEW: Toast notifications
+│   ├── voice/
+│   │   ├── voiceInput.js            # (existing, enhanced)
+│   │   └── voiceOutput.js           # NEW: TTS output
+│   └── components/
+│       ├── VoiceScreen.js           # (updated with onboarding)
+│       └── OnboardingOverlay.js     # NEW: Onboarding UI
+```
+
+---
+
+## 1. Global State Manager - App Modes
+
+**`src/state/appMode.js`**
+```javascript
+/**
+ * App Mode Manager
+ * Global state management for application modes
+ * idle | onboarding | chat | listening
+ */
+
+import { useState, useCallback, useRef } from 'react';
+import { logger } from '../utils/logger';
+
+// Mode definitions with their allowed transitions
+const MODE_TRANSITIONS = {
+  idle: ['onboarding', 'chat', 'listening'],
+  onboarding: ['chat', 'idle'],
+  chat: ['listening', 'idle', 'onboarding'],
+  listening: ['chat', 'idle', 'onboarding']
+};
+
+class AppModeManager {
+  constructor() {
+    this.currentMode = 'idle';
+    this.previousMode = null;
+    this.listeners = new Set();
+    this.modeData = {}; // Store extra data for each mode
+  }
+
+  subscribe(listener) {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  notify(mode, previousMode, data = {}) {
+    this.listeners.forEach(listener => {
+      try {
+        listener(mode, previousMode, data);
+      } catch (err) {
+        logger.error('Mode listener error:', err);
+      }
+    });
+  }
+
+  canTransition(toMode) {
+    const allowed = MODE_TRANSITIONS[this.currentMode] || [];
+    return allowed.includes(toMode);
+  }
+
+  transition(toMode, data = {}) {
+    if (!this.canTransition(toMode)) {
+      logger.warn(`Invalid transition: ${this.currentMode} → ${toMode}`);
+      return false;
+    }
+
+    this.previousMode = this.currentMode;
+    this.currentMode = toMode;
+    this.modeData[toMode] = data;
+
+    logger.log(`Mode transition: ${this.previousMode} → ${toMode}`, data);
+    this.notify(toMode, this.previousMode, data);
+    return true;
+  }
+
+  getMode() {
+    return this.currentMode;
+  }
+
+  getPreviousMode() {
+    return this.previousMode;
+  }
+
+  getModeData(mode = null) {
+    const target = mode || this.currentMode;
+    return this.modeData[target] || {};
+  }
+
+  is(mode) {
+    return this.currentMode === mode;
+  }
+
+  isNot(mode) {
+    return this.currentMode !== mode;
+  }
+
+  // Quick transition methods
+  toIdle(data) {
+    return this.transition('idle', data);
+  }
+
+  toOnboarding(data) {
+    return this.transition('onboarding', data);
+  }
+
+  toChat(data) {
+    return this.transition('chat', data);
+  }
+
+  toListening(data) {
+    return this.transition('listening', data);
+  }
+
+  // Reset
+  reset() {
+    this.currentMode = 'idle';
+    this.previousMode = null;
+    this.modeData = {};
+    this.notify('idle', null, {});
+  }
+}
+
+// Singleton instance
+const appMode = new AppModeManager();
+
+// React Hook
+export function useAppMode() {
+  const [mode, setMode] = useState(appMode.getMode());
+  const [modeData, setModeData] = useState(appMode.getModeData());
+
+  const transition = useCallback((toMode, data) => {
+    return appMode.transition(toMode, data);
+  }, []);
+
+  const toIdle = useCallback((data) => appMode.toIdle(data), []);
+  const toOnboarding = useCallback((data) => appMode.toOnboarding(data), []);
+  const toChat = useCallback((data) => appMode.toChat(data), []);
+  const toListening = useCallback((data) => appMode.toListening(data), []);
+
+  useState(() => {
+    const unsubscribe = appMode.subscribe((newMode, prevMode, data) => {
+      setMode(newMode);
+      setModeData(data);
+    });
+    return unsubscribe;
+  }, []);
+
+  return {
+    mode,
+    modeData,
+    previousMode: appMode.getPreviousMode(),
+    is: appMode.is.bind(appMode),
+    isNot: appMode.isNot.bind(appMode),
+    transition,
+    toIdle,
+    toOnboarding,
+    toChat,
+    toListening,
+    canTransition: appMode.canTransition.bind(appMode)
+  };
+}
+
+export default appMode;
+```
+
+---
+
+## 2. Onboarding Engine
+
+**`src/onboarding/onboardingEngine.js`**
+```javascript
+/**
+ * Onboarding Engine
+ * Conversational, voice-driven onboarding flow
+ * Human-like interaction with sequential questions
+ */
+
+import { logger } from '../utils/logger';
+import memoryManager from '../memory/memoryManager';
+import appMode from '../state/appMode';
+import voiceOutput from '../voice/voiceOutput';
+
+// Onboarding flow configuration
+const ONBOARDING_FLOW = {
+  intro: {
+    id: 'intro',
+    zagelMessage: "Hi... I am Zagel 🕊\nCan I get to know you?",
+    expectYesNo: true,
+    onYes: 'name',
+    onNo: 'exit',
+    saveAnswer: false
+  },
+  name: {
+    id: 'name',
+    zagelMessage: "What is your name?",
+    field: 'name',
+    saveAnswer: true,
+    confirmation: (value) => `Nice to meet you, ${value}!`,
+    next: 'job'
+  },
+  job: {
+    id: 'job',
+    zagelMessage: "What do you do?",
+    field: 'job',
+    saveAnswer: true,
+    confirmation: (value) => `Interesting! ${value} sounds like a great field.`,
+    next: 'interests'
+  },
+  interests: {
+    id: 'interests',
+    zagelMessage: "What are your interests?",
+    field: 'interests',
+    saveAnswer: true,
+    isArray: true, // Can have multiple interests
+    confirmation: (value) => `Great! We'll explore ${Array.isArray(value) ? value.join(', ') : value} together.`,
+    next: 'complete'
+  },
+  complete: {
+    id: 'complete',
+    zagelMessage: (userData) => `Perfect! I'm ready to help you, ${userData.name}. Just tap the circle anytime you need me.`,
+    saveAnswer: false,
+    isFinal: true
+  }
+};
+
+class OnboardingEngine {
+  constructor() {
+    this.currentStep = null;
+    this.userData = {
+      name: '',
+      job: '',
+      interests: []
+    };
+    this.isActive = false;
+    this.onStepComplete = null;
+    this.onOnboardingComplete = null;
+    this.onOnboardingExit = null;
+  }
+
+  /**
+   * Start the onboarding flow
+   */
+  async start(options = {}) {
+    logger.log('Starting onboarding...');
+
+    this.onStepComplete = options.onStepComplete;
+    this.onOnboardingComplete = options.onOnboardingComplete;
+    this.onOnboardingExit = options.onOnboardingExit;
+
+    // Check if user already has data
+    const existing = await memoryManager.getUserPreference('name');
+    if (existing && !options.force) {
+      logger.log('User already onboarded, skipping');
+      if (options.onOnboardingComplete) {
+        options.onOnboardingComplete(await this.getStoredUserData());
+      }
+      return false;
+    }
+
+    this.isActive = true;
+    this.userData = { name: '', job: '', interests: [] };
+    
+    // Start with intro
+    await this.goToStep('intro');
+    return true;
+  }
+
+  /**
+   * Navigate to a specific step
+   */
+  async goToStep(stepId) {
+    const step = ONBOARDING_FLOW[stepId];
+    if (!step) {
+      logger.error('Invalid onboarding step:', stepId);
+      return;
+    }
+
+    this.currentStep = step;
+
+    // Generate message (can be dynamic)
+    const message = typeof step.zagelMessage === 'function' 
+      ? step.zagelMessage(this.userData)
+      : step.zagelMessage;
+
+    logger.log('Onboarding step:', stepId, message);
+
+    // Notify UI
+    if (this.onStepComplete) {
+      this.onStepComplete({
+        step: stepId,
+        zagelMessage: message,
+        expectYesNo: step.expectYesNo || false,
+        isFinal: step.isFinal || false,
+        userData: { ...this.userData }
+      });
+    }
+
+    // Speak the message
+    await voiceOutput.speak(message);
+
+    // If not yes/no and not final, auto-start listening
+    if (!step.expectYesNo && !step.isFinal) {
+      // Signal to start listening after speech
+      setTimeout(() => {
+        appMode.toListening({ 
+          context: 'onboarding',
+          step: stepId,
+          autoStart: true 
+        });
+      }, 500);
+    }
+
+    return step;
+  }
+
+  /**
+   * Handle user answer
+   */
+  async handleUserAnswer(answer) {
+    if (!this.isActive || !this.currentStep) {
+      logger.warn('No active onboarding step');
+      return;
+    }
+
+    const step = this.currentStep;
+    logger.log('Handling answer for step:', step.id, answer);
+
+    // Handle yes/no for intro
+    if (step.expectYesNo) {
+      const normalized = this.normalizeYesNo(answer);
+      
+      if (normalized === 'yes') {
+        await this.goToStep(step.onYes);
+      } else {
+        await this.exitOnboarding();
+      }
+      return;
+    }
+
+    // Validate and save answer
+    if (step.saveAnswer && step.field) {
+      const validated = this.validateAnswer(answer, step);
+      
+      if (!validated.isValid) {
+        // Re-ask with clarification
+        await voiceOutput.speak("I didn't catch that. " + step.zagelMessage);
+        appMode.toListening({ context: 'onboarding', step: step.id });
+        return;
+      }
+
+      // Save to local data
+      if (step.isArray) {
+        // Parse comma-separated or single value
+        const values = answer.split(/[،,]/).map(s => s.trim()).filter(Boolean);
+        this.userData[step.field] = values;
+      } else {
+        this.userData[step.field] = validated.value;
+      }
+
+      // Save to persistent memory immediately
+      await this.saveToMemory(step.field, this.userData[step.field]);
+
+      // Speak confirmation
+      const confirmation = typeof step.confirmation === 'function'
+        ? step.confirmation(this.userData[step.field])
+        : step.confirmation;
+      
+      if (confirmation) {
+        await voiceOutput.speak(confirmation);
+      }
+    }
+
+    // Move to next step
+    if (step.isFinal) {
+      await this.completeOnboarding();
+    } else if (step.next) {
+      // Small delay for natural conversation flow
+      setTimeout(() => {
+        this.goToStep(step.next);
+      }, 800);
+    }
+  }
+
+  /**
+   * Validate user answer
+   */
+  validateAnswer(answer, step) {
+    const trimmed = answer.trim();
+    
+    if (!trimmed) {
+      return { isValid: false, value: null };
+    }
+
+    // Name validation
+    if (step.field === 'name') {
+      // Remove extra spaces, keep only letters and spaces
+      const cleaned = trimmed.replace(/[^\p{L}\s]/gu, '').trim();
+      if (cleaned.length < 2) {
+        return { isValid: false, value: null };
+      }
+      return { isValid: true, value: cleaned };
+    }
+
+    // Job validation
+    if (step.field === 'job') {
+      if (trimmed.length < 3) {
+        return { isValid: false, value: null };
+      }
+      return { isValid: true, value: trimmed };
+    }
+
+    // Interests validation
+    if (step.field === 'interests') {
+      const values = trimmed.split(/[،,]/).map(s => s.trim()).filter(Boolean);
+      if (values.length === 0) {
+        return { isValid: false, value: null };
+      }
+      return { isValid: true, value: values };
+    }
+
+    return { isValid: true, value: trimmed };
+  }
+
+  /**
+   * Normalize yes/no answers
+   */
+  normalizeYesNo(answer) {
+    const normalized = answer.trim().toLowerCase();
+    
+    const yesWords = ['yes', 'yeah', 'yep', 'sure', 'ok', 'okay', 'أيوة', 'نعم', 'تمام', 'ماشي', 'أه', 'yes please', 'why not'];
+    const noWords = ['no', 'nope', 'nah', 'لا', 'مش دلوقتي', 'not now', 'maybe later', 'بعدين'];
+    
+    if (yesWords.some(w => normalized.includes(w))) return 'yes';
+    if (noWords.some(w => normalized.includes(w))) return 'no';
+    
+    // Default to yes if unclear but positive sounding
+    return normalized.length > 3 ? 'yes' : 'no';
+  }
+
+  /**
+   * Save to persistent memory
+   */
+  async saveToMemory(field, value) {
+    try {
+      // Update user preferences
+      const update = { [field]: value };
+      await memoryManager.updatePreferences(update);
+      
+      // Also save as user fact for richer context
+      await memoryManager.addToConversation('system', `User ${field}: ${Array.isArray(value) ? value.join(', ') : value}`, {
+        type: 'onboarding_fact',
+        field: field
+      });
+      
+      logger.log('Saved to memory:', field, value);
+    } catch (err) {
+      logger.error('Failed to save to memory:', err);
+    }
+  }
+
+  /**
+   * Complete onboarding
+   */
+  async completeOnboarding() {
+    logger.log('Onboarding complete!', this.userData);
+    this.isActive = false;
+
+    // Final save
+    await memoryManager.updatePreferences({
+      onboardingComplete: true,
+      onboardingCompletedAt: Date.now(),
+      ...this.userData
+    });
+
+    // Transition to chat mode
+    appMode.toChat({ 
+      source: 'onboarding_complete',
+      userData: { ...this.userData }
+    });
+
+    if (this.onOnboardingComplete) {
+      this.onOnboardingComplete({ ...this.userData });
+    }
+  }
+
+  /**
+   * Exit onboarding early
+   */
+  async exitOnboarding() {
+    logger.log('Onboarding exited by user');
+    this.isActive = false;
+    
+    await voiceOutput.speak("No problem! You can always tell me about yourself later. Just tap the circle when you need me.");
+    
+    appMode.toIdle({ source: 'onboarding_exit' });
+
+    if (this.onOnboardingExit) {
+      this.onOnboardingExit();
+    }
+  }
+
+  /**
+   * Get stored user data
+   */
+  async getStoredUserData() {
+    const prefs = await memoryManager.getMemory();
+    return {
+      name: prefs.userPreferences.name || '',
+      job: prefs.userPreferences.job || '',
+      interests: prefs.userPreferences.interests || [],
+      onboardingComplete: prefs.userPreferences.onboardingComplete || false
+    };
+  }
+
+  /**
+   * Check if onboarding is needed
+   */
+  async isOnboardingNeeded() {
+    const userData = await this.getStoredUserData();
+    return !userData.onboardingComplete || !userData.name;
+  }
+
+  /**
+   * Replay onboarding (for settings)
+   */
+  async replay(options = {}) {
+    return this.start({ ...options, force: true });
+  }
+
+  /**
+   * Skip onboarding
+   */
+  async skip() {
+    logger.log('Skipping onboarding');
+    await memoryManager.updatePreferences({ onboardingSkipped: true });
+    this.exitOnboarding();
+  }
+
+  /**
+   * Get current state
+   */
+  getState() {
+    return {
+      isActive: this.isActive,
+      currentStep: this.currentStep?.id || null,
+      userData: { ...this.userData }
+    };
+  }
+}
+
+// Singleton
+const onboardingEngine = new OnboardingEngine();
+
+export default onboardingEngine;
+```
+
+---
+
+## 3. Voice Output (TTS)
+
+**`src/voice/voiceOutput.js`**
+```javascript
+/**
+ * Voice Output
+ * Text-to-Speech for Zagel responses
+ */
+
+import * as Speech from 'expo-speech';
+import { logger } from '../utils/logger';
+
+class VoiceOutput {
+  constructor() {
+    this.isSpeaking = false;
+    this.speechQueue = [];
+    this.currentOptions = {};
+    
+    // Default TTS options
+    this.defaultOptions = {
+      language: 'ar-SA', // Arabic Saudi (good for Egyptian/Levantine too)
+      pitch: 1.0,
+      rate: 0.9, // Slightly slower for clarity
+      volume: 1.0,
+      onStart: () => {
+        this.isSpeaking = true;
+        logger.log('TTS started');
+      },
+      onDone: () => {
+        this.isSpeaking = false;
+        this.processQueue();
+        logger.log('TTS done');
+      },
+      onError: (err) => {
+        this.isSpeaking = false;
+        logger.error('TTS error:', err);
+        this.processQueue();
+      }
+    };
+  }
+
+  /**
+   * Speak text
+   */
+  async speak(text, options = {}) {
+    if (!text) return;
+
+    // Queue if already speaking
+    if (this.isSpeaking) {
+      this.speechQueue.push({ text, options });
+      logger.log('Queued TTS:', text.substring(0, 30));
+      return;
+    }
+
+    // Merge options
+    const speakOptions = {
+      ...this.defaultOptions,
+      ...options,
+      onStart: () => {
+        this.isSpeaking = true;
+        options.onStart?.();
+        this.defaultOptions.onStart();
+      },
+      onDone: () => {
+        this.isSpeaking = false;
+        options.onDone?.();
+        this.defaultOptions.onDone();
+      },
+      onError: (err) => {
+        this.isSpeaking = false;
+        options.onError?.(err);
+        this.defaultOptions.onError(err);
+      }
+    };
+
+    try {
+      // Detect language (simple heuristic)
+      const isArabic = /[\u0600-\u06FF]/.test(text);
+      speakOptions.language = isArabic ? 'ar-SA' : (options.language || 'en-US');
+
+      // Adjust tone based on content
+      if (options.tone) {
+        speakOptions = this.applyTone(speakOptions, options.tone);
+      }
+
+      logger.log('Speaking:', text.substring(0, 50));
+      Speech.speak(text, speakOptions);
+      
+    } catch (err) {
+      logger.error('Failed to speak:', err);
+      this.isSpeaking = false;
+    }
+  }
+
+  /**
+   * Process queued speech
+   */
+  processQueue() {
+    if (this.speechQueue.length > 0 && !this.isSpeaking) {
+      const next = this.speechQueue.shift();
+      setTimeout(() => this.speak(next.text, next.options), 100);
+    }
+  }
+
+  /**
+   * Stop speaking
+   */
+  async stop() {
+    try {
+      await Speech.stop();
+      this.isSpeaking = false;
+      this.speechQueue = [];
+    } catch (err) {
+      logger.error('Failed to stop TTS:', err);
+    }
+  }
+
+  /**
+   * Apply tone modifications
+   */
+  applyTone(options, tone) {
+    const toneSettings = {
+      friendly: { pitch: 1.1, rate: 0.95 },
+      serious: { pitch: 0.9, rate: 0.85 },
+      excited: { pitch: 1.2, rate: 1.0 },
+      calm: { pitch: 1.0, rate: 0.8 },
+      funny: { pitch: 1.15, rate: 1.0 }
+    };
+
+    const settings = toneSettings[tone] || toneSettings.friendly;
+    return { ...options, ...settings };
+  }
+
+  /**
+   * Check if speaking
+   */
+  isCurrentlySpeaking() {
+    return this.isSpeaking;
+  }
+
+  /**
+   * Get available voices
+   */
+  async getVoices() {
+    try {
+      const voices = await Speech.getAvailableVoicesAsync();
+      return voices;
+    } catch (err) {
+      logger.error('Failed to get voices:', err);
+      return [];
+    }
+  }
+}
+
+// Singleton
+const voiceOutput = new VoiceOutput();
+
+export default voiceOutput;
+```
+
+---
+
+## 4. UI Components
+
+**`src/ui/ToastMessage.js`**
+```javascript
+/**
+ * Toast Message Component
+ * Shows temporary notifications with animations
+ */
+
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
+
+export default function ToastMessage({ message, visible, onHide, duration = 3000 }) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(-100)).current;
+
+  useEffect(() => {
+    if (visible) {
+      // Show animation
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Auto hide
+      const timer = setTimeout(() => {
+        hide();
+      }, duration);
+
+      return () => clearTimeout(timer);
+    }
+  }, [visible]);
+
+  const hide = () => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: -100,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onHide?.();
+    });
+  };
+
+  if (!visible && fadeAnim.__getValue() === 0) return null;
+
+  return (
+    <Animated.View 
+      style={[
+        styles.container,
+        {
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }]
+        }
+      ]}
+    >
+      <View style={styles.content}>
+        <Text style={styles.icon}>🕊</Text>
+        <Text style={styles.text}>{message}</Text>
+      </View>
+    </Animated.View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    top: 100,
+    left: 20,
+    right: 20,
+    zIndex: 1000,
+    alignItems: 'center',
+  },
+  content: {
+    backgroundColor: 'rgba(30, 41, 59, 0.95)',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 212, 255, 0.3)',
+  },
+  icon: {
+    fontSize: 20,
+  },
+  text: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+});
+```
+
+**`src/ui/ZagelButton.js`**
+```javascript
+/**
+ * Zagel Circle Button
+ * Animated floating trigger with pulse/glow effects
+ */
+
+import React, { useEffect, useRef, useCallback } from 'react';
+import { 
+  TouchableOpacity, 
+  View, 
+  StyleSheet, 
+  Animated,
+  Vibration,
+  Dimensions 
+} from 'react-native';
+
+const { width } = Dimensions.get('window');
+
+export default function ZagelButton({ 
+  onPress, 
+  isActive = false,
+  isListening = false,
+  showGlow = true 
+}) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+
+  // Breathing animation (idle)
+  useEffect(() => {
+    if (!isActive && !isListening) {
+      const breathe = Animated.loop(
+        Animated.sequence([
+          Animated.timing(scaleAnim, {
+            toValue: 1.05,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 1,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      breathe.start();
+      return () => breathe.stop();
+    }
+  }, [isActive, isListening]);
+
+  // Glow animation
+  useEffect(() => {
+    if (showGlow) {
+      const glow = Animated.loop(
+        Animated.sequence([
+          Animated.timing(glowAnim, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(glowAnim, {
+            toValue: 0,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      glow.start();
+      return () => glow.stop();
+    }
+  }, [showGlow]);
+
+  // Active pulse animation
+  useEffect(() => {
+    if (isActive || isListening) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.3,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [isActive, isListening]);
+
+  // Rotation for active state
+  useEffect(() => {
+    if (isActive) {
+      const rotate = Animated.loop(
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 3000,
+          useNativeDriver: true,
+        })
+      );
+      rotate.start();
+      return () => rotate.stop();
+    }
+  }, [isActive]);
+
+  const handlePress = useCallback(() => {
+    // Haptic feedback
+    Vibration.vibrate(50);
+    
+    // Scale animation on press
+    Animated.sequence([
+      Animated.timing(scaleAnim, {
+        toValue: 0.9,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    onPress?.();
+  }, [onPress]);
+
+  const spin = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg']
+  });
+
+  return (
+    <View style={styles.container}>
+      {/* Outer glow rings */}
+      {showGlow && (
+        <>
+          <Animated.View 
+            style={[
+              styles.glowRing,
+              styles.glowRingOuter,
+              {
+                opacity: glowAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.2, 0.5]
+                }),
+                transform: [{ scale: pulseAnim }]
+              }
+            ]} 
+          />
+          <Animated.View 
+            style={[
+              styles.glowRing,
+              styles.glowRingInner,
+              {
+                opacity: glowAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.3, 0.6]
+                }),
+                transform: [{ scale: pulseAnim.interpolate({
+                  inputRange: [1, 1.3],
+                  outputRange: [1, 1.15]
+                }) }]
+              }
+            ]} 
+          />
+        </>
+      )}
+
+      {/* Main button */}
+      <TouchableOpacity 
+        onPress={handlePress}
+        activeOpacity={0.8}
+        style={styles.touchable}
+      >
+        <Animated.View 
+          style={[
+            styles.button,
+            {
+              transform: [
+                { scale: scaleAnim },
+                { rotate: isActive ? spin : '0deg' }
+              ],
+              backgroundColor: isListening ? '#ef4444' : isActive ? '#00d4ff' : '#0f172a',
+            }
+          ]}
+        >
+          {/* Inner circle with icon */}
+          <View style={styles.innerCircle}>
+            <View style={styles.zagelIcon}>
+              <View style={styles.birdBody} />
+              <View style={styles.birdWing} />
+              <View style={styles.birdBeak} />
+            </View>
+          </View>
+
+          {/* Active indicator ring */}
+          {(isActive || isListening) && (
+            <View style={styles.activeRing} />
+          )}
+        </Animated.View>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 120,
+    height: 120,
+  },
+  touchable: {
+    zIndex: 10,
+  },
+  button: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#00d4ff',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
+    borderWidth: 3,
+    borderColor: '#00d4ff',
+  },
+  innerCircle: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(0, 212, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  zagelIcon: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  birdBody: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    position: 'absolute',
+  },
+  birdWing: {
+    width: 16,
+    height: 10,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    position: 'absolute',
+    top: 8,
+    right: 4,
+    transform: [{ rotate: '-20deg' }],
+  },
+  birdBeak: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 8,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#f59e0b',
+    position: 'absolute',
+    top: 12,
+    right: -2,
+  },
+  glowRing: {
+    position: 'absolute',
+    borderRadius: 100,
+    borderWidth: 2,
+    borderColor: '#00d4ff',
+  },
+  glowRingOuter: {
+    width: 120,
+    height: 120,
+    opacity: 0.3,
+  },
+  glowRingInner: {
+    width: 100,
+    height: 100,
+    opacity: 0.4,
+  },
+  activeRing: {
+    position: 'absolute',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 2,
+    borderColor: '#fff',
+    opacity: 0.5,
+  },
+});
+```
+
+---
+
+## 5. Onboarding Overlay Component
+
+**`src/components/OnboardingOverlay.js`**
+```javascript
+import React from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity,
+  Animated 
+} from 'react-native';
+
+import ZagelButton from '../ui/ZagelButton';
+import ToastMessage from '../ui/ToastMessage';
+
+export default function OnboardingOverlay({ 
+  visible,
+  step,
+  zagelMessage,
+  expectYesNo,
+  isFinal,
+  userData,
+  onYes,
+  onNo,
+  onSkip,
+  isListening 
+}) {
+  if (!visible) return null;
+
+  return (
+    <View style={styles.overlay}>
+      {/* Background dim */}
+      <View style={styles.backdrop} />
+      
+      {/* Toast notification */}
+      <ToastMessage 
+        message="Zagel is waking up..."
+        visible={visible && !step}
+        duration={2000}
+      />
+
+      {/* Main content */}
+      <View style={styles.content}>
+        {/* Zagel avatar area */}
+        <View style={styles.avatarArea}>
+          <ZagelButton 
+            isActive={true}
+            isListening={isListening}
+            showGlow={true}
+          />
+          
+          {isListening && (
+            <View style={styles.listeningIndicator}>
+              <View style={styles.listeningDot} />
+              <Text style={styles.listeningText}>Listening...</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Message bubble */}
+        <View style={styles.messageBubble}>
+          <Text style={styles.messageText}>{zagelMessage}</Text>
+        </View>
+
+        {/* Yes/No buttons for intro */}
+        {expectYesNo && (
+          <View style={styles.yesNoContainer}>
+            <TouchableOpacity style={styles.yesButton} onPress={onYes}>
+              <Text style={styles.yesButtonText}>Yes, sure!</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.noButton} onPress={onNo}>
+              <Text style={styles.noButtonText}>Not now</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Skip option */}
+        {!isFinal && !expectYesNo && (
+          <TouchableOpacity style={styles.skipButton} onPress={onSkip}>
+            <Text style={styles.skipText}>Skip for now →</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Progress indicator */}
+        <View style={styles.progressContainer}>
+          <View style={styles.progressBar}>
+            <View 
+              style={[
+                styles.progressFill,
+                { width: getProgressWidth(step) }
+              ]} 
+            />
+          </View>
+          <Text style={styles.progressText}>
+            {getStepNumber(step)} of 4
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function getProgressWidth(step) {
+  const progress = {
+    intro: '25%',
+    name: '50%',
+    job: '75%',
+    interests: '100%',
+    complete: '100%'
+  };
+  return progress[step] || '0%';
+}
+
+function getStepNumber(step) {
+  const numbers = {
+    intro: 1,
+    name: 2,
+    job: 3,
+    interests: 4,
+    complete: 4
+  };
+  return numbers[step] || 1;
+}
+
+const styles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+  },
+  content: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  avatarArea: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  listeningIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 15,
+    gap: 8,
+  },
+  listeningDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ef4444',
+  },
+  listeningText: {
+    color: '#ef4444',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  messageBubble: {
+    backgroundColor: '#1e293b',
+    padding: 20,
+    borderRadius: 20,
+    borderBottomLeftRadius: 4,
+    maxWidth: '90%',
+    marginBottom: 30,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 212, 255, 0.3)',
+  },
+  messageText: {
+    color: '#fff',
+    fontSize: 18,
+    lineHeight: 26,
+    textAlign: 'center',
+  },
+  yesNoContainer: {
+    flexDirection: 'row',
+    gap: 15,
+  },
+  yesButton: {
+    backgroundColor: '#00d4ff',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+  },
+  yesButtonText: {
+    color: '#0f172a',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  noButton: {
+    backgroundColor: '#334155',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+  },
+  noButtonText: {
+    color: '#94a3b8',
+    fontSize: 16,
+  },
+  skipButton: {
+    marginTop: 20,
+  },
+  skipText: {
+    color: '#64748b',
+    fontSize: 14,
+  },
+  progressContainer: {
+    position: 'absolute',
+    bottom: 50,
+    width: '80%',
+    alignItems: 'center',
+  },
+  progressBar: {
+    width: '100%',
+    height: 4,
+    backgroundColor: '#334155',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#00d4ff',
+    borderRadius: 2,
+  },
+  progressText: {
+    color: '#64748b',
+    fontSize: 12,
+    marginTop: 8,
+  },
+});
+```
+
+---
+
+## 6. Updated Main Screen
+
+**`src/components/VoiceScreen.js` (Updated with Onboarding)**
+```javascript
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  TextInput,
+  TouchableOpacity,
+  Vibration
+} from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+
+import { useVoiceInput } from '../voice/voiceInput';
+import voiceOutput from '../voice/voiceOutput';
+import { useInstructionClassifier } from '../engine/instructionClassifier';
+import memoryManager from '../memory/memoryManager';
+import zagelBridge from '../integration/zagelBridge';
+import onboardingEngine from '../onboarding/onboardingEngine';
+import appMode, { useAppMode } from '../state/appMode';
+
+import ZagelButton from '../ui/ZagelButton';
+import MicButton from './MicButton';
+import ChatBubble from './ChatBubble';
+import StatusIndicator from './StatusIndicator';
+import OnboardingOverlay from './OnboardingOverlay';
+
+export default function VoiceScreen() {
+  // State
+  const [messages, setMessages] = useState([]);
+  const [inputText, setInputText] = useState('');
+  const [showTextInput, setShowTextInput] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  
+  // Onboarding state
+  const [onboardingVisible, setOnboardingVisible] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(null);
+  const [onboardingMessage, setOnboardingMessage] = useState('');
+  const [onboardingExpectYesNo, setOnboardingExpectYesNo] = useState(false);
+  const [onboardingIsFinal, setOnboardingIsFinal] = useState(false);
+  const [onboardingUserData, setOnboardingUserData] = useState({});
+
+  // Hooks
+  const { mode, toIdle, toOnboarding, toChat, toListening } = useAppMode();
+  const { isListening, transcript, error, startListening, stopListening } = useVoiceInput();
+  const { classify, extract } = useInstructionClassifier();
+  const scrollViewRef = useRef(null);
+
+  // Initialize
+  useEffect(() => {
+    memoryManager.init();
+    
+    // Subscribe to mode changes
+    const unsubscribe = appMode.subscribe((newMode, prevMode, data) => {
+      handleModeChange(newMode, prevMode, data);
+    });
+    
+    return unsubscribe;
+  }, []);
+
+  // Handle voice transcript changes
+  useEffect(() => {
+    if (transcript && !isListening && mode === 'listening') {
+      handleVoiceInput(transcript);
+    }
+  }, [transcript, isListening, mode]);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    scrollViewRef.current?.scrollToEnd({ animated: true });
+  }, [messages]);
+
+  // Handle mode changes
+  const handleModeChange = (newMode, prevMode, data) => {
+    logger.log('Mode changed:', prevMode, '→', newMode);
+    
+    switch (newMode) {
+      case 'onboarding':
+        setOnboardingVisible(true);
+        break;
+      case 'chat':
+        setOnboardingVisible(false);
+        break;
+      case 'listening':
+        if (data?.autoStart) {
+          startListening('ar-SA');
+        }
+        break;
+    }
+  };
+
+  // Zagel Circle button press
+  const handleZagelPress = useCallback(async () => {
+    Vibration.vibrate(50);
+    
+    // Show toast
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2000);
+    
+    // Check if we need onboarding
+    const needsOnboarding = await onboardingEngine.isOnboardingNeeded();
+    
+    if (needsOnboarding) {
+      // Start onboarding
+      startOnboarding();
+    } else {
+      // Go to chat mode
+      toChat({ source: 'zagel_button' });
+      
+      // Greet user by name
+      const userData = await onboardingEngine.getStoredUserData();
+      const greeting = `Let's work on something interesting today, ${userData.name}!`;
+      
+      addMessage('assistant', greeting);
+      voiceOutput.speak(greeting);
+    }
+  }, []);
+
+  // Start onboarding flow
+  const startOnboarding = () => {
+    onboardingEngine.start({
+      onStepComplete: (stepData) => {
+        setOnboardingStep(stepData.step);
+        setOnboardingMessage(stepData.zagelMessage);
+        setOnboardingExpectYesNo(stepData.expectYesNo);
+        setOnboardingIsFinal(stepData.isFinal);
+        setOnboardingUserData(stepData.userData);
+        toOnboarding({ step: stepData.step });
+      },
+      onOnboardingComplete: (userData) => {
+        setOnboardingVisible(false);
+        toChat({ source: 'onboarding_complete' });
+        
+        // Welcome message
+        const welcome = `Perfect! I'm ready to help you, ${userData.name}. Just tap the circle anytime you need me.`;
+        addMessage('assistant', welcome);
+      },
+      onOnboardingExit: () => {
+        setOnboardingVisible(false);
+        toIdle({ source: 'onboarding_exit' });
+      }
+    });
+  };
+
+  // Handle onboarding yes/no
+  const handleOnboardingYes = () => {
+    onboardingEngine.handleUserAnswer('yes');
+  };
+
+  const handleOnboardingNo = () => {
+    onboardingEngine.handleUserAnswer('no');
+  };
+
+  const handleOnboardingSkip = () => {
+    onboardingEngine.skip();
+  };
+
+  // Handle voice input
+  const handleVoiceInput = async (text) => {
+    if (mode === 'onboarding') {
+      // Onboarding mode - send to onboarding engine
+      await onboardingEngine.handleUserAnswer(text);
+    } else if (mode === 'chat') {
+      // Normal chat mode
+      await handleChatInput(text);
+    }
+  };
+
+  // Handle chat input (normal mode)
+  const handleChatInput = async (text) => {
+    if (!text.trim()) return;
+
+    // Add user message
+    addMessage('user', text);
+
+    // Classify
+    const classification = classify(text);
+    
+    if (classification.isInstruction) {
+      // Handle instruction
+      await handleInstruction(text, classification);
+    } else {
+      // Send to Zagel
+      await handleZagelMessage(text);
+    }
+  };
+
+  // Handle instruction
+  const handleInstruction = async (text, classification) => {
+    const details = extract(classification);
+    const rule = instructionParser.parse(details, text);
+    const confirmation = instructionParser.generateConfirmation(rule);
+    
+    await zagelBridge.confirmInstruction(rule, confirmation);
+    
+    addMessage('assistant', confirmation, { type: 'instruction' });
+    voiceOutput.speak(confirmation);
+  };
+
+  // Handle Zagel message
+  const handleZagelMessage = async (text) => {
+    toChat({ source: 'user_message' });
+    
+    const response = await zagelBridge.sendMessageToZagel(text);
+    
+    addMessage('assistant', response.text, response.metadata);
+    
+    // Speak response
+    voiceOutput.speak(response.text);
+  };
+
+  // Add message to chat
+  const addMessage = (role, content, metadata = {}) => {
+    const msg = {
+      id: Date.now(),
+      role,
+      content,
+      ...metadata
+    };
+    setMessages(prev => [...prev, msg]);
+  };
+
+  // Manual text input
+  const handleTextSubmit = () => {
+    if (inputText.trim()) {
+      handleVoiceInput(inputText);
+      setInputText('');
+    }
+  };
+
+  // Mic button press (during chat)
+  const handleMicPress = useCallback(async () => {
+    if (isListening) {
+      const finalText = await stopListening();
+      if (finalText) {
+        handleVoiceInput(finalText);
+      }
+    } else {
+      toListening({ context: 'manual' });
+      await startListening('ar-SA');
+    }
+  }, [isListening, stopListening, startListening, mode]);
+
+  return (
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <StatusBar style="light" />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>زاجل</Text>
+        <StatusIndicator status={mode} />
+      </View>
+      
+      {/* Chat Area */}
+      <ScrollView 
+        ref={scrollViewRef}
+        style={styles.chatContainer}
+        contentContainerStyle={styles.chatContent}
+      >
+        {messages.map((msg) => (
+          <ChatBubble key={msg.id} message={msg} />
+        ))}
+      </ScrollView>
+      
+      {/* Zagel Circle Button (Floating) */}
+      <View style={styles.zagelButtonContainer}>
+        <ZagelButton 
+          onPress={handleZagelPress}
+          isActive={mode !== 'idle'}
+          isListening={isListening}
+        />
+      </View>
+      
+      {/* Bottom Controls */}
+      <View style={styles.inputContainer}>
+        {showTextInput ? (
+          <View style={styles.textInputRow}>
+            <TextInput
+              style={styles.textInput}
+              value={inputText}
+              onChangeText={setInputText}
+              placeholder="اكتب رسالتك..."
+              placeholderTextColor="#666"
+              onSubmitEditing={handleTextSubmit}
+              returnKeyType="send"
+            />
+            <TouchableOpacity onPress={handleTextSubmit} style={styles.sendButton}>
+              <Text style={styles.sendButtonText}>→</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => setShowTextInput(false)} 
+              style={styles.closeButton}
+            >
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.controlsRow}>
+            <TouchableOpacity 
+              onPress={() => setShowTextInput(true)}
+              style={styles.keyboardButton}
+            >
+              <Text style={styles.keyboardButtonText}>⌨️</Text>
+            </TouchableOpacity>
+            
+            <MicButton 
+              isListening={isListening}
+              onPress={handleMicPress}
+              status={mode}
+            />
+          </View>
+        )}
+      </View>
+
+      {/* Onboarding Overlay */}
+      <OnboardingOverlay
+        visible={onboardingVisible}
+        step={onboardingStep}
+        zagelMessage={onboardingMessage}
+        expectYesNo={onboardingExpectYesNo}
+        isFinal={onboardingIsFinal}
+        userData={onboardingUserData}
+        onYes={handleOnboardingYes}
+        onNo={handleOnboardingNo}
+        onSkip={handleOnboardingSkip}
+        isListening={isListening && mode === 'listening'}
+      />
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+  },
+  header: {
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#1e293b',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  chatContainer: {
+    flex: 1,
+  },
+  chatContent: {
+    padding: 16,
+    paddingBottom: 150,
+  },
+  zagelButtonContainer: {
+    position: 'absolute',
+    bottom: 100,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 50,
+  },
+  inputContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0',
+    padding: 16,
+    paddingBottom: 30,
+    backgroundColor: '#1e293b',
+  },
+  controlsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 20,
+  },
+  textInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  textInput: {
+    flex: 1,
+    backgroundColor: '#334155',
+    borderRadius: 25,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    color: '#fff',
+    fontSize: 16,
+    maxHeight: 100,
+  },
+  sendButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#00d4ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sendButtonText: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  closeButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#475569',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  keyboardButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#334155',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  keyboardButtonText: {
+    fontSize: 24,
+  },
+});
+```
+
+---
+
+## 7. Updated Status Indicator
+
+**`src/components/StatusIndicator.js` (Updated with modes)**
+```javascript
+import React from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
+
+export default function StatusIndicator({ status }) {
+  const pulseAnim = React.useRef(new Animated.Value(1)).current;
+  
+  React.useEffect(() => {
+    if (status === 'listening') {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.5,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [status]);
+
+  const getStatusConfig = () => {
+    switch (status) {
+      case 'idle':
+        return { text: 'انقر الدائرة', color: '#64748b', icon: '◉' };
+      case 'onboarding':
+        return { text: 'التعريف', color: '#f59e0b', icon: '👋' };
+      case 'listening':
+        return { text: 'جاري الاستماع...', color: '#ef4444', icon: '●' };
+      case 'chat':
+        return { text: 'جاهز', color: '#00d4ff', icon: '◉' };
+      default:
+        return { text: 'جاهز', color: '#00d4ff', icon: '◉' };
+    }
+  };
+
+  const config = getStatusConfig();
+
+  return (
+    <View style={styles.container}>
+      {status === 'listening' && (
+        <Animated.View 
+          style={[
+            styles.pulse,
+            { 
+              backgroundColor: config.color,
+              transform: [{ scale: pulseAnim }],
+              opacity: pulseAnim.interpolate({
+                inputRange: [1, 1.5],
+                outputRange: [0.5, 0]
+              })
+            }
+          ]} 
+        />
+      )}
+      <View style={[styles.dot, { backgroundColor: config.color }]} />
+      <Text style={[styles.text, { color: config.color }]}>
+        {config.text}
+      </Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  pulse: {
+    position: 'absolute',
+    left: 0,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  text: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+});
+```
+
+---
+
+## Complete File List
+
+| File | Purpose |
+|------|---------|
+| `src/state/appMode.js` | Global mode manager (idle/onboarding/chat/listening) |
+| `src/onboarding/onboardingEngine.js` | Conversational onboarding flow |
+| `src/voice/voiceOutput.js` | TTS for Zagel responses |
+| `src/ui/ZagelButton.js` | Animated circle button with glow |
+| `src/ui/ToastMessage.js` | Toast notifications |
+| `src/components/OnboardingOverlay.js` | Onboarding UI overlay |
+| `src/components/VoiceScreen.js` | Updated main screen |
+| `src/components/StatusIndicator.js` | Updated status with modes |
+
+---
+
+## Key Features Implemented
+
+✅ **Conversational Onboarding** - Human-like flow with sequential questions  
+✅ **Voice-Driven** - Auto-listens after each question  
+✅ **Memory Storage** - Saves name, job, interests immediately  
+✅ **Mode System** - idle/onboarding/chat/listening with global state  
+✅ **Zagel Circle** - Animated button with pulse, glow, vibration  
+✅ **Toast Notifications** - "Zagel is waking up..."  
+✅ **TTS Output** - Zagel speaks every message  
+✅ **Personalization** - Uses name in responses after onboarding  
+✅ **Skip Option** - Can skip and replay later  
+✅ **Progress Indicator** - Shows onboarding progress  
+
+The system is fully integrated with your existing Zagel OS via `zagelBridge.js` and maintains all previous functionality while adding the new conversational layer.
