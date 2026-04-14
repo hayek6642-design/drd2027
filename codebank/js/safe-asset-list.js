@@ -1,6 +1,76 @@
 // safe-asset-list.js - DIRECT ASSETBUS ACCESS VERSION
 (function() {
     'use strict';
+// NON-BLOCKING INIT - Start UI immediately, fetch data later
+console.log('[SafeCode] Script loaded, starting non-blocking init');
+
+let SAFECODE_ASSETS = { codes: [], silver: [], gold: [] };
+let SAFECODE_READY = false;
+
+function initSafeCodeUI() {
+    console.log('[SafeCode] Initializing UI (non-blocking)');
+    
+    // Start 3D dog immediately - DO NOT WAIT FOR ASSETS
+    if (window.init3DDog) {
+        console.log('[SafeCode] Starting 3D dog');
+        try {
+            window.init3DDog();
+        } catch (e) {
+            console.warn('[SafeCode] 3D dog init failed:', e);
+        }
+    }
+    
+    const container = document.querySelector('#safe-assets-container');
+    if (container) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 40px;">
+                <div class="spinner"></div>
+                <p style="color: #8b9499; margin-top: 20px;">Loading assets...</p>
+            </div>
+        `;
+    }
+    
+    SAFECODE_READY = true;
+}
+
+function requestAssetsFromParent() {
+    console.log('[SafeCode] Requesting assets from parent');
+    window.parent.postMessage({
+        type: 'assets:request'
+    }, '*');
+}
+
+window.addEventListener('message', (e) => {
+    if (e.data?.type === 'assets:response') {
+        console.log('[SafeCode] Received assets from parent:', {
+            codes: e.data.assets.codes?.length || 0,
+            silver: e.data.assets.silver?.length || 0,
+            gold: e.data.assets.gold?.length || 0
+        });
+        SAFECODE_ASSETS = e.data.assets;
+        
+        const container = document.querySelector('#safe-assets-container');
+        if (container && SAFECODE_READY) {
+            renderSafeAssets(window.ACTIVE_ASSET_TAB || 'codes', container);
+        }
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('[SafeCode] DOM ready');
+    initSafeCodeUI();
+    requestAssetsFromParent();
+});
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSafeCodeUI);
+} else {
+    console.log('[SafeCode] DOM already loaded, starting immediately');
+    initSafeCodeUI();
+    requestAssetsFromParent();
+}
+
+
 
     // ========================
     // Configuration & State
