@@ -2988,7 +2988,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                 // If /api/me fails, return null so the balloon engine simply doesn't run
                 // until the user properly logs in.
                 try {
-                    const r = await fetch('/api/me', { credentials: 'include' }).then(x=>x.json());
+                    const r = await fetch('/api/auth/me', { credentials: 'include' }).then(x=>x.json());
                     if (r && r.user && r.user.id) return r.user.id;
                 } catch(_){}
                 return null;
