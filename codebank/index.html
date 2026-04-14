@@ -795,5 +795,92 @@
        setTimeout(() => clearInterval(retryInterval), 10000);
    })();
    </script>
- </body>
+ <script>
+// ACC BRIDGE - Communication layer between CodeBank and iframes
+class ACCBridge {
+    constructor() {
+        this.clients = [];
+        this.init();
+        console.log('[ACCBridge] Initialized');
+    }
+
+    init() {
+        window.addEventListener('message', (e) => {
+            // Register iframe as a service
+            if (e.data?.type === 'register:service') {
+                if (!this.clients.includes(e.source)) {
+                    this.clients.push(e.source);
+                    console.log('[ACCBridge] Service registered, total clients:', this.clients.length);
+                }
+                return;
+            }
+
+            // Asset request - send cached assets
+            if (e.data?.type === 'assets:request') {
+                console.log('[ACCBridge] Asset request from iframe');
+                const assets = this.getAssets();
+                console.log('[ACCBridge] Sending assets:', {
+                    codes: assets.codes.length,
+                    silver: assets.silver.length,
+                    gold: assets.gold.length
+                });
+                e.source.postMessage({
+                    type: 'assets:response',
+                    assets: assets
+                }, '*');
+                return;
+            }
+
+            // Auth request - provide session info
+            if (e.data?.type === 'auth:request') {
+                console.log('[ACCBridge] Auth request from iframe');
+                e.source.postMessage({
+                    type: 'auth:response',
+                    authenticated: true,
+                    sessionId: localStorage.getItem('sessionId'),
+                    userId: localStorage.getItem('userId'),
+                    email: localStorage.getItem('user_email')
+                }, '*');
+                return;
+            }
+        });
+    }
+
+    getAssets() {
+        try {
+            const stored = localStorage.getItem('acc_assets');
+            if (stored) {
+                return JSON.parse(stored);
+            }
+        } catch (e) {
+            console.warn('[ACCBridge] Failed to parse assets:', e);
+        }
+        return { codes: [], silver: [], gold: [] };
+    }
+
+    broadcast(assets) {
+        console.log('[ACCBridge] Broadcasting to', this.clients.length, 'clients');
+        this.clients.forEach((client, idx) => {
+            try {
+                client.postMessage({
+                    type: 'assets:update',
+                    assets: assets
+                }, '*');
+            } catch (e) {
+                console.warn('[ACCBridge] Failed to send to client', idx, e);
+                this.clients.splice(idx, 1);
+            }
+        });
+    }
+}
+
+window.ACC_BRIDGE = new ACCBridge();
+console.log('[CodeBank] ACC Bridge ready');
+
+window.addEventListener('assets:updated', (e) => {
+    const assets = e.detail || window.GLOBAL_STORE?.state?.assets || { codes: [], silver: [], gold: [] };
+    window.ACC_BRIDGE.broadcast(assets);
+});
+</script>
+</body>
 </html>
