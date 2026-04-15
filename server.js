@@ -87,7 +87,8 @@ import aiRoutes from './api/routes/ai-routes.js';
 import zagelRouter from './api/routes/zagel.js';
 
 // Zagel Brain System (RAG)
-import zagelBrain from './codebank/js/zagel-brain/zagel-integration.js';
+// Note: Frontend modules - served statically, initialize from frontend
+import './codebank/js/zagel-brain/zagel-integration.js';
 import shotsRouter from './api/modules/shots.js';
 import biometricRouter from './api/modules/biometric.js';
 import gambleRouter from './api/modules/gamble.js';
