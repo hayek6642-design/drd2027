@@ -2232,6 +2232,18 @@ app.get(['/yt-new-clear.html'], (req, res) => {
 });
 
 // [SECURITY] Serve Lifecycle files (Explicitly)
+// ✅ ROOT ROUTE: Serve main application (DR.D Project) from root /
+app.get('/', (req, res) => {
+  console.log(`[route] / → Serving yt-new-clear.html (main DR.D application)`);
+  try {
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+  } catch(_) {}
+  res.sendFile(path.join(__dirname, 'yt-new-clear.html'));
+});
+
+
 app.get('/main.js', (req, res) => res.sendFile(path.join(__dirname, 'main.js')));
 app.get('/core/app-lifecycle.js', (req, res) => res.sendFile(path.join(__dirname, 'core/app-lifecycle.js')));
 
