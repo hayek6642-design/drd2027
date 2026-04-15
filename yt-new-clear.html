@@ -42,7 +42,7 @@ function clearSessionAndLogout() {
   
   // Give cookies time to be cleared before redirect
   setTimeout(function() {
-    window.location.href = '/index.html';
+    window.location.href = '/login.html';
   }, 500);
 }
 
@@ -3012,8 +3012,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                 // [CROSS-DEVICE FIX] Do NOT fall back to /api/auth/dev-login.
                 // That endpoint creates a brand-new random userId each time it's called,
                 // which makes the phone and computer look like two completely different users.
-                // If /api/me fails, return null so the balloon engine simply doesn't run
-                // until the user properly logs in.
+                // If /api/me fails, redirect to login to clear stale session state
                 try {
                     const r = await fetch('/api/auth/me', { 
               credentials: 'include',
@@ -3021,8 +3020,24 @@ document.addEventListener('DOMContentLoaded', async function(){
                 'Authorization': 'Bearer ' + (localStorage.getItem('session_token') || '')
               }
             }).then(x=>x.json());
-                    if (r && r.user && r.user.id) return r.user.id;
-                } catch(_){}
+                    if (r && r.user && r.user.id) {
+                        console.log('[AUTH] Session valid, user:', r.user.email);
+                        return r.user.id;
+                    }
+                } catch(e) {
+                    console.error('[AUTH] Fetch error:', e.message);
+                }
+                
+                // ❌ AUTH FAILED - redirect to login.html
+                console.log('[AUTH] Session invalid or expired, redirecting to login...');
+                localStorage.removeItem('session_active');
+                localStorage.removeItem('session_token');
+                localStorage.removeItem('user_data');
+                // Give it a moment for localStorage to sync
+                setTimeout(() => {
+                    window.location.href = '/login.html';
+                }, 100);
+                
                 return null;
             }
             async function init(){
