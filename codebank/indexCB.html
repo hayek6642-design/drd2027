@@ -634,6 +634,19 @@
                 -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
                 display:inline-block;
             ">Bankode</span>
+            <!-- Admin Voice Teaching Button -->
+            <div id="admin-zagel-section" style="display:none;margin-top:12px;">
+                <button id="admin-teach-btn" onclick="openZagelTeach()" style="
+                    display:inline-flex;align-items:center;gap:8px;
+                    background:linear-gradient(135deg,#8b5cf6 0%,#7c3aed 100%);
+                    color:#fff;border:none;padding:10px 20px;
+                    border-radius:25px;font-size:14px;font-weight:500;
+                    cursor:pointer;box-shadow:0 4px 12px rgba(139,92,246,0.3);
+                ">
+                    <span>🎤</span>
+                    <span>Teach Zagel Voice</span>
+                </button>
+            </div>
         </div>
 
 
@@ -1692,6 +1705,45 @@
         console.log('[Zagel] Recording started...');
         // Voice recognition would go here in production
     };
+    
+    // Admin Zagel Voice Teaching
+    window.openZagelTeach = function() {
+        console.log('[Admin] Opening voice teaching...');
+        if (window.ZagelSystem?.openTeachMode) {
+            window.ZagelSystem.openTeachMode();
+        } else {
+            alert('Voice teaching mode activated for admin');
+        }
+    };
+    
+    // Check if admin and show/hide button
+    function checkAdminZagel() {
+        var ADMIN_EMAIL = 'dia201244@gmail.com';
+        var session = null;
+        
+        if (window.ZagelSessionManager?.getSession) {
+            session = window.ZagelSessionManager.getSession();
+        } else if (window.CodeBankAuth?.getAuthState) {
+            var state = window.CodeBankAuth.getAuthState();
+            if (state && state.user) session = state.user;
+        } else {
+            try {
+                session = JSON.parse(localStorage.getItem('zagelsession') || localStorage.getItem('codebank_auth') || 'null');
+            } catch(e) { session = null; }
+        }
+        
+        var isAdmin = session && (session.email === ADMIN_EMAIL || session.user?.email === ADMIN_EMAIL);
+        var section = document.getElementById('admin-zagel-section');
+        
+        console.log('[AdminCheck] Is admin:', isAdmin);
+        
+        if (section && isAdmin) {
+            section.style.display = 'block';
+        }
+    }
+    
+    setTimeout(checkAdminZagel, 1000);
+    setTimeout(checkAdminZagel, 2500);
     
     // Show Zagel FAB after a delay
     document.addEventListener('DOMContentLoaded', function() {

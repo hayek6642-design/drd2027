@@ -149,12 +149,22 @@
       this.debouncedServerSync();
     }
     
+    // Minimum sync interval to prevent rapid syncs (5 seconds)
+    MIN_SYNC_INTERVAL = 5000;
+    
     debouncedServerSync() {
       if (this.syncTimeout) clearTimeout(this.syncTimeout);
       this.syncTimeout = setTimeout(() => { this.syncToServer(); }, 5000);
     }
     
     async syncToServer() {
+      // Throttle: prevent sync if too soon
+      const now = Date.now();
+      if (this.lastSyncTime && (now - this.lastSyncTime) < this.MIN_SYNC_INTERVAL) {
+        log('Sync throttled - too soon since last sync');
+        return;
+      }
+      
       if (this.syncInProgress) {
         this.pendingSync = true;
         return;
