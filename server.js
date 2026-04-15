@@ -2332,6 +2332,11 @@ app.use(express.static(path.join(__dirname), {
 }));
 
 // Serve /public directory (AI-Hub platforms & static assets)
+// ROOT ROUTE: Serve yt-new-clear.html at / (fixes index.html loading wrong page)
+app.get('/', (req, res) => {
+  console.log('[route] / → Serving yt-new-clear.html');
+  res.sendFile(path.join(__dirname, 'yt-new-clear.html'));
+});
 app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: '1d',
   etag: true,
@@ -2348,11 +2353,6 @@ app.use('/ai-hub', express.static(path.join(__dirname, 'codebank', 'components')
 // Service-specific routes
 
 
-// ROOT ROUTE: Serve yt-new-clear.html at / (fixes index.html loading wrong page)
-app.get('/', (req, res) => {
-  console.log('[route] / → Serving yt-new-clear.html');
-  res.sendFile(path.join(__dirname, 'yt-new-clear.html'));
-});
 
 
 // YT-Clear Default Route
