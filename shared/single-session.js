@@ -85,9 +85,11 @@
     // Give AuthCore a chance to clean up
     try { if (window.Auth && window.Auth.logout) window.Auth.logout(); } catch(_) {}
 
-    // Redirect
+    // Clear session but stay on page - don't redirect to login
     setTimeout(function() {
-      window.location.href = '/login.html?reason=kicked';
+      console.log('[Session] Cleared - staying on current page as guest');
+      // Stay on current page instead of redirecting
+      window.location.reload();
     }, 300);
   }
 

@@ -35,8 +35,8 @@
 
         requireAuth() {
             if (!window.AppState.isAuthenticated) {
-                console.warn('[AuthManager] Not authenticated. Redirecting to login.');
-                window.location.href = '/login.html';
+                console.warn('[AuthManager] Not authenticated. Staying as guest.');
+                // Don't redirect - stay on page as guest
                 return false;
             }
             return true;
@@ -64,7 +64,9 @@
                 };
             } catch(_) {}
             this._clearUser();
-            window.location.href = '/login.html';
+            console.log('[Auth] Logged out - staying on page as guest');
+            // Don't redirect to login - reload to clear state
+            window.location.reload();
         },
 
         _setUser(user, sessionId) {

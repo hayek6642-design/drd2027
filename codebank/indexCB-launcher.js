@@ -36,8 +36,8 @@
   function init() {
     // Auth should already be set by auth-global.js
     if (!window.AUTH_GLOBAL) {
-      console.error('[Launcher] No auth — redirecting to login');
-      window.location.href = '/login.html';
+      console.log('[Launcher] No auth - staying as guest');
+      // Stay on page as guest instead of redirect
       return;
     }
 
