@@ -132,37 +132,55 @@
         // Dynamic imports for code splitting
         const loadApp = async () => {
           try {
+            console.log('[Index] Starting app load...');
+            
+            // Check DOM elements
+            const appEl = document.getElementById('app');
+            console.log('[Index] App element found:', !!appEl);
+            if (!appEl) throw new Error('App container #app not found');
+            
             // Core first
+            console.log('[Index] Importing core modules...');
             const [{ serviceManager }, { assetBus }, { watchDog }] = await Promise.all([
               import('./src/core/service-manager-v2.js'),
               import('./src/core/assetbus-v2.js'),
               import('./src/core/watch-dog-optimized.js')
             ]);
+            console.log('[Index] Core modules imported successfully');
             
             // UI components (lazy)
+            console.log('[Index] Importing app-grid...');
             const { renderAppGrid } = await import('./src/components/app-grid.js');
+            console.log('[Index] App-grid imported successfully, type:', typeof renderAppGrid);
             
             // Initialize
             window.serviceManager = serviceManager;
             window.assetBus = assetBus;
             window.watchDog = watchDog;
+            console.log('[Index] Global references set');
             
             // Render
-            renderAppGrid(document.getElementById('app'));
+            console.log('[Index] Calling renderAppGrid...');
+            renderAppGrid(appEl);
+            console.log('[Index] renderAppGrid completed');
             
             // Remove loading screen
             document.getElementById('loading').remove();
+            console.log('[Index] Loading screen removed');
             
             // Load performance monitor (dev only)
             if (location.hostname === 'localhost' || location.search.includes('debug')) {
               await import('./src/utils/performance-monitor.js');
             }
             
+            console.log('[Index] App loaded successfully!');
+            
           } catch (err) {
-            console.error('Failed to load app:', err);
+            console.error('[Index] Failed to load app:', err.message);
+            console.error('[Index] Stack:', err.stack);
             const loadingEl = document.getElementById('loading');
             if (loadingEl) {
-              loadingEl.innerHTML = '<p>فشل التحميل. يرجى تحديث الصفحة.</p>';
+              loadingEl.innerHTML = '<p>فشل التحميل.<br>خطأ: ' + err.message + '</p>';
             }
           }
         };
