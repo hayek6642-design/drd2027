@@ -623,12 +623,14 @@ document.querySelectorAll('.settings-btn').forEach(btn => {
                            try { window.showToast && window.showToast('Popup blocked. Please enable popups to sign in.', 'warning'); } catch(e) {}
                        }
                    } catch (e) {
-                       const returnUrl = encodeURIComponent('./indexCB.html');
-                       window.location.href = `login.html?return=${returnUrl}`;
+                       // Stay on page instead of redirecting to login
+                       console.log('[Auth] Need auth - staying as guest');
+                       try { window.showToast && window.showToast('Please sign in to access this feature.', 'info'); } catch(e) {}
                    }
                } else {
-                   const returnUrl = encodeURIComponent('./indexCB.html');
-                   window.location.href = `login.html?return=${returnUrl}`;
+                   // Stay on page instead of redirecting to login
+                   console.log('[Auth] Need auth - staying as guest');
+                   try { window.showToast && window.showToast('Please sign in to access this feature.', 'info'); } catch(e) {}
                }
                break;
 

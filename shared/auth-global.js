@@ -22,7 +22,7 @@
 
   const SESSION_KEY = 'codebank_session';
   const TOKEN_COOKIE = 'cb_token';
-  const LOGIN_URL = '/login.html';
+  // REMOVED: LOGIN_URL redirect - stay on page as guest instead
 
   // ── Helpers ──────────────────────────────────────────────
 
@@ -48,18 +48,18 @@
           window.AUTH_GLOBAL = session;
         } else {
           clearAuth();
-          window.location.href = LOGIN_URL;
+          console.log('[Auth] Session expired - continuing as guest');
+          // Stay on page as guest instead of redirect
           return;
         }
       } catch (e) {
         clearAuth();
-        window.location.href = LOGIN_URL;
+        console.log('[Auth] Session parse error - continuing as guest');
         return;
       }
     } else {
-      // No session at all — redirect to login
-      // (Comment out next line if you want unauthenticated landing pages)
-      window.location.href = LOGIN_URL;
+      // No session at all — stay on page as guest
+      console.log('[Auth] No session - continuing as guest');
       return;
     }
   }
@@ -87,7 +87,8 @@
       clearAuth();
       // Notify all iframes before redirect
       window.broadcastAuth(null);
-      window.location.href = LOGIN_URL;
+      // Stay on page after logout instead of redirecting
+      console.log('[Auth] Logged out - staying on page as guest');
     },
 
     /**
