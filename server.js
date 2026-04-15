@@ -810,6 +810,47 @@ const JWT_SECRET = 'secret-demo';
 function signJwt(userId, email) { return jwt.sign({ userId, email }, JWT_SECRET, { expiresIn: '7d' }) }
 function requireJwtAuth(req, res, next) { try { const h = req.headers.authorization || ''; const parts = h.split(' '); if (parts[0] !== 'Bearer' || !parts[1]) return res.status(401).json({ status: 'failed', error: 'Unauthorized' }); const decoded = jwt.verify(parts[1], JWT_SECRET); req.auth = { userId: decoded.userId, email: decoded.email }; next() } catch (e) { return res.status(401).json({ status: 'failed', error: 'Unauthorized' }) } }
 const __authUsers = new Map(); // email -> { id, email, username, password_hash }
+
+// ============================================================================
+// DEMO USERS INITIALIZATION (CRITICAL FIX)
+// ============================================================================
+async function seedDemoUsers() {
+  try {
+    const bcryptHash = await import('bcryptjs');
+    const bcrypt = bcryptHash.default;
+    
+    // Demo user 1
+    const hash1 = await bcrypt.hash('demo123456', 10);
+    __authUsers.set('demo@example.com', {
+      id: 'demo-user-1',
+      email: 'demo@example.com',
+      username: 'demo',
+      password_hash: hash1,
+      user_type: 'user',
+      is_untrusted: false
+    });
+    
+    // Demo user 2
+    const hash2 = await bcrypt.hash('test123456', 10);
+    __authUsers.set('test@example.com', {
+      id: 'test-user-1',
+      email: 'test@example.com',
+      username: 'test',
+      password_hash: hash2,
+      user_type: 'user',
+      is_untrusted: false
+    });
+    
+    console.log('[INIT] ✅ Demo users seeded successfully');
+  } catch(err) {
+    console.error('[INIT] ❌ Failed to seed demo users:', err.message);
+  }
+}
+
+// Call on startup
+seedDemoUsers();
+
+
 let __USER_SEQ = 1000;
 async function sqliteFindUserByEmail(email){
   try {
