@@ -38,12 +38,28 @@ function clearSessionAndLogout() {
   }
   
   console.log('[LOGOUT] All session data cleared');
-  console.log('[LOGOUT] Redirecting to login.html in 500ms...');
+  console.log('[LOGOUT] Staying in app as guest mode...');
   
-  // Give cookies time to be cleared before redirect
-  setTimeout(function() {
-    window.location.href = '/login.html';
-  }, 500);
+  // Initialize guest session instead of redirect
+  window.AUTH_GLOBAL = {
+    userId: 'guest_' + Date.now(),
+    authenticated: false,
+    guest: true,
+    expiresAt: Date.now() + (365 * 24 * 60 * 60 * 1000)
+  };
+  
+  if (window.broadcastAuth && typeof window.broadcastAuth === 'function') {
+    window.broadcastAuth(window.AUTH_GLOBAL);
+  }
+  
+  if (window.AuthCore && typeof window.AuthCore._setState === 'function') {
+    window.AuthCore._setState({
+      authenticated: false,
+      status: 'guest',
+      userId: window.AUTH_GLOBAL.userId,
+      guest: true
+    });
+  }
 }
 
 </script>
@@ -3028,15 +3044,20 @@ document.addEventListener('DOMContentLoaded', async function(){
                     console.error('[AUTH] Fetch error:', e.message);
                 }
                 
-                // ❌ AUTH FAILED - redirect to login.html
-                console.log('[AUTH] Session invalid or expired, redirecting to login...');
-                localStorage.removeItem('session_active');
-                localStorage.removeItem('session_token');
-                localStorage.removeItem('user_data');
-                // Give it a moment for localStorage to sync
-                setTimeout(() => {
-                    window.location.href = '/login.html';
-                }, 100);
+                // ❌ AUTH FAILED - fallback to guest mode
+                console.log('[AUTH] Session invalid or expired, continuing as guest...');
+                
+                // Create guest session instead of redirect
+                window.AUTH_GLOBAL = {
+                    userId: 'guest_' + Date.now(),
+                    authenticated: false,
+                    guest: true,
+                    expiresAt: Date.now() + (365 * 24 * 60 * 60 * 1000)
+                };
+                
+                if (window.broadcastAuth && typeof window.broadcastAuth === 'function') {
+                    window.broadcastAuth(window.AUTH_GLOBAL);
+                }
                 
                 return null;
             }
