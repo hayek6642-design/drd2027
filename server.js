@@ -86,9 +86,8 @@ import battaloodaRouter from './api/routes/battalooda.js';
 import aiRoutes from './api/routes/ai-routes.js';
 import zagelRouter from './api/routes/zagel.js';
 
-// Zagel Brain System (RAG)
-// Note: Frontend modules - served statically, initialize from frontend
-import './codebank/js/zagel-brain/zagel-integration.js';
+// Zagel Brain System - Served statically to frontend
+// Frontend loads: /codebank/js/zagel-brain/zagel-integration.js
 import shotsRouter from './api/modules/shots.js';
 import biometricRouter from './api/modules/biometric.js';
 import gambleRouter from './api/modules/gamble.js';
@@ -350,30 +349,13 @@ app.use('/api/quota',  quotaRouter);
 app.use('/api/assets', assetRoutes);
 
 // ── Zagel Brain RAG API ───────────────────────────────────
-// Initialize the brain system without requiring API key upfront
-let zagelInitialized = false;
-
-app.use('/api/zagel', async (req, res, next) => {
-  // Lazy initialization - wait for first actual request
-  if (!zagelInitialized && process.env.GEMINI_API_KEY) {
-    try {
-      await window.zagelBrain.init(process.env.GEMINI_API_KEY, null);
-      zagelInitialized = true;
-      console.log('[ZAGEL] Brain system initialized ✅');
-    } catch (e) {
-      console.warn('[ZAGEL] Init failed:', e.message);
-    }
-  }
-  next(); // Pass through to actual routes handled by the frontend
-});
-
 // Serve Zagel brain modules statically for frontend to use
 app.use('/codebank/js/zagel-brain', express.static(path.join(__dirname, 'codebank/js/zagel-brain'), {
   maxAge: '1h'
 }));
 console.log('[ZAGEL] Brain modules available at /codebank/js/zagel-brain');
 
-// Mount Zagel API routes
+// Mount Zagel API routes (server-side)
 app.use('/api/zagel', zagelRouter);
 console.log('[ZAGEL] API routes mounted at /api/zagel ✅');
 
