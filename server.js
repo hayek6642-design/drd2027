@@ -84,6 +84,10 @@ import { watchdog } from './services/watchdog/watchdog.js';
 import watchdogRoutes from './routes/watchdog.js';
 import battaloodaRouter from './api/routes/battalooda.js';
 import aiRoutes from './api/routes/ai-routes.js';
+import zagelRouter from './api/routes/zagel.js';
+
+// Zagel Brain System (RAG)
+import zagelBrain from './codebank/js/zagel-brain/zagel-integration.js';
 import shotsRouter from './api/modules/shots.js';
 import biometricRouter from './api/modules/biometric.js';
 import gambleRouter from './api/modules/gamble.js';
@@ -343,6 +347,34 @@ app.use('/api/likes', likesRouter);
 app.use('/api/drmail', drmailRouter);
 app.use('/api/quota',  quotaRouter);
 app.use('/api/assets', assetRoutes);
+
+// ── Zagel Brain RAG API ───────────────────────────────────
+// Initialize the brain system without requiring API key upfront
+let zagelInitialized = false;
+
+app.use('/api/zagel', async (req, res, next) => {
+  // Lazy initialization - wait for first actual request
+  if (!zagelInitialized && process.env.GEMINI_API_KEY) {
+    try {
+      await window.zagelBrain.init(process.env.GEMINI_API_KEY, null);
+      zagelInitialized = true;
+      console.log('[ZAGEL] Brain system initialized ✅');
+    } catch (e) {
+      console.warn('[ZAGEL] Init failed:', e.message);
+    }
+  }
+  next(); // Pass through to actual routes handled by the frontend
+});
+
+// Serve Zagel brain modules statically for frontend to use
+app.use('/codebank/js/zagel-brain', express.static(path.join(__dirname, 'codebank/js/zagel-brain'), {
+  maxAge: '1h'
+}));
+console.log('[ZAGEL] Brain modules available at /codebank/js/zagel-brain');
+
+// Mount Zagel API routes
+app.use('/api/zagel', zagelRouter);
+console.log('[ZAGEL] API routes mounted at /api/zagel ✅');
 
 // ── Phase 5: Mount Auth V2 Routes ──────────────────────────────
 // Auth Refactor v2 - Guest/User Session Management
