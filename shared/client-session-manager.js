@@ -208,7 +208,9 @@
 
         var message = msg.message || 'Your session was terminated on another device.';
         _showAlert('Signed Out', message, function() {
-            window.location.href = '/login.html?reason=kicked';
+            // Stay on page after session cleared - continue as guest
+            console.log('[Session] Terminated - staying as guest');
+            window.location.reload();
         });
     }
 
@@ -313,7 +315,9 @@
         btnLogout.onclick = function() {
             modal.remove();
             _clearSession();
-            window.location.href = '/login.html?reason=self_logout';
+            // Stay on page after logout - reload instead of redirect
+            console.log('[Session] Self logout - staying as guest');
+            window.location.reload();
         };
     }
 

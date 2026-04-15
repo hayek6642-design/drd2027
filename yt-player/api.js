@@ -36,11 +36,11 @@ class ApiService {
         try {   
             const response = await fetch(`${this.baseURL}${endpoint}`, config);
             
-            // Handle authentication errors
+            // Handle authentication errors - don't redirect to login, stay in guest mode
             if (response.status === 401) {
-                localStorage.removeItem('user');
-                window.location.href = 'login.html';
-                throw new Error('Authentication required');
+                console.warn('[API] 401 Unauthorized - staying in guest mode');
+                // Don't redirect to login - stay on current page as guest
+                throw new Error('Authentication required - continuing as guest');
             }
             
             if (!response.ok) {

@@ -624,8 +624,8 @@
        
        window.dispatchEvent(new CustomEvent('auth:logout'));
        
-       // 6. HARD RELOAD to clear all memory state
-       window.location.href = '/login.html';
+       // Stay on page after logout - reload to clear state instead of redirecting to login
+       window.location.reload();
      },
 
     // 🛡️ IDB HELPER METHODS (Requirement from actly.md)
