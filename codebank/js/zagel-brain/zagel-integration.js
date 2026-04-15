@@ -216,3 +216,6 @@ await window.zagel('Hello, how are you?');
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = ZagelBrain;
 }
+
+// Also export as default for ES modules
+export default window.ZagelBrain;
