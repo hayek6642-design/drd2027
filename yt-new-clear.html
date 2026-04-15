@@ -2885,9 +2885,6 @@ function clearSessionAndLogout() {
     <!-- main.js loaded below after acc bridges -->
     <script>
         (function () {
-                }
-            })();
-
             try { window.__UV_TRACE__ = Array.isArray(window.__UV_TRACE__) ? window.__UV_TRACE__ : []; } catch(_){}
             function __uvlog__(type, data, source){ try { var rec = { type: String(type||''), data: data||{}, source: String(source||'unknown'), ts: Date.now() }; window.__UV_TRACE__.push(rec); } catch(_){} }
             try { window.UVLog = __uvlog__ } catch(_){}
