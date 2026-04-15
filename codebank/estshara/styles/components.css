@@ -1,0 +1,652 @@
+/**
+ * Estshara Component Styles
+ * Category grid, consultant cards, chat interface
+ */
+
+/* ==========================================
+   HEADER
+   ========================================== */
+.estshara-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+}
+
+.estshara-header .logo {
+  font-size: 1.75rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.estshara-header .tagline {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.user-menu-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: var(--surface-dark);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast);
+}
+
+.user-menu-btn:hover {
+  background: var(--border);
+}
+
+/* ==========================================
+   CATEGORY GRID
+   ========================================== */
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.category-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-lg);
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.category-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.category-icon {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.category-name {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.category-count {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  background: var(--surface-dark);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+/* ==========================================
+   CONSULTANT RESULTS
+   ========================================== */
+.results-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 73px;
+  z-index: var(--z-sticky);
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--surface-dark);
+  border: none;
+  border-radius: var(--radius);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.back-btn:hover {
+  background: var(--border);
+}
+
+.results-header h2 {
+  font-size: 1.25rem;
+  color: var(--text);
+}
+
+.consultant-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.consultant-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.consultant-card:hover {
+  border-color: var(--primary);
+  box-shadow: var(--shadow);
+}
+
+.consultant-card .avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  background: var(--surface-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.consultant-card .consultant-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.consultant-card .consultant-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.consultant-card .consultant-specialty {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-bottom: var(--space-xs);
+}
+
+.consultant-card .consultant-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.875rem;
+}
+
+.consultant-card .consultant-rating .stars {
+  color: var(--warning);
+}
+
+.consultant-card .consultant-rating .rating-value {
+  color: var(--text-muted);
+}
+
+.consultant-card .consultant-price {
+  text-align: left;
+}
+
+.consultant-card .price {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.consultant-card .currency {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.consultant-card .unit {
+  font-size: 0.75rem;
+  color: var(--text-light);
+}
+
+.book-btn {
+  padding: var(--space-sm) var(--space-md);
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.book-btn:hover {
+  background: var(--primary-dark);
+}
+
+/* ==========================================
+   BOOKING MODAL
+   ========================================== */
+.booking-modal {
+  max-width: 500px;
+}
+
+.booking-header {
+  padding: var(--space-lg);
+  border-bottom: 1px solid var(--border);
+}
+
+.booking-header h2 {
+  font-size: 1.5rem;
+  margin-bottom: var(--space-xs);
+}
+
+.booking-header p {
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.consultant-preview {
+  padding: var(--space-md) var(--space-lg);
+  background: var(--surface-dark);
+}
+
+.consultant-card-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.consultant-card-preview .avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.consultant-card-preview .info h3 {
+  font-size: 1rem;
+  margin-bottom: 2px;
+}
+
+.consultant-card-preview .info p {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.consultant-card-preview .rating {
+  font-size: 0.875rem;
+  color: var(--warning);
+}
+
+.booking-form {
+  padding: var(--space-lg);
+}
+
+.consultation-types {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-sm);
+}
+
+.type-option {
+  cursor: pointer;
+}
+
+.type-option input {
+  display: none;
+}
+
+.type-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  transition: all var(--transition-fast);
+}
+
+.type-option input:checked + .type-card {
+  border-color: var(--primary);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.type-icon {
+  font-size: 1.5rem;
+}
+
+.type-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.type-price {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.price-summary {
+  margin-top: var(--space-lg);
+  padding: var(--space-md);
+  background: var(--surface-dark);
+  border-radius: var(--radius);
+}
+
+.price-summary .row {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-xs) 0;
+  font-size: 0.875rem;
+}
+
+.price-summary .row.total {
+  border-top: 1px solid var(--border);
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+
+.price-summary .amount {
+  font-weight: 600;
+}
+
+.submit-btn {
+  width: 100%;
+  padding: var(--space-md);
+  margin-top: var(--space-lg);
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.submit-btn:hover {
+  background: var(--primary-dark);
+}
+
+/* ==========================================
+   CHAT INTERFACE
+   ========================================== */
+.chat-interface {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.chat-back,
+.chat-menu {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  border-radius: var(--radius);
+}
+
+.chat-back:hover,
+.chat-menu:hover {
+  background: var(--surface-dark);
+}
+
+.chat-header .consultant-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.chat-header .consultant-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--surface-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-header .consultant-name {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.chat-header .consultant-status {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.chat-header .consultant-status.online {
+  color: var(--success);
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.messages-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.welcome-message {
+  text-align: center;
+  padding: var(--space-2xl) var(--space-lg);
+  color: var(--text-muted);
+}
+
+.welcome-message h3 {
+  font-size: 1.5rem;
+  color: var(--text);
+  margin-bottom: var(--space-sm);
+}
+
+.welcome-message .hint {
+  font-size: 0.875rem;
+  margin-top: var(--space-sm);
+}
+
+.message {
+  max-width: 80%;
+  display: flex;
+  flex-direction: column;
+}
+
+.message.own {
+  align-self: flex-end;
+}
+
+.message.other {
+  align-self: flex-start;
+}
+
+.message-content {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-lg);
+}
+
+.message.own .message-content {
+  background: var(--primary);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.message.other .message-content {
+  background: var(--surface-dark);
+  color: var(--text);
+  border-bottom-left-radius: 4px;
+}
+
+.message-time {
+  font-size: 0.625rem;
+  color: var(--text-light);
+  margin-top: 2px;
+}
+
+.message.own .message-time {
+  text-align: right;
+}
+
+.chat-input-area {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+
+.attach-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  border-radius: var(--radius);
+}
+
+.chat-input-area input {
+  flex: 1;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+}
+
+.send-btn {
+  padding: var(--space-sm) var(--space-md);
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.send-btn:hover {
+  background: var(--primary-dark);
+}
+
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: var(--space-sm) var(--space-md);
+}
+
+.typing-indicator .dot {
+  width: 8px;
+  height: 8px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  animation: typing 1.4s infinite ease-in-out both;
+}
+
+.typing-indicator .dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-indicator .dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typing {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* ==========================================
+   LOADING & EMPTY STATES
+   ========================================== */
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-2xl);
+}
+
+.empty-state,
+.error-state {
+  text-align: center;
+  padding: var(--space-2xl);
+  color: var(--text-muted);
+}
+
+.error-state {
+  color: var(--danger);
+}
+
+/* ==========================================
+   RESPONSIVE
+   ========================================== */
+@media (max-width: 640px) {
+  .category-grid {
+    grid-template-columns: repeat(2, 1fr);
+    padding: var(--space-md);
+  }
+  
+  .consultant-list {
+    grid-template-columns: 1fr;
+    padding: var(--space-md);
+  }
+  
+  .consultation-types {
+    grid-template-columns: 1fr;
+  }
+  
+  .message {
+    max-width: 90%;
+  }
+}
