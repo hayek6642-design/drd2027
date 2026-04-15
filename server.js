@@ -1246,7 +1246,7 @@ app.get('/api/session/qr/generate', requireAuth, async (req, res) => {
 app.get('/api/session/qr/approve', async (req, res) => {
   try {
     const { t: token } = req.query;
-    if (!token) return res.redirect('/login.html');
+    if (!token) return res.redirect('/index.html');
 
     const row = await query(
       'SELECT user_id, expires_at, used FROM qr_link_tokens WHERE token = $1',
@@ -2319,7 +2319,7 @@ app.get(['/yt-simple', '/yt-new', '/yt-new.html'], (req, res) => {
       res.clearCookie('session_token', { path: '/' });
     }
     console.log(`[route] ${req.path} → Redirecting to login.html (Session missing)`);
-    return res.redirect('/login.html');
+    return res.redirect('/index.html');
   }
   console.log(`[route] ${req.path} → yt-new-clear.html (Session: ${session.userId})`);
   try {
@@ -2791,7 +2791,7 @@ app.get(['/yt-clear', '/yt-clear/yt-new-clear.html'], (req, res) => {
       res.clearCookie('session_token', { path: '/' });
     }
     console.log(`[route] ${req.path} → Redirecting to login.html`);
-    return res.redirect('/login.html');
+    return res.redirect('/index.html');
   }
   console.log(`[route] ${req.path} → yt-new-clear.html`);
   res.sendFile(path.join(__dirname, 'yt-new-clear.html'));
@@ -2930,7 +2930,7 @@ function adjustCodes(userId, delta) {
 // AUTH REMOVED — CLEAN RESET
 
 // Login route
-app.get('/login.html', (req, res) => {
+app.get('/index.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'login.html'));
 });
 
