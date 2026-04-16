@@ -1770,6 +1770,22 @@
             }
         }, 2000);
     });
+    
+    // ==========================================
+    // ZAGEL PULL-TO-REFRESH - Smart refresh
+    // ==========================================
+    (function() {
+      // Only enable if not in iframe and touch supported
+      if ('ontouchstart' in window && window.self === window.top) {
+        // Load the pull-refresh controller
+        const script = document.createElement('script');
+        script.src = '/shared/zagel-pull-refresh.js';
+        script.onload = function() {
+          console.log('[Zagel] Pull-to-refresh initialized');
+        };
+        document.head.appendChild(script);
+      }
+    })();
     </script>
 
 </body>
