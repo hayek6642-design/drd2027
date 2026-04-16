@@ -1,3 +1,4 @@
+// DEPLOY_TRIGGER: 1776368300
 import 'dotenv/config';
 import path from 'path';
 import fs from 'fs-extra';
