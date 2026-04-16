@@ -945,13 +945,14 @@ function clearSessionAndLogout() {
 
 
         #watch-time {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            align-items: center;
-            column-gap: 12px !important;
-            width: max-content;
-            margin-top: 20px !important;
-        }
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0px;
+    width: auto;
+    margin-top: 0px !important;
+}
 
         /* Spark beam effect */
         #code-display::before {
@@ -985,10 +986,10 @@ function clearSessionAndLogout() {
 
         #counter {
             position: relative;
-            display: inline-block;
+            display: block;
             flex: 0 0 auto;
             width: max-content;
-            margin: 0;
+            margin: 0 auto;
             font-size: 0.7em;
             background: transparent !important;
             padding: 2px 4px;
@@ -1057,19 +1058,8 @@ function clearSessionAndLogout() {
 
         /* Stopwatch styling */
         #stopwatch {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            background: #000;
-            color: #00ff88;
-            font-family: 'Courier New', monospace !important;
-            font-size: 0.68em;
-            letter-spacing: 0.03em;
-            white-space: nowrap;
-            user-select: none;
-            transition: background-color 200ms ease, box-shadow 200ms ease, color 200ms ease;
-        }
+    display: none !important;
+}
 
         #stopwatch.running {
             background: #b00000;
