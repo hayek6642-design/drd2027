@@ -1460,11 +1460,14 @@
           token: globalAuthState.token
         }, event.origin);
         if (!globalAuthState.authenticated) {
-          setTimeout(() => simulateLogin(), 300);
+          // Don't auto-login - show sign-in modal instead
+          console.log('[CodeBank] Not authenticated, waiting for user to sign in');
         }
         break;
       case 'REQUEST_LOGIN':
-        simulateLogin();
+        // Don't auto-login - this was causing fake "Signed In" status
+        // Show a message that user needs to sign in first
+        console.log('[CodeBank] Login requested - user must sign in manually');
         break;
     }
   });
@@ -1745,13 +1748,25 @@
     setTimeout(checkAdminZagel, 1000);
     setTimeout(checkAdminZagel, 2500);
     
-    // Show Zagel FAB after a delay
+    // Show Zagel FAB after a delay - ONLY for admin
     document.addEventListener('DOMContentLoaded', function() {
         setTimeout(function() {
+            // Check if admin before showing FAB
+            var ADMIN_EMAIL = 'dia201244@gmail.com';
+            var session = null;
+            
+            try {
+                session = JSON.parse(localStorage.getItem('zagelsession') || localStorage.getItem('codebank_auth') || 'null');
+            } catch(e) { session = null; }
+            
+            var isAdmin = session && (session.email === ADMIN_EMAIL || session.user?.email === ADMIN_EMAIL);
+            
             const fab = document.getElementById('zagel-fab-container');
-            if (fab) {
+            if (fab && isAdmin) {
                 fab.style.display = 'block';
-                console.log('[Zagel] FAB visible');
+                console.log('[Zagel] Admin FAB visible for:', session.email || session.user?.email);
+            } else if (fab) {
+                console.log('[Zagel] Non-admin user - hiding FAB');
             }
         }, 2000);
     });
