@@ -1,58 +1,62 @@
 import { defineConfig } from 'vite';
-import { resolve } from 'path';
+import react from '@vitejs/plugin-react';
+import path from 'path';
 
 export default defineConfig({
+  plugins: [react()],
+  
   build: {
     target: 'es2020',
     minify: 'terser',
-    cssMinify: true,
-    
-    // Code splitting
-    rollupOptions: {
-      input: {
-        main: resolve(__dirname, 'index.html'),
-        codebank: resolve(__dirname, 'codebank/indexCB.html'),
-        e7ki: resolve(__dirname, 'services/e7ki/index.html'),
-        farragna: resolve(__dirname, 'services/farragna/index.html'),
-        samman: resolve(__dirname, 'services/samman/index.html'),
-        pebalaash: resolve(__dirname, 'services/pebalaash/index.html'),
-        eb3at: resolve(__dirname, 'services/eb3at/index.html'),
-        games: resolve(__dirname, 'services/games/index.html'),
-        battalooda: resolve(__dirname, 'battalooda/index.html')
-      },
-      output: {
-        manualChunks: {
-          // Shared vendor chunks
-          'vendor-auth': ['./shared/auth-core.js', './shared/iframe-auth-client.js'],
-          'vendor-service': ['./shared/service-base.js', './shared/service-manager-v3.js'],
-          'vendor-crypto': ['./battalooda/battalooda-crypto.js'],
-          
-          // Feature chunks
-          'ui-components': ['./shared/ui-kit.js'],
-          'utils': ['./shared/utils.js']
-        }
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true
       }
     },
     
-    // Chunk size warnings
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'core-auth': ['src/core/auth-core.js', 'src/core/session-manager-v2.js'],
+          'core-services': ['src/core/service-manager-v2.js', 'src/core/assetbus-v2.js', 'src/core/watch-dog-v2.js'],
+          'api-bankode': ['src/api/bankode-core.js', 'src/api/bankode-ledger.js'],
+          'api-safecode': ['src/api/safecode-core.js', 'src/api/safecode-validation.js'],
+          'ui-components': ['src/components/app-launcher.js', 'src/components/app-grid.js', 'src/components/service-container.js'],
+          'admin-module': ['src/admin/admin-dashboard.js', 'src/admin/admin-routes.js'],
+          'utils': ['src/utils/helpers.js', 'src/utils/formatters.js', 'src/utils/validators.js'],
+          'styles': ['src/styles/index.css', 'src/styles/theme.css']
+        },
+        
+        chunkFileNames: 'chunks/[name].[hash].js',
+        entryFileNames: '[name].[hash].js',
+        assetFileNames: 'assets/[name].[hash][extname]'
+      }
+    },
+    
     chunkSizeWarningLimit: 500,
-    
-    // Asset optimization
-    assetsInlineLimit: 4096,
-    
-    // Source maps for debugging
-    sourcemap: process.env.NODE_ENV !== 'production'
+    reportCompressedSize: false
   },
   
-  // Development server
   server: {
     port: 3000,
-    strictPort: true,
-    cors: true
+    strictPort: false,
+    host: '0.0.0.0',
+    cors: true,
+    sourcemap: false,
+    middlewareMode: false
   },
   
-  // Optimizations
+  preview: {
+    port: 4173,
+    strictPort: false,
+    host: '0.0.0.0'
+  },
+  
   optimizeDeps: {
-    include: ['wavesurfer.js']
-  }
+    include: ['react', 'react-dom'],
+    exclude: ['src/services/**', 'src/admin/**']
+  },
+  
+  logLevel: 'warn'
 });
