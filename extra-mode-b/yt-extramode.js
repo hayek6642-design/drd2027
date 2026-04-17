@@ -632,6 +632,32 @@ function updateExtraProgress(percentOverride) {
     }
 }
 
+
+/**
+ * Schedule automatic deactivation of extra mode after reward window expires
+ */
+let autoDeactivationTimer = null;
+
+function scheduleAutoDeactivation(delayMs) {
+    if (autoDeactivationTimer) {
+        clearTimeout(autoDeactivationTimer);
+    }
+    autoDeactivationTimer = setTimeout(() => {
+        if (extraModeActive && (!activeReward || !activeReward.claimed)) {
+            console.log('[ExtraMode] Auto-deactivating - claim window expired');
+            deactivateExtraMode();
+        }
+        autoDeactivationTimer = null;
+    }, delayMs);
+}
+
+function cancelAutoDeactivation() {
+    if (autoDeactivationTimer) {
+        clearTimeout(autoDeactivationTimer);
+        autoDeactivationTimer = null;
+    }
+}
+
 /**
  * Check for reward milestones
  */
@@ -652,7 +678,10 @@ function checkForRewards() {
         };
         activeReward = reward;
         
-        showRewardMessage(reward.type); // Show claim message only
+        showRewardMessage(reward.type);
+        
+        // AUTO-DEACTIVATION: If user doesn\'t claim within 60s, auto-deactivate
+        scheduleAutoDeactivation(60000); // 60 seconds // Show claim message only
     }
 }
 
@@ -1055,6 +1084,9 @@ async function claimReward(reward) {
         rewardState = 'CLAIMING';
         if (window.DEBUG_MODE) console.log('[Reward] State: READY -> CLAIMING');
         
+        // Cancel auto-deactivation since user claimed
+        cancelAutoDeactivation();
+        
         // STEP 1: Disable reward UI
         disableRewardUI();
         
@@ -1064,10 +1096,24 @@ async function claimReward(reward) {
         // STEP 3: Claim the reward via API
         // FIX BUG#1: Added credentials:'include' so session cookie is sent with request
         // FIX BUG#2: Added X-CSRF-TOKEN header for CSRF-protected POST routes
-        const csrfToken = (document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/) || [])[1]
-                       || (document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/) || [])[1]
-                       || document.querySelector('meta[name="csrf-token"]')?.content
-                       || '';
+        let csrfToken = '';
+        try {
+            csrfToken = document.querySelector('meta[name="csrf-token"]')?.content 
+                     || document.querySelector('meta[name="x-csrf-token"]')?.content 
+                     || document.querySelector('input[name="_csrf"]')?.value 
+                     || '';
+            
+            if (!csrfToken) {
+                const cookies = document.cookie.split(';').reduce((acc, c) => {
+                    const [key, val] = c.trim().split('=');
+                    acc[key] = decodeURIComponent(val || '');
+                    return acc;
+                }, {});
+                csrfToken = cookies['XSRF-TOKEN'] || cookies['csrf_token'] || cookies['X-CSRF-TOKEN'] || '';
+            }
+        } catch (e) {
+            console.warn('[Reward] CSRF token extraction failed:', e.message);
+        }
         const response = await fetch('/api/rewards/claim', {
             method: 'POST',
             credentials: 'include',
