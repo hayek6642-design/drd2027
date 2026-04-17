@@ -465,10 +465,13 @@ function clearSessionAndLogout() {
             display: block;
         }
 
-        /* Sound button styles - ABOVE counter */
+        
+
+
+
+        /* Sound button ABOVE counter */
         #sound-button {
             position: relative;
-            /* Relative to container */
             background-color: rgba(247, 242, 242, 0.075);
             color: rgba(247, 242, 242, 0.075);
             border: none;
@@ -496,34 +499,19 @@ function clearSessionAndLogout() {
             gap: 8px;
         }
 
-        /* Make watch-time centered */
-        #watch-time {
-            order: 2;
-            /* Counter comes second */
-        }
-
-        /* Make control-buttons come first */
-        #control-buttons {
-            order: 1;
-            /* Button comes first (above) */
-        }
-
-        #toggle-switch-absolute-container {
-            order: 3;
-            /* Switch comes third */
-        }
-
-        #extra-switch-absolute-container {
-            order: 0;
-            /* Extra switch comes first */
-        }
+        /* Order elements */
+        #extra-switch-absolute-container { order: 1; }
+        #control-buttons { order: 2; }
+        #watch-time { order: 3; }
+        #toggle-switch-absolute-container { order: 4; }
+        #code-display { order: 5; }
+        #progress-bar-container { order: 6; }
+        #play-pause-button { order: 7; }
 
         #sound-button:hover {
             background-color: rgba(9, 10, 8, 0.8);
-            /* Slightly transparent on hover */
         }
 
-        /* Sound button hover popup – match counter container */
         #sound-popup {
             position: fixed;
             bottom: 200px;
@@ -912,9 +900,9 @@ function clearSessionAndLogout() {
             font-family: 'Courier New', monospace !important;
             letter-spacing: 0.03em;
             background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(20, 20, 30, 0.8));
-            padding: 6px 0 !important;
+            padding: 8px 15px !important;
             border-radius: 10px;
-            width: 100% !important;
+            
             min-width: 250px;
             text-align: center;
             display: flex;
@@ -961,13 +949,14 @@ function clearSessionAndLogout() {
 
 
         #watch-time {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            align-items: center;
-            column-gap: 12px !important;
-            width: max-content;
-            margin-top: 20px !important;
-        }
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    width: auto;
+    margin-top: 0px !important;
+}
 
         /* Spark beam effect */
         #code-display::before {
@@ -999,26 +988,7 @@ function clearSessionAndLogout() {
         }
 
 
-        #counter {
-            position: relative;
-            display: inline-block;
-            flex: 0 0 auto;
-            width: max-content;
-            margin: 0;
-            font-size: 0.7em;
-            background: transparent !important;
-            padding: 2px 4px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 0 10px rgba(0, 150, 255, 0.2);
-            -webkit-backdrop-filter: blur(2px);
-            backdrop-filter: blur(2px);
-            transform: translateZ(0);
-            transition: transform 0.5s ease;
-            white-space: nowrap;
-            overflow: hidden;
-            justify-self: start;
-        }
+        
 
         #counter.hidden {
             display: block !important;
@@ -1067,25 +1037,14 @@ function clearSessionAndLogout() {
 
         /* Ensure extra code bar and sound button match container transparency */
         #extra-code-bar,
-        #sound-button {
-            background: transparent !important;
-        }
+        
+
+
 
         /* Stopwatch styling */
         #stopwatch {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            background: #000;
-            color: #00ff88;
-            font-family: 'Courier New', monospace !important;
-            font-size: 0.68em;
-            letter-spacing: 0.03em;
-            white-space: nowrap;
-            user-select: none;
-            transition: background-color 200ms ease, box-shadow 200ms ease, color 200ms ease;
-        }
+    display: none !important;
+}
 
         #stopwatch.running {
             background: #b00000;
@@ -1094,6 +1053,11 @@ function clearSessionAndLogout() {
             box-shadow: 0 0 8px rgba(255, 0, 0, 0.6);
             animation: stopwatchPulse 1.2s ease-in-out infinite;
         }
+        */
+        
+
+        /* Make control-buttons invisible/non-functional container */
+        
 
         @keyframes stopwatchPulse {
             0% {
@@ -1213,11 +1177,14 @@ function clearSessionAndLogout() {
 
         /* Force watch time display to LTR */
         #watch-time {
-            direction: ltr !important;
-            unicode-bidi: bidi-override !important;
-            text-align: center !important;
-            font-family: 'Courier New', monospace !important;
-        }
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    width: auto;
+    margin-top: 0px !important;
+}
 
         /* Specifically force time display to maintain proper digit order */
         #sound-popup .time-display {
@@ -1354,10 +1321,14 @@ function clearSessionAndLogout() {
             }
 
             #watch-time {
-                font-size: 0.8em;
-
-
-            }
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    width: auto;
+    margin-top: 0px !important;
+}
 
 
             #play-pause-button {
@@ -2098,7 +2069,7 @@ function clearSessionAndLogout() {
             }
             #code-display {
                 min-width: unset !important;
-                width: 100% !important;
+                width: 95vw !important;
             }
         }
 
@@ -2221,7 +2192,7 @@ function clearSessionAndLogout() {
                     </div>
                 </div>
 
-                <!-- Sound button moved ABOVE counter -->
+                <!-- Sound button ABOVE counter -->
                 <div id="control-buttons" class="d-flex justify-content-center gap-2">
                     <button id="sound-button" class="btn btn-secondary" title="Toggle Sound"
                         data-i18n-title="buttons.soundToggle" aria-label="Sound"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.536 14.01A8.47 8.47 0 0 0 14.026 8a8.47 8.47 0 0 0-2.49-6.01l-.708.707A7.48 7.48 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303l.708.707z"/><path d="M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.48 5.48 0 0 1 11.025 8a5.48 5.48 0 0 1-1.611 3.889l.707.707z"/><path d="M8.707 11.182A4.49 4.49 0 0 0 10.025 8a4.49 4.49 0 0 0-1.318-3.182L8 5.525A3.49 3.49 0 0 1 9.025 8 3.49 3.49 0 0 1 8 10.475l.707.707zM6.717 3.55A.5.5 0 0 1 7.025 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.525a.5.5 0 0 1-.5-.5V6a.5.5 0 0 1 .5-.5h2.3l2.388-1.89a.5.5 0 0 1 .504-.06z"/></svg></button>
@@ -3858,4 +3829,66 @@ document.addEventListener('DOMContentLoaded', async function(){
     <!-- ZAGEL SYSTEM REMOVED - Only available in CodeBank (indexCB.html) -->
     <!-- ========================================== -->
 
-    </body>
+    
+    <!--  Real-time Counter → Code Display Sync (Monitor for counter updates) -->
+    <script>
+    (function() {
+      const counter = document.getElementById('counter');
+      const codeDisplay = document.getElementById('code-display');
+      if (!counter || !codeDisplay) return;
+      
+      // Create observer to watch counter for changes
+      const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(m) {
+          if (m.type === 'characterData' || m.type === 'childList') {
+            // Counter changed, now re-fetch and update code display
+            try {
+              // Try to get latest code from AssetBus
+              if (window.AssetBus && typeof window.AssetBus.snapshot === 'function') {
+                const snap = window.AssetBus.snapshot();
+                if (snap && (snap.latest || snap.latestCode)) {
+                  const code = snap.latest || snap.latestCode;
+                  if (code && codeDisplay.textContent !== code) {
+                    codeDisplay.textContent = code;
+                    console.log('[SYNC] Code updated with counter:', code);
+                  }
+                }
+              }
+              
+              // Also trigger a fetch from SQLite to ensure freshness
+              if (typeof fetch !== 'undefined') {
+                fetch('/api/sqlite/codes', { method: 'GET', credentials: 'include' })
+                  .then(r => r.json())
+                  .then(data => {
+                    if (data && data.rows && data.rows.length > 0) {
+                      const latest = data.latest || data.rows[0].code;
+                      if (latest && codeDisplay.textContent !== latest) {
+                        codeDisplay.textContent = latest;
+                        console.log('[SYNC] Code refreshed from DB:', latest);
+                        // Dispatch event so other listeners know about the update
+                        window.dispatchEvent(new CustomEvent('sqlite:code-synced', { detail: { code: latest } }));
+                      }
+                    }
+                  })
+                  .catch(e => console.log('[SYNC] DB fetch failed (OK if offline):', e.message));
+              }
+            } catch(e) {
+              console.log('[SYNC] Error updating code display:', e.message);
+            }
+          }
+        });
+      });
+      
+      // Watch counter element for any changes
+      observer.observe(counter, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        characterDataOldValue: true
+      });
+      
+      console.log('[SYNC] Real-time counter→code display sync activated');
+    })();
+    </script>
+
+</body>
