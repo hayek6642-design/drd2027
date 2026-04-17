@@ -465,14 +465,10 @@ function clearSessionAndLogout() {
             display: block;
         }
 
-        /* Sound button styles */
+        /* Sound button styles - ABOVE counter */
         #sound-button {
-            position: absolute;
-            top: -10px;
-            /* Distance from top */
-            left: 50%;
-            transform: translateX(-50%);
-            /* Center horizontally */
+            position: relative;
+            /* Relative to container */
             background-color: rgba(247, 242, 242, 0.075);
             color: rgba(247, 242, 242, 0.075);
             border: none;
@@ -484,9 +480,6 @@ function clearSessionAndLogout() {
             backdrop-filter: blur(3px);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
             z-index: 1002;
-            /* Ensure it stays above other elements */
-            margin-top: 10px;
-            /* Space between button and counter */
             transition: all 0.3s ease;
         }
 
@@ -497,9 +490,32 @@ function clearSessionAndLogout() {
             max-width: 100%;
             box-sizing: border-box;
             padding: 6px 8px !important;
-            display: inline-flex;
+            display: flex;
+            flex-direction: column;
             align-items: center;
             gap: 8px;
+        }
+
+        /* Make watch-time centered */
+        #watch-time {
+            order: 2;
+            /* Counter comes second */
+        }
+
+        /* Make control-buttons come first */
+        #control-buttons {
+            order: 1;
+            /* Button comes first (above) */
+        }
+
+        #toggle-switch-absolute-container {
+            order: 3;
+            /* Switch comes third */
+        }
+
+        #extra-switch-absolute-container {
+            order: 0;
+            /* Extra switch comes first */
         }
 
         #sound-button:hover {
@@ -2205,14 +2221,15 @@ function clearSessionAndLogout() {
                     </div>
                 </div>
 
-                <div id="watch-time" class="h5">
-                    <span id="counter">000:00:00.000</span>
-                    <span id="stopwatch">00:00:0</span>
-                </div>
-
+                <!-- Sound button moved ABOVE counter -->
                 <div id="control-buttons" class="d-flex justify-content-center gap-2">
                     <button id="sound-button" class="btn btn-secondary" title="Toggle Sound"
                         data-i18n-title="buttons.soundToggle" aria-label="Sound"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.536 14.01A8.47 8.47 0 0 0 14.026 8a8.47 8.47 0 0 0-2.49-6.01l-.708.707A7.48 7.48 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303l.708.707z"/><path d="M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.48 5.48 0 0 1 11.025 8a5.48 5.48 0 0 1-1.611 3.889l.707.707z"/><path d="M8.707 11.182A4.49 4.49 0 0 0 10.025 8a4.49 4.49 0 0 0-1.318-3.182L8 5.525A3.49 3.49 0 0 1 9.025 8 3.49 3.49 0 0 1 8 10.475l.707.707zM6.717 3.55A.5.5 0 0 1 7.025 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.525a.5.5 0 0 1-.5-.5V6a.5.5 0 0 1 .5-.5h2.3l2.388-1.89a.5.5 0 0 1 .504-.06z"/></svg></button>
+                </div>
+
+                <div id="watch-time" class="h5">
+                    <span id="counter">000:00:00.000</span>
+                    <span id="stopwatch">00:00:0</span>
                 </div>
 
                 <div id="toggle-switch-absolute-container">
