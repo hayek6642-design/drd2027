@@ -1050,13 +1050,22 @@ function doSearch(query) {
 }
 
 /* ===== EASTER EGG (7 clicks on logo) ===== */
+var farragnaClickCount = 0;
+var farragnaClickTimer = null;
+
 $('#logoTitle').addEventListener('click', function() {
-  state.easterClicks++;
-  clearTimeout(state.easterTimer);
-  state.easterTimer = setTimeout(() => { state.easterClicks = 0; }, 3000);
-  if (state.easterClicks >= 7) {
-    state.easterClicks = 0;
-    openAdmin();
+  farragnaClickCount++;
+  clearTimeout(farragnaClickTimer);
+  farragnaClickTimer = setTimeout(() => { farragnaClickCount = 0; }, 3000);
+  if (farragnaClickCount >= 7) {
+    farragnaClickCount = 0;
+    // Show password prompt
+    var password = prompt('Enter admin password:');
+    if (password === 'doitasap2025') {
+      openAdmin();
+    } else if (password !== null) {
+      alert('Incorrect password');
+    }
   }
 });
 
