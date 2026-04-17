@@ -64,12 +64,12 @@ export const AppRegistry = {
             badge: null
         },
         {
-            id: 'nostaglia',
-            name: 'Nostaglia',
+            id: 'nostalgia',
+            name: 'Nostalgia',
             category: 'media',
             icon: 'fa-compact-disc',
             color: '#8b5cf6',
-            url: '/codebank/nostaglia.html',
+            url: '/codebank/nostalgia.html',
             status: 'maintenance',
             description: 'Retro music collection',
             badge: null

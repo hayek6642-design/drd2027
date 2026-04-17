@@ -15,7 +15,7 @@ const attemptReconnect = (userId, callback) => {
 };
 
 export const setupSSE = (userId, callback) => {
-  eventSource = new EventSource(`/api/nostaglia/sse?userId=${userId}`);
+  eventSource = new EventSource(`/api/nostalgia/sse?userId=${userId}`);
   
   eventSource.onmessage = (event) => {
     const data = JSON.parse(event.data);

@@ -1,0 +1,15 @@
+/* minimal calm aesthetic */
+.nostalgia-feed { display: flex; flex-direction: column; gap: 16px; padding: 12px; }
+.nostalgia-card { background: #0b0f1a; color: #e6e6e6; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+.nostalgia-media { width: 100%; height: 56vh; background: #111; object-fit: cover; }
+.nostalgia-meta { padding: 12px; display: flex; justify-content: space-between; align-items: center; }
+.nostalgia-title { font-weight: 600; }
+.nostalgia-user { opacity: 0.8; font-size: 0.9rem; }
+.nostalgia-date { font-weight: 500; color: #7dd3fc; }
+.nostalgia-timeline { height: 6px; background: linear-gradient(to right, #1f2937, #374151); margin: 0 12px 12px; border-radius: 999px; position: relative; }
+.nostalgia-marker { position: absolute; top: -4px; width: 14px; height: 14px; border-radius: 50%; background: #7dd3fc; box-shadow: 0 0 0 3px rgba(125,211,252,0.3); }
+.nostalgia-actions { display:flex; gap:12px; padding: 0 12px 12px; }
+.nostalgia-btn { display:flex; align-items:center; gap:6px; background:#111827; color:#e5e7eb; padding:8px 12px; border-radius:8px; }
+.nostalgia-btn:active { transform: scale(0.98); }
+.nostalgia-comments { padding: 0 12px 12px; }
+.nostalgia-input { width: 100%; padding:8px; border-radius:6px; background:#0f172a; color:#e5e7eb; }

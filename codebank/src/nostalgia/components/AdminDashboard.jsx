@@ -9,7 +9,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchPendingUploads = async () => {
       try {
-        const response = await fetch('/api/nostaglia/admin/pending', {
+        const response = await fetch('/api/nostalgia/admin/pending', {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
@@ -34,7 +34,7 @@ const AdminDashboard = () => {
     const adminAssignedDate = prompt('Enter the admin-assigned date (YYYY-MM-DD):');
     if (adminAssignedDate) {
       try {
-        await fetch('/api/nostaglia/admin/approve', {
+        await fetch('/api/nostalgia/admin/approve', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -52,7 +52,7 @@ const AdminDashboard = () => {
   
   const handleReject = async (uploadId) => {
     try {
-      await fetch('/api/nostaglia/admin/reject', {
+      await fetch('/api/nostalgia/admin/reject', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -69,7 +69,7 @@ const AdminDashboard = () => {
   
   const handleDelete = async (uploadId) => {
     try {
-      await fetch('/api/nostaglia/admin/upload', {
+      await fetch('/api/nostalgia/admin/upload', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -86,7 +86,7 @@ const AdminDashboard = () => {
   
   const handleFeature = async (uploadId) => {
     try {
-      await fetch('/api/nostaglia/admin/feature', {
+      await fetch('/api/nostalgia/admin/feature', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -102,7 +102,7 @@ const AdminDashboard = () => {
   
   const handleStartCycle = async () => {
     try {
-      await fetch('/api/nostaglia/admin/cycle', {
+      await fetch('/api/nostalgia/admin/cycle', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -119,7 +119,7 @@ const AdminDashboard = () => {
     const cycleId = prompt('Enter the cycle ID to end:');
     if (cycleId) {
       try {
-        await fetch('/api/nostaglia/admin/cycle/end', {
+        await fetch('/api/nostalgia/admin/cycle/end', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

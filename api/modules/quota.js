@@ -85,7 +85,7 @@ async function getTableStats() {
     'users', 'messages', 'farragna_views', 'farragna_likes',
     'farragna_comments', 'farragna_videos', 'transactions',
     'e7ki_message_reads', 'e7ki_message_reactions',
-    'battalooda_recordings', 'nostaglia_uploads', 'drmail_messages',
+    'battalooda_recordings', 'nostalgia_uploads', 'drmail_messages',
     'pebalaash_orders', 'rewards', 'assets_media',
   ]
   const stats = []

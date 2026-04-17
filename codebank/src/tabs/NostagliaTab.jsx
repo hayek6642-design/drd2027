@@ -1,13 +1,13 @@
-// NostagliaTab.jsx
+// NostalgiaTab.jsx
 import React from 'react';
-import Feed from '../nostaglia/components/Feed';
-import Upload from '../nostaglia/components/Upload';
-import AdminDashboard from '../nostaglia/components/AdminDashboard';
+import Feed from '../nostalgia/components/Feed';
+import Upload from '../nostalgia/components/Upload';
+import AdminDashboard from '../nostalgia/components/AdminDashboard';
 
-const NostagliaTab = () => {
+const NostalgiaTab = () => {
   return (
     <div>
-      <h1>Nostaglia</h1>
+      <h1>Nostalgia</h1>
       <Feed />
       <Upload />
       <AdminDashboard />
@@ -15,4 +15,4 @@ const NostagliaTab = () => {
   );
 };
 
-export default NostagliaTab;
+export default NostalgiaTab;

@@ -20,7 +20,7 @@ const Upload = () => {
       formData.append('memoryNote', memoryNote);
       formData.append('file', file);
       
-      const response = await fetch('/api/nostaglia/upload', {
+      const response = await fetch('/api/nostalgia/upload', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`

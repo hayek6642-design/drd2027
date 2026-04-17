@@ -67,7 +67,7 @@ import trustRouter from './api/modules/trust.js';
 
 import * as monetizationMod from './api/modules/monetization.js';
 import * as samma3nyMod from './api/modules/samma3ny.js';
-import * as nostagliaMod from './api/modules/nostaglia.js';
+import * as nostalgiaMod from './api/modules/nostalgia.js';
 import * as pebalaashMod from './api/modules/pebalaash.js';
 import * as adminMod from './api/modules/admin.js';
 import * as testMod from './api/modules/test.js';
@@ -2267,7 +2267,7 @@ app.use('/shared', express.static(path.join(__dirname, 'shared'), {
 app.use('/shared_external', express.static(path.join(__dirname, 'shared_external'), {
   maxAge: '1d', etag: true, lastModified: true
 }));
-app.use('/nostaglia', express.static(path.join(__dirname, 'services/codebank/nostaglia'), {
+app.use('/nostalgia', express.static(path.join(__dirname, 'services/codebank/nostalgia'), {
   maxAge: '1d', etag: true, lastModified: true
 }));
 // ensure canonical assets mapping only
@@ -2946,16 +2946,16 @@ app.get('/community', (req, res) => {
 // Serve Games Centre static assets
 // Games Centre removed in cleanup phase
 
-const nostagliaClients = new Set();
-function nostagliaBroadcast(event, payload) {
+const nostalgiaClients = new Set();
+function nostalgiaBroadcast(event, payload) {
   const data = `event: ${event}\n` + `data: ${JSON.stringify(payload)}\n\n`;
-  for (const res of nostagliaClients) {
+  for (const res of nostalgiaClients) {
     try { res.write(data); } catch (e) { }
   }
 }
 // AUTH REMOVED — CLEAN RESET
 
-let nostagliaStore = {
+let nostalgiaStore = {
   uploads: [],
   reactions: new Map(),
   comments: new Map(),
@@ -5682,7 +5682,7 @@ const logicodeRouter = logicodeMod.default || logicodeMod.router || logicodeMod;
 const corsaRouter = corsaMod.default || corsaMod.router || corsaMod;
 const monetizationRouter = monetizationMod.default || monetizationMod.router || monetizationMod;
 const samma3nyRouter = samma3nyMod.default || samma3nyMod.router || samma3nyMod;
-const nostagliaRouter = nostagliaMod.default || nostagliaMod.router || nostagliaMod;
+const nostalgiaRouter = nostalgiaMod.default || nostalgiaMod.router || nostalgiaMod;
 const pebalaashRouter = pebalaashMod.default || pebalaashMod.router || pebalaashMod;
 const codesRouter = codesMod.default || codesMod.router || codesMod;
 const settaRouter = settaDefault || settaDefault?.router || settaDefault;

@@ -1,11 +1,11 @@
-// test-nostaglia.js
+// test-nostalgia.js
 const request = require('supertest');
 const express = require('express');
-const nostagliaRouter = require('./modules/nostaglia');
+const nostalgiaRouter = require('./modules/nostalgia');
 
 const app = express();
 app.use(express.json());
-app.use('/api/nostaglia', nostagliaRouter.router);
+app.use('/api/nostalgia', nostalgiaRouter.router);
 
 // Mock the authenticateJWT middleware
 const mockAuthenticateJWT = (req, res, next) => {
@@ -23,18 +23,18 @@ const mockCheckRole = (role) => (req, res, next) => {
 };
 
 // Apply mock middlewares
-app.use('/api/nostaglia/upload', mockAuthenticateJWT);
-app.use('/api/nostaglia/feed', mockAuthenticateJWT);
-app.use('/api/nostaglia/react', mockAuthenticateJWT);
-app.use('/api/nostaglia/comment', mockAuthenticateJWT);
-app.use('/api/nostaglia/share', mockAuthenticateJWT);
-app.use('/api/nostaglia/admin', mockAuthenticateJWT, mockCheckRole('admin'));
+app.use('/api/nostalgia/upload', mockAuthenticateJWT);
+app.use('/api/nostalgia/feed', mockAuthenticateJWT);
+app.use('/api/nostalgia/react', mockAuthenticateJWT);
+app.use('/api/nostalgia/comment', mockAuthenticateJWT);
+app.use('/api/nostalgia/share', mockAuthenticateJWT);
+app.use('/api/nostalgia/admin', mockAuthenticateJWT, mockCheckRole('admin'));
 
 // Test the upload endpoint
-describe('POST /api/nostaglia/upload', () => {
+describe('POST /api/nostalgia/upload', () => {
   it('should upload a song or music video clip', async () => {
     const response = await request(app)
-      .post('/api/nostaglia/upload')
+      .post('/api/nostalgia/upload')
       .send({
         title: 'Test Song',
         artist: 'Test Artist',
@@ -47,10 +47,10 @@ describe('POST /api/nostaglia/upload', () => {
 });
 
 // Test the feed endpoint
-describe('GET /api/nostaglia/feed', () => {
+describe('GET /api/nostalgia/feed', () => {
   it('should get all uploads for the feed', async () => {
     const response = await request(app)
-      .get('/api/nostaglia/feed');
+      .get('/api/nostalgia/feed');
     
     expect(response.statusCode).toBe(200);
     expect(Array.isArray(response.body)).toBeTruthy();
@@ -58,10 +58,10 @@ describe('GET /api/nostaglia/feed', () => {
 });
 
 // Test the reaction endpoint
-describe('POST /api/nostaglia/react', () => {
+describe('POST /api/nostalgia/react', () => {
   it('should like, super like, or mega like an upload', async () => {
     const response = await request(app)
-      .post('/api/nostaglia/react')
+      .post('/api/nostalgia/react')
       .send({
         uploadId: 'test-upload-id',
         reactionType: 'like'
@@ -73,10 +73,10 @@ describe('POST /api/nostaglia/react', () => {
 });
 
 // Test the comment endpoint
-describe('POST /api/nostaglia/comment', () => {
+describe('POST /api/nostalgia/comment', () => {
   it('should add a comment to an upload', async () => {
     const response = await request(app)
-      .post('/api/nostaglia/comment')
+      .post('/api/nostalgia/comment')
       .send({
         uploadId: 'test-upload-id',
         content: 'Test Comment'
@@ -88,10 +88,10 @@ describe('POST /api/nostaglia/comment', () => {
 });
 
 // Test the share endpoint
-describe('POST /api/nostaglia/share', () => {
+describe('POST /api/nostalgia/share', () => {
   it('should share an upload', async () => {
     const response = await request(app)
-      .post('/api/nostaglia/share')
+      .post('/api/nostalgia/share')
       .send({
         uploadId: 'test-upload-id'
       });
@@ -102,10 +102,10 @@ describe('POST /api/nostaglia/share', () => {
 });
 
 // Test the admin approve endpoint
-describe('PUT /api/nostaglia/admin/approve', () => {
+describe('PUT /api/nostalgia/admin/approve', () => {
   it('should approve an upload', async () => {
     const response = await request(app)
-      .put('/api/nostaglia/admin/approve')
+      .put('/api/nostalgia/admin/approve')
       .send({
         uploadId: 'test-upload-id',
         adminAssignedDate: '2023-01-01'
@@ -117,10 +117,10 @@ describe('PUT /api/nostaglia/admin/approve', () => {
 });
 
 // Test the admin reject endpoint
-describe('PUT /api/nostaglia/admin/reject', () => {
+describe('PUT /api/nostalgia/admin/reject', () => {
   it('should reject an upload', async () => {
     const response = await request(app)
-      .put('/api/nostaglia/admin/reject')
+      .put('/api/nostalgia/admin/reject')
       .send({
         uploadId: 'test-upload-id'
       });
@@ -131,10 +131,10 @@ describe('PUT /api/nostaglia/admin/reject', () => {
 });
 
 // Test the admin delete endpoint
-describe('DELETE /api/nostaglia/admin/upload', () => {
+describe('DELETE /api/nostalgia/admin/upload', () => {
   it('should delete an upload', async () => {
     const response = await request(app)
-      .delete('/api/nostaglia/admin/upload')
+      .delete('/api/nostalgia/admin/upload')
       .send({
         uploadId: 'test-upload-id'
       });
@@ -145,10 +145,10 @@ describe('DELETE /api/nostaglia/admin/upload', () => {
 });
 
 // Test the admin feature endpoint
-describe('PUT /api/nostaglia/admin/feature', () => {
+describe('PUT /api/nostalgia/admin/feature', () => {
   it('should feature an upload', async () => {
     const response = await request(app)
-      .put('/api/nostaglia/admin/feature')
+      .put('/api/nostalgia/admin/feature')
       .send({
         uploadId: 'test-upload-id'
       });
@@ -159,10 +159,10 @@ describe('PUT /api/nostaglia/admin/feature', () => {
 });
 
 // Test the admin pending endpoint
-describe('GET /api/nostaglia/admin/pending', () => {
+describe('GET /api/nostalgia/admin/pending', () => {
   it('should get all pending uploads', async () => {
     const response = await request(app)
-      .get('/api/nostaglia/admin/pending');
+      .get('/api/nostalgia/admin/pending');
     
     expect(response.statusCode).toBe(200);
     expect(Array.isArray(response.body)).toBeTruthy();
@@ -170,10 +170,10 @@ describe('GET /api/nostaglia/admin/pending', () => {
 });
 
 // Test the admin cycle endpoint
-describe('POST /api/nostaglia/admin/cycle', () => {
+describe('POST /api/nostalgia/admin/cycle', () => {
   it('should start a new cycle', async () => {
     const response = await request(app)
-      .post('/api/nostaglia/admin/cycle');
+      .post('/api/nostalgia/admin/cycle');
     
     expect(response.statusCode).toBe(201);
     expect(response.body).toHaveProperty('id');
@@ -181,10 +181,10 @@ describe('POST /api/nostaglia/admin/cycle', () => {
 });
 
 // Test the admin cycle end endpoint
-describe('PUT /api/nostaglia/admin/cycle/end', () => {
+describe('PUT /api/nostalgia/admin/cycle/end', () => {
   it('should end a cycle and determine the winner', async () => {
     const response = await request(app)
-      .put('/api/nostaglia/admin/cycle/end')
+      .put('/api/nostalgia/admin/cycle/end')
       .send({
         cycleId: 'test-cycle-id'
       });

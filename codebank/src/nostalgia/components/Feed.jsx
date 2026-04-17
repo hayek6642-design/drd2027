@@ -10,7 +10,7 @@ const Feed = () => {
   useEffect(() => {
     const fetchFeed = async () => {
       try {
-        const response = await fetch('/api/nostaglia/feed', {
+        const response = await fetch('/api/nostalgia/feed', {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
@@ -74,7 +74,7 @@ const Feed = () => {
   
   return (
     <div className="feed">
-      <h2>Nostaglia Feed</h2>
+      <h2>Nostalgia Feed</h2>
       {uploads.length === 0 ? (
         <p>No uploads yet.</p>
       ) : (
@@ -101,7 +101,7 @@ const Feed = () => {
   
   const handleLike = async (uploadId) => {
     try {
-      await fetch('/api/nostaglia/react', {
+      await fetch('/api/nostalgia/react', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -116,7 +116,7 @@ const Feed = () => {
   
   const handleSuperLike = async (uploadId) => {
     try {
-      await fetch('/api/nostaglia/react', {
+      await fetch('/api/nostalgia/react', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -131,7 +131,7 @@ const Feed = () => {
   
   const handleMegaLike = async (uploadId) => {
     try {
-      await fetch('/api/nostaglia/react', {
+      await fetch('/api/nostalgia/react', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -148,7 +148,7 @@ const Feed = () => {
     const comment = prompt('Enter your comment:');
     if (comment) {
       try {
-        await fetch('/api/nostaglia/comment', {
+        await fetch('/api/nostalgia/comment', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -164,7 +164,7 @@ const Feed = () => {
   
   const handleShare = async (uploadId) => {
     try {
-      await fetch('/api/nostaglia/share', {
+      await fetch('/api/nostalgia/share', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

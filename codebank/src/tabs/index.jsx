@@ -3,7 +3,7 @@ import BankodeTab from "./BankodeTab";
 import CorsaTab from "./CorsaTab";
 import E7kiTab from "./E7kiTab";
 import FarragnaTab from "./FarragnaTab";
-import NostagliaTab from "./NostagliaTab";
+import NostalgiaTab from "./NostalgiaTab";
 
 export const tabs = [
   { id: "bankode", label: "CodeBank", component: <BankodeTab /> },
@@ -11,5 +11,5 @@ export const tabs = [
   { id: "e7ki", label: "E7ki", component: <E7kiTab /> },
   { id: "farragna", label: "Farragna", component: <FarragnaTab /> },
   { id: "setta", label: "Setta X Tes3a", component: <SettaXtes3a /> },
-  { id: "nostaglia", label: "Nostaglia", component: <NostagliaTab /> },
+  { id: "nostalgia", label: "Nostalgia", component: <NostalgiaTab /> },
 ];

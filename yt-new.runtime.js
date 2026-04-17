@@ -134,7 +134,7 @@
         <button class="cb-tab-btn" data-tab="farragna">
           <i class="fas fa-play-circle"></i> Farragna
         </button>
-        <button class="cb-tab-btn" data-tab="nostaglia">
+        <button class="cb-tab-btn" data-tab="nostalgia">
           <i class="fas fa-music"></i> Nostaglia
         </button>
         <button class="cb-tab-btn" data-tab="pebalaash">
@@ -327,7 +327,7 @@
                 case 'farragna':
                     content.innerHTML = await this.loadFarragnaTab();
                     break;
-                case 'nostaglia':
+                case 'nostalgia':
                     content.innerHTML = await this.loadNostalgiaTab();
                     break;
                 case 'pebalaash':

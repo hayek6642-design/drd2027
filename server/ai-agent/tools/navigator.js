@@ -13,7 +13,7 @@ const SERVICES_MAP = {
   ledger:     { url: '/codebank/bankode/ledger.html',  requiresAuth: true,  minCodes: 0 },
   qarsan:     { url: '/codebank/qarsan.html',          requiresAuth: true,  minCodes: 5 },
   battalooda: { url: '/codebank/battalooda.html',      requiresAuth: true,  minCodes: 0 },
-  nostaglia:  { url: '/codebank/nostaglia.html',       requiresAuth: false, minCodes: 0 },
+  nostalgia:  { url: '/codebank/nostalgia.html',       requiresAuth: false, minCodes: 0 },
   corsa:      { url: '/codebank/corsa.html',           requiresAuth: false, minCodes: 0 },
   home:       { url: '/codebank/index.html',           requiresAuth: false, minCodes: 0 },
 };
