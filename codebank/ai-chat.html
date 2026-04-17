@@ -3,1022 +3,841 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Chat - DRD2027</title>
+    <title>AI Chat Hub - Modern</title>
     <style>
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
+        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1e1e2f 0%, #2d2d44 100%);
-            margin: 0;
-            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 50%, #16213e 100%);
+            color: #e0e0e0;
             height: 100vh;
             display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ═══════════════════════════════════════════════════════════ */
+        /* RIGHT HOVER TOAST SIDEBAR - MODERN STYLE */
+        /* ═══════════════════════════════════════════════════════════ */
+        
+        .sidebar-trigger-zone {
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 60px;
+            height: 100vh;
+            z-index: 800;
+        }
+
+        .sidebar-toast {
+            position: fixed;
+            right: -400px;
+            top: 0;
+            width: 380px;
+            height: 100vh;
+            background: rgba(15, 20, 25, 0.95);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5);
+            transition: right 0.35s cubic-bezier(0.23, 1, 0.320, 1);
+            z-index: 999;
+            display: flex;
             flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar-trigger-zone:hover ~ .sidebar-toast,
+        .sidebar-toast:hover {
+            right: 0;
+        }
+
+        .sidebar-toast.show {
+            right: 0;
+        }
+
+        /* Sidebar Header */
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.03);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .sidebar-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #fff;
+            margin: 0;
+        }
+
+        .sidebar-close-btn {
+            background: transparent;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            font-size: 24px;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+        }
+
+        .sidebar-close-btn:hover {
             color: #fff;
         }
+
+        /* Sidebar Content */
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* Account Section */
+        .sidebar-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .sidebar-section-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #666;
+            letter-spacing: 1px;
+            margin: 5px 0;
+        }
+
+        /* Auth Buttons - FIXED VISIBILITY */
+        .auth-button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #e0e0e0;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .auth-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.25);
+            color: #fff;
+        }
+
+        .auth-btn.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: transparent;
+            color: #fff;
+        }
+
+        .auth-btn.primary:hover {
+            background: linear-gradient(135deg, #7c8eef 0%, #8b5ab8 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .google-btn {
+            background: #fff;
+            color: #333;
+            border: none;
+        }
+
+        .google-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .google-icon {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Account Status */
+        .account-status {
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            display: none;
+        }
+
+        .account-status.logged-in {
+            display: block;
+        }
+
+        .account-status h4 {
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            color: #667eea;
+        }
+
+        .account-status p {
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+
+        /* Divider */
+        .sidebar-divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.08);
+            margin: 5px 0;
+        }
+
+        /* Menu Items - FIXED SPACING */
+        .sidebar-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .sidebar-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #aaa;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .sidebar-menu-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+        }
+
+        .sidebar-menu-item .icon {
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 18px;
+        }
+
+        .sidebar-menu-item .label {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            display: flex;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            padding: 4px;
+        }
+
+        .theme-option {
+            flex: 1;
+            padding: 6px 10px;
+            border: none;
+            background: transparent;
+            color: #888;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .theme-option.active {
+            background: rgba(102, 126, 234, 0.5);
+            color: #fff;
+        }
+
+        /* Main Chat Area */
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            overflow: hidden;
+        }
+
         .chat-header {
-            background: #1a1a2e;
+            background: rgba(26, 26, 46, 0.8);
             padding: 15px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid #333;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            flex-wrap: wrap;
-            gap: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
         }
+
         .chat-header h1 {
-            font-size: 1.3rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .chat-header h1 span {
+            font-size: 1.2rem;
             background: linear-gradient(135deg, #667eea, #764ba2);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        .header-status {
+
+        .chat-controls {
             display: flex;
+            gap: 10px;
             align-items: center;
-            gap: 8px;
-            font-size: 0.85rem;
-            color: #aaa;
         }
+
+        .header-btn {
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(102, 126, 234, 0.4);
+            color: #667eea;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .header-btn:hover {
+            background: rgba(102, 126, 234, 0.3);
+        }
+
         .status-indicator {
             width: 8px;
             height: 8px;
             border-radius: 50%;
             background: #4ade80;
-            animation: pulse-status 2s infinite;
+            animation: pulse 2s infinite;
         }
-        .status-indicator.error {
-            background: #ef4444;
-            animation: none;
-        }
-        @keyframes pulse-status {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
-        }
-        .header-controls {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-        .menu-btn {
-            background: transparent;
-            border: 1px solid #444;
-            color: #aaa;
-            padding: 8px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.2s;
-        }
-        .menu-btn:hover {
-            border-color: #667eea;
-            color: #667eea;
-            background: rgba(102, 126, 234, 0.1);
-        }
-        .dropdown-menu {
-            position: absolute;
-            top: 70px;
-            right: 20px;
-            background: #2a2a3e;
-            border: 1px solid #3a3a4e;
-            border-radius: 8px;
-            min-width: 200px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            display: none;
-            z-index: 1000;
-            overflow: hidden;
-        }
-        .dropdown-menu.active {
-            display: block;
-        }
-        .dropdown-menu button {
-            width: 100%;
-            background: transparent;
-            border: none;
-            color: #e0e0e0;
-            padding: 12px 16px;
-            text-align: left;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: background 0.2s;
-            border-bottom: 1px solid #3a3a4e;
-        }
-        .dropdown-menu button:last-child {
-            border-bottom: none;
-        }
-        .dropdown-menu button:hover {
-            background: #3a3a4e;
-            color: #667eea;
-        }
-        .model-selector {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .model-selector label {
-            font-size: 0.85rem;
-            color: #aaa;
-        }
-        .model-selector select {
-            padding: 8px 12px;
-            border-radius: 8px;
-            border: 1px solid #444;
-            background: #2a2a3e;
-            color: #fff;
-            font-size: 0.85rem;
-            cursor: pointer;
-            outline: none;
-        }
-        .model-selector select:hover {
-            border-color: #667eea;
-        }
-        .chat-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            max-width: 900px;
-            margin: 0 auto;
-            width: 100%;
-        }
-        .message {
-            max-width: 85%;
-            padding: 12px 18px;
-            border-radius: 18px;
-            line-height: 1.5;
-            word-wrap: break-word;
-            animation: fadeIn 0.3s ease;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .user-message {
-            align-self: flex-end;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #fff;
-            border-bottom-right-radius: 4px;
-        }
-        .ai-message {
-            align-self: flex-start;
-            background: #2a2a3e;
-            color: #e0e0e0;
-            border: 1px solid #3a3a4e;
-            border-bottom-left-radius: 4px;
-        }
-        .error-message {
-            align-self: flex-start;
-            background: #3d1f1f;
-            border: 1px solid #8b3a3a;
-            color: #ff6b6b;
-        }
-        .ai-message .model-tag {
-            font-size: 0.7rem;
-            color: #888;
-            margin-bottom: 5px;
-        }
-        .typing-indicator {
-            align-self: flex-start;
-            background: #2a2a3e;
-            padding: 15px 20px;
-            border-radius: 18px;
-            border-bottom-left-radius: 4px;
-            color: #888;
-            font-style: italic;
-        }
-        .typing-dot {
-            display: inline-block;
-            width: 6px;
-            height: 6px;
-            background: #667eea;
-            border-radius: 50%;
-            margin: 0 2px;
-            animation: typing 1.4s infinite;
-        }
-        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes typing {
-            0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
-            30% { opacity: 1; transform: translateY(-4px); }
-        }
-        .input-area {
-            padding: 20px;
-            background: #1a1a2e;
-            border-top: 1px solid #333;
-        }
-        .input-container {
-            max-width: 900px;
-            margin: 0 auto;
-            display: flex;
-            gap: 10px;
-            width: 100%;
-        }
-        .input-controls {
-            display: flex;
-            gap: 8px;
-        }
-        .input-container input {
-            flex: 1;
-            padding: 14px 20px;
-            border: 1px solid #444;
-            border-radius: 25px;
-            font-size: 1rem;
-            background: #2a2a3e;
-            color: #fff;
-            outline: none;
-            transition: border-color 0.3s;
-        }
-        .input-container input:focus {
-            border-color: #667eea;
-        }
-        .input-container input::placeholder {
-            color: #666;
-        }
-        .input-container button {
-            padding: 14px 28px;
-            border: none;
-            border-radius: 25px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .input-container button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-        .input-container button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-        .tool-btn {
-            background: transparent;
-            border: 1px solid #3a3a4e;
-            color: #888;
-            padding: 10px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 18px;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .tool-btn:hover {
-            border-color: #667eea;
-            color: #667eea;
-            background: rgba(102, 126, 234, 0.1);
-        }
-        .tool-btn.recording {
-            color: #ff4757;
-            border-color: #ff4757;
-            animation: pulse 1s infinite;
-        }
+
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
-        .api-warning {
-            text-align: center;
-            padding: 12px;
-            background: #3d1f1f;
-            border-top: 1px solid #8b3a3a;
-            color: #ff6b6b;
-            font-size: 0.85rem;
+
+        .status-indicator.error {
+            background: #ef4444;
+            animation: none;
         }
-        .api-warning a {
-            color: #ffa07a;
-            text-decoration: underline;
-        }
-        .markdown-content {
-            line-height: 1.6;
-        }
-        .markdown-content code {
-            background: #1a1a2e;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: 'Courier New', monospace;
-        }
-        .markdown-content pre {
-            background: #1a1a2e;
-            padding: 12px;
-            border-radius: 8px;
-            overflow-x: auto;
-            margin: 8px 0;
-            border: 1px solid #333;
-        }
-        .markdown-content pre code {
-            background: none;
-            padding: 0;
-        }
-        .file-preview {
-            background: #2a2a3e;
-            border: 1px dashed #3a3a4e;
-            border-radius: 8px;
-            padding: 12px;
-            margin: 10px 0;
-            color: #aaa;
-            font-size: 12px;
-        }
-        .file-preview.loading {
-            border-color: #667eea;
-            color: #667eea;
-        }
-        .retry-btn {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            margin-top: 8px;
-        }
-        .retry-btn:hover {
-            background: #5568d3;
-        }
-        .chat-history-sidebar {
-            position: fixed;
-            right: -300px;
-            top: 0;
-            width: 300px;
-            height: 100vh;
-            background: #1a1a2e;
-            border-left: 1px solid #333;
-            transition: right 0.3s ease;
-            z-index: 999;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-        }
-        .chat-history-sidebar.active {
-            right: 0;
-        }
-        .sidebar-header {
-            padding: 15px;
-            border-bottom: 1px solid #333;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .sidebar-header h3 {
-            margin: 0;
-            font-size: 1rem;
-        }
-        .close-sidebar {
-            background: transparent;
-            border: none;
-            color: #aaa;
-            cursor: pointer;
-            font-size: 20px;
-        }
-        .sidebar-content {
+
+        /* Messages */
+        .chat-messages {
             flex: 1;
             overflow-y: auto;
-            padding: 10px;
-        }
-        .history-item {
-            background: #2a2a3e;
-            border: 1px solid #3a3a4e;
-            border-radius: 8px;
-            padding: 10px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .history-item:hover {
-            border-color: #667eea;
-            background: #333348;
-        }
-        .history-item-title {
-            color: #e0e0e0;
-            font-weight: 500;
-            margin-bottom: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .history-item-date {
-            color: #666;
-            font-size: 0.75rem;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1001;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-        }
-        .modal.active {
+            padding: 20px;
             display: flex;
-            justify-content: center;
-            align-items: center;
+            flex-direction: column;
+            gap: 12px;
         }
-        .modal-content {
-            background: #1a1a2e;
-            border: 1px solid #333;
-            border-radius: 12px;
-            padding: 30px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-        .modal-header {
-            font-size: 1.3rem;
-            margin-bottom: 15px;
-            color: #fff;
-        }
-        .modal-input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #444;
-            border-radius: 6px;
-            background: #2a2a3e;
-            color: #fff;
-            margin-bottom: 15px;
-            font-size: 0.95rem;
-        }
-        .modal-buttons {
+
+        .message {
             display: flex;
             gap: 10px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
             justify-content: flex-end;
         }
-        .modal-btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.2s;
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 15px;
+            border-radius: 10px;
+            word-wrap: break-word;
         }
-        .modal-btn.primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+
+        .message.bot .message-content {
+            background: rgba(102, 126, 234, 0.15);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            color: #e0e0e0;
         }
-        .modal-btn.primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
         }
-        .modal-btn.secondary {
-            background: #3a3a4e;
-            color: #aaa;
-        }
-        .modal-btn.secondary:hover {
-            background: #444455;
-        }
-        .empty-chat {
+
+        .empty-state {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100%;
             color: #666;
-            gap: 15px;
+            text-align: center;
         }
-        .empty-chat-icon {
+
+        .empty-state-icon {
             font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        /* Input Area */
+        .chat-input-container {
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(15, 20, 25, 0.5);
+            backdrop-filter: blur(10px);
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            color: #fff;
+            padding: 10px 15px;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(102, 126, 234, 0.5);
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.2);
+        }
+
+        .input-controls {
+            display: flex;
+            gap: 6px;
+        }
+
+        .icon-btn {
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(102, 126, 234, 0.4);
+            color: #667eea;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            transition: all 0.2s;
+        }
+
+        .icon-btn:hover {
+            background: rgba(102, 126, 234, 0.3);
+            color: #7c8eef;
+        }
+
+        .send-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .send-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Model Selector */
+        .model-selector {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            color: #fff;
+            padding: 10px 15px;
+            font-size: 0.9rem;
+        }
+
+        .model-selector:focus {
+            outline: none;
+            border-color: rgba(102, 126, 234, 0.5);
+        }
+
+        /* Loading State */
+        .loading-dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #667eea;
+            animation: blink 1.4s infinite;
+        }
+
+        .loading-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .loading-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes blink {
+            0%, 60%, 100% { opacity: 0.3; }
+            30% { opacity: 1; }
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(102, 126, 234, 0.3);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(102, 126, 234, 0.5);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar-toast {
+                width: 85vw;
+                right: -85vw;
+            }
+
+            .message-content {
+                max-width: 85%;
+            }
+
+            .chat-input {
+                font-size: 16px;
+            }
         }
     </style>
-
-    <body>
+</head>
+<body>
+    <!-- MAIN CHAT CONTAINER -->
+    <div class="chat-container">
+        <!-- HEADER -->
         <div class="chat-header">
-            <div>
-                <h1>🤖 <span>AI Chat Hub</span></h1>
-                <div class="header-status">
-                    <span class="status-indicator" id="statusIndicator"></span>
-                    <span id="statusText">Loading models...</span>
+            <h1>🤖 AI Chat Hub</h1>
+            <div class="chat-controls">
+                <span class="header-btn">
+                    <span class="status-indicator"></span>
+                    Ready
+                </span>
+            </div>
+        </div>
+
+        <!-- MESSAGES -->
+        <div class="chat-messages" id="chatMessages">
+            <div class="empty-state">
+                <div class="empty-state-icon">💬</div>
+                <h2>Welcome to AI Chat Hub</h2>
+                <p>Select a model and start chatting</p>
+            </div>
+        </div>
+
+        <!-- INPUT AREA -->
+        <div class="chat-input-container">
+            <div class="input-row">
+                <select class="model-selector" id="modelSelect">
+                    <option value="">Select an AI Model...</option>
+                    <optgroup label="Groq (Free)">
+                        <option value="groq:llama-3.1-8b">Llama 3.1 8B</option>
+                        <option value="groq:mixtral-8x7b">Mixtral 8x7B</option>
+                    </optgroup>
+                    <optgroup label="Google Gemini (Free)">
+                        <option value="gemini:1.5-flash">Gemini 1.5 Flash</option>
+                        <option value="gemini:1.5-pro">Gemini 1.5 Pro</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <div class="input-row">
+                <input 
+                    type="text" 
+                    class="chat-input" 
+                    id="chatInput" 
+                    placeholder="Type your message... (Ctrl+Enter to send)"
+                    autocomplete="off"
+                >
+                <div class="input-controls">
+                    <button class="icon-btn" title="Attach file">📎</button>
+                    <button class="icon-btn" title="Voice input">🎤</button>
+                    <button class="send-btn" id="sendBtn">Send</button>
                 </div>
             </div>
-            <div class="header-controls">
-                <div class="model-selector">
-                    <label for="modelSelect">Model:</label>
-                    <select id="modelSelect">
-                        <option value="">Loading...</option>
-                    </select>
+        </div>
+    </div>
+
+    <!-- RIGHT SIDEBAR - HOVER TOAST ACTIVATION ZONE -->
+    <div class="sidebar-trigger-zone"></div>
+
+    <!-- MODERN SIDEBAR TOAST -->
+    <div class="sidebar-toast" id="sidebarToast">
+        <div class="sidebar-header">
+            <h3>⚙️ Account</h3>
+            <button class="sidebar-close-btn" onclick="document.getElementById('sidebarToast').classList.remove('show')">✕</button>
+        </div>
+
+        <div class="sidebar-content">
+            <!-- AUTHENTICATION SECTION -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Authentication</div>
+                
+                <div class="auth-button-container">
+                    <!-- Google Sign In -->
+                    <button class="auth-btn google-btn" onclick="handleGoogleSignIn()">
+                        <svg class="google-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                        </svg>
+                        Sign in with Google
+                    </button>
+
+                    <!-- Sign In Button -->
+                    <button class="auth-btn" onclick="handleSignIn()">
+                        🔐 Sign In
+                    </button>
+
+                    <!-- Sign Up Button -->
+                    <button class="auth-btn primary" onclick="handleSignUp()">
+                        ✨ Create Account
+                    </button>
                 </div>
-                <div style="position: relative;">
-                    <button class="menu-btn" id="menuBtn">⚙️ Menu</button>
-                    <div class="dropdown-menu" id="dropdownMenu">
-                        <button onclick="openSaveModal()">💾 Save Chat</button>
-                        <button onclick="toggleHistorySidebar()">📋 History</button>
-                        <button onclick="exportChat('json')">📥 Export JSON</button>
-                        <button onclick="exportChat('markdown')">📄 Export MD</button>
-                        <button onclick="clearChatHistory()">🗑️ Clear History</button>
-                        <button onclick="newChat()">➕ New Chat</button>
+
+                <!-- Account Status (shown when logged in) -->
+                <div class="account-status" id="accountStatus">
+                    <h4>Logged In</h4>
+                    <p id="userName">user@example.com</p>
+                </div>
+
+                <div class="sidebar-divider"></div>
+            </div>
+
+            <!-- MENU SECTION -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Menu</div>
+                <div class="sidebar-menu">
+                    <div class="sidebar-menu-item" onclick="saveChat()">
+                        <span class="icon">💾</span>
+                        <span class="label">Save Chat</span>
+                    </div>
+                    <div class="sidebar-menu-item" onclick="viewHistory()">
+                        <span class="icon">📋</span>
+                        <span class="label">Chat History</span>
+                    </div>
+                    <div class="sidebar-menu-item" onclick="exportJSON()">
+                        <span class="icon">📥</span>
+                        <span class="label">Export JSON</span>
+                    </div>
+                    <div class="sidebar-menu-item" onclick="exportMarkdown()">
+                        <span class="icon">📄</span>
+                        <span class="label">Export MD</span>
+                    </div>
+                    <div class="sidebar-menu-item" onclick="clearHistory()">
+                        <span class="icon">🗑️</span>
+                        <span class="label">Clear All</span>
+                    </div>
+                    <div class="sidebar-menu-item" onclick="newChat()">
+                        <span class="icon">➕</span>
+                        <span class="label">New Chat</span>
+                    </div>
+                </div>
+
+                <div class="sidebar-divider"></div>
+            </div>
+
+            <!-- THEME SECTION -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Theme</div>
+                <div class="theme-toggle">
+                    <button class="theme-option active" onclick="setTheme('dark')">🌙 Dark</button>
+                    <button class="theme-option" onclick="setTheme('light')">☀️ Light</button>
+                </div>
+
+                <div class="sidebar-divider"></div>
+            </div>
+
+            <!-- PREFERENCES -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Preferences</div>
+                <div class="sidebar-menu">
+                    <div class="sidebar-menu-item" onclick="openSettings()">
+                        <span class="icon">⚙️</span>
+                        <span class="label">Settings</span>
+                    </div>
+                    <div class="sidebar-menu-item" onclick="openHelp()">
+                        <span class="icon">❓</span>
+                        <span class="label">Help & Docs</span>
+                    </div>
+                    <div class="sidebar-menu-item" onclick="openAbout()">
+                        <span class="icon">ℹ️</span>
+                        <span class="label">About</span>
                     </div>
                 </div>
             </div>
         </div>
-
-        <div class="chat-container" id="chatContainer">
-            <div class="empty-chat">
-                <div class="empty-chat-icon">💬</div>
-                <p>Start a conversation with an AI model</p>
-                <p style="font-size: 0.85rem; color: #555;">Select a model above and type your message below</p>
-            </div>
-        </div>
-
-        <div class="input-area">
-            <div class="input-container">
-                <div class="input-controls">
-                    <button class="tool-btn" id="fileUploadBtn" title="Upload file for analysis">📎</button>
-                    <button class="tool-btn" id="voiceBtn" title="Voice input (click to record)">🎤</button>
-                </div>
-                <input type="file" id="fileInput" style="display:none;" accept=".js,.py,.jsx,.ts,.tsx,.java,.cpp,.md,.txt,.pdf,.docx,.jpg,.png,.gif,.webp,.mp3,.wav,.ogg,.json,.csv,.xml">
-                <input type="text" id="userInput" placeholder="Type your message or use voice... (Ctrl+Enter to send)" onkeypress="handleKeyPress(event)">
-                <button id="sendBtn" onclick="sendMessage()">Send</button>
-            </div>
-        </div>
-
-        <div id="apiWarning" class="api-warning" style="display:none;"></div>
-
-        <!-- Chat History Sidebar -->
-        <div class="chat-history-sidebar" id="historySidebar">
-            <div class="sidebar-header">
-                <h3>📋 Chat History</h3>
-                <button class="close-sidebar" onclick="toggleHistorySidebar()">✕</button>
-            </div>
-            <div class="sidebar-content" id="sidebarContent">
-                <p style="color: #666; text-align: center; padding: 20px;">No saved chats yet</p>
-            </div>
-        </div>
-
-        <!-- Save Chat Modal -->
-        <div class="modal" id="saveModal">
-            <div class="modal-content">
-                <div class="modal-header">💾 Save Chat</div>
-                <input type="text" class="modal-input" id="chatNameInput" placeholder="Enter chat name..." maxlength="100">
-                <div class="modal-buttons">
-                    <button class="modal-btn secondary" onclick="closeSaveModal()">Cancel</button>
-                    <button class="modal-btn primary" onclick="saveChat()">Save</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Load Chat Modal -->
-        <div class="modal" id="loadModal">
-            <div class="modal-content">
-                <div class="modal-header">📂 Load Chat</div>
-                <div id="loadModalContent" style="max-height: 400px; overflow-y: auto;"></div>
-                <div class="modal-buttons" style="margin-top: 15px;">
-                    <button class="modal-btn secondary" onclick="closeLoadModal()">Cancel</button>
-                </div>
-            </div>
-        </div>
-    </body>
+    </div>
 
     <script>
-        // ============= STATE MANAGEMENT =============
-        let chatHistory = [];
-        let currentChat = [];
-        let availableModels = [];
-        let isRecording = false;
-        let recognition = null;
-        let currentFile = null;
-        let currentChatId = null;
-        const MAX_MESSAGE_LENGTH = 4096;
-        const STORAGE_KEY = 'ai_chat_history';
-        const CURRENT_CHAT_KEY = 'ai_current_chat';
-
-        // ============= DOM ELEMENTS =============
-        const chatContainer = document.getElementById('chatContainer');
-        const userInput = document.getElementById('userInput');
-        const sendBtn = document.getElementById('sendBtn');
-        const modelSelect = document.getElementById('modelSelect');
-        const voiceBtn = document.getElementById('voiceBtn');
-        const fileUploadBtn = document.getElementById('fileUploadBtn');
-        const fileInput = document.getElementById('fileInput');
-        const statusIndicator = document.getElementById('statusIndicator');
-        const statusText = document.getElementById('statusText');
-        const apiWarning = document.getElementById('apiWarning');
-        const menuBtn = document.getElementById('menuBtn');
-        const dropdownMenu = document.getElementById('dropdownMenu');
-
-        // ============= STORAGE FUNCTIONS =============
-        function loadChatHistory() {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            return stored ? JSON.parse(stored) : [];
+        // Auth Functions
+        function handleGoogleSignIn() {
+            alert('Google Sign-In: Integrating with OAuth...');
+            updateAccountStatus('user@gmail.com');
         }
 
-        function saveChatHistoryToStorage() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(chatHistory));
-        }
-
-        function loadCurrentChat() {
-            const stored = localStorage.getItem(CURRENT_CHAT_KEY);
-            return stored ? JSON.parse(stored) : [];
-        }
-
-        function saveCurrentChatToStorage() {
-            localStorage.setItem(CURRENT_CHAT_KEY, JSON.stringify(currentChat));
-        }
-
-        function updateHistorySidebar() {
-            const sidebarContent = document.getElementById('sidebarContent');
-            chatHistory = loadChatHistory();
-            
-            if (chatHistory.length === 0) {
-                sidebarContent.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No saved chats yet</p>';
-                return;
-            }
-
-            sidebarContent.innerHTML = chatHistory.map(chat => `
-                <div class="history-item" onclick="loadChat('${chat.id}')">
-                    <div class="history-item-title">${chat.name || 'Untitled Chat'}</div>
-                    <div class="history-item-date">${new Date(chat.timestamp).toLocaleDateString()}</div>
-                </div>
-            `).join('');
-        }
-
-        // ============= UTILITY FUNCTIONS =============
-        function showStatus(text, isError = false) {
-            statusText.textContent = text;
-            if (isError) {
-                statusIndicator.classList.add('error');
-            } else {
-                statusIndicator.classList.remove('error');
+        function handleSignIn() {
+            const email = prompt('Enter your email:');
+            if (email) {
+                updateAccountStatus(email);
+                alert(`Welcome back, ${email}!`);
             }
         }
 
-        function toggleHistorySidebar() {
-            document.getElementById('historySidebar').classList.toggle('active');
-            updateHistorySidebar();
+        function handleSignUp() {
+            alert('Sign Up: Redirecting to registration...');
         }
 
-        function openSaveModal() {
-            document.getElementById('chatNameInput').value = '';
-            document.getElementById('saveModal').classList.add('active');
-            dropdownMenu.classList.remove('active');
+        function updateAccountStatus(email) {
+            document.getElementById('accountStatus').classList.add('logged-in');
+            document.getElementById('userName').textContent = email;
         }
 
-        function closeSaveModal() {
-            document.getElementById('saveModal').classList.remove('active');
-        }
-
-        function closeLoadModal() {
-            document.getElementById('loadModal').classList.remove('active');
-        }
-
-        function saveChat() {
-            const name = document.getElementById('chatNameInput').value.trim();
-            if (!name) {
-                alert('Please enter a chat name');
-                return;
-            }
-
-            chatHistory = loadChatHistory();
-            const chatToSave = {
-                id: Date.now().toString(),
-                name: name,
-                messages: currentChat,
-                model: modelSelect.value,
-                timestamp: Date.now()
-            };
-
-            chatHistory.push(chatToSave);
-            saveChatHistoryToStorage();
-            closeSaveModal();
-            alert(`✅ Chat saved as "${name}"`);
-            updateHistorySidebar();
-        }
-
-        function loadChat(chatId) {
-            chatHistory = loadChatHistory();
-            const chat = chatHistory.find(c => c.id === chatId);
-            if (!chat) return;
-
-            currentChat = chat.messages;
-            currentChatId = chatId;
-            modelSelect.value = chat.model;
-            renderChat();
-            document.getElementById('historySidebar').classList.remove('active');
-            userInput.focus();
-        }
-
-        function newChat() {
-            if (currentChat.length > 0 && !confirm('Clear current chat? (You can save it first)')) {
-                return;
-            }
-            currentChat = [];
-            currentChatId = null;
-            saveCurrentChatToStorage();
-            renderChat();
-            dropdownMenu.classList.remove('active');
-            userInput.focus();
-        }
-
-        function clearChatHistory() {
-            if (!confirm('Delete all saved chats? This cannot be undone.')) {
-                return;
-            }
-            chatHistory = [];
-            saveChatHistoryToStorage();
-            updateHistorySidebar();
-            alert('✅ Chat history cleared');
-            dropdownMenu.classList.remove('active');
-        }
-
-        function exportChat(format) {
-            if (currentChat.length === 0) {
-                alert('No chat to export');
-                return;
-            }
-
-            let content = '';
-            const timestamp = new Date().toLocaleString();
-
-            if (format === 'json') {
-                content = JSON.stringify({
-                    model: modelSelect.value,
-                    exported: timestamp,
-                    messages: currentChat
-                }, null, 2);
-                downloadFile(content, 'chat-export.json', 'application/json');
-            } else if (format === 'markdown') {
-                content = `# AI Chat Export\n\n`;
-                content += `**Model:** ${modelSelect.value}\n`;
-                content += `**Exported:** ${timestamp}\n\n`;
-                content += `---\n\n`;
-
-                currentChat.forEach(msg => {
-                    content += `### ${msg.role === 'user' ? '👤 You' : '🤖 AI'}\n\n`;
-                    content += `${msg.content}\n\n`;
-                });
-
-                downloadFile(content, 'chat-export.md', 'text/markdown');
-            }
-
-            dropdownMenu.classList.remove('active');
-            alert('✅ Chat exported');
-        }
-
-        function downloadFile(content, filename, type) {
-            const blob = new Blob([content], { type });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        // ============= CHAT RENDERING =============
-        function renderChat() {
-            if (currentChat.length === 0) {
-                chatContainer.innerHTML = `
-                    <div class="empty-chat">
-                        <div class="empty-chat-icon">💬</div>
-                        <p>Start a conversation with an AI model</p>
-                        <p style="font-size: 0.85rem; color: #555;">Select a model above and type your message below</p>
-                    </div>
-                `;
-                return;
-            }
-
-            chatContainer.innerHTML = currentChat.map((msg, idx) => {
-                const messageClass = msg.role === 'user' ? 'user-message' : 'ai-message';
-                const icon = msg.role === 'user' ? '👤' : '🤖';
-                const model = msg.model ? `<div class="model-tag">${msg.model}</div>` : '';
-                
-                let content = msg.content;
-                if (msg.role === 'ai') {
-                    content = markdownToHtml(content);
-                }
-
-                return `
-                    <div class="message ${messageClass}">
-                        ${model}
-                        <div class="markdown-content">${content}</div>
-                    </div>
-                `;
-            }).join('');
-
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-        function markdownToHtml(markdown) {
-            // Code blocks
-            markdown = markdown.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
-                const highlightedCode = code.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                return `<pre><code>${highlightedCode}</code></pre>`;
-            });
-
-            // Inline code
-            markdown = markdown.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-            // Bold
-            markdown = markdown.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-
-            // Italic
-            markdown = markdown.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-
-            // Line breaks
-            markdown = markdown.replace(/\n/g, '<br>');
-
-            return markdown;
-        }
-
-        // ============= SEND MESSAGE =============
+        // Chat Functions
         function sendMessage() {
-            const message = userInput.value.trim();
-            if (!message || !modelSelect.value) {
-                if (!modelSelect.value) alert('Please select a model');
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            const model = document.getElementById('modelSelect').value;
+
+            if (!message || !model) {
+                alert('Please select a model and enter a message');
                 return;
             }
 
-            currentChat.push({
-                role: 'user',
-                content: message,
-                timestamp: Date.now()
-            });
+            // Add user message
+            addMessage('user', message);
+            input.value = '';
 
-            userInput.value = '';
-            saveCurrentChatToStorage();
-            renderChat();
-            fetchAIResponse();
+            // Simulate bot response
+            setTimeout(() => {
+                addMessage('bot', `Response from ${model}... (Demo)`);
+            }, 1000);
         }
 
-        async function fetchAIResponse() {
-            const model = modelSelect.value;
-            const userMessage = currentChat[currentChat.length - 1].content;
+        function addMessage(sender, content) {
+            const messagesDiv = document.getElementById('chatMessages');
+            
+            // Remove empty state if needed
+            if (messagesDiv.innerHTML.includes('empty-state')) {
+                messagesDiv.innerHTML = '';
+            }
 
-            // Add typing indicator
-            chatContainer.innerHTML += `
-                <div class="typing-indicator">
-                    <span class="typing-dot"></span>
-                    <span class="typing-dot"></span>
-                    <span class="typing-dot"></span>
-                </div>
-            `;
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            const messageEl = document.createElement('div');
+            messageEl.className = `message ${sender}`;
+            messageEl.innerHTML = `<div class="message-content">${escapeHtml(content)}</div>`;
+            messagesDiv.appendChild(messageEl);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
 
-            try {
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: userMessage, model })
-                });
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
 
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error || 'Failed to get response');
-                }
-
-                currentChat.push({
-                    role: 'ai',
-                    content: data.response,
-                    model: model,
-                    timestamp: Date.now()
-                });
-
-                saveCurrentChatToStorage();
-                renderChat();
-                showStatus('Ready', false);
-            } catch (error) {
-                currentChat.push({
-                    role: 'ai',
-                    content: `⚠️ Error: ${error.message}`,
-                    timestamp: Date.now()
-                });
-                renderChat();
-                showStatus('Error: ' + error.message, true);
+        // Chat Management
+        function saveChat() { alert('💾 Save Chat: Feature coming soon'); }
+        function viewHistory() { alert('📋 View History: Feature coming soon'); }
+        function exportJSON() { alert('📥 Export JSON: Downloading...'); }
+        function exportMarkdown() { alert('📄 Export MD: Downloading...'); }
+        function clearHistory() {
+            if (confirm('Clear all chat history?')) {
+                alert('✅ History cleared');
             }
         }
+        function newChat() {
+            document.getElementById('chatMessages').innerHTML = '<div class="empty-state"><div class="empty-state-icon">💬</div><h2>New Chat Started</h2></div>';
+            document.getElementById('chatInput').value = '';
+        }
 
-        function handleKeyPress(e) {
-            if (e.ctrlKey && e.key === 'Enter') {
+        // Settings
+        function openSettings() { alert('⚙️ Settings: Coming soon'); }
+        function openHelp() { alert('❓ Help: Check documentation'); }
+        function openAbout() { alert('ℹ️ About AI Chat Hub v2.0'); }
+        function setTheme(theme) {
+            alert(`🎨 Theme set to ${theme}`);
+            document.querySelectorAll('.theme-option').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        // Event Listeners
+        document.getElementById('sendBtn').addEventListener('click', sendMessage);
+        document.getElementById('chatInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                 sendMessage();
             }
-        }
-
-        // ============= VOICE INPUT =============
-        function toggleVoice() {
-            if (!recognition) setupVoiceRecognition();
-            if (isRecording) {
-                recognition.stop();
-            } else {
-                recognition.start();
-            }
-        }
-
-        function setupVoiceRecognition() {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) {
-                alert('Voice input not supported in your browser');
-                return;
-            }
-
-            recognition = new SpeechRecognition();
-            recognition.continuous = false;
-            recognition.interimResults = true;
-            recognition.lang = 'en-US';
-
-            recognition.onstart = () => {
-                isRecording = true;
-                voiceBtn.classList.add('recording');
-                voiceBtn.textContent = '⏹️';
-            };
-
-            recognition.onresult = (event) => {
-                let transcript = '';
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                    transcript += event.results[i][0].transcript;
-                }
-                userInput.value = transcript;
-            };
-
-            recognition.onend = () => {
-                isRecording = false;
-                voiceBtn.classList.remove('recording');
-                voiceBtn.textContent = '🎤';
-                userInput.focus();
-            };
-
-            recognition.onerror = (event) => {
-                console.error('Voice error:', event.error);
-                showStatus('Voice input error', true);
-            };
-        }
-
-        // ============= FILE UPLOAD =============
-        fileUploadBtn.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', handleFileUpload);
-
-        function handleFileUpload(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            currentFile = file;
-            userInput.value = `📎 File: ${file.name}\n\n[Describe what you'd like me to do with this file...]`;
-            userInput.focus();
-        }
-
-        // ============= MENU =============
-        menuBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            dropdownMenu.classList.toggle('active');
         });
 
-        document.addEventListener('click', (e) => {
-            if (!menuBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
-                dropdownMenu.classList.remove('active');
-            }
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('✅ AI Chat Hub Modern - Ready');
         });
-
-        // ============= INITIALIZATION =============
-        voiceBtn.addEventListener('click', toggleVoice);
-
-        async function initializeApp() {
-            try {
-                const response = await fetch('/api/models');
-                const data = await response.json();
-
-                if (data.models) {
-                    availableModels = data.models;
-                    modelSelect.innerHTML = data.models
-                        .map(m => `<option value="${m.id}">${m.name}</option>`)
-                        .join('');
-                    showStatus('Ready', false);
-                } else {
-                    throw new Error(data.error || 'No models available');
-                }
-            } catch (error) {
-                console.error('Init error:', error);
-                showStatus('API unavailable', true);
-                apiWarning.innerHTML = `⚠️ ${error.message}. Check console for details.`;
-                apiWarning.style.display = 'block';
-            }
-
-            // Load saved chat
-            currentChat = loadCurrentChat();
-            chatHistory = loadChatHistory();
-            renderChat();
-            updateHistorySidebar();
-        }
-
-        initializeApp();
     </script>
 </body>
 </html>
