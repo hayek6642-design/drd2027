@@ -17,10 +17,11 @@
   var services = [
     { id: 'yt-clear',       name: 'YT-Clear',       icon: '📺', url: '/yt-new-clear.html',  desc: 'Watch & Earn', isExternal: true },
     { id: 'safecode',       name: 'SafeCode',        icon: '🔐', url: '/safecode.html',      desc: 'Asset Vault' },
-    { id: 'e7ki',           name: 'E7ki',             icon: '💬', url: '/e7ki.html',          desc: 'Chat' },
-    { id: 'samma3ny',       name: 'Samma3ny',        icon: '🤖', url: '/samma3ny.html',      desc: 'AI Assistant' },
+    { id: 'e7ki',           name: 'E7ki',             icon: '💬', url: '/codebank/e7ki.html',   desc: 'Chat' },
+    { id: 'samma3ny',       name: 'Samma3ny',        icon: '🤖', url: '/codebank/samma3ny.html', desc: 'AI Assistant' },
     { id: 'farragna',       name: 'Farragna',        icon: '❤️', url: '/farragna.html',      desc: 'Social Likes' },
     { id: 'nostalgia',      name: 'Nostalgia',       icon: '💿', url: '/codebank/nostalgia.html', desc: 'Retro Memories' },
+    { id: 'estshara',       name: 'Estshara',        icon: '💼', url: '/codebank/estshara/',  desc: 'Consultations', isFolder: true },
     { id: 'pebalaash',      name: 'Pebalaash',       icon: '🏪', url: '/pebalaash.html',     desc: 'Barter & Trade' },
     { id: 'corsa',          name: 'CoRsA',            icon: '🏎️', url: '/corsa.html',         desc: 'Racing Game' },
     { id: 'eb3at',          name: 'Eb3at',            icon: '📤', url: '/eb3at.html',         desc: 'File Transfer' },
