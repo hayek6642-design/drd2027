@@ -305,8 +305,136 @@
             background: none;
             padding: 0;
         }
+    
+        .file-upload-btn {
+            background: transparent;
+            border: 1px solid #3a3a4e;
+            color: #888;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .file-upload-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+        
+        .file-preview {
+            background: #2a2a3e;
+            border: 1px dashed #3a3a4e;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 10px 0;
+            color: #aaa;
+            font-size: 12px;
+        }
+        .file-preview.loading {
+            border-color: #667eea;
+            color: #667eea;
+        }
+        .file-preview .file-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .file-preview .file-icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+        .file-preview .file-remove {
+            background: transparent;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .file-preview .file-remove:hover {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
     </style>
-</head>
+
+    <script src="../js/ai-hub-knowledge.js">
+        // File upload handling
+        let currentFile = null;
+        
+        document.getElementById('fileUploadBtn')?.addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+        });
+        
+        document.getElementById('fileInput')?.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
+            
+            currentFile = file;
+            const analyzer = new FileAnalyzer();
+            
+            // Show loading state
+            addMessage('📎 **Analyzing file...**', 'ai');
+            
+            // Analyze
+            const analysis = analyzer.analyzeFile(file);
+            
+            // Read file content (if applicable)
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                const content = evt.target.result;
+                const preview = content.substring(0, 200);
+                
+                addMessage(analysis + '\n\n```\n' + preview + '\n...\n```\n\n**What would you like me to do with this file?**', 'ai');
+                
+                // Store for context
+                window.currentFileContent = content;
+                window.currentFileName = file.name;
+            };
+            
+            reader.onerror = () => {
+                addMessage('❌ Could not read file. Try again or paste content directly.', 'ai');
+            };
+            
+            // Read as text (try)
+            try {
+                reader.readAsText(file);
+            } catch(e) {
+                addMessage(`Analysis ready for: **${file.name}**\n\nPaste code or content in chat for detailed analysis.`, 'ai');
+            }
+        });
+        
+        // Integrate with AI responses
+        const originalSendMessage = window.sendMessage || (() => {});
+        window.sendMessage = function() {
+            const input = document.getElementById('userInput');
+            const msg = input.value.trim();
+            
+            if(!msg) return;
+            
+            // Detect intent with knowledge base
+            if(window.AI_RESPONSES?.detectIntent) {
+                const intent = window.AI_RESPONSES.detectIntent(msg);
+                const response = window.AI_RESPONSES.respond(intent, msg);
+                
+                addMessage(msg, 'user');
+                input.value = '';
+                setTimeout(() => addMessage(response, 'ai'), 300);
+                return;
+            }
+            
+            // Fallback
+            if(originalSendMessage) originalSendMessage();
+        };
+
+    </script>
+    <script src="../js/ai-file-analyzer.js"></script>
+
+    </head>
 <body>
     <div class="chat-header">
         <h1>🤖 <span>AI Chat</span></h1>
@@ -335,6 +463,9 @@
     
     <div class="input-area">
         <div class="input-container">
+        <button class="file-upload-btn" id="fileUploadBtn" title="Upload file for analysis">📎</button>
+        <input type="file" id="fileInput" style="display:none;" accept=".js,.py,.jsx,.ts,.tsx,.java,.cpp,.md,.txt,.pdf,.docx,.jpg,.png,.gif,.webp,.mp3,.wav,.ogg,.json,.csv,.xml">
+
             <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()" title="Voice input">🎤</button>
             <input type="text" id="userInput" placeholder="Type your message..." onkeypress="if(event.key==='Enter') sendMessage()">
             <button id="sendBtn" onclick="sendMessage()">Send</button>

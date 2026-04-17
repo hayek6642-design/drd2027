@@ -406,11 +406,11 @@
   </style>
   <link rel="stylesheet" href="css/yacine-hub.css">
   <link rel="stylesheet" href="css/movie-hub.css">
-  <script src="../services/yacine-service.js" defer></script>
-  <script src="components/yacine-hub.js" defer></script>
-  <script src="../services/movie-platforms-service.js" defer></script>
-  <script src="components/movie-hub.js" defer></script>
-  <script src="../src/native-phone-actions.js" defer></script>
+  <script src="/services/yacine-service.js" defer></script>
+  <script src="/codebank/components/yacine-hub.js" defer></script>
+  <script src="/services/movie-platforms-service.js" defer></script>
+  <script src="/codebank/components/movie-hub.js" defer></script>
+  <script src="/src/native-phone-actions.js" defer></script>
 </head>
 <body>
 
@@ -1431,5 +1431,48 @@ function openCinemaHub() {
 
 init();
 </script>
+
+    <!-- File Analysis Section -->
+    <script src="../js/ai-hub-knowledge.js"></script>
+    <script>
+        // Add file analysis action to service grid
+        document.addEventListener('DOMContentLoaded', () => {
+            const content = document.getElementById('mainContent');
+            if(content && !document.querySelector('[data-service="file-analysis"]')) {
+                const fileSection = document.createElement('div');
+                fileSection.className = 'cat-section';
+                fileSection.innerHTML = `
+                    <div class="cat-title">
+                        <span class="cat-icon">📎</span>
+                        File Analysis
+                        <span class="cat-count">3</span>
+                    </div>
+                    <div class="services-grid">
+                        <div class="service-card" onclick="openAIChat('Upload Code')">
+                            <div class="svc-logo">📝</div>
+                            <div class="svc-name">Code Analysis</div>
+                            <div class="svc-desc">Upload code files for explanation & debugging</div>
+                        </div>
+                        <div class="service-card" onclick="openAIChat('Upload Document')">
+                            <div class="svc-logo">📄</div>
+                            <div class="svc-name">Document Summary</div>
+                            <div class="svc-desc">Upload docs for analysis & key points</div>
+                        </div>
+                        <div class="service-card" onclick="openAIChat('Upload Image')">
+                            <div class="svc-logo">🖼️</div>
+                            <div class="svc-name">Image Analysis</div>
+                            <div class="svc-desc">Upload images for OCR & description</div>
+                        </div>
+                    </div>
+                `;
+                content.insertBefore(fileSection, content.firstChild);
+            }
+        });
+        
+        function openAIChat(context) {
+            // Navigate to AI-Chat with context
+            window.location.href = './ai-chat.html?context=' + encodeURIComponent(context);
+        }
+    </script>
 </body>
 </html>
