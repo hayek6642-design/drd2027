@@ -173,7 +173,7 @@ function tryOpenService(app, fallbackIndex = 0) {
     }
 }
 
-// Initialize the launcher UI
+// Initialize the launcher UI with organized categories
 export function initLauncher() {
     console.log('[AppLauncher] Initializing...');
 
@@ -181,53 +181,92 @@ export function initLauncher() {
     if (!container) return;
     container.innerHTML = '';
 
-    // All apps from every category in one flat list
-    const allApps = [
-        ...(AppRegistry.core    || []),
-        ...(AppRegistry.media   || []),
-        ...(AppRegistry.finance || []),
-        ...(AppRegistry.games   || []),
-        ...(AppRegistry.tools   || [])
+    // Category display order and labels
+    const categoryOrder = [
+        { key: 'core', label: '🔐 Core', color: '#10b981' },
+        { key: 'tools', label: '🛠 Tools', color: '#06b6d4' },
+        { key: 'media', label: '🎬 Media', color: '#8b5cf6' },
+        { key: 'finance', label: '💰 Finance', color: '#f59e0b' },
+        { key: 'games', label: '🎮 Games', color: '#ec4899' }
     ];
 
-    allApps.forEach(app => {
-        const card = document.createElement('div');
-        card.className = 'app-card app-launcher-icon';
-        card.setAttribute('data-id', app.id);
+    // Create category sections
+    categoryOrder.forEach(({ key, label, color }) => {
+        const apps = AppRegistry[key] || [];
+        if (apps.length === 0) return;
 
-        const tileColor = app.color || '#6366f1';
+        // Create category header
+        const header = document.createElement('div');
+        header.style.cssText = `
+            grid-column: 1 / -1;
+            margin-top: 12px;
+            margin-bottom: 4px;
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        `;
+        const headerText = document.createElement('h3');
+        headerText.style.cssText = `
+            font-size: 13px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.7);
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        `;
+        headerText.textContent = label;
+        const headerLine = document.createElement('div');
+        headerLine.style.cssText = `
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, ${color}44, transparent);
+        `;
+        header.appendChild(headerText);
+        header.appendChild(headerLine);
+        container.appendChild(header);
 
-        // Icon wrapper — rounded square like iOS/Android
-        const iconWrapper = document.createElement('div');
-        iconWrapper.className = 'app-icon-wrapper';
-        iconWrapper.style.cssText = `background: ${tileColor}22; border-radius: 18px; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;`;
+        // Create app tiles for this category
+        apps.forEach(app => {
+            const card = document.createElement('div');
+            card.className = 'app-card app-launcher-icon';
+            card.setAttribute('data-id', app.id);
+            card.setAttribute('data-category', key);
 
-        const icon = document.createElement('i');
-        const iconClass = app.icon.startsWith('fa-') ? `fas ${app.icon}` : app.icon;
-        icon.className = iconClass;
-        icon.style.cssText = `color: ${tileColor}; font-size: 26px;`;
+            const tileColor = app.color || '#6366f1';
 
-        iconWrapper.appendChild(icon);
+            // Icon wrapper — rounded square like iOS/Android
+            const iconWrapper = document.createElement('div');
+            iconWrapper.className = 'app-icon-wrapper';
+            iconWrapper.style.cssText = `background: ${tileColor}22; border-radius: 18px; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;`;
 
-        // App name
-        const name = document.createElement('span');
-        name.className = 'app-tile-name';
-        name.textContent = app.name;
+            const icon = document.createElement('i');
+            const iconClass = app.icon.startsWith('fa-') ? `fas ${app.icon}` : app.icon;
+            icon.className = iconClass;
+            icon.style.cssText = `color: ${tileColor}; font-size: 26px;`;
 
-        // Badge (if exists)
-        if (app.badge) {
-            const badge = document.createElement('div');
-            badge.className = 'app-tile-badge';
-            badge.textContent = app.badge;
-            badge.style.backgroundColor = tileColor;
-            card.appendChild(badge);
-        }
+            iconWrapper.appendChild(icon);
 
-        card.appendChild(iconWrapper);
-        card.appendChild(name);
+            // App name
+            const name = document.createElement('span');
+            name.className = 'app-tile-name';
+            name.textContent = app.name;
 
-        card.addEventListener('click', () => tryOpenService(app, 0));
-        container.appendChild(card);
+            // Badge (if exists)
+            if (app.badge) {
+                const badge = document.createElement('div');
+                badge.className = 'app-tile-badge';
+                badge.textContent = app.badge;
+                badge.style.backgroundColor = tileColor;
+                card.appendChild(badge);
+            }
+
+            card.appendChild(iconWrapper);
+            card.appendChild(name);
+
+            card.addEventListener('click', () => tryOpenService(app, 0));
+            container.appendChild(card);
+        });
     });
 
     // Set up modal controls if not already done

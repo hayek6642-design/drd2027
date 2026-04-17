@@ -569,12 +569,13 @@
             padding-left: 2px !important;
         }
 
-        /* 3. Phone-launcher app grid — no rectangles, icons only */
+        /* 3. Phone-launcher app grid — organized by categories */
         .app-launcher-grid {
             display: grid !important;
             grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)) !important;
             gap: 8px !important;
-            padding: 12px !important;
+            padding: 8px !important;
+            align-content: start;
         }
         @media (max-width: 768px) {
             .app-launcher-grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)) !important; gap: 8px !important; }
