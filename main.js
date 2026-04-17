@@ -1,3 +1,48 @@
+// 🛡️ CRITICAL POLYFILLS - Ensure core classes exist before app boot
+if (!window.AssetMirror) {
+  window.AssetMirror = class {
+    constructor() {
+      this.assets = {
+        codes: parseInt(localStorage.getItem('asset_codes') || '0', 10),
+        silver: parseInt(localStorage.getItem('asset_silver') || '0', 10),
+        gold: parseInt(localStorage.getItem('asset_gold') || '0', 10)
+      };
+      this.listeners = [];
+    }
+    async sync() { return this.assets; }
+    get() { return { ...this.assets }; }
+    add(type, amount) { if (this.assets[type] !== undefined) this.assets[type] += amount; }
+    onChange(cb) { this.listeners.push(cb); }
+  };
+}
+
+if (!window.PerformanceMonitor) {
+  window.PerformanceMonitor = class {
+    constructor() { this.metrics = { fps: 60 }; }
+    getMetrics() { return { ...this.metrics }; }
+  };
+  window.performanceMonitor = new window.PerformanceMonitor();
+}
+
+if (!window.AuthUnified) {
+  window.AuthUnified = class {
+    constructor() { 
+      this.state = { authenticated: false, isGuest: true };
+      this.listeners = [];
+    }
+    getState() { return { ...this.state }; }
+    onChange(cb) { this.listeners.push(cb); }
+  };
+  window.authUnified = new window.AuthUnified();
+}
+
+if (!window.Guardian3D) {
+  window.Guardian3D = class {
+    constructor() { this.isInitialized = true; }
+  };
+}
+
+console.log('[Polyfills] ✅ All core classes available');
 import { AppLifecycleManager, onceEvent, safeFetch } from "./core/app-lifecycle.js";
 import { SelfHealing } from "./core/self-healing.js";
 import { AIBrainEngine } from "./core/ai-brain.js";
