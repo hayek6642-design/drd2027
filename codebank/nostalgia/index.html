@@ -265,6 +265,42 @@
         }
         
         loadFeed();
-    </script>
+    
+
+// Enable direct uploads without review
+document.addEventListener('DOMContentLoaded', function() {
+  // Find all upload buttons and enable them
+  const uploadBtns = document.querySelectorAll('[data-upload], .upload-btn, #uploadBtn, button[type="submit"][class*="upload"]');
+  uploadBtns.forEach(btn => {
+    btn.disabled = false;
+    btn.onclick = function(e) {
+      e.preventDefault();
+      handleDirectUpload();
+      return false;
+    };
+  });
+});
+
+function handleDirectUpload() {
+  const fileInput = document.querySelector('input[type="file"][accept*="video"], input[type="file"][accept*="audio"], input[type="file"]');
+  if (fileInput) {
+    fileInput.click();
+  }
+}
+
+// Auto-submit after file selection (no review needed)
+document.addEventListener('change', function(e) {
+  if (e.target.matches('input[type="file"]')) {
+    setTimeout(() => {
+      const form = e.target.closest('form');
+      if (form) {
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.click();
+      }
+    }, 500);
+  }
+});
+
+</script>
 </body>
 </html>

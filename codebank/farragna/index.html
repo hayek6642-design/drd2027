@@ -329,7 +329,7 @@ input,textarea,select{font:inherit;color:inherit;background:none;border:none;out
             </select>
           </div>
         </div>
-        <button class="btn btn-primary" id="uploadBtn" style="width:100%" disabled>Upload Selected</button>
+        <button class="btn btn-primary" id="uploadBtn" style="width:100%">Upload Selected</button>
         <div class="upload-queue" id="uploadQueue"></div>
       </div>
 
@@ -428,6 +428,30 @@ const $ = (s, p) => (p || document).querySelector(s);
 const $$ = (s, p) => [...(p || document).querySelectorAll(s)];
 const feedContainer = $('#feedContainer');
 const feedLoading = $('#feedLoading');
+
+
+// 7-click admin access
+document.getElementById('logoTitle').addEventListener('click', function() {
+  state.adminClicks = (state.adminClicks || 0) + 1;
+  
+  // Clear timer and set new one
+  if (state.adminTimer) clearTimeout(state.adminTimer);
+  state.adminTimer = setTimeout(() => { state.adminClicks = 0; }, 3000);
+  
+  // Show password prompt on 7th click
+  if (state.adminClicks === 7) {
+    const pass = prompt('🔐 Admin Password:', '');
+    if (pass === 'admin123') {  // Default password - change as needed
+      $('#adminOverlay').classList.add('open');
+      state.adminClicks = 0;
+      toast('🔓 Admin Dashboard Unlocked!', 3000);
+    } else if (pass !== null) {
+      toast('❌ Wrong password!', 2000);
+      state.adminClicks = 0;
+    }
+  }
+});
+
 
 /* ===== UTILS ===== */
 function formatCount(n) {
@@ -1468,6 +1492,101 @@ checkAuth();
 loadFeed(true);
 
 })();
+
+
+// Upload handler
+document.getElementById('uploadBtn').addEventListener('click', async function() {
+  if (state.selectedFiles.length === 0) {
+    toast('⚠️ Please select files first');
+    return;
+  }
+  
+  const caption = document.getElementById('uploadCaption').value.trim();
+  const category = document.getElementById('uploadCategory').value;
+  
+  if (!caption) {
+    toast('⚠️ Please add a caption');
+    return;
+  }
+  
+  // Process each file
+  for (const file of state.selectedFiles) {
+    await uploadFile(file, caption, category);
+  }
+  
+  // Clear form
+  document.getElementById('uploadCaption').value = '';
+  state.selectedFiles = [];
+  document.getElementById('uploadQueue').innerHTML = '';
+  toast('✅ Upload complete!', 3000);
+});
+
+// File selection handler
+document.getElementById('uploadZone').addEventListener('click', () => {
+  document.getElementById('fileInput').click();
+});
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  state.selectedFiles = Array.from(e.target.files);
+  updateUploadQueue();
+  document.getElementById('uploadBtn').disabled = false;
+});
+
+// Drag and drop
+document.getElementById('uploadZone').addEventListener('dragover', (e) => {
+  e.preventDefault();
+  e.target.classList.add('dragover');
+});
+
+document.getElementById('uploadZone').addEventListener('dragleave', (e) => {
+  e.target.classList.remove('dragover');
+});
+
+document.getElementById('uploadZone').addEventListener('drop', (e) => {
+  e.preventDefault();
+  e.target.classList.remove('dragover');
+  state.selectedFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('video/'));
+  updateUploadQueue();
+  document.getElementById('uploadBtn').disabled = false;
+});
+
+function updateUploadQueue() {
+  const queue = document.getElementById('uploadQueue');
+  queue.innerHTML = '';
+  state.selectedFiles.forEach((file, i) => {
+    const item = document.createElement('div');
+    item.className = 'upload-item';
+    item.innerHTML = `
+      <div class="file-info">
+        <div class="file-name">${file.name}</div>
+        <div class="file-size">${(file.size / (1024 * 1024)).toFixed(2)} MB</div>
+      </div>
+    `;
+    queue.appendChild(item);
+  });
+}
+
+async function uploadFile(file, caption, category) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('caption', caption);
+  formData.append('category', category);
+  
+  try {
+    const resp = await apiFetch('/api/farragna/upload', {
+      method: 'POST',
+      body: formData
+    });
+    if (resp.ok) {
+      toast('✅ ' + file.name + ' uploaded!');
+    } else {
+      toast('❌ Upload failed for ' + file.name);
+    }
+  } catch(e) {
+    toast('❌ Error uploading ' + file.name);
+  }
+}
+
 </script>
 </body>
 </html>
