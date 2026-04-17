@@ -246,6 +246,8 @@ function switchToSilverMode() {
         // Reset awarded flags for new mode
         awardedSilver = false;
         awardedGold = false;
+        // Reset progress % when switching from gold to silver
+        resetExtraModeProgress();
         // console.log('Switched to Silver Mode while Extra Mode is active');
     }
 }
@@ -275,6 +277,8 @@ function switchToGoldMode() {
         // Reset awarded flags for new mode
         awardedSilver = false;
         awardedGold = false;
+        // Reset progress % when switching from silver to gold
+        resetExtraModeProgress();
         // console.log('Switched to Gold Mode while Extra Mode is active');
     }
 }
@@ -388,6 +392,8 @@ async function activateExtraMode(mode) {
 
     // Update UI
     updateExtraModeUI(true);
+    // Fade the dr.dc.png background image to show progress % underneath
+    fadePlayPauseButtonImage(true);
     try { document.body.classList.add('extra-mode'); } catch(_){}
     try { window.dispatchEvent(new CustomEvent('extra-mode:changed', { detail: { active: true } })); } catch(_){}
 
@@ -444,6 +450,8 @@ function deactivateExtraMode() {
         stopExtraTimer();
         resetSwitchToCenter();
         updateExtraModeUI(false);
+        // Restore the dr.dc.png background image when extra mode deactivates
+        fadePlayPauseButtonImage(false);
         try { document.body.classList.remove('extra-mode'); } catch(_){}
         try { window.dispatchEvent(new CustomEvent('extra-mode:changed', { detail: { active: false } })); } catch(_){}
         try { window.handleExtraModeChange && window.handleExtraModeChange(false); } catch (_) {}
@@ -585,6 +593,47 @@ function checkExtraModeActivation() {
 // document.addEventListener('visibilitychange', ...)
 
 /**
+ * Fade dr.dc.png background image on play-pause button when Extra Mode activates
+ * This allows the progress % to be visible and clickable
+ */
+function fadePlayPauseButtonImage(fadeOut = true) {
+    const playPauseButton = document.getElementById('play-pause-button');
+    if (!playPauseButton) return;
+    
+    if (fadeOut) {
+        // Fade out the background image (dr.dc.png) to 0 opacity
+        playPauseButton.style.transition = 'background-image opacity 0.5s ease-in-out';
+        playPauseButton.style.backgroundImage = 'linear-gradient(rgba(0,0,0,1), rgba(0,0,0,1)), url(\'/codebank/samma3ny/dr.dc.png?v=20260410\')';
+        playPauseButton.style.backgroundBlendMode = 'darken';
+        playPauseButton.style.opacity = '0.3'; // Fade the entire button
+        if (window.DEBUG_MODE) console.log('[ExtraMode] Play-pause button background fading out');
+    } else {
+        // Restore the background image opacity
+        playPauseButton.style.opacity = '1'; // Restore full opacity
+        playPauseButton.style.backgroundImage = 'url(\'/codebank/samma3ny/dr.dc.png?v=20260410\')';
+        playPauseButton.style.backgroundBlendMode = 'normal';
+        if (window.DEBUG_MODE) console.log('[ExtraMode] Play-pause button background restored');
+    }
+}
+
+/**
+ * Reset Extra Mode progress bar when tier switches
+ */
+function resetExtraModeProgress() {
+    extraWatchTime = 0;
+    const progressBar = document.getElementById('progress-bar');
+    if (progressBar) {
+        progressBar.style.width = '0%';
+        progressBar.style.transition = 'width 0.3s ease';
+    }
+    const progressText = document.getElementById('progress-text');
+    if (progressText) {
+        progressText.textContent = '00%';
+    }
+    if (window.DEBUG_MODE) console.log('[ExtraMode] Progress reset on tier switch');
+}
+
+/**
  * Update Extra Mode progress bar
  */
 function updateExtraProgress(percentOverride) {
@@ -669,7 +718,7 @@ function checkForRewards() {
         rewardState = 'READY'; // Set reward state to READY
         
         stopExtraTimer();
-        resetExtraProgress();
+        resetExtraModeProgress();
         
         const reward = {
             type: extraBarMode, // 'silver' | 'gold'
@@ -686,22 +735,6 @@ function checkForRewards() {
 }
 
  
-
-/**
- * Reset extra progress
- */
-function resetExtraProgress() {
-    extraWatchTime = 0;
-    const progressBar = document.getElementById('progress-bar');
-    if (progressBar) {
-        progressBar.style.width = '0%';
-        progressBar.style.transition = 'width 0.3s ease';
-    }
-    const progressText = document.getElementById('progress-text');
-    if (progressText) {
-        progressText.textContent = '00%';
-    }
-}
 
 /**
  * Set reward lock
@@ -1245,7 +1278,7 @@ function showRewardMessage(type, code = null) {
             if (!activeReward || activeReward.claimed) return;
             console.warn('[Reward] expired without claim');
             hideRewardNotification();
-            resetExtraProgress();
+            resetExtraModeProgress();
             deactivateExtraMode();
         };
         try {
