@@ -16,6 +16,16 @@ console.log('[AssetsDirectBus] Found:', stored ? 'YES' : 'NO', stored ? JSON.par
 
     window.AssetsManager = {
         async sync() {
+            // [GUEST MODE CHECK] Skip server sync if not logged in
+            const sessionId = localStorage.getItem('sessionId');
+            const userId = localStorage.getItem('userId');
+            
+            if (!sessionId || !userId) {
+                console.log('[AssetsDirect] Guest mode - using localStorage only');
+                this.loadFromCache();
+                return;
+            }
+            
             try {
 
                 // [CRITICAL FIX] Fetch from API with timeout and storage fallback

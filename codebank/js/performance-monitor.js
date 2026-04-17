@@ -114,11 +114,18 @@
         }
 
         observeIframes() {
-            // Monitor iframe leaks
+            // Monitor iframe leaks - with debounce
+            let lastCheck = 0;
+            let alertShown = false;
             const observer = new MutationObserver((mutations) => {
+                const now = Date.now();
+                if (now - lastCheck < 30000) return; // Only check once per 30 seconds
+                lastCheck = now;
+                
                 const iframes = document.querySelectorAll('iframe').length;
-                if (iframes > 2) {
+                if (iframes > 2 && !alertShown) {
                     console.warn(`[PERF ALERT] Excessive iframes detected (${iframes}). Leak suspected!`);
+                    alertShown = true;
                 }
             });
             observer.observe(document.body, { childList: true, subtree: true });
