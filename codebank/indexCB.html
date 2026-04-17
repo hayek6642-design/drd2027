@@ -1898,14 +1898,14 @@
     // Auth Functions for top-right auth container
     window.showSignInModal = function() {
         console.log('[Auth] Opening sign in modal...');
-        // Show existing sign in page in service modal
-        window.openService('/codebank/login.html', 'Sign In');
+        // Show existing sign in page in service modal (correct path: /login.html)
+        window.openService('/login.html', 'Sign In');
     };
     
     window.showSignUpModal = function() {
         console.log('[Auth] Opening sign up modal...');
         // Show existing sign up page in service modal
-        window.openService('/codebank/login.html?mode=signup', 'Sign Up');
+        window.openService('/login.html?mode=signup', 'Sign Up');
     };
     
     window.initGoogleSignIn = function() {
