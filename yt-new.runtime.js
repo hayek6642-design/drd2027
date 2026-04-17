@@ -135,7 +135,7 @@
           <i class="fas fa-play-circle"></i> Farragna
         </button>
         <button class="cb-tab-btn" data-tab="nostalgia">
-          <i class="fas fa-music"></i> Nostaglia
+          <i class="fas fa-music"></i> Nostalgia
         </button>
         <button class="cb-tab-btn" data-tab="pebalaash">
           <i class="fas fa-gift"></i> Pebalaash
