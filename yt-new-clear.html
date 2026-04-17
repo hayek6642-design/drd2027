@@ -483,30 +483,7 @@ function clearSessionAndLogout() {
             backdrop-filter: blur(3px);
             z-index: 1002;
             transition: all 0.3s ease;
-            margin-bottom: 2px;
         }
-
-        /* Counter container - button inside at top */
-        #counter-container {
-            position: relative;
-            width: fit-content !important;
-            max-width: 100%;
-            box-sizing: border-box;
-            padding: 8px 8px 6px !important;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-        }
-
-        /* Order: button first (top), then counter */
-        #control-buttons { order: 1; }
-        #watch-time { order: 2; }
-        #extra-switch-absolute-container { order: 0; }
-        #toggle-switch-absolute-container { order: 3; }
-        #code-display { order: 4; }
-        #progress-bar-container { order: 5; }
-        #play-pause-button { order: 6; }
 
         #sound-button:hover {
             background-color: rgba(9, 10, 8, 0.8);
@@ -919,22 +896,19 @@ function clearSessionAndLogout() {
         /* Visual indicator when Watch-dog is active */
         .watch-dog-active #counter-container {
             box-shadow: inset 0 0 12px rgba(0, 255, 0, 0.35);
+            width: fit-content !important;
+            min-width: 200px !important;
         }
 
-        /* Progress text sizing inside Play/Pause */
-        #progress-text {
-            font-size: 11px;
-        }
-
-        /* Counter Container Style - FROZEN: DO NOT MODIFY */
-        /* [FROZEN] Counter container CSS and layout are locked. No modifications allowed. */
+        /* Counter Container: CONSTANT width */
         #counter-container {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             gap: 6px;
-            /* Reduced vertical gap */
+            width: fit-content !important;
+            min-width: 200px !important;
             padding: 6px 8px !important;
             position: relative;
             bottom: 20px;
@@ -1527,21 +1501,16 @@ function clearSessionAndLogout() {
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
         }
 
-        /* Spacing System: container gap 24px, padding 10px, watch-time margin-top 16px */
-        /* Constant counter container dimensions across modes */
-        #counter-container,
-        .extra-mode #counter-container,
+        /* Extra mode: CONSTANT width like normal */
+        .extra-mode #counter-container {
+            width: fit-content !important;
+            min-width: 200px !important;
+        }
+
+        /* Fullscreen mode: CONSTANT width */
         .theatre-mode-active #counter-container {
             width: fit-content !important;
-            height: auto !important;
-            min-height: 120px !important;
-            display: inline-flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 32px !important;
-            padding: 12px 12px !important;
-            box-sizing: border-box;
+            min-width: 200px !important;
         }
 
         #progress-text {
