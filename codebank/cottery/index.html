@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cottery - Prediction Game</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Admin Dashboard Module -->
+    <script src="/shared/farragna-admin.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+        }
+        .cottery-header {
+            background: rgba(0,0,0,0.3);
+            padding: 60px 20px 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .cottery-header h1 {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .cottery-header h1 i { margin-right: 8px; }
+        
+        .cottery-pool {
+            background: linear-gradient(135deg, rgba(255,107,53,0.2), rgba(247,147,30,0.2));
+            border: 2px solid rgba(255,107,53,0.5);
+            border-radius: 16px;
+            padding: 30px;
+            margin: 20px;
+            text-align: center;
+        }
+        .pool-amount {
+            font-size: 48px;
+            font-weight: 900;
+            color: #ff6b35;
+        }
+        .pool-label {
+            color: rgba(255,255,255,0.6);
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        
+        .cottery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            padding: 20px;
+        }
+        .bet-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .bet-card:hover {
+            background: rgba(255,107,53,0.1);
+            border-color: #ff6b35;
+            transform: translateY(-4px);
+        }
+        .bet-card.selected {
+            background: rgba(255,107,53,0.2);
+            border-color: #ff6b35;
+        }
+        .bet-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        .bet-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        .bet-odds {
+            color: #ff6b35;
+            font-size: 14px;
+        }
+        
+        .cottery-select {
+            padding: 20px;
+        }
+        .number-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin: 20px;
+        }
+        .number-btn {
+            aspect-ratio: 1;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.2);
+            color: #fff;
+            font-size: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .number-btn:hover {
+            background: rgba(255,107,53,0.3);
+            border-color: #ff6b35;
+        }
+        .number-btn.selected {
+            background: #ff6b35;
+            border-color: #ff6b35;
+        }
+        
+        .place-bet-btn {
+            display: block;
+            width: calc(100% - 40px);
+            margin: 20px;
+            padding: 16px;
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .place-bet-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .recent-bets {
+            padding: 20px;
+        }
+        .recent-bets h3 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: rgba(255,255,255,0.8);
+        }
+        .bet-item {
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .bet-item .numbers {
+            font-family: monospace;
+            font-size: 16px;
+            color: #ff6b35;
+        }
+        .bet-item .amount {
+            font-weight: 600;
+        }
+        .bet-item.won .numbers { color: #00ff88; }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 0 20px;
+        }
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            color: rgba(255,255,255,0.5);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        .tab.active {
+            color: #ff6b35;
+            border-bottom-color: #ff6b35;
+        }
+        
+        .content {
+            padding: 20px;
+            display: none;
+        }
+        .content.active { display: block; }
+        
+        /* Admin Overlay */
+        .admin-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 300;
+            background: rgba(0, 0, 0, 0.97);
+            backdrop-filter: blur(20px);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .admin-overlay.open { display: flex; }
+    </style>
+</head>
+<body>
+    <div class="cottery-header">
+        <h1 id="cotteryTitle"><i class="fas fa-dice"></i> Cottery</h1>
+    </div>
+    
+    <div class="tabs">
+        <div class="tab active" data-tab="numbers">Numbers</div>
+        <div class="tab" data-tab="sports">Sports</div>
+        <div class="tab" data-tab="recent">Recent</div>
+    </div>
+    
+    <div class="content active" id="numbers">
+        <div class="cottery-pool">
+            <div class="pool-amount" id="poolAmount">0</div>
+            <div class="pool-label">Total Pool (Codes)</div>
+        </div>
+        
+        <p style="color:rgba(255,255,255,0.6);text-align:center;margin-bottom:15px;">Pick 3 numbers (1-50)</p>
+        <div class="number-grid" id="numberGrid"></div>
+        
+        <button class="place-bet-btn" id="placeBetBtn" disabled onclick="placeBet()">
+            Place Bet (0 selected)
+        </button>
+    </div>
+    
+    <div class="content" id="sports">
+        <div class="cottery-grid">
+            <div class="bet-card" onclick="selectBet(this, 'football')">
+                <div class="bet-icon">⚽</div>
+                <div class="bet-title">Football</div>
+                <div class="bet-odds">1.5x - 5x</div>
+            </div>
+            <div class="bet-card" onclick="selectBet(this, 'basketball')">
+                <div class="bet-icon">🏀</div>
+                <div class="bet-title">Basketball</div>
+                <div class="bet-odds">1.5x - 10x</div>
+            </div>
+            <div class="bet-card" onclick="selectBet(this, 'tennis')">
+                <div class="bet-icon">🎾</div>
+                <div class="bet-title">Tennis</div>
+                <div class="bet-odds">1.5x - 3x</div>
+            </div>
+            <div class="bet-card" onclick="selectBet(this, 'boxing')">
+                <div class="bet-icon">🥊</div>
+                <div class="bet-title">Boxing</div>
+                <div class="bet-odds">2x - 15x</div>
+            </div>
+            <div class="bet-card" onclick="selectBet(this, 'racing')">
+                <div class="bet-icon">🏎️</div>
+                <div class="bet-title">Racing</div>
+                <div class="bet-odds">2x - 20x</div>
+            </div>
+            <div class="bet-card" onclick="selectBet(this, 'esports')">
+                <div class="bet-icon">🎮</div>
+                <div class="bet-title">Esports</div>
+                <div class="bet-odds">1.5x - 8x</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="content" id="recent">
+        <div class="recent-bets" id="recentBets">
+            <p style="color:rgba(255,255,255,0.5);text-align:center;padding:40px;">No recent bets</p>
+        </div>
+    </div>
+    
+    <script src="/shared/cottery-admin.js"></script>
+    <script>
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(function(tab) {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+                document.querySelectorAll('.content').forEach(function(c) { c.classList.remove('active'); });
+                this.classList.add('active');
+                document.getElementById(this.dataset.tab).classList.add('active');
+            });
+        });
+        
+        // Number selection
+        var selectedNumbers = [];
+        var numberGrid = document.getElementById('numberGrid');
+        
+        for (var i = 1; i <= 50; i++) {
+            var btn = document.createElement('button');
+            btn.className = 'number-btn';
+            btn.textContent = i;
+            btn.addEventListener('click', function() {
+                var num = parseInt(this.textContent);
+                if (this.classList.contains('selected')) {
+                    this.classList.remove('selected');
+                    selectedNumbers = selectedNumbers.filter(function(n) { return n !== num; });
+                } else if (selectedNumbers.length < 3) {
+                    this.classList.add('selected');
+                    selectedNumbers.push(num);
+                }
+                updateBetButton();
+            });
+            numberGrid.appendChild(btn);
+        }
+        
+        function updateBetButton() {
+            var btn = document.getElementById('placeBetBtn');
+            if (selectedNumbers.length === 3) {
+                btn.disabled = false;
+                btn.textContent = 'Place Bet (' + selectedNumbers.join('-') + ')';
+            } else {
+                btn.disabled = true;
+                btn.textContent = 'Place Bet (' + selectedNumbers.length + '/3 selected)';
+            }
+        }
+        
+        function placeBet() {
+            if (selectedNumbers.length !== 3) return;
+            alert('Bet placed: ' + selectedNumbers.join('-'));
+            selectedNumbers = [];
+            document.querySelectorAll('.number-btn.selected').forEach(function(btn) {
+                btn.classList.remove('selected');
+            });
+            updateBetButton();
+        }
+        
+        // Sports betting
+        var selectedBet = null;
+        function selectBet(card, sport) {
+            document.querySelectorAll('.bet-card').forEach(function(c) { c.classList.remove('selected'); });
+            card.classList.add('selected');
+            selectedBet = sport;
+        }
+        
+        // Load pool
+        document.getElementById('poolAmount').textContent = '12,450';
+        
+        // ============================================
+        // EASTER EGG: 7 clicks on title for admin
+        // ============================================
+        var cotteryClickCount = 0;
+        var cotteryClickTimer = null;
+        
+        document.getElementById('cotteryTitle').addEventListener('click', function() {
+            cotteryClickCount++;
+            clearTimeout(cotteryClickTimer);
+            cotteryClickTimer = setTimeout(function() { cotteryClickCount = 0; }, 3000);
+            if (cotteryClickCount >= 7) {
+                cotteryClickCount = 0;
+                var password = prompt('Enter admin password:');
+                if (password === 'doitasap2025') {
+                    openCotteryAdmin();
+                } else if (password !== null) {
+                    alert('Incorrect password');
+                }
+            }
+        });
+        
+        // ============================================
+        // ADMIN PANEL
+        // ============================================
+        function openCotteryAdmin() {
+            var modal = document.createElement('div');
+            modal.className = 'admin-overlay open';
+            modal.id = 'cotteryAdminOverlay';
+            modal.innerHTML = '
+                <div class="admin-header">
+                    <h2>🎯 Cottery Admin</h2>
+                    <span class="admin-close" onclick="this.closest(\'.admin-overlay\').remove()">&times;</span>
+                </div>
+                <div class="admin-tabs">
+                    <button class="admin-tab active" data-tab="cottery-upload">Upload</button>
+                    <button class="admin-tab" data-tab="cottery-stats">Statistics</button>
+                    <button class="admin-tab" data-tab="cottery-moderation">Moderation</button>
+                </div>
+                <div class="admin-content">
+                    <div class="admin-section active" id="sec-cottery-upload">
+                        <div class="upload-zone" id="cotteryUploadZone">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Drag & drop files here</p>
+                            <p style="color:#94a3b8;font-size:12px;">or click to select</p>
+                        </div>
+                    </div>
+                    <div class="admin-section" id="sec-cottery-stats">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-value">12450</div>
+                                <div class="stat-label">Total Pool</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">892</div>
+                                <div class="stat-label">Total Bets</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">15</div>
+                                <div class="stat-label">Today's Winners</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="admin-section" id="sec-cottery-moderation">
+                        <p style="color:#94a3b8;text-align:center;padding:40px;">Loading...</p>
+                    </div>
+                </div>
+            ';
+            document.body.appendChild(modal);
+        }
+    </script>
+</body>
+</html>

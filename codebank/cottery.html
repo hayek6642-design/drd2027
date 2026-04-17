@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cottery Loader</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: #ff6b35;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .message {
+            color: rgba(255,255,255,0.6);
+            font-size: 16px;
+        }
+        #service-frame { width: 100%; height: 100vh; border: none; display: none; }
+    </style>
+</head>
+<body>
+    <div id="auth-loading">
+        <div class="spinner"></div>
+        <p class="message">Loading Cottery...</p>
+    </div>
+    <iframe id="service-frame"></iframe>
+    
+    <script>
+        window.addEventListener('load', function() {
+            const frame = document.getElementById('service-frame');
+            const loader = document.getElementById('auth-loading');
+            
+            frame.onload = function() {
+                loader.style.display = 'none';
+                frame.style.display = 'block';
+            };
+            
+            frame.src = './cottery/index.html';
+        });
+    </script>
+</body>
+</html>

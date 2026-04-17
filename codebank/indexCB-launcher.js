@@ -17,6 +17,7 @@
   var services = [
     { id: 'yt-clear',       name: 'YT-Clear',       icon: '📺', url: '/yt-new-clear.html',  desc: 'Watch & Earn', isExternal: true },
     { id: 'safecode',       name: 'SafeCode',        icon: '🔐', url: '/safecode.html',      desc: 'Asset Vault' },
+    { id: 'cottery',        name: 'Cottery',         icon: '🎯', url: '/codebank/cottery.html',  desc: 'Prediction Game' },
     { id: 'e7ki',           name: 'E7ki',             icon: '💬', url: '/codebank/e7ki.html',   desc: 'Chat' },
     { id: 'samma3ny',       name: 'Samma3ny',        icon: '🤖', url: '/codebank/samma3ny.html', desc: 'AI Assistant' },
     { id: 'farragna',       name: 'Farragna',        icon: '❤️', url: '/farragna.html',      desc: 'Social Likes' },
