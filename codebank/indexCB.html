@@ -1895,6 +1895,72 @@
     </style>
     
     <script>
+    // Auth Functions for top-right auth container
+    window.showSignInModal = function() {
+        console.log('[Auth] Opening sign in modal...');
+        // Show existing sign in page in service modal
+        window.openService('/codebank/login.html', 'Sign In');
+    };
+    
+    window.showSignUpModal = function() {
+        console.log('[Auth] Opening sign up modal...');
+        // Show existing sign up page in service modal
+        window.openService('/codebank/login.html?mode=signup', 'Sign Up');
+    };
+    
+    window.initGoogleSignIn = function() {
+        console.log('[Auth] Google sign in clicked...');
+        // Redirect to Google OAuth
+        window.location.href = '/api/auth/google';
+    };
+    
+    window.handleSignOut = function() {
+        console.log('[Auth] Signing out...');
+        // Clear local storage
+        localStorage.removeItem('codebank_auth');
+        localStorage.removeItem('session_active');
+        localStorage.removeItem('session_token');
+        localStorage.removeItem('user_data');
+        // Reload to apply
+        window.location.reload();
+    };
+    
+    // Initialize auth state on load
+    window.initAuthState = function() {
+        const auth = localStorage.getItem('codebank_auth');
+        const authButtons = document.getElementById('customAuthButtons');
+        const userProfile = document.getElementById('userProfile');
+        const userAvatar = document.getElementById('userAvatar');
+        const userName = document.getElementById('userName');
+        
+        if (auth) {
+            try {
+                const user = JSON.parse(auth);
+                if (user && user.email) {
+                    if (authButtons) authButtons.style.display = 'none';
+                    if (userProfile) {
+                        userProfile.style.display = 'flex';
+                        if (userAvatar) userAvatar.src = user.avatar || '';
+                        if (userName) userName.textContent = user.name || user.email || 'User';
+                    }
+                    console.log('[Auth] User logged in:', user.email);
+                }
+            } catch(e) {
+                console.log('[Auth] No valid session');
+            }
+        } else {
+            if (authButtons) authButtons.style.display = 'flex';
+            if (userProfile) userProfile.style.display = 'none';
+        }
+    };
+    
+    // Run on DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', window.initAuthState);
+    } else {
+        setTimeout(window.initAuthState, 100);
+    }
+    
     // Zagel Voice Modal Functions
     window.openZagelVoice = function() {
         console.log('[Zagel] Opening voice assistant...');
