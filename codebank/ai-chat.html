@@ -40,6 +40,22 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+        }
+        .status-indicator.error {
+            background: #ef4444;
+        }
         .model-selector {
             display: flex;
             align-items: center;
@@ -74,7 +90,7 @@
             width: 100%;
         }
         .message {
-            max-width: 80%;
+            max-width: 85%;
             padding: 12px 18px;
             border-radius: 18px;
             line-height: 1.5;
@@ -98,28 +114,16 @@
             border: 1px solid #3a3a4e;
             border-bottom-left-radius: 4px;
         }
+        .error-message {
+            align-self: flex-start;
+            background: #3d1f1f;
+            border: 1px solid #8b3a3a;
+            color: #ff6b6b;
+        }
         .ai-message .model-tag {
             font-size: 0.7rem;
             color: #888;
             margin-bottom: 5px;
-        }
-        .ai-message .actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 8px;
-        }
-        .ai-message .action-btn {
-            background: transparent;
-            border: 1px solid #444;
-            color: #888;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            cursor: pointer;
-        }
-        .ai-message .action-btn:hover {
-            border-color: #667eea;
-            color: #667eea;
         }
         .typing-indicator {
             align-self: flex-start;
@@ -155,6 +159,11 @@
             margin: 0 auto;
             display: flex;
             gap: 10px;
+            width: 100%;
+        }
+        .input-controls {
+            display: flex;
+            gap: 8px;
         }
         .input-container input {
             flex: 1;
@@ -193,97 +202,44 @@
             cursor: not-allowed;
             transform: none;
         }
-        .api-warning {
-            text-align: center;
-            padding: 8px;
-            background: #2a2a3e;
-            color: #888;
-            font-size: 0.8rem;
-            border-top: 1px solid #333;
-        }
-        .api-warning a {
-            color: #667eea;
-            text-decoration: none;
-        }
-        .api-warning a:hover {
-            text-decoration: underline;
-        }
-        .clear-btn {
+        .tool-btn {
             background: transparent;
-            border: 1px solid #444;
+            border: 1px solid #3a3a4e;
             color: #888;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 0.75rem;
+            padding: 10px;
+            border-radius: 8px;
             cursor: pointer;
-            margin-left: 10px;
-        }
-        .clear-btn:hover {
-            border-color: #667eea;
-            color: #667eea;
-        }
-        .chat-tabs {
-            display: flex;
-            gap: 5px;
-            margin-top: 10px;
-            overflow-x: auto;
-            padding-bottom: 5px;
-        }
-        .chat-tab {
-            background: #2a2a3e;
-            border: 1px solid #444;
-            color: #aaa;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            cursor: pointer;
-            white-space: nowrap;
+            font-size: 18px;
+            transition: all 0.2s;
             display: flex;
             align-items: center;
-            gap: 6px;
+            justify-content: center;
         }
-        .chat-tab.active {
-            background: #667eea;
+        .tool-btn:hover {
             border-color: #667eea;
-            color: #fff;
-        }
-        .chat-tab .close-tab {
-            opacity: 0.6;
-            font-size: 0.9rem;
-        }
-        .chat-tab .close-tab:hover {
-            opacity: 1;
-        }
-        .new-chat-btn {
-            background: transparent;
-            border: 1px dashed #444;
             color: #667eea;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            cursor: pointer;
+            background: rgba(102, 126, 234, 0.1);
         }
-        .new-chat-btn:hover {
-            border-color: #667eea;
-        }
-        .voice-btn {
-            background: transparent;
-            border: none;
-            color: #aaa;
-            cursor: pointer;
-            font-size: 1.2rem;
-            padding: 8px;
-        }
-        .voice-btn:hover {
-            color: #667eea;
-        }
-        .voice-btn.recording {
+        .tool-btn.recording {
             color: #ff4757;
+            border-color: #ff4757;
             animation: pulse 1s infinite;
         }
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
+        }
+        .api-warning {
+            text-align: center;
+            padding: 12px;
+            background: #3d1f1f;
+            border-top: 1px solid #8b3a3a;
+            color: #ff6b6b;
+            font-size: 0.85rem;
+        }
+        .api-warning a {
+            color: #ffa07a;
+            text-decoration: underline;
         }
         .markdown-content {
             line-height: 1.6;
@@ -300,31 +256,12 @@
             border-radius: 8px;
             overflow-x: auto;
             margin: 8px 0;
+            border: 1px solid #333;
         }
         .markdown-content pre code {
             background: none;
             padding: 0;
         }
-    
-        .file-upload-btn {
-            background: transparent;
-            border: 1px solid #3a3a4e;
-            color: #888;
-            padding: 10px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 18px;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .file-upload-btn:hover {
-            border-color: #667eea;
-            color: #667eea;
-            background: rgba(102, 126, 234, 0.1);
-        }
-        
         .file-preview {
             background: #2a2a3e;
             border: 1px dashed #3a3a4e;
@@ -338,375 +275,154 @@
             border-color: #667eea;
             color: #667eea;
         }
-        .file-preview .file-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .file-preview .file-icon {
-            font-size: 24px;
-            margin-right: 10px;
-        }
-        .file-preview .file-remove {
-            background: transparent;
+        .retry-btn {
+            background: #667eea;
+            color: white;
             border: none;
-            color: #888;
+            padding: 8px 12px;
+            border-radius: 6px;
             cursor: pointer;
-            padding: 4px 8px;
-            border-radius: 4px;
+            font-size: 0.85rem;
+            margin-top: 8px;
         }
-        .file-preview .file-remove:hover {
-            color: #ef4444;
-            background: rgba(239, 68, 68, 0.1);
+        .retry-btn:hover {
+            background: #5568d3;
         }
-
     </style>
 
-    <script src="../js/ai-hub-knowledge.js">
-        // File upload handling
-        let currentFile = null;
-        
-        document.getElementById('fileUploadBtn')?.addEventListener('click', () => {
-            document.getElementById('fileInput').click();
-        });
-        
-        document.getElementById('fileInput')?.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if(!file) return;
-            
-            currentFile = file;
-            const analyzer = new FileAnalyzer();
-            
-            // Show loading state
-            addMessage('📎 **Analyzing file...**', 'ai');
-            
-            // Analyze
-            const analysis = analyzer.analyzeFile(file);
-            
-            // Read file content (if applicable)
-            const reader = new FileReader();
-            reader.onload = (evt) => {
-                const content = evt.target.result;
-                const preview = content.substring(0, 200);
-                
-                addMessage(analysis + '\n\n```\n' + preview + '\n...\n```\n\n**What would you like me to do with this file?**', 'ai');
-                
-                // Store for context
-                window.currentFileContent = content;
-                window.currentFileName = file.name;
-            };
-            
-            reader.onerror = () => {
-                addMessage('❌ Could not read file. Try again or paste content directly.', 'ai');
-            };
-            
-            // Read as text (try)
-            try {
-                reader.readAsText(file);
-            } catch(e) {
-                addMessage(`Analysis ready for: **${file.name}**\n\nPaste code or content in chat for detailed analysis.`, 'ai');
-            }
-        });
-        
-        // Integrate with AI responses
-        const originalSendMessage = window.sendMessage || (() => {});
-        window.sendMessage = function() {
-            const input = document.getElementById('userInput');
-            const msg = input.value.trim();
-            
-            if(!msg) return;
-            
-            // Detect intent with knowledge base
-            if(window.AI_RESPONSES?.detectIntent) {
-                const intent = window.AI_RESPONSES.detectIntent(msg);
-                const response = window.AI_RESPONSES.respond(intent, msg);
-                
-                addMessage(msg, 'user');
-                input.value = '';
-                setTimeout(() => addMessage(response, 'ai'), 300);
-                return;
-            }
-            
-            // Fallback
-            if(originalSendMessage) originalSendMessage();
-        };
-
-    </script>
-    <script src="../js/ai-file-analyzer.js"></script>
-
-    </head>
-<body>
-    <div class="chat-header">
-        <h1>🤖 <span>AI Chat</span></h1>
-        <div class="model-selector">
-            <label>Model:</label>
-            <select id="modelSelect">
-                <option value="">Loading models...</option>
-            </select>
-            <button class="clear-btn" onclick="clearChat()">Clear Chat</button>
+    <body>
+        <div class="chat-header">
+            <div>
+                <h1>🤖 <span>AI Chat Hub</span></h1>
+                <div class="header-status">
+                    <span class="status-indicator" id="statusIndicator"></span>
+                    <span id="statusText">Loading models...</span>
+                </div>
+            </div>
+            <div class="model-selector">
+                <label for="modelSelect">Model:</label>
+                <select id="modelSelect">
+                    <option value="">Loading...</option>
+                </select>
+            </div>
         </div>
-    </div>
-    
-    <div class="chat-tabs" id="chatTabs">
-        <button class="chat-tab active" id="defaultTab" onclick="switchTab('default')">
-            Chat 1 <span class="close-tab" onclick="event.stopPropagation(); closeTab('default')">×</span>
-        </button>
-        <button class="new-chat-btn" onclick="createNewChat()">+ New</button>
-    </div>
-    
-    <div class="chat-container" id="chatContainer">
-        <div class="message ai-message">
-            <div class="model-tag">System</div>
-            Hello! I'm your AI assistant. Select a model from the dropdown and start chatting. All conversations stay within the app!
-        </div>
-    </div>
-    
-    <div class="input-area">
-        <div class="input-container">
-        <button class="file-upload-btn" id="fileUploadBtn" title="Upload file for analysis">📎</button>
-        <input type="file" id="fileInput" style="display:none;" accept=".js,.py,.jsx,.ts,.tsx,.java,.cpp,.md,.txt,.pdf,.docx,.jpg,.png,.gif,.webp,.mp3,.wav,.ogg,.json,.csv,.xml">
 
-            <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()" title="Voice input">🎤</button>
-            <input type="text" id="userInput" placeholder="Type your message..." onkeypress="if(event.key==='Enter') sendMessage()">
-            <button id="sendBtn" onclick="sendMessage()">Send</button>
+        <div class="chat-container" id="chatContainer"></div>
+
+        <div class="input-area">
+            <div class="input-container">
+                <div class="input-controls">
+                    <button class="tool-btn" id="fileUploadBtn" title="Upload file for analysis">📎</button>
+                    <button class="tool-btn" id="voiceBtn" title="Voice input (click to record)">🎤</button>
+                </div>
+                <input type="file" id="fileInput" style="display:none;" accept=".js,.py,.jsx,.ts,.tsx,.java,.cpp,.md,.txt,.pdf,.docx,.jpg,.png,.gif,.webp,.mp3,.wav,.ogg,.json,.csv,.xml">
+                <input type="text" id="userInput" placeholder="Type your message or use voice... (Ctrl+Enter to send)" onkeypress="handleKeyPress(event)">
+                <button id="sendBtn" onclick="sendMessage()">Send</button>
+            </div>
         </div>
-    </div>
-    
-    <div class="api-warning">
-        ⚠️ API keys required. Configure OPENROUTER_API_KEY, GROQ_API_KEY, or HUGGINGFACE_API_KEY in environment variables.
-    </div>
+
+        <div id="apiWarning" class="api-warning" style="display:none;"></div>
+    </body>
 
     <script>
+        // ============= STATE MANAGEMENT =============
+        let chatHistory = [];
+        let availableModels = [];
+        let isRecording = false;
+        let recognition = null;
+        let currentFile = null;
+        const MAX_MESSAGE_LENGTH = 4096;
+
+        // ============= DOM ELEMENTS =============
         const chatContainer = document.getElementById('chatContainer');
         const userInput = document.getElementById('userInput');
         const sendBtn = document.getElementById('sendBtn');
         const modelSelect = document.getElementById('modelSelect');
-        const chatTabs = document.getElementById('chatTabs');
         const voiceBtn = document.getElementById('voiceBtn');
-        
-        let chatHistory = [];
-        let availableModels = [];
-        let chats = { 'default': [] };
-        let currentTab = 'default';
-        let recognition = null;
-        let isRecording = false;
-        
-        // Load chats from localStorage
-        function loadChatsFromStorage() {
-            try {
-                const saved = localStorage.getItem('ai_chats');
-                if (saved) {
-                    chats = JSON.parse(saved);
-                    // Restore tabs
-                    Object.keys(chats).forEach(tabId => {
-                        if (tabId !== 'default') {
-                            createTabElement(tabId);
-                        }
-                    });
-                }
-            } catch (e) {
-                console.log('No saved chats');
-            }
+        const fileUploadBtn = document.getElementById('fileUploadBtn');
+        const fileInput = document.getElementById('fileInput');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const apiWarning = document.getElementById('apiWarning');
+
+        // ============= UTILITY FUNCTIONS =============
+        function showStatus(text, isError = false) {
+            statusText.textContent = text;
+            statusIndicator.className = isError ? 'status-indicator error' : 'status-indicator';
         }
-        
-        // Save chats to localStorage
-        function saveChatsToStorage() {
-            try {
-                localStorage.setItem('ai_chats', JSON.stringify(chats));
-            } catch (e) {
-                console.log('Could not save chats');
-            }
+
+        function showAPIWarning(message) {
+            apiWarning.innerHTML = message;
+            apiWarning.style.display = 'block';
         }
-        
-        function createTabElement(tabId) {
-            const tab = document.createElement('button');
-            tab.className = 'chat-tab';
-            tab.id = 'tab_' + tabId;
-            tab.onclick = () => switchTab(tabId);
-            tab.innerHTML = `Chat ${tabId.slice(-1)} <span class="close-tab" onclick="event.stopPropagation(); closeTab('${tabId}')">×</span>`;
-            chatTabs.insertBefore(tab, chatTabs.lastElementChild);
+
+        function hideAPIWarning() {
+            apiWarning.style.display = 'none';
         }
-        
-        function createNewChat() {
-            const newId = 'chat_' + Date.now();
-            chats[newId] = [];
-            createTabElement(newId);
-            switchTab(newId);
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
-        
-        function switchTab(tabId) {
-            // Save current chat
-            chats[currentTab] = chatHistory;
-            saveChatsToStorage();
-            
-            // Switch
-            currentTab = tabId;
-            chatHistory = chats[tabId] || [];
-            
-            // Update tab UI
-            document.querySelectorAll('.chat-tab').forEach(t => t.classList.remove('active'));
-            const tabEl = document.getElementById('tab_' + tabId);
-            if (tabEl) tabEl.classList.add('active');
-            
-            // Render messages
-            renderMessages();
-        }
-        
-        function closeTab(tabId) {
-            if (Object.keys(chats).length <= 1) {
-                alert('Cannot close the last chat');
-                return;
-            }
-            delete chats[tabId];
-            
-            const tabEl = document.getElementById('tab_' + tabId);
-            if (tabEl) tabEl.remove();
-            
-            // Switch to first remaining tab
-            const firstTab = Object.keys(chats)[0];
-            switchTab(firstTab);
-            saveChatsToStorage();
-        }
-        
-        function renderMessages() {
-            chatContainer.innerHTML = '';
-            chatHistory.forEach(msg => {
-                const isUser = msg.role === 'user';
-                addMessage(msg.content, isUser, isUser ? null : msg.model);
-            });
-            
-            if (chatHistory.length === 0) {
-                chatContainer.innerHTML = `
-                    <div class="message ai-message">
-                        <div class="model-tag">System</div>
-                        Hello! I'm your AI assistant. Select a model from the dropdown and start chatting. All conversations stay within the app!
-                    </div>
-                `;
-            }
-        }
-        
-        // Simple markdown parser
+
         function parseMarkdown(text) {
-            let html = text
-                .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
-                .replace(/`([^`]+)`/g, '<code>$1</code>')
-                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-                .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-                .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-                .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-                .replace(/\n/g, '<br>');
+            // Simple markdown parser
+            let html = escapeHtml(text);
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+            html = html.replace(/\n/g, '<br>');
             return html;
         }
-        
-        function addMessage(text, isUser, modelInfo = null) {
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message', isUser ? 'user-message' : 'ai-message');
+
+        // ============= MESSAGE HANDLING =============
+        function addMessage(content, isUser = false, modelInfo = '') {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = isUser ? 'message user-message' : 'message ai-message';
+            if (!isUser && modelInfo && modelInfo.includes('Error')) {
+                msgDiv.className = 'message error-message';
+            }
+
+            let htmlContent = parseMarkdown(content);
             
             if (!isUser && modelInfo) {
-                const tagDiv = document.createElement('div');
-                tagDiv.className = 'model-tag';
-                tagDiv.textContent = modelInfo;
-                messageDiv.appendChild(tagDiv);
-                
-                // Add actions for AI messages
-                const actionsDiv = document.createElement('div');
-                actionsDiv.className = 'actions';
-                
-                const copyBtn = document.createElement('button');
-                copyBtn.className = 'action-btn';
-                copyBtn.textContent = '📋 Copy';
-                copyBtn.onclick = () => {
-                    navigator.clipboard.writeText(text);
-                    copyBtn.textContent = '✓ Copied!';
-                    setTimeout(() => copyBtn.textContent = '📋 Copy', 2000);
-                };
-                actionsDiv.appendChild(copyBtn);
-                
-                const regenerateBtn = document.createElement('button');
-                regenerateBtn.className = 'action-btn';
-                regenerateBtn.textContent = '🔄 Regenerate';
-                regenerateBtn.onclick = () => {
-                    if (chatHistory.length > 0 && chatHistory[chatHistory.length - 1].role === 'assistant') {
-                        // Remove last assistant message and retry
-                        chatHistory.pop();
-                        const lastUser = chatHistory.pop();
-                        if (lastUser) {
-                            chatHistory.push(lastUser);
-                            sendMessage(true);
-                        }
-                    }
-                };
-                actionsDiv.appendChild(regenerateBtn);
-                
-                messageDiv.appendChild(actionsDiv);
+                msgDiv.innerHTML = `<div class="model-tag">${escapeHtml(modelInfo)}</div><div class="markdown-content">${htmlContent}</div>`;
+            } else {
+                msgDiv.innerHTML = `<div class="markdown-content">${htmlContent}</div>`;
             }
-            
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'markdown-content';
-            contentDiv.innerHTML = isUser ? text : parseMarkdown(text);
-            messageDiv.appendChild(contentDiv);
-            
-            chatContainer.appendChild(messageDiv);
+
+            chatContainer.appendChild(msgDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
-        
-        // Voice input using Web Speech API
-        function toggleVoice() {
-            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                alert('Voice input not supported in this browser. Try Chrome.');
-                return;
-            }
-            
-            if (isRecording) {
-                if (recognition) recognition.stop();
-                return;
-            }
-            
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.continuous = false;
-            recognition.interimResults = true;
-            
-            recognition.onstart = () => {
-                isRecording = true;
-                voiceBtn.classList.add('recording');
-                voiceBtn.textContent = '🛑';
-            };
-            
-            recognition.onresult = (event) => {
-                let transcript = '';
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                    transcript += event.results[i][0].transcript;
-                }
-                userInput.value = transcript;
-            };
-            
-            recognition.onerror = (event) => {
-                console.error('Voice error:', event.error);
-                stopRecording();
-            };
-            
-            recognition.onend = () => {
-                stopRecording();
-            };
-            
-            recognition.start();
+
+        function showTyping() {
+            const typingDiv = document.createElement('div');
+            typingDiv.classList.add('typing-indicator');
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = 'AI is thinking<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+            chatContainer.appendChild(typingDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
         }
-        
-        function stopRecording() {
-            isRecording = false;
-            voiceBtn.classList.remove('recording');
-            voiceBtn.textContent = '🎤';
+
+        function removeTyping() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) indicator.remove();
         }
-        
-        // Load available models
+
+        // ============= MODEL MANAGEMENT =============
         async function loadModels() {
             try {
                 const response = await fetch('/api/chat/models');
                 const data = await response.json();
-                availableModels = data.models || [];
                 
+                if (!data.models || data.models.length === 0) {
+                    showStatus('No models available - check API keys', true);
+                    showAPIWarning('⚠️ No AI models configured. Please set up API keys: <strong>OPENROUTER_API_KEY, GROQ_API_KEY, HUGGINGFACE_API_KEY</strong>');
+                    return;
+                }
+
+                availableModels = data.models;
                 modelSelect.innerHTML = '';
                 
                 // Group by provider
@@ -737,94 +453,179 @@
                 const freeModel = availableModels.find(m => m.free);
                 if (freeModel) {
                     modelSelect.value = freeModel.id;
+                    showStatus(`Ready - Using ${freeModel.name}`);
+                    hideAPIWarning();
                 }
             } catch (err) {
+                showStatus('Failed to load models', true);
+                showAPIWarning(`❌ Error loading models: ${err.message}<br>Check server connection and API key configuration.`);
                 console.error('Failed to load models:', err);
-                modelSelect.innerHTML = '<option value="">Error loading models</option>';
             }
         }
-        
-        function showTyping() {
-            const typingDiv = document.createElement('div');
-            typingDiv.classList.add('typing-indicator');
-            typingDiv.id = 'typingIndicator';
-            typingDiv.innerHTML = 'AI is thinking<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
-            chatContainer.appendChild(typingDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-        
-        function removeTyping() {
-            const indicator = document.getElementById('typingIndicator');
-            if (indicator) indicator.remove();
-        }
-        
-        async function sendMessage(isRegenerate = false) {
-            const message = userInput.value.trim();
-            if (!message && !isRegenerate) return;
-            
-            const sendMsg = isRegenerate ? chatHistory.filter(m => m.role === 'user').pop()?.content : message;
-            if (!sendMsg && !isRegenerate) return;
-            
-            // Add user message only if not regenerating
-            if (!isRegenerate) {
-                addMessage(message, true);
-                userInput.value = '';
+
+        // ============= VOICE INPUT =============
+        function toggleVoice() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                alert('Speech recognition not supported in this browser.');
+                return;
             }
+
+            if (isRecording) {
+                recognition.stop();
+                return;
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.language = 'en-US';
+            recognition.interimResults = true;
+
+            isRecording = true;
+            voiceBtn.classList.add('recording');
+
+            recognition.onstart = () => {
+                userInput.placeholder = '🎤 Listening...';
+            };
+
+            recognition.onresult = (event) => {
+                let interim = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        userInput.value += transcript + ' ';
+                    } else {
+                        interim += transcript;
+                    }
+                }
+                if (interim) {
+                    userInput.placeholder = `🎤 ${interim}`;
+                }
+            };
+
+            recognition.onend = () => {
+                isRecording = false;
+                voiceBtn.classList.remove('recording');
+                userInput.placeholder = 'Type your message or use voice... (Ctrl+Enter to send)';
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                userInput.placeholder = `Error: ${event.error}`;
+                isRecording = false;
+                voiceBtn.classList.remove('recording');
+            };
+
+            recognition.start();
+        }
+
+        // ============= FILE UPLOAD =============
+        fileUploadBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            currentFile = file;
+            userInput.value = `[File attached: ${file.name}] `;
             
-            // Disable input while loading
+            // Show file info
+            const fileInfo = `📎 **File attached**: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
+            addMessage(fileInfo, false, 'File Info');
+            
+            // Reset file input
+            fileInput.value = '';
+        });
+
+        // ============= MESSAGE SENDING =============
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && event.ctrlKey) {
+                sendMessage();
+            }
+        }
+
+        async function sendMessage() {
+            let message = userInput.value.trim();
+            if (!message) return;
+
+            // Validate message length
+            if (message.length > MAX_MESSAGE_LENGTH) {
+                addMessage(`❌ Message too long (${message.length}/${MAX_MESSAGE_LENGTH} chars)`, false, 'Error');
+                return;
+            }
+
+            addMessage(message, true);
+            userInput.value = '';
+            
             userInput.disabled = true;
             sendBtn.disabled = true;
             showTyping();
             
-            // Add to history
-            chatHistory.push({ role: 'user', content: sendMsg });
+            chatHistory.push({ role: 'user', content: message });
             
             try {
                 const modelId = modelSelect.value;
+                if (!modelId) {
+                    throw new Error('No model selected');
+                }
+
                 const selectedOption = modelSelect.options[modelSelect.selectedIndex];
-                const provider = selectedOption.dataset.provider || 'openrouter';
+                const provider = selectedOption.dataset.provider || 'groq';
                 
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        message: sendMsg,
+                        message: message,
                         modelId: modelId,
                         provider: provider,
-                        history: chatHistory.slice(-6, -1) // Last 5 messages (excluding current)
-                    })
+                        history: chatHistory.slice(-6, -1)
+                    }),
+                    timeout: 30000
                 });
                 
-                const data = await response.json();
                 removeTyping();
+                const data = await response.json();
                 
-                if (data.error) {
-                    addMessage(`Error: ${data.error}`, false, 'Error');
+                if (!response.ok) {
+                    const errorMsg = data.error || `HTTP ${response.status}`;
+                    addMessage(`❌ ${errorMsg}`, false, 'Error');
+                    if (response.status === 503) {
+                        showAPIWarning(`⚠️ API Key missing: ${errorMsg}<br>Configure API keys in environment variables.`);
+                    }
+                } else if (data.error) {
+                    addMessage(`❌ ${data.error}`, false, 'Error');
                 } else {
-                    addMessage(data.reply, false, `${data.provider} • ${data.model}`);
-                    chatHistory.push({ role: 'assistant', content: data.reply, model: data.model });
-                    saveChatsToStorage();
+                    addMessage(data.reply || 'No response', false, `${data.provider} • ${data.model}`);
+                    chatHistory.push({ 
+                        role: 'assistant', 
+                        content: data.reply,
+                        model: data.model,
+                        provider: data.provider
+                    });
                 }
             } catch (err) {
                 removeTyping();
-                addMessage(`Network error: ${err.message}`, false, 'Error');
+                addMessage(`❌ Network error: ${err.message}`, false, 'Error');
+                showStatus('Connection error', true);
             } finally {
                 userInput.disabled = false;
                 sendBtn.disabled = false;
                 userInput.focus();
+                currentFile = null;
             }
         }
-        
-        function clearChat() {
-            chatHistory = [];
-            renderMessages();
-            saveChatsToStorage();
-        }
-        
-        // Initialize
-        loadModels();
-        loadChatsFromStorage();
-        userInput.focus();
+
+        // ============= INITIALIZATION =============
+        window.addEventListener('load', () => {
+            loadModels();
+            userInput.focus();
+            
+            // Initialize with welcome message
+            addMessage('👋 Welcome to AI Chat! Select a model and start typing or use voice input.', false, 'Welcome');
+            addMessage('💡 Tip: Press Ctrl+Enter to send, use 📎 to attach files, and 🎤 for voice input.', false, 'Tip');
+        });
     </script>
 </body>
 </html>
