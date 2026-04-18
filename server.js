@@ -467,6 +467,15 @@ app.get('/api/auth/me', (req, res) => {
     });
 });
 
+// Google OAuth endpoint (stub)
+app.get('/api/auth/google', (req, res) => {
+    res.json({
+        success: false,
+        message: 'Google auth not configured - using guest mode',
+        authenticated: false
+    });
+});
+
 // Codes sync endpoint
 app.post('/api/codes/sync', (req, res) => {
     console.log('[API] Codes sync received:', req.body);
