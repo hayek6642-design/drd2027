@@ -631,6 +631,30 @@ app.post('/api/auth/validate-session', (req, res) => {
 // Logout endpoint
 app.post('/api/auth/logout', (req, res) => {
     res.json({ success: true, message: 'Logged out' });
+
+// ============================================================================
+// Health Check Endpoints
+// ============================================================================
+
+// GET /ping - Simple health check
+app.get('/ping', (req, res) => {
+  res.status(200).json({ 
+    status: 'pong',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
+// GET /health - Extended health check  
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    service: 'dr-d-backend',
+    version: '2.0',
+    uptime: process.uptime()
+  });
+});
 });
 
 // Note: GET /api/auth/google was removed. Use POST /api/auth/google instead for authentication.
