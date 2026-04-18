@@ -595,15 +595,6 @@ function clearSessionAndLogout() {
             box-shadow: inset 0 0 5px 1px rgba(255, 255, 255, 0.8);
             border-radius: 50%;
             position: absolute;
-            /* Hide any text content */
-            color: transparent !important;
-            font-size: 0 !important;
-            line-height: 0 !important;
-            overflow: hidden !important;
-            /* Dr.D logo as background image */
-            background: url('/codebank/samma3ny/dr.dc.png?v=20260410') no-repeat center center !important;
-            background-size: cover !important;
-            background-position: center !important;
             /* Size */
             min-width: 65px !important;
             min-height: 65px !important;
@@ -618,18 +609,45 @@ function clearSessionAndLogout() {
             z-index: 10000 !important;
             border: none !important;
             padding: 0 !important;
-            /* Ensure no text shows */
-            text-indent: -9999px !important;
-            white-space: nowrap !important;
+            background: none !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
         }
 
-        /* Hide any child elements */
-        #play-pause-button::before,
-        #play-pause-button::after,
-        #play-pause-button span,
-        #play-pause-button div {
-            display: none !important;
-            visibility: hidden !important;
+        /* Background image on ::before pseudo-element so it can fade independently */
+        #play-pause-button::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: url('/codebank/samma3ny/dr.dc.png?v=20260410') no-repeat center center;
+            background-size: cover;
+            background-position: center;
+            border-radius: 50%;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Progress text on top */
+        #play-pause-button .progress-text,
+        #play-pause-button .extra-progress,
+        #play-pause-button [class*="progress"] {
+            position: relative;
+            z-index: 1;
+            color: #00ff00 !important;
+            font-family: 'Courier New', monospace !important;
+            font-size: 12px !important;
+            font-weight: bold !important;
+            text-align: center !important;
+            text-shadow: 0 0 3px rgba(0, 255, 0, 0.5) !important;
+        }
+
+        /* When Extra Mode is active, fade the background image */
+        #play-pause-button.extra-mode-active::before {
+            opacity: 0 !important;
         }
 
         #play-pause-button.paused {
@@ -3002,7 +3020,23 @@ document.addEventListener('DOMContentLoaded', async function(){
                         try { console.log('Watch-dog (fallback) active:', !!active); } catch (_) { }
                         try { document.body.classList.toggle('watch-dog-active', !!active); } catch (_) { }
                     }
-                } catch (_) { }
+                    
+                    // Handle play-pause button background opacity for Extra Mode
+                    const playPauseBtn = document.getElementById('play-pause-button');
+                    if (playPauseBtn) {
+                        if (active) {
+                            // Extra Mode activated - fade the background image
+                            playPauseBtn.classList.add('extra-mode-active');
+                            try { console.log('[Extra Mode] Play-pause button background faded to show progress'); } catch (_) { }
+                        } else {
+                            // Extra Mode deactivated - restore the background image
+                            playPauseBtn.classList.remove('extra-mode-active');
+                            try { console.log('[Extra Mode] Play-pause button background restored'); } catch (_) { }
+                        }
+                    }
+                } catch (err) {
+                    try { console.error('[Extra Mode] Error in basicHandleExtraModeChange:', err); } catch (_) { }
+                }
             }
             try { window.addEventListener('extra-mode:changed', function (e) { basicHandleExtraModeChange(!!(e && e.detail && e.detail.active)); }); } catch (_) { }
             if (!window.handleExtraModeChange) { window.handleExtraModeChange = basicHandleExtraModeChange; }
