@@ -3304,10 +3304,17 @@ document.addEventListener('DOMContentLoaded', async function(){
     <!--  Unified UI Handler for Code Display -->
     <script>
     (function() {
-      const codeDisplay = document.getElementById('code-display');
-      if (!codeDisplay) return;
+      // Wait for DOM to be ready
+      function init() {
+        const codeDisplay = document.getElementById('code-display');
+        if (!codeDisplay) {
+          console.warn('[UI SYNC] #code-display not found, retrying...');
+          setTimeout(init, 500);
+          return;
+        }
 
-      let lastDisplayedCode = null;
+        console.log('[UI SYNC] Code display handler initialized');
+        let lastDisplayedCode = null;
 
       function updateUI(code, source) {
         if (!code || code === lastDisplayedCode) return;
@@ -3356,6 +3363,18 @@ document.addEventListener('DOMContentLoaded', async function(){
 
       events.forEach(evt => window.addEventListener(evt, handleEvent));
 
+      // Also listen for storage changes (cross-tab sync)
+      window.addEventListener('storage', (e) => {
+        if (e.key && (e.key === 'acc_assets' || e.key === 'codebank_assets' || e.key === 'last_generated_code')) {
+          console.log('[UI SYNC] Storage change detected:', e.key);
+          const lastCode = localStorage.getItem('last_generated_code') || 
+                          (JSON.parse(localStorage.getItem('acc_assets') || '{}').codes || []).slice(-1)[0];
+          if (lastCode) {
+            updateUI(lastCode, 'storage-change');
+          }
+        }
+      });
+
       // Initial check
       window.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
@@ -3371,6 +3390,14 @@ document.addEventListener('DOMContentLoaded', async function(){
           }
         }, 1500);
       });
+    }
+    
+    // Start initialization
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
     })();
     </script>
 
