@@ -77,7 +77,7 @@
       "enabled": true
     }
   },
-  "updatess": {
+  "updates": {
     "enabled": true,
     "url": "https://dr-d-h51l.onrender.com/capacitor-update",
     "channel": "production"

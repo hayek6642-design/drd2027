@@ -960,13 +960,21 @@ app.post('/api/rewards/claim', (req, res) => {
 
 // Capacitor Live Update manifest
 app.get('/capacitor-update/manifest.json', (req, res) => {
+    // OTA Update manifest for Capacitor app
+    // Points to APK built from latest commits with all fixes:
+    // ✅ Fixed postMessage cross-origin issues
+    // ✅ Fixed assets showing 0 codes/silver/gold
+    // ✅ Removed hardcoded FINALTEST text
+    // ✅ Fixed Matter.js balloon animation
+    // ✅ Restored proper email+password login to indexCB.html
     res.json({
-        version: '1.0.0',
-        url: 'https://dr-d-h51l.onrender.com/capacitor-update',
-        assets: {
-            'index.html': '/index.html',
-            'assets/': '/assets/'
-        }
+        version: '1.1.0',
+        versionCode: 2,
+        minVersion: '1.0.0',
+        releaseChannel: 'production',
+        url: 'https://gitlab.com/dia201244/drd2027/-/raw/main/CodeBank-debug.apk',
+        rollout: 100,
+        description: 'Critical fixes: Cross-origin postMessage, asset display, login flow restoration'
     });
 });
 
