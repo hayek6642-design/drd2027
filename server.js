@@ -721,10 +721,15 @@ app.post('/api/rewards/claim', (req, res) => {
     const guestId = req.headers['x-guest-id'] || req.cookies?.guest_id;
     console.log('[Rewards] Claim:', type, 'guest:', guestId || 'anonymous');
     
-    // Generate reward code
-    const code = type === 'gold' ? 'GOLD-' : 'SILVER-';
-    const randomPart = Math.random().toString(36).substr(2, 6).toUpperCase();
-    const fullCode = code + randomPart + '-' + Date.now().toString().slice(-4);
+    // Format: SLVR-XXXX-XXXX-XXXX-XXXX-XXXX-P(n) or GOLD-XXXX-XXXX-XXXX-XXXX-XXXX-P(n)
+    const prefix = type === 'gold' ? 'GOLD' : 'SLVR';
+    const randomPart = Array(6).fill(0).map(() => 
+        Math.random().toString(36).substr(2, 4).toUpperCase()
+    ).join('-');
+    
+    // Get claim count for P(n)
+    const claimCount = parseInt((Date.now() / 1000) % 100) + 1;
+    const fullCode = `${prefix}-${randomPart}-P${claimCount}`;
     
     res.json({
         success: true,

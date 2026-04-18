@@ -3,6 +3,39 @@ console.log('[AssetsDirectBus] Checking localStorage for acc_assets');
 const stored = localStorage.getItem('acc_assets');
 console.log('[AssetsDirectBus] Found:', stored ? 'YES' : 'NO', stored ? JSON.parse(stored) : 'EMPTY');
 
+// Define AssetsDirectBus if not already defined
+if (typeof window.AssetsDirectBus === 'undefined') {
+    window.AssetsDirectBus = {
+        loadFromCache: function() {
+            try {
+                const cached = localStorage.getItem('acc_assets');
+                if (cached) {
+                    const assets = JSON.parse(cached);
+                    window.AppState = window.AppState || {};
+                    window.AppState.assets = assets;
+                    console.log('[AssetsDirectBus] Loaded from cache:', assets);
+                    return assets;
+                }
+            } catch(e) {
+                console.warn('[AssetsDirectBus] Cache load error:', e);
+            }
+            return null;
+        },
+        saveToCache: function(assets) {
+            try {
+                localStorage.setItem('acc_assets', JSON.stringify(assets));
+                console.log('[AssetsDirectBus] Saved to cache');
+            } catch(e) {
+                console.warn('[AssetsDirectBus] Cache save error:', e);
+            }
+        },
+        publish: function(event, data) {
+            console.log('[AssetsDirectBus] Publish:', event, data);
+            window.dispatchEvent(new CustomEvent('assets:updated', { detail: data }));
+        }
+    };
+}
+
 /**
  * assets-direct.js
  * Unified asset management — no bridge, no postMessage.
