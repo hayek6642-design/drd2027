@@ -511,7 +511,7 @@ app.use((req, res) => {
 const SERVER_STARTUP_TIMEOUT = 15000; // 15 second timeout
 let startupTimer = null;
 
-const server = app.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ [CRITICAL] Server bound to 0.0.0.0:${PORT}`);
     console.log(`✅ [BOOT] Dr.D Backend v2.0 is now listening`);
     
