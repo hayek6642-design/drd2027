@@ -436,14 +436,48 @@
         }
         
         /* Auth Container */
+/* Bankode Header with Title */
+        .bankode-header {
+            position: fixed;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            text-align: center;
+        }
+        .bankode-title {
+            font-size: 26px;
+            font-weight: 800;
+            background: linear-gradient(90deg, #00d4ff, #7b2cbf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+            text-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+        }
+        .bankode-subtitle {
+            display: block;
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 2px;
+            letter-spacing: 1px;
+        }
         .auth-container {
             position: fixed;
-            top: 20px;
-            right: 60px;
+            top: 90px;
+            left: 50%;
+            transform: translateX(-50%);
             z-index: 1001;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
+        }
+        .auth-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
         }
         .btn-google {
             display: flex;
@@ -992,7 +1026,13 @@
             </div>
         </div>
 
-        <!-- Auth Container (top-right) -->
+        <!-- Bankode Header with Title -->
+        <div class="bankode-header" id="bankodeHeader">
+            <h1 class="bankode-title">Bankode</h1>
+            <span class="bankode-subtitle">CodeBank Exchange</span>
+        </div>
+
+        <!-- Auth Container (under Bankode title) -->
         <div class="auth-container" id="authContainer">
             <div class="auth-buttons" id="customAuthButtons">
                 <button class="btn-google" onclick="initGoogleSignIn()">
