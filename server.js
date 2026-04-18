@@ -465,6 +465,40 @@ app.get('/api/auth/me', (req, res) => {
         message: 'Guest mode - no auth token provided',
         user: null
     });
+
+// Auth configuration endpoint (for Google Client ID)
+app.get('/api/auth/google-client-id', (req, res) => {
+    res.json({ 
+        clientId: process.env.GOOGLE_CLIENT_ID || null,
+        enabled: !!process.env.GOOGLE_CLIENT_ID 
+    });
+});
+
+// Google auth initiation
+app.post('/api/auth/google', (req, res) => {
+    // For now, return an error since we don't have Google OAuth configured
+    res.status(400).json({
+        error: 'Google auth not configured',
+        message: 'Set GOOGLE_CLIENT_ID environment variable to enable Google sign-in'
+    });
+});
+
+// User session validation
+app.post('/api/auth/validate-session', (req, res) => {
+    const sessionToken = req.headers['x-session-token'] || req.body?.sessionToken;
+    
+    if (!sessionToken) {
+        return res.status(401).json({ valid: false });
+    }
+    
+    // TODO: Validate against your session database
+    res.json({ valid: true, userId: 'user-' + Date.now() });
+});
+
+// Logout endpoint
+app.post('/api/auth/logout', (req, res) => {
+    res.json({ success: true, message: 'Logged out' });
+});
 });
 
 // Google OAuth endpoint (stub)
