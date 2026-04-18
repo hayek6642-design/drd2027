@@ -1245,21 +1245,39 @@ async function registerBiometric() {
 // ── Google Sign-In Integration ──────────────────────────────────────────────
 async function initGoogleSignIn() {
   try {
+    console.log('[Google] Fetching client ID from server...');
     const res = await fetch('/api/auth/google-client-id');
     const data = await res.json();
+    
+    console.log('[Google] Server response:', data);
+    
     // Validate it's a real Google client ID (not empty or placeholder)
     const isValidClientId = data.clientId &&
       data.clientId !== 'your_google_client_id.apps.googleusercontent.com' &&
       /^\d+(-\w+)?\.apps\.googleusercontent\.com$/.test(data.clientId);
 
     if (!isValidClientId) {
-      console.log('[Google] GOOGLE_CLIENT_ID not configured — hiding Google Sign-In buttons');
+      console.warn('[Google Auth Setup]');
+      console.warn('  ❌ GOOGLE_CLIENT_ID is NOT configured on the server');
+      console.warn('  📋 Instructions:');
+      console.warn('     1. Go to https://console.cloud.google.com/');
+      console.warn('     2. Create a new project');
+      console.warn('     3. Enable Google+ API');
+      console.warn('     4. Create OAuth 2.0 credentials (Web application)');
+      console.warn('     5. Add authorized origins: https://dr-d-h51l.onrender.com');
+      console.warn('     6. Copy the Client ID and update the .env file');
+      console.warn('     7. Restart the server');
+      console.warn('  For now, Google Sign-In buttons are disabled.');
+      
+      // Hide Google auth UI
       document.querySelectorAll('.google-login-wrapper, #google-login-wrapper, #google-signup-wrapper, #google-divider-login, #google-divider-signup').forEach(el => {
         if (el) el.style.display = 'none';
       });
       return;
     }
 
+    console.log('[Google] Client ID is valid, initializing Google Sign-In...');
+    
     google.accounts.id.initialize({
       client_id: data.clientId,
       callback: handleGoogleCredential,
@@ -1297,15 +1315,18 @@ async function initGoogleSignIn() {
       document.getElementById('google-divider-signup').style.display = 'flex';
     }
 
-    console.log('[Google] Sign-In buttons rendered');
+    console.log('[Google] ✅ Sign-In buttons rendered successfully');
   } catch (e) {
-    console.warn('[Google] Init failed:', e);
+    console.error('[Google Auth Error]', e);
+    console.error('Failed to initialize Google Sign-In. Check console for details.');
   }
 }
 
 async function handleGoogleCredential(response) {
   const statusEl = document.getElementById('statusMessage');
   try {
+    console.log('[Google] Credential received, sending to server...');
+    
     if (statusEl) {
       statusEl.textContent = 'Signing in with Google...';
       statusEl.className = 'status-message success';
@@ -1320,17 +1341,16 @@ async function handleGoogleCredential(response) {
     });
 
     const data = await res.json();
+    console.log('[Google] Server response:', data);
 
-    if (data.status === 'success') {
+    if (data.status === 'success' || data.success === true) {
+      console.log('[Google] ✅ Authentication successful!');
       localStorage.setItem('session_token', data.sessionId);
       localStorage.setItem('__cached_session_id__', data.sessionId);
       localStorage.setItem('session_active', 'true');
       if (data.user) localStorage.setItem('user_data', JSON.stringify(data.user));
-      localStorage.setItem('session_active', 'true');
       if (data.user && data.user.email) localStorage.setItem('last_login_email', data.user.email);
-      // 📱 NATIVE: Persist to Capacitor Preferences so session survives app kill
-      if (window._NativeBio) window._NativeBio.saveSession(data.sessionId, data.user);
-
+      
       // 📱 NATIVE: Persist to Capacitor Preferences so session survives app kill
       if (window._NativeBio) window._NativeBio.saveSession(data.sessionId, data.user);
 
@@ -1351,15 +1371,18 @@ async function handleGoogleCredential(response) {
 
       setTimeout(function() { window.location.href = '/yt-new-clear.html'; }, 1000);
     } else {
+      console.error('[Google] Server error response:', data);
+      const errorMsg = data.error || data.message || 'Google sign-in failed';
       if (statusEl) {
-        statusEl.textContent = data.error || 'Google sign-in failed';
+        statusEl.textContent = '❌ ' + errorMsg;
         statusEl.className = 'status-message error';
       }
     }
   } catch (e) {
     console.error('[Google Auth Error]', e);
+    const errorMsg = 'Network error: ' + e.message;
     if (statusEl) {
-      statusEl.textContent = 'Network error during Google sign-in';
+      statusEl.textContent = '❌ ' + errorMsg;
       statusEl.className = 'status-message error';
     }
   }

@@ -469,42 +469,106 @@ app.get('/api/auth/me', (req, res) => {
 // Auth configuration endpoint (for Google Client ID)
 app.get('/api/auth/google-client-id', (req, res) => {
   const raw = process.env.GOOGLE_CLIENT_ID || '';
-  // Return empty if placeholder not replaced
-  const isValid = raw && raw !== 'your_google_client_id.apps.googleusercontent.com' && /\.apps\.googleusercontent\.com$/.test(raw);
-  res.json({ clientId: isValid ? raw : '' });
+  
+  // Validate it's a real Google Client ID (not empty or placeholder)
+  const isValid = raw && 
+                  raw !== 'your_google_client_id.apps.googleusercontent.com' && 
+                  /^\d+(-[a-z0-9]+)?\.apps\.googleusercontent\.com$/.test(raw);
+  
+  if (!isValid) {
+    console.warn('[AUTH] GOOGLE_CLIENT_ID not configured or invalid:', raw ? '(set but invalid format)' : '(not set)');
+  }
+  
+  res.json({ 
+    clientId: isValid ? raw : '',
+    configured: isValid,
+    debug: {
+      isConfigured: !!raw,
+      isPlaceholder: raw === 'your_google_client_id.apps.googleusercontent.com',
+      isValid: isValid
+    }
+  });
 });
 
 // Google auth initiation
 app.post('/api/auth/google', async (req, res) => {
   try {
     const { credential } = req.body;
-    if (!credential) return res.status(400).json({ status: 'failed', error: 'Missing Google credential' });
+    
+    // Validate credential is provided
+    if (!credential) {
+      console.warn('[GOOGLE AUTH] Missing credential in request body');
+      return res.status(400).json({ 
+        status: 'failed',
+        success: false,
+        error: 'Missing Google credential',
+        message: 'No credential provided'
+      });
+    }
 
+    // Check if GOOGLE_CLIENT_ID is configured
     const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-    if (!GOOGLE_CLIENT_ID) return res.status(500).json({ status: 'failed', error: 'Google Sign-In not configured on server' });
+    if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'your_google_client_id.apps.googleusercontent.com') {
+      console.error('[GOOGLE AUTH] GOOGLE_CLIENT_ID not properly configured in .env');
+      return res.status(500).json({ 
+        status: 'failed',
+        success: false,
+        authenticated: false,
+        error: 'Google Sign-In not configured on server',
+        message: 'Server admin must set GOOGLE_CLIENT_ID in .env file'
+      });
+    }
+
+    console.log('[GOOGLE AUTH] Verifying token with Google...');
 
     // Verify the ID token with Google
     const googleRes = await fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(credential));
-    if (!googleRes.ok) return res.status(401).json({ status: 'failed', error: 'Invalid Google token' });
+    
+    if (!googleRes.ok) {
+      const errText = await googleRes.text();
+      console.error('[GOOGLE AUTH] Token verification failed:', googleRes.status, errText);
+      return res.status(401).json({ 
+        status: 'failed',
+        success: false,
+        error: 'Invalid Google token',
+        message: 'Google rejected the token'
+      });
+    }
 
     const gUser = await googleRes.json();
 
     // Verify audience matches our client ID
     if (gUser.aud !== GOOGLE_CLIENT_ID) {
-      return res.status(401).json({ status: 'failed', error: 'Token audience mismatch' });
+      console.warn('[GOOGLE AUTH] Token audience mismatch. Expected:', GOOGLE_CLIENT_ID, 'Got:', gUser.aud);
+      return res.status(401).json({ 
+        status: 'failed',
+        success: false,
+        error: 'Token audience mismatch',
+        message: 'Token is not for this application'
+      });
     }
+
     if (!gUser.email) {
-      return res.status(401).json({ status: 'failed', error: 'No email in Google token' });
+      console.warn('[GOOGLE AUTH] No email in Google token');
+      return res.status(401).json({ 
+        status: 'failed',
+        success: false,
+        error: 'No email in Google token',
+        message: 'Google account does not have an email'
+      });
     }
 
     const email = gUser.email.toLowerCase().trim();
     const displayName = gUser.name || email.split('@')[0];
+
+    console.log('[GOOGLE AUTH] Token verified for:', email);
 
     // Find existing user
     let user = process.env.DATABASE_URL ? await sqliteFindUserByEmail(email) : memFindUserByEmail(email);
 
     if (!user) {
       // Auto-create account for Google users
+      console.log('[GOOGLE AUTH] Creating new user for:', email);
       const randomPassword = crypto.randomUUID();
       const created = await memCreateUser(email, displayName, randomPassword, {
         emailVerified: true,
@@ -514,6 +578,8 @@ app.post('/api/auth/google', async (req, res) => {
       if (!created || !created.id) throw new Error('User creation failed');
       user = { id: created.id, email, username: displayName, user_type: 'user' };
       console.log('[GOOGLE AUTH] New user created:', user.id, email);
+    } else {
+      console.log('[GOOGLE AUTH] Existing user found:', user.id, email);
     }
 
     // Create session
@@ -528,17 +594,27 @@ app.post('/api/auth/google', async (req, res) => {
       isUntrusted: user.is_untrusted || false
     });
 
+    console.log('[GOOGLE AUTH] Session created:', sessionId);
+
     res.json({
       status: 'success',
+      success: true,
       message: 'Google authentication successful',
       authenticated: true,
       sessionId,
       token,
+      userId: user.id,
       user: { id: user.id, email, username: displayName }
     });
   } catch (error) {
-    console.error('[GOOGLE AUTH ERROR]', error.message);
-    res.status(500).json({ status: 'failed', error: 'Google authentication failed' });
+    console.error('[GOOGLE AUTH ERROR]', error.message, error.stack);
+    res.status(500).json({ 
+      status: 'failed',
+      success: false,
+      authenticated: false,
+      error: 'Google authentication failed',
+      message: error.message 
+    });
   }
 });
 app.post('/api/auth/validate-session', (req, res) => {
@@ -557,14 +633,7 @@ app.post('/api/auth/logout', (req, res) => {
     res.json({ success: true, message: 'Logged out' });
 });
 
-// Google OAuth endpoint (stub)
-app.get('/api/auth/google', (req, res) => {
-    res.json({
-        success: false,
-        message: 'Google auth not configured - using guest mode',
-        authenticated: false
-    });
-});
+// Note: GET /api/auth/google was removed. Use POST /api/auth/google instead for authentication.
 
 // Codes sync endpoint
 app.post('/api/codes/sync', (req, res) => {
