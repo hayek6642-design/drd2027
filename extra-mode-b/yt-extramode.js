@@ -345,16 +345,7 @@ async function activateExtraMode(mode) {
         return; // Prevent activation
     }
 
-    // Check if user has been active for at least 1 minute
-    const timeOnSite = Date.now() - window.appStartTime;
-    const minTimeForExtra = 60000; // 1 minute
-    if (timeOnSite < minTimeForExtra) {
-        if (window.DEBUG_MODE) console.log('[Extra Mode] User has not been active long enough, waiting...');
-        setTimeout(() => {
-            activateExtraMode(mode);
-        }, minTimeForExtra - timeOnSite);
-        return;
-    }
+    // INSTANT ACTIVATION - No delay on extra mode
 
     if (mode !== 'silver' && mode !== 'gold') mode = 'silver';
     extraBarMode = mode;
@@ -1772,6 +1763,27 @@ function enableCodeGenerationProgress() {
 
 // Create Extra Mode UI elements if they don't exist
 function createExtraModeUI() {
+    // Create progress-text element and insert inside play-pause button
+    if (!document.getElementById('progress-text')) {
+        const playPauseBtn = document.getElementById('play-pause-button');
+        if (playPauseBtn) {
+            const progressText = document.createElement('span');
+            progressText.id = 'progress-text';
+            progressText.textContent = '00%';
+            progressText.style.display = 'none';
+            progressText.style.position = 'absolute';
+            progressText.style.top = '50%';
+            progressText.style.left = '50%';
+            progressText.style.transform = 'translate(-50%, -50%)';
+            progressText.style.color = '#00ff00';
+            progressText.style.fontSize = '14px';
+            progressText.style.fontWeight = 'bold';
+            progressText.style.zIndex = '10';
+            progressText.style.pointerEvents = 'none';
+            playPauseBtn.appendChild(progressText);
+        }
+    }
+
     // Create reward notification element
     if (!document.getElementById('reward-notification')) {
         const rewardNotification = document.createElement('div');
