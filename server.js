@@ -556,7 +556,6 @@ app.post('/api/auth/validate-session', (req, res) => {
 app.post('/api/auth/logout', (req, res) => {
     res.json({ success: true, message: 'Logged out' });
 });
-});
 
 // Google OAuth endpoint (stub)
 app.get('/api/auth/google', (req, res) => {
