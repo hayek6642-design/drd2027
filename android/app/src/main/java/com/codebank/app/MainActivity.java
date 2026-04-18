@@ -39,10 +39,12 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        // Prevent WebView reload on resume
+        // CRITICAL: Pause WebView to save battery
+        // Stops all JavaScript timers and animations
         WebView webView = getBridge().getWebView();
         if (webView != null) {
-            webView.onPause();
+            webView.onPause();           // Pauses rendering
+            webView.pauseTimers();       // CRITICAL: Stops setInterval/setTimeout
         }
     }
     
@@ -52,13 +54,18 @@ public class MainActivity extends BridgeActivity {
         // Resume WebView without reload
         WebView webView = getBridge().getWebView();
         if (webView != null) {
-            webView.onResume();
+            webView.onResume();          // Resume rendering
+            webView.resumeTimers();      // Resume JavaScript timers
         }
     }
     
     @Override
     protected void onStop() {
         super.onStop();
-        // Don't destroy WebView - just pause it
+        // Additional battery saving when app is fully stopped
+        WebView webView = getBridge().getWebView();
+        if (webView != null) {
+            webView.pauseTimers();  // Ensure timers are paused
+        }
     }
 }

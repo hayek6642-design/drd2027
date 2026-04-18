@@ -1,0 +1,80 @@
+/**
+ * 🔋 BATTERY SAVE MODE STYLES
+ * Disables animations and transitions to reduce battery drain
+ * Applied when app is backgrounded or in low-power mode
+ */
+
+/* Disable all animations when in battery save mode */
+.battery-save-mode,
+.battery-save-mode * {
+  animation: none !important;
+  -webkit-animation: none !important;
+}
+
+/* Disable all transitions */
+.battery-save-mode,
+.battery-save-mode * {
+  transition: none !important;
+  -webkit-transition: none !important;
+}
+
+/* Disable background images/videos to save memory */
+.battery-save-mode video,
+.battery-save-mode audio {
+  display: none !important;
+}
+
+/* Optimize text rendering - reduce GPU load */
+.battery-save-mode * {
+  -webkit-font-smoothing: auto;
+  font-smoothing: auto;
+}
+
+/* Reduce shadow rendering */
+.battery-save-mode {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+/* Disable filters and effects */
+.battery-save-mode * {
+  filter: none !important;
+  -webkit-filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Disable blur effects */
+.battery-save-mode .blur {
+  blur: 0 !important;
+}
+
+/* Reduce GPU-intensive 3D transforms */
+.battery-save-mode * {
+  perspective: none;
+  transform: translateZ(0) !important;
+}
+
+/* Optimize scrolling - disable smooth scroll */
+.battery-save-mode {
+  scroll-behavior: auto !important;
+}
+
+/* Minimize repaints - simpler styling */
+.battery-save-mode {
+  will-change: unset !important;
+}
+
+/* Stop spinner/loading animations */
+.battery-save-mode .spinner,
+.battery-save-mode [class*="loading"],
+.battery-save-mode [class*="rotate"],
+.battery-save-mode .pulse {
+  animation: none !important;
+}
+
+/* Disable page transitions */
+.battery-save-mode .page-transition {
+  animation: none !important;
+  transition: none !important;
+}

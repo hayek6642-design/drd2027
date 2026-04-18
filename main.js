@@ -46,6 +46,7 @@ console.log('[Polyfills] ✅ All core classes available');
 import { AppLifecycleManager, onceEvent, safeFetch } from "./core/app-lifecycle.js";
 import { SelfHealing } from "./core/self-healing.js";
 import { AIBrainEngine } from "./core/ai-brain.js";
+import { BatteryManager } from "./core/battery-manager.js";  // 🔋 Battery optimization
 
 // ==========================================
 // 🛡️ 1) Self-Healing Rules Registration

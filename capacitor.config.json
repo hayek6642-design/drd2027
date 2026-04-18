@@ -43,7 +43,7 @@
     "url": "https://dr-d-h51l.onrender.com",
     "androidScheme": "https",
     "hostname": "localhost",
-    "cleartext": true,
+    "cleartext": false,
     "allowNavigation": [
       "localhost",
       "127.0.0.1",
@@ -59,7 +59,7 @@
     ]
   },
   "android": {
-    "allowMixedContent": true,
+    "allowMixedContent": false,
     "webContentsDebuggingEnabled": false,
     "backgroundColor": "#0d1117",
     "appendUserAgent": "CodeBank-Android",
