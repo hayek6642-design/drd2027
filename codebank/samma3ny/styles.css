@@ -2428,3 +2428,242 @@ body {
     }
 }
 }
+
+/* ===== MOBILE RESPONSIVENESS ===== */
+
+/* Tablet & Mobile (Portrait) */
+@media (max-width: 1023px) {
+    .player-container {
+        padding: 12px 12px 40px;
+        max-width: 100%;
+    }
+    
+    .media-player {
+        grid-template-columns: 1fr;
+        grid-template-areas: 
+            "cd-player"
+            "playlist";
+        min-height: auto;
+        gap: 16px;
+        padding: 16px;
+        border-radius: 16px;
+    }
+}
+
+/* Mobile (Portrait - Max 767px) */
+@media (max-width: 767px) {
+    body {
+        font-size: 12px;
+    }
+    
+    .player-container {
+        padding: 8px 8px 80px;
+        min-height: auto;
+    }
+    
+    .media-player {
+        gap: 12px;
+        padding: 12px;
+    }
+    
+    /* CD Player Responsive Sizing */
+    .cd-player {
+        max-width: 100%;
+    }
+    
+    .cd-container {
+        width: 240px;
+        height: 240px;
+        margin: 0 auto 24px;
+    }
+    
+    .cd-disc {
+        width: 220px;
+        height: 220px;
+    }
+    
+    .progress-ring {
+        width: 240px !important;
+        height: 240px !important;
+    }
+    
+    .progress-ring circle {
+        r: 115 !important;
+        cx: 120 !important;
+        cy: 120 !important;
+    }
+    
+    /* Track Info Responsive */
+    .track-info {
+        margin-top: 16px;
+    }
+    
+    .track-title {
+        font-size: 14px;
+        margin-bottom: 4px;
+    }
+    
+    .track-artist {
+        font-size: 11px;
+        margin-bottom: 2px;
+    }
+    
+    .track-description {
+        font-size: 10px;
+    }
+    
+    /* Controls Responsive */
+    .player-controls {
+        margin-top: 12px;
+        gap: 8px;
+    }
+    
+    .control-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 12px;
+    }
+    
+    .main-play-btn {
+        width: 48px;
+        height: 48px;
+    }
+    
+    .control-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .main-play-btn svg {
+        width: 22px;
+        height: 22px;
+    }
+    
+    /* Progress Bar Responsive */
+    .progress-container {
+        margin-top: 12px;
+    }
+    
+    .progress-bar {
+        height: 4px;
+        margin-bottom: 6px;
+    }
+    
+    .progress-handle {
+        width: 12px;
+        height: 12px;
+    }
+    
+    .time-display {
+        font-size: 10px;
+        gap: 4px;
+    }
+    
+    /* Sound Control */
+    .sound-container {
+        margin-top: 8px;
+    }
+    
+    .sound-btn {
+        font-size: 18px;
+        width: 40px;
+        height: 40px;
+    }
+    
+    /* Playlist Responsive */
+    .right-panel {
+        min-height: auto;
+    }
+    
+    .playlist-header-main {
+        margin-bottom: 12px;
+    }
+    
+    .playlist-title {
+        font-size: 14px;
+    }
+    
+    .refresh-btn {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .refresh-btn svg {
+        width: 14px;
+        height: 14px;
+    }
+    
+    .section-title {
+        font-size: 12px;
+    }
+    
+    .playlist {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .playlist-item {
+        padding: 8px;
+        margin-bottom: 6px;
+    }
+    
+    .playlist-item-title {
+        font-size: 12px;
+    }
+    
+    .playlist-item-artist {
+        font-size: 10px;
+    }
+    
+    /* Nav Arrows */
+    .nav-arrows {
+        display: none; /* Hide on mobile, use native back */
+    }
+}
+
+/* Extra Small Mobile (Max 480px) */
+@media (max-width: 480px) {
+    .cd-container {
+        width: 200px;
+        height: 200px;
+        margin: 0 auto 16px;
+    }
+    
+    .cd-disc {
+        width: 180px;
+        height: 180px;
+    }
+    
+    .progress-ring {
+        width: 200px !important;
+        height: 200px !important;
+    }
+    
+    .progress-ring circle {
+        r: 95 !important;
+        cx: 100 !important;
+        cy: 100 !important;
+    }
+    
+    .track-title {
+        font-size: 12px;
+    }
+    
+    .track-artist {
+        font-size: 10px;
+    }
+    
+    .control-btn {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .main-play-btn {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .playlist {
+        max-height: 200px;
+    }
+}
