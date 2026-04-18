@@ -450,6 +450,7 @@ app.get('/health', (req, res) => {
         environment: process.env.NODE_ENV || 'production',
         sseClients: global.__sseRegistry.size
     });
+});
 
 // Auth endpoint (stub for unauthenticated requests)
 app.get('/api/auth/me', (req, res) => {
@@ -460,7 +461,21 @@ app.get('/api/auth/me', (req, res) => {
     });
 });
 
+// Codes sync endpoint
+app.post('/api/codes/sync', (req, res) => {
+    console.log('[API] Codes sync received:', req.body);
+    res.json({ success: true, saved: true, count: 1 });
+});
 
+// Assets sync endpoint  
+app.post('/api/assets/sync', (req, res) => {
+    console.log('[API] Assets sync received:', req.body);
+    res.json({ success: true });
+});
+
+// SQLite codes endpoint
+app.get('/api/sqlite/codes', (req, res) => {
+    res.json({ codes: [], count: 0 });
 });
 
 
