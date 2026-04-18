@@ -715,6 +715,27 @@ app.post('/api/battalooda/upload', identifyGuest, (req, res) => {
     });
 });
 
+// Extra Mode Reward Claim (local storage fallback for guests)
+app.post('/api/rewards/claim', (req, res) => {
+    const { type } = req.body;
+    const guestId = req.headers['x-guest-id'] || req.cookies?.guest_id;
+    console.log('[Rewards] Claim:', type, 'guest:', guestId || 'anonymous');
+    
+    // Generate reward code
+    const code = type === 'gold' ? 'GOLD-' : 'SILVER-';
+    const randomPart = Math.random().toString(36).substr(2, 6).toUpperCase();
+    const fullCode = code + randomPart + '-' + Date.now().toString().slice(-4);
+    
+    res.json({
+        success: true,
+        code: fullCode,
+        type: type,
+        guestId: guestId,
+        claimedAt: Date.now(),
+        message: `Claimed ${type} reward!`
+    });
+});
+
 
 // 404 handler
 app.use((req, res) => {
