@@ -2,6 +2,40 @@
  * AssetsDirect - Production-Ready Asset Manager
  * NO INFINITE LOOPS. NO CACHE SPAM. REAL SERVER SYNC.
  */
+
+// Define AssetsDirectBus if not already defined
+if (typeof window.AssetsDirectBus === 'undefined') {
+    window.AssetsDirectBus = {
+        loadFromCache: function() {
+            try {
+                const cached = localStorage.getItem('acc_assets') || localStorage.getItem('codebank_assets');
+                if (cached) {
+                    const assets = JSON.parse(cached);
+                    window.AppState = window.AppState || {};
+                    window.AppState.assets = assets;
+                    console.log('[AssetsDirectBus] Loaded from cache:', assets);
+                    return assets;
+                }
+            } catch(e) {
+                console.warn('[AssetsDirectBus] Cache load error:', e);
+            }
+            return null;
+        },
+        saveToCache: function(assets) {
+            try {
+                localStorage.setItem('acc_assets', JSON.stringify(assets));
+                console.log('[AssetsDirectBus] Saved to cache');
+            } catch(e) {
+                console.warn('[AssetsDirectBus] Cache save error:', e);
+            }
+        },
+        publish: function(event, data) {
+            console.log('[AssetsDirectBus] Publish:', event, data);
+            window.dispatchEvent(new CustomEvent('assets:updated', { detail: data }));
+        }
+    };
+}
+
 (function() {
   'use strict';
   
@@ -33,6 +67,9 @@
       this.broadcastToIframes();
       this.isInitialized = true;
       log('Initialized with:', this.getCounts());
+      
+      // Force UI update with current cache counts
+      this.updateUICounts();
     }
     
     waitForAuth() {
@@ -249,6 +286,32 @@
     
     getAssets() { return { ...this.assets }; }
     getCodes() { return [...this.assets.codes]; }
+    
+    // Direct UI update that doesn't depend on event bus
+    updateUICounts() {
+        const counts = this.getCounts();
+        const codes = this.assets.codes || [];
+        
+        // Update all code count elements
+        document.querySelectorAll('.code-count, #code-count, [data-code-count]').forEach(el => {
+            el.textContent = counts.codes;
+        });
+        
+        // Update code list display if container exists
+        const listContainer = document.getElementById('code-list') || document.getElementById('generated-codes');
+        if (listContainer && codes.length > 0) {
+            listContainer.innerHTML = codes.map(code => 
+                `<div class="code-item">${code}</div>`
+            ).join('');
+        }
+        
+        // Dispatch event for any listeners
+        window.dispatchEvent(new CustomEvent('assets:updated', { 
+            detail: { type: 'codes', count: counts.codes, list: codes } 
+        }));
+        
+        console.log('[AssetsDirect] UI updated with', counts.codes, 'codes');
+    }
   }
   
   // Initialize

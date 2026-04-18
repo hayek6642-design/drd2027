@@ -5,6 +5,35 @@
  * Fix: Check sessionId first, only sync if authenticated
  */
 
+// Define AssetsDirectBus if not already defined
+if (typeof window.AssetsDirectBus === 'undefined') {
+    window.AssetsDirectBus = {
+        loadFromCache: function() {
+            try {
+                const cached = localStorage.getItem('acc_assets') || localStorage.getItem('codebank_assets');
+                if (cached) {
+                    const assets = JSON.parse(cached);
+                    window.AppState = window.AppState || {};
+                    window.AppState.assets = assets;
+                    console.log('[AssetsDirectBus] Loaded from cache:', assets);
+                    return assets;
+                }
+            } catch(e) {
+                console.warn('[AssetsDirectBus] Cache load error:', e);
+            }
+            return null;
+        },
+        saveToCache: function(assets) {
+            try {
+                localStorage.setItem('acc_assets', JSON.stringify(assets));
+            } catch(e) {}
+        },
+        publish: function(event, data) {
+            window.dispatchEvent(new CustomEvent('assets:updated', { detail: data }));
+        }
+    };
+}
+
 (function() {
     const SYNC_INTERVAL = 5000; // 5 seconds
     const MAX_RETRIES = 3;
