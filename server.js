@@ -976,6 +976,18 @@ app.post('/api/rewards/claim', (req, res) => {
     });
 });
 
+// Capacitor Live Update manifest
+app.get('/capacitor-update/manifest.json', (req, res) => {
+    res.json({
+        version: '1.0.0',
+        url: 'https://dr-d-h51l.onrender.com/capacitor-update',
+        assets: {
+            'index.html': '/index.html',
+            'assets/': '/assets/'
+        }
+    });
+});
+
 
 // 404 handler
 app.use((req, res) => {
