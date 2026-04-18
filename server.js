@@ -465,7 +465,7 @@ app.get('/api/auth/me', (req, res) => {
         message: 'Guest mode - no auth token provided',
         user: null
     });
-
+});
 // Auth configuration endpoint (for Google Client ID)
 app.get('/api/auth/google-client-id', (req, res) => {
   const raw = process.env.GOOGLE_CLIENT_ID || '';
