@@ -505,30 +505,75 @@ class UniversalPersistentStorage {
     if (!this.isOnline) return;
 
     const queue = await this.getAllFromStore('syncQueue');
+    if (queue.length === 0) return;
+
     const sorted = queue.sort((a, b) => {
       const order = { high: 0, normal: 1, low: 2 };
       return order[a.priority] - order[b.priority];
     });
 
+    // Batch sync - collect all pending items
+    const actions = [];
+    const mediaProgress = [];
+    const actionQueueIds = [];
+    const progressQueueIds = [];
+
     for (const item of sorted) {
       if (item.attempts >= 5) continue;
       
-      try {
-        // Sync to Turso (placeholder)
-        console.log('[PersistentStorage] Syncing:', item.type, item.record?.universalKey);
-        
-        // Mark as synced
-        if (item.type === 'action') {
-          await this.updateInStore('universalActions', item.record.universalKey, {
-            syncStatus: 'synced',
-            syncedAt: Date.now()
-          });
+      if (item.type === 'action') {
+        actions.push(item.record);
+        actionQueueIds.push(item.queueId);
+      } else if (item.type === 'progress') {
+        mediaProgress.push(item.record);
+        progressQueueIds.push(item.queueId);
+      }
+    }
+
+    if (actions.length === 0 && mediaProgress.length === 0) return;
+
+    try {
+      const identity = this.getUserIdentity();
+      
+      // Call server API to sync
+      const response = await fetch('/api/persistence/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          actions,
+          mediaProgress,
+          userId: identity.userId || null,
+          userFingerprint: identity.fingerprint,
+          deviceId: identity.deviceId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Sync failed: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Mark synced items
+        for (const queueId of actionQueueIds) {
+          await this.deleteFromStore('syncQueue', queueId);
+        }
+        for (const queueId of progressQueueIds) {
+          await this.deleteFromStore('syncQueue', queueId);
         }
 
-        await this.deleteFromStore('syncQueue', item.queueId);
-      } catch (err) {
+        console.log(`[PersistentStorage] Synced ${result.synced} items to server`);
+      }
+    } catch (err) {
+      console.error('[PersistentStorage] Sync error:', err);
+      
+      // Increment attempt counts on all items
+      for (const item of sorted.slice(0, actions.length + mediaProgress.length)) {
         await this.updateInStore('syncQueue', item.queueId, {
-          attempts: item.attempts + 1,
+          attempts: (item.attempts || 0) + 1,
           lastError: err.message
         });
       }

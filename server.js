@@ -78,6 +78,7 @@ import * as logicodeMod from './api/modules/logicode.js';
 import * as corsaMod from './api/modules/corsa.js';
 import * as codesMod from './api/modules/codes.js';
 import syncRouter from './api/modules/sync.js';
+import persistenceRouter from './api/modules/persistence.js';
 import settaDefault from './api/modules/setta.js';
 import * as balloonMod from './api/modules/balloon.js';
 import { query, pool } from './api/config/db.js';
@@ -422,6 +423,9 @@ app.use('/api/watchdog', watchdogRoutes);
 
 // Register Trust Engine routes
 app.use('/api/trust', trustRouter);
+
+// Register Persistence/Sync routes (watching time, likes, comments, etc.)
+app.use('/api/persistence', persistenceRouter);
 
 // Redirect old paths to new structure (fallback for missed paths)
 app.get('/services/yt-clear/*', (req, res) => {

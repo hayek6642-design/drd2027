@@ -230,6 +230,117 @@ class ServicePersistenceHelper {
   }
 
   /**
+   * Retrieve synced data from server
+   * Usage: const serverActions = await helper.getFromServer('like', { limit: 50 })
+   */
+  async getFromServer(action = null, options = {}) {
+    try {
+      const identity = this.storage?.getUserIdentity() || {};
+      
+      const params = new URLSearchParams({
+        service: this.service,
+        userFingerprint: identity.fingerprint,
+        limit: options.limit || 100,
+        offset: options.offset || 0
+      });
+
+      if (action) {
+        params.append('action', action);
+      }
+
+      const response = await fetch(`/api/persistence/actions?${params}`);
+      
+      if (!response.ok) {
+        throw new Error(`Server retrieval failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.success ? result.actions : [];
+    } catch (err) {
+      console.error(`[${this.service}] Server retrieval failed:`, err);
+      return [];
+    }
+  }
+
+  /**
+   * Get media progress from server
+   * Usage: const progress = await helper.getProgressFromServer(videoId)
+   */
+  async getProgressFromServer(contentId) {
+    try {
+      const identity = this.storage?.getUserIdentity() || {};
+      
+      const response = await fetch(
+        `/api/persistence/resume/${this.service}/${contentId}?userFingerprint=${identity.fingerprint}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Resume retrieval failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.found ? result.resume : null;
+    } catch (err) {
+      console.error(`[${this.service}] Resume retrieval failed:`, err);
+      return null;
+    }
+  }
+
+  /**
+   * Restore from server (multi-device sync)
+   * Syncs data from server back to local storage
+   */
+  async restoreFromServer() {
+    try {
+      const actions = await this.getFromServer();
+      
+      for (const action of actions) {
+        // Merge into local storage
+        await this.storage.saveToStore('universalActions', {
+          universalKey: action.universal_key,
+          service: action.service,
+          action: action.action,
+          itemId: action.item_id,
+          userId: action.user_id,
+          timestamp: action.timestamp,
+          data: typeof action.data === 'string' ? JSON.parse(action.data) : action.data,
+          syncStatus: 'synced',
+          contentType: action.content_type
+        });
+      }
+
+      console.log(`[${this.service}] Restored ${actions.length} actions from server`);
+      return actions;
+    } catch (err) {
+      console.error(`[${this.service}] Server restore failed:`, err);
+      return [];
+    }
+  }
+
+  /**
+   * Get user statistics from server
+   */
+  async getStatsFromServer() {
+    try {
+      const identity = this.storage?.getUserIdentity() || {};
+      
+      const response = await fetch(
+        `/api/persistence/stats/${identity.fingerprint}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Stats retrieval failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.success ? result.stats : null;
+    } catch (err) {
+      console.error(`[${this.service}] Stats retrieval failed:`, err);
+      return null;
+    }
+  }
+
+  /**
    * Clear all data for this service
    */
   async clearAll() {
