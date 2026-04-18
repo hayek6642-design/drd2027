@@ -1076,22 +1076,11 @@ function handleUnload() {
  * DONE -> IDLE (after cleanup)
  */
 async function claimReward(reward) {
-    // FIX BUG#3: AuthGate race condition — wait for auth to be ready before claiming
-    // The console showed "[AuthGate] Queuing fetch to /api/rewards/claim until auth ready"
-    // which means the claim fires before auth resolves and the request is held, possibly
-    // expiring the reward window before it's sent.
+    // FIX: Allow guest users to claim rewards even if AuthGate is not ready
+    // Guests (unauthenticated) can claim - proceed immediately
     if (window.AuthGate && typeof window.AuthGate.isReady === 'function' && !window.AuthGate.isReady()) {
-        console.warn('[Reward] AuthGate not ready — waiting up to 5s before claiming');
-        await new Promise((resolve) => {
-            const timeout = setTimeout(resolve, 5000); // max 5s wait
-            const checkReady = setInterval(() => {
-                if (window.AuthGate && window.AuthGate.isReady()) {
-                    clearInterval(checkReady);
-                    clearTimeout(timeout);
-                    resolve();
-                }
-            }, 100);
-        });
+        console.warn('[Reward] AuthGate not ready — proceeding anyway for guest claim');
+        // Don't wait - proceed immediately for guests
     }
 
     // STATE CHECK: Only allow claiming if state is READY
