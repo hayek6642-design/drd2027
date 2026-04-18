@@ -10,31 +10,20 @@ export default defineConfig({
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true,
+        drop_console: false,
         drop_debugger: true
       }
     },
     
     rollupOptions: {
       output: {
-        manualChunks: {
-          'core-auth': ['src/core/auth-core.js', 'src/core/session-manager-v2.js'],
-          'core-services': ['src/core/service-manager-v2.js', 'src/core/assetbus-v2.js', 'src/core/watch-dog-v2.js'],
-          'api-bankode': ['src/api/bankode-core.js', 'src/api/bankode-ledger.js'],
-          'api-safecode': ['src/api/safecode-core.js', 'src/api/safecode-validation.js'],
-          'ui-components': ['src/components/app-launcher.js', 'src/components/app-grid.js', 'src/components/service-container.js'],
-          'admin-module': ['src/admin/admin-dashboard.js', 'src/admin/admin-routes.js'],
-          'utils': ['src/utils/helpers.js', 'src/utils/formatters.js', 'src/utils/validators.js'],
-          'styles': ['src/styles/index.css', 'src/styles/theme.css']
-        },
-        
         chunkFileNames: 'chunks/[name].[hash].js',
         entryFileNames: '[name].[hash].js',
         assetFileNames: 'assets/[name].[hash][extname]'
       }
     },
     
-    chunkSizeWarningLimit: 500,
+    chunkSizeWarningLimit: 1000,
     reportCompressedSize: false
   },
   

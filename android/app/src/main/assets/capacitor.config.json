@@ -8,7 +8,8 @@
 			"launchShowDuration": 0
 		},
 		"StatusBar": {
-			"style": "DARK"
+			"style": "DARK",
+			"backgroundColor": "#000000"
 		},
 		"Keyboard": {
 			"resize": "ionic",
@@ -40,6 +41,8 @@
 	},
 	"server": {
 		"url": "https://drd2027.onrender.com",
+		"androidScheme": "https",
+		"hostname": "localhost",
 		"cleartext": true,
 		"allowNavigation": [
 			"localhost",
@@ -60,7 +63,9 @@
 		"webContentsDebuggingEnabled": false,
 		"backgroundColor": "#0d1117",
 		"appendUserAgent": "CodeBank-Android",
-		"screenOrientation": "portrait"
+		"screenOrientation": "portrait",
+		"launchShowDuration": 0,
+		"launchAutoHide": true
 	},
 	"ios": {
 		"contentInset": "always",

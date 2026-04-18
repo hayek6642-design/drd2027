@@ -1,9 +1,158 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#0d1117">
-<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0d1117;color:#fff;font-family:system-ui;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}.loader{text-align:center}.spinner{width:48px;height:48px;border:3px solid #30363d;border-top-color:#00d4ff;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}@keyframes spin{to{transform:rotate(360deg)}}</style>
-</head><body><div class="loader"><div class="spinner"></div><p style="color:#8b949e">Connecting to CodeBank...</p></div>
-<script>
-const S='https://dr-d-h51l.onrender.com';let r=0;
-async function t(){try{const p=await fetch(S+'/api/health',{signal:AbortSignal.timeout(15000)});if(p.ok)window.location.replace(S);else throw 0}catch(e){if(++r<3)setTimeout(t,2000*r);else document.body.innerHTML='<div style="text-align:center;padding:40px"><h2 style="color:#f85149">Connection Failed</h2><p style="color:#8b949e;margin:16px 0">Check your internet connection</p><button onclick="r=0;t()" style="padding:10px 24px;background:#00d4ff;color:#0d1117;border:none;border-radius:8px;font-weight:bold">Retry</button></div>'}}
-t();</script></body></html>
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <script>
+    // 🔥 Cache Buster - Force fresh file loads
+    window.__CACHE_BUST_VERSION = '1776497134584';
+    const _origFetch = window.fetch;
+    window.fetch = function(...args) {
+        let [url, opts] = args;
+        if (typeof url === 'string' && (url.includes('.js') || url.includes('.css'))) {
+            const sep = url.includes('?') ? '&' : '?';
+            url = url + sep + 'cb=' + window.__CACHE_BUST_VERSION;
+        }
+        return _origFetch(url, opts);
+    };
+    console.log('[CacheBuster] Enabled - version:', window.__CACHE_BUST_VERSION);
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f0f0f">
+  
+  <!-- Performance: Preconnect to critical domains -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="dns-prefetch" href="https://api.codebank.app">
+  
+  <!-- ═══ PWA & NATIVE INSTALL ══════════════════════════════════════════ -->
+  <link rel="manifest" href="/assets/manifest.e760cKv8.json">
+
+  <!-- iOS Safari PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CodeBank">
+
+  <!-- iOS Touch Icons (all required sizes) -->
+  <link rel="apple-touch-icon" href="/assets/icon-180x180.DyNyvC5X.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/assets/icon-152x152.i_IH4dR3.png">
+  <link rel="apple-touch-icon" sizes="167x167" href="/assets/icon-167x167.TAGi8iF2.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/icon-180x180.DyNyvC5X.png">
+
+  <!-- iOS Splash Screens (covers common iPhone/iPad sizes) -->
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" href="/assets/splash-390x844.YGHn-sqa.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)" href="/assets/splash-414x896.CeYDsNZC.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" href="/assets/splash-375x667.LfD3wRvT.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)" href="/assets/splash-430x932.C7Pm9T9M.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32x32.CKeOjgBQ.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/icon-192x192.B8R1CofA.png">
+  <link rel="shortcut icon" href="/assets/favicon.CFMvjZqy.ico">
+
+  <!-- Microsoft / Windows -->
+  <meta name="msapplication-TileImage" content="data:image/png;base64,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">
+  <meta name="msapplication-TileColor" content="#0f0f0f">
+  <meta name="msapplication-config" content="none">
+
+  <!-- Description for install banner -->
+  <meta name="description" content="CodeBank — manage codes, rewards, music, games and more. Install for the full native experience.">
+  
+  <!-- Critical CSS inline -->
+  <style>
+    /* Minimal critical CSS for first paint */
+    body { margin: 0; background: #0f0f0f; color: #fff; font-family: system-ui; }
+    #app { min-height: 100vh; }
+    .loading-screen { 
+      position: fixed; 
+      inset: 0; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+      background: #0f0f0f;
+      z-index: 99999;
+    }
+    .spinner { 
+      width: 40px; 
+      height: 40px; 
+      border: 3px solid #333; 
+      border-top-color: #00d4ff; 
+      border-radius: 50%; 
+      animation: spin 1s linear infinite; 
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+  
+  <!-- Async load non-critical CSS -->
+  <noscript></noscript>
+  
+  <title>CodeBank</title>
+
+  <!-- Capacitor Native Bridge -->
+  <script src="https://cdn.jsdelivr.net/npm/@capacitor/core/dist/capacitor.js"></script>
+  <script src="/src/native-bridge.js"></script>
+  <script src="/src/native-storage.js"></script>
+  
+  <!-- Native platform styles -->
+  <style>
+    /* Safe area support for notched devices */
+    body {
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+    }
+    /* Hide scrollbars on native */
+    .native-platform ::-webkit-scrollbar { display: none; }
+    .native-platform { -webkit-overflow-scrolling: touch; }
+  </style>
+
+  <!-- PWA Install Handler (iOS guide + Android banner + Service Worker) -->
+  <script src="/src/pwa-install.js" defer></script>
+  
+  <!-- FIX 3: Storage Bridge - Persistent localStorage using Capacitor Preferences -->
+  
+  <!-- FIX 3: Emergency HTML Unescape (failsafe) -->
+  <script>
+    // Prevent escaped text from rendering
+    if (document.body && document.body.textContent.includes('\\n')) {
+      console.log('[Emergency] Unescaping HTML...');
+      document.body.innerHTML = document.body.textContent
+        .replace(/\\n/g, '\n')
+        .replace(/\\t/g, '\t')
+        .replace(/\\"/g, '"')
+        .replace(/\\\\/g, '\\');
+    }
+    
+    // Global error handler for storage
+    window.addEventListener('error', (event) => {
+      if (event.message && event.message.includes('localStorage')) {
+        console.error('[Storage] Critical error:', event.message);
+        console.log('[Storage] Attempting fallback to IndexedDB...');
+      }
+    });
+  </script>
+  <script type="module" crossorigin src="/index.BsTpxchu.js"></script>
+  <link rel="modulepreload" crossorigin href="/chunks/dist.Cr12GazG.js">
+  <link rel="stylesheet" crossorigin href="/assets/index.Bq8jUTcw.css">
+</head>
+<body>
+  <!-- Loading screen (removed by JS when ready) -->
+  <div id="loading" class="loading-screen">
+    <div class="spinner"></div>
+  </div>
+
+  <div id="app"></div>
+
+  <!-- Module scripts (loaded asynchronously) -->
+
+  <!-- Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js', { 
+        updateViaCache: 'imports' 
+      }).catch(console.error);
+    }
+  </script>
+</body>
+</html>
