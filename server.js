@@ -652,6 +652,69 @@ app.get('/api/sqlite/codes', (req, res) => {
     res.json({ codes: [], count: 0 });
 });
 
+// ============================================================================
+// GUEST CONTENT UPLOAD - Farragna, Nostalgia, Battalooda
+// ============================================================================
+
+// Generate guest ID
+function generateGuestId() {
+    return 'guest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+// Guest upload middleware
+function identifyGuest(req, res, next) {
+    const guestId = req.headers['x-guest-id'] || req.cookies?.guest_id;
+    if (!guestId || !guestId.startsWith('guest_')) {
+        req.guestId = generateGuestId();
+        req.isNewGuest = true;
+    } else {
+        req.guestId = guestId;
+        req.isNewGuest = false;
+    }
+    res.setHeader('x-guest-id', req.guestId);
+    next();
+}
+
+// Farragna upload (guest)
+app.post('/api/farragna/upload', identifyGuest, (req, res) => {
+    const { mediaUrl, caption, type } = req.body;
+    console.log('[Farragna] Guest upload:', req.guestId, type);
+    // Store metadata only - no media storage for guests
+    res.json({
+        success: true,
+        postId: 'farragna_' + Date.now(),
+        guestId: req.guestId,
+        isNewGuest: req.isNewGuest,
+        status: 'pending_review'
+    });
+});
+
+// Nostalgia upload (guest)
+app.post('/api/nostalgia/upload', identifyGuest, (req, res) => {
+    const { mediaUrl, caption, year, location } = req.body;
+    console.log('[Nostalgia] Guest upload:', req.guestId, year);
+    res.json({
+        success: true,
+        postId: 'nostalgia_' + Date.now(),
+        guestId: req.guestId,
+        isNewGuest: req.isNewGuest,
+        status: 'pending_review'
+    });
+});
+
+// Battalooda upload (guest)
+app.post('/api/battalooda/upload', identifyGuest, (req, res) => {
+    const { mediaUrl, caption, location } = req.body;
+    console.log('[Battalooda] Guest upload:', req.guestId);
+    res.json({
+        success: true,
+        postId: 'battalooda_' + Date.now(),
+        guestId: req.guestId,
+        isNewGuest: req.isNewGuest,
+        status: 'pending_review'
+    });
+});
+
 
 // 404 handler
 app.use((req, res) => {
