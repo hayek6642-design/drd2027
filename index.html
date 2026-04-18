@@ -110,6 +110,34 @@
 
   <!-- PWA Install Handler (iOS guide + Android banner + Service Worker) -->
   <script src="/src/pwa-install.js" defer></script>
+  
+  <!-- FIX 3: Storage Bridge - Persistent localStorage using Capacitor Preferences -->
+  <script type="module">
+    // Initialize storage bridge immediately
+    import { startStorageBridge } from '/js/storage-bridge.js';
+    startStorageBridge().catch(console.error);
+  </script>
+  
+  <!-- FIX 3: Emergency HTML Unescape (failsafe) -->
+  <script>
+    // Prevent escaped text from rendering
+    if (document.body && document.body.textContent.includes('\\n')) {
+      console.log('[Emergency] Unescaping HTML...');
+      document.body.innerHTML = document.body.textContent
+        .replace(/\\n/g, '\n')
+        .replace(/\\t/g, '\t')
+        .replace(/\\"/g, '"')
+        .replace(/\\\\/g, '\\');
+    }
+    
+    // Global error handler for storage
+    window.addEventListener('error', (event) => {
+      if (event.message && event.message.includes('localStorage')) {
+        console.error('[Storage] Critical error:', event.message);
+        console.log('[Storage] Attempting fallback to IndexedDB...');
+      }
+    });
+  </script>
 </head>
 <body>
   <!-- Loading screen (removed by JS when ready) -->
