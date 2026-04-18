@@ -450,6 +450,17 @@ app.get('/health', (req, res) => {
         environment: process.env.NODE_ENV || 'production',
         sseClients: global.__sseRegistry.size
     });
+
+// Auth endpoint (stub for unauthenticated requests)
+app.get('/api/auth/me', (req, res) => {
+    res.status(401).json({
+        authenticated: false,
+        message: 'Guest mode - no auth token provided',
+        user: null
+    });
+});
+
+
 });
 
 
