@@ -411,7 +411,17 @@ global.__sseEmitToSession = function(sessionId, data) {
     return false;
 };
 
-// Continue with remaining route registrations...
+
+// ============================================================================
+// STATIC FILE SERVING - SERVE HTML/JS/CSS FROM ROOT DIRECTORY
+// ============================================================================
+app.use(express.static(__dirname, {
+    maxAge: '1h',
+    setHeaders: (res, path) => {
+        if (path.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+}));
 
 // ============================================================================
 // ALL REMAINING ROUTES - Mounted in order
@@ -485,14 +495,20 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Simple root endpoint
+// Serve yt-new-clear.html on root path
 app.get('/', (req, res) => {
-    res.status(200).json({
-        service: 'Dr.D Backend Server',
-        version: '2.0',
-        status: 'operational',
-        port: PORT
-    });
+    const htmlPath = path.join(__dirname, 'yt-new-clear.html');
+    if (fs.existsSync(htmlPath)) {
+        res.sendFile(htmlPath);
+    } else {
+        res.status(200).json({
+            service: 'Dr.D Backend Server',
+            version: '2.0',
+            status: 'operational',
+            port: PORT,
+            warning: 'yt-new-clear.html not found in root directory'
+        });
+    }
 });
 
 // 404 handler
