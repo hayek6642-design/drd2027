@@ -22,7 +22,7 @@ console.log('[AssetsDirectBus] Found:', stored ? 'YES' : 'NO', stored ? JSON.par
             
             if (!sessionId || !userId) {
                 console.log('[AssetsDirect] Guest mode - using localStorage only');
-                this.loadFromCache();
+                AssetsDirectBus.loadFromCache();
                 return;
             }
             
