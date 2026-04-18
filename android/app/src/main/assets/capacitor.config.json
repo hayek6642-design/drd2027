@@ -40,7 +40,7 @@
 		}
 	},
 	"server": {
-		"url": "https://drd2027.onrender.com",
+		"url": "https://dr-d-h51l.onrender.com",
 		"androidScheme": "https",
 		"hostname": "localhost",
 		"cleartext": true,
