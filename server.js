@@ -389,6 +389,35 @@ app.get('/api/auth/session', async (req, res) => {
 });
 
 // Register WatchDog routes
+// ============================================================================
+// ROOT ROUTE & STATIC FILES (MUST BE BEFORE API ROUTES)
+// ============================================================================
+
+// Root path: serve yt-new-clear.html
+app.get('/', (req, res) => {
+    const htmlPath = path.join(__dirname, 'yt-new-clear.html');
+    if (fs.existsSync(htmlPath)) {
+        return res.sendFile(htmlPath);
+    }
+    // Fallback
+    res.status(200).json({
+        service: 'Dr.D Backend Server',
+        version: '2.0',
+        status: 'operational',
+        port: PORT
+    });
+});
+
+// Static files (CSS, JS, images, etc.)
+app.use(express.static(__dirname, {
+    maxAge: '1h',
+    setHeaders: (res, path) => {
+        if (path.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+}));
+
+
 app.use('/api/watchdog', watchdogRoutes);
 
 // Register Trust Engine routes
@@ -412,78 +441,6 @@ global.__sseEmitToSession = function(sessionId, data) {
 };
 
 
-// ============================================================================
-// STATIC FILE SERVING - SERVE HTML/JS/CSS FROM ROOT DIRECTORY
-// ============================================================================
-app.use(express.static(__dirname, {
-    maxAge: '1h',
-    setHeaders: (res, path) => {
-        if (path.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Access-Control-Allow-Origin', '*');
-    }
-}));
-
-// ============================================================================
-// ALL REMAINING ROUTES - Mounted in order
-// ============================================================================
-
-// Ballons router
-app.use('/api/balloons', battaloodaRouter);
-
-// AI routes
-app.use('/api/ai', aiRoutes);
-
-// Zagel routes
-app.use('/api/zagel', zagelRouter);
-
-// Shots router
-app.use('/api/shots', shotsRouter);
-
-// Biometric router
-app.use('/api/biometric', biometricRouter);
-
-// Gamble router
-app.use('/api/gamble', gambleRouter);
-
-// Samma3ny auto mode router
-app.use('/api/samma3ny-automode', sammAutoRouter);
-
-// Likes router
-app.use('/api/likes', likesRouter);
-
-// DrMail router
-app.use('/api/drmail', drmailRouter);
-
-// Quota router
-app.use('/api/quota', quotaRouter);
-
-// Auth v2 routes (must come after cookie parsing)
-app.use('/api/auth', authV2Routes);
-
-// Asset routes
-app.use('/api/assets', assetRoutes);
-
-// API module routes
-app.use('/api/codes', codesMod.default ? codesMod.default : codesMod);
-app.use('/api/sync', syncRouter);
-app.use('/api/monetization', monetizationMod.default || monetizationMod);
-app.use('/api/samma3ny', samma3nyMod.default || samma3nyMod);
-app.use('/api/nostalgia', nostalgiaMod.default || nostalgiaMod);
-app.use('/api/pebalaash', pebalaashMod.default || pebalaashMod);
-app.use('/api/admin', adminMod.default || adminMod);
-app.use('/api/test', testMod.default || testMod);
-app.use('/api/rewards', rewardsMod.default || rewardsMod);
-app.use('/api/farragna', farragnaDefault || farragnaWebhook);
-app.use('/api/e7ki', e7kiDefault || {});
-app.use('/api/logicode', logicodeMod.default || logicodeMod);
-app.use('/api/corsa', corsaMod.default || corsaMod);
-app.use('/api/setta', settaDefault || {});
-app.use('/api/balloon', balloonMod.default || balloonMod);
-
-// ============================================================================
-// CRITICAL: HEALTH CHECK & PORT BINDING
-// ============================================================================
-
 // Health check endpoint (REQUIRED - Render monitoring depends on this)
 app.get('/health', (req, res) => {
     res.status(200).json({
@@ -495,19 +452,6 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Serve yt-new-clear.html on root path
-app.get('/', (req, res) => {
-    const htmlPath = path.join(__dirname, 'yt-new-clear.html');
-    if (fs.existsSync(htmlPath)) {
-        res.sendFile(htmlPath);
-    } else {
-        res.status(200).json({
-            service: 'Dr.D Backend Server',
-            version: '2.0',
-            status: 'operational',
-            port: PORT,
-            warning: 'yt-new-clear.html not found in root directory'
-        });
     }
 });
 
