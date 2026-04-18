@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!overlay || !iframe) return;
       overlay.style.display = 'flex';
       overlay.classList.add('open');
-      iframe.src = '/services/yt-clear/codebank/indexCB.html';
+      iframe.src = '/codebank/indexCB.html';
       const shield = document.getElementById('global-touch-shield');
       if (shield) shield.style.display = 'none';
       window.shieldDisabled = true;

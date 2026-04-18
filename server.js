@@ -421,7 +421,13 @@ app.use(express.static(__dirname, {
 app.use('/api/watchdog', watchdogRoutes);
 
 // Register Trust Engine routes
-app.use('/api/trust', trustRouter);// ============================================================================
+app.use('/api/trust', trustRouter);
+
+// Redirect old paths to new structure (fallback for missed paths)
+app.get('/services/yt-clear/*', (req, res) => {
+    const newPath = req.path.replace('/services/yt-clear', '');
+    res.redirect(newPath);
+});// ============================================================================
 // EMERGENCY RENDER FIX - Missing app.listen() + SSE Functions
 // ============================================================================
 
