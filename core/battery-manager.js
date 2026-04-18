@@ -13,13 +13,18 @@ export class BatteryManager {
   }
 
   static initialize() {
-    if (!window.Capacitor) {
-      console.warn('[BatteryManager] Capacitor not available');
+    if (!window.Capacitor || !window.Capacitor.Plugins) {
+      console.warn('[BatteryManager] Capacitor not available (web context)');
       return;
     }
 
     try {
       const { App } = window.Capacitor.Plugins;
+      
+      if (!App) {
+        console.warn('[BatteryManager] App plugin not available (web context)');
+        return;
+      }
 
       App.addListener('appStateChange', (state) => {
         isAppInBackground = !state.isActive;

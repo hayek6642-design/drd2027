@@ -886,8 +886,7 @@
                     console.log('[Google] Initializing with client ID');
                     window.google.accounts.id.initialize({
                         client_id: data.clientId,
-                        callback: window.handleGoogleSignInResponse,
-                        hosted_domain: 'dr-d-h51l.onrender.com'
+                        callback: window.handleGoogleSignInResponse
                     });
                     console.log('[Google] SDK initialized successfully');
                 } else {
@@ -2366,6 +2365,58 @@
         document.head.appendChild(script);
       }
     })();
+    </script>
+
+    <!-- Guardian 3D Container -->
+    <div id="guardian-dog-container" style="position: fixed; bottom: 20px; right: 20px; width: 180px; height: 180px; z-index: 100; pointer-events: none;"></div>
+
+    <!-- Initialize AssetBus Global Object -->
+    <script>
+        // Initialize AssetBus if not already defined
+        if (!window.AssetBus) {
+            window.AssetBus = {
+                state: { codes: [], silver: [], gold: [], lastSync: 0 },
+                listeners: [],
+                
+                getState: function() {
+                    return this.state;
+                },
+                
+                snapshot: function() {
+                    return {
+                        codes: this.state.codes || [],
+                        silver: this.state.silver || [],
+                        gold: this.state.gold || [],
+                        count: (this.state.codes?.length || 0),
+                        lastSync: this.state.lastSync || 0
+                    };
+                },
+                
+                sync: function(data) {
+                    if (data) {
+                        this.state = { ...this.state, ...data };
+                        this.notify();
+                    }
+                },
+                
+                subscribe: function(listener) {
+                    if (typeof listener === 'function') {
+                        this.listeners.push(listener);
+                    }
+                },
+                
+                notify: function() {
+                    this.listeners.forEach(listener => {
+                        try {
+                            listener(this.state);
+                        } catch(e) {
+                            console.warn('[AssetBus] Listener error:', e);
+                        }
+                    });
+                }
+            };
+            console.log('[AssetBus] Global object initialized');
+        }
     </script>
 
 </body>
