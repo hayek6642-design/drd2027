@@ -838,6 +838,32 @@
         #ba-content::-webkit-scrollbar { width:4px; }
         #ba-content::-webkit-scrollbar-thumb { background:#3730a3; border-radius:4px; }
 </style>
+
+<!-- Google Sign-In SDK -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+    // Initialize Google Sign-In when SDK is ready
+    window.onload = function () {
+        // Fetch Google Client ID from server
+        fetch('/api/auth/google-client-id')
+            .then(res => res.json())
+            .then(data => {
+                if (data.clientId && window.google && window.google.accounts) {
+                    console.log('[Google] Initializing with client ID');
+                    window.google.accounts.id.initialize({
+                        client_id: data.clientId,
+                        callback: window.handleGoogleSignInResponse,
+                        hosted_domain: 'dr-d-h51l.onrender.com'
+                    });
+                    console.log('[Google] SDK initialized successfully');
+                } else {
+                    console.warn('[Google] Client ID not configured');
+                }
+            })
+            .catch(err => console.error('[Google] Failed to load client ID:', err));
+    };
+</script>
+
 </head>
 <body>
     <div id="codebank-root">
@@ -1955,8 +1981,85 @@
     
     window.initGoogleSignIn = function() {
         console.log('[Auth] Google sign in clicked...');
-        // Redirect to Google OAuth
-        window.location.href = '/api/auth/google';
+        
+        // Check if Google API is loaded
+        if (typeof window.google === 'undefined' || !window.google.accounts) {
+            console.error('[Auth] Google Sign-In SDK not loaded');
+            alert('Google Sign-In is loading. Please try again in a moment.');
+            return;
+        }
+        
+        // Trigger the Google Sign-In flow
+        try {
+            window.google.accounts.id.renderButton(
+                document.createElement('div'),
+                {
+                    type: 'standard',
+                    size: 'large',
+                    text: 'signin_with',
+                    locale: 'en'
+                }
+            );
+            
+            // Trigger sign-in programmatically
+            window.google.accounts.id.prompt((notification) => {
+                console.log('[Google] Prompt notification:', notification);
+            });
+        } catch (error) {
+            console.error('[Auth] Google Sign-In error:', error);
+            alert('Failed to initialize Google Sign-In. Please try again.');
+        }
+    };
+    
+    // Handle Google Sign-In response
+    window.handleGoogleSignInResponse = async function(response) {
+        console.log('[Auth] Google Sign-In response received');
+        
+        if (!response.credential) {
+            console.error('[Auth] No credential in response');
+            alert('Google Sign-In failed: No credential received');
+            return;
+        }
+        
+        try {
+            // Send the credential to our backend
+            const res = await fetch('/api/auth/google', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    credential: response.credential
+                })
+            });
+            
+            const data = await res.json();
+            
+            if (!res.ok || !data.success) {
+                console.error('[Auth] Authentication failed:', data);
+                alert('Authentication failed: ' + (data.error || 'Unknown error'));
+                return;
+            }
+            
+            console.log('[Auth] Google authentication successful');
+            
+            // Store session
+            localStorage.setItem('session_token', data.token);
+            localStorage.setItem('sessionId', data.sessionId);
+            localStorage.setItem('user_id', data.userId);
+            localStorage.setItem('user_email', data.user.email);
+            
+            // Close auth modal if open
+            const modal = document.getElementById('auth-modal');
+            if (modal) modal.style.display = 'none';
+            
+            // Reload page or update UI
+            window.location.href = '/codebank/';
+        } catch (error) {
+            console.error('[Auth] Google sign-in request failed:', error);
+            alert('Sign-in failed: ' + error.message);
+        }
     };
     
     window.handleSignOut = function() {
