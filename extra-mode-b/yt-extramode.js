@@ -593,26 +593,29 @@ function checkExtraModeActivation() {
 // document.addEventListener('visibilitychange', ...)
 
 /**
- * Fade dr.dc.png background image on play-pause button when Extra Mode activates
- * This allows the progress % to be visible and clickable
+ // Completely hide dr.dc.png on play-pause button when Extra Mode activates
+// This allows the progress % to be visible and clickable
  */
 function fadePlayPauseButtonImage(fadeOut = true) {
     const playPauseButton = document.getElementById('play-pause-button');
     if (!playPauseButton) return;
     
     if (fadeOut) {
-        // Fade out the background image (dr.dc.png) to 0 opacity
-        playPauseButton.style.transition = 'background-image opacity 0.5s ease-in-out';
-        playPauseButton.style.backgroundImage = 'linear-gradient(rgba(0,0,0,1), rgba(0,0,0,1)), url(\'/codebank/samma3ny/dr.dc.png?v=20260410\')';
-        playPauseButton.style.backgroundBlendMode = 'darken';
-        playPauseButton.style.opacity = '0.3'; // Fade the entire button
-        if (window.DEBUG_MODE) console.log('[ExtraMode] Play-pause button background fading out');
+        // Remove background image completely to show progress underneath
+        playPauseButton.style.setProperty('background', 'none', 'important');
+        playPauseButton.style.backgroundImage = 'none';
+        playPauseButton.style.backgroundColor = 'transparent';
+        playPauseButton.style.boxShadow = 'inset 0 0 15px 5px rgba(255,255,255,0.9)';
+        playPauseButton.style.border = '2px solid rgba(255,255,255,0.8)';
+        if (window.DEBUG_MODE) console.log('[ExtraMode] HIDDEN dr.dc.png');
     } else {
-        // Restore the background image opacity
-        playPauseButton.style.opacity = '1'; // Restore full opacity
-        playPauseButton.style.backgroundImage = 'url(\'/codebank/samma3ny/dr.dc.png?v=20260410\')';
-        playPauseButton.style.backgroundBlendMode = 'normal';
-        if (window.DEBUG_MODE) console.log('[ExtraMode] Play-pause button background restored');
+        // Restore the background image
+        playPauseButton.style.setProperty('background', "url('/codebank/samma3ny/dr.dc.png?v=20260410') no-repeat center center", 'important');
+        playPauseButton.style.backgroundImage = "url('/codebank/samma3ny/dr.dc.png?v=20260410')";
+        playPauseButton.style.backgroundColor = 'transparent';
+        playPauseButton.style.boxShadow = 'inset 0 0 5px 1px rgba(255, 255, 255, 0.8)';
+        playPauseButton.style.border = 'none';
+        if (window.DEBUG_MODE) console.log('[ExtraMode] RESTORED dr.dc.png');
     }
 }
 
