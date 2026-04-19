@@ -1,176 +1,145 @@
-/**
- * AUTH-GLOBAL.js - Global Authentication Singleton
- * 
- * PURPOSE: Replace all auth-core.js, bridge files, and scattered auth logic.
- * USAGE: Include this script in indexCB.html and yt-new-clear.html (parent windows ONLY).
- * Iframes should use service-auth.js instead.
- * 
- * This file handles:
- * - Reading session from localStorage on page load
- * - Setting window.AUTH_GLOBAL
- * - Providing AuthAPI for iframes to query
- * - Broadcasting auth changes to all iframes
- * - Token refresh logic
- */
+// ═══════════════════════════════════════════════════════════════════════════════
+// AUTH GLOBAL - GUEST MODE FIX
+// Replaces hard redirects with silent guest session creation
+// ═══════════════════════════════════════════════════════════════════════════════
 
-(function initGlobalAuth() {
-  'use strict';
+if (window.__AUTH_GLOBAL_INITIALIZED) {
+    console.log('[auth-global] Already initialized, skipping');
+} else {
+    window.__AUTH_GLOBAL_INITIALIZED = true;
+    console.log('[auth-global] Initializing with guest mode support...');
 
-  // Prevent double-init
-  if (window.__AUTH_GLOBAL_INITIALIZED) return;
-  window.__AUTH_GLOBAL_INITIALIZED = true;
+    // ─────────────────────────────────────────────────────────────────────────────
+    // CONSTANTS
+    // ─────────────────────────────────────────────────────────────────────────────
+    const LOGIN_URL = '/login.html';
+    const GUEST_SESSION_KEY = 'guest_session';
+    const SESSION_TOKEN_KEY = 'session_token';
+    const SESSION_ACTIVE_KEY = 'session_active';
+    const GUEST_SESSION_DURATION = 365 * 24 * 60 * 60 * 1000; // 1 year
 
-  const SESSION_KEY = 'codebank_session';
-  const TOKEN_COOKIE = 'cb_token';
-  // REMOVED: LOGIN_URL redirect - stay on page as guest instead
+    // ─────────────────────────────────────────────────────────────────────────────
+    // GUEST MODE SETUP
+    // ─────────────────────────────────────────────────────────────────────────────
+    
+    function createGuestSession() {
+        const guestId = 'guest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const guestSession = {
+            userId: guestId,
+            authenticated: false,
+            guest: true,
+            createdAt: Date.now(),
+            expiresAt: Date.now() + GUEST_SESSION_DURATION,
+            token: 'guest_' + Math.random().toString(36).substr(2, 40)
+        };
 
-  // ── Helpers ──────────────────────────────────────────────
+        localStorage.setItem(GUEST_SESSION_KEY, JSON.stringify(guestSession));
+        window.CURRENT_SESSION = guestSession;
+        
+        console.log('[auth-global] ✅ Guest session created:', guestId);
+        return guestSession;
+    }
 
-  function getCookie(name) {
-    const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
-    return match ? decodeURIComponent(match[1]) : null;
-  }
-
-  function clearAuth() {
-    window.AUTH_GLOBAL = null;
-    localStorage.removeItem(SESSION_KEY);
-    document.cookie = TOKEN_COOKIE + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-  }
-
-  // ── Restore session from localStorage ────────────────────
-
-  if (!window.AUTH_GLOBAL) {
-    const stored = localStorage.getItem(SESSION_KEY);
-    if (stored) {
-      try {
-        const session = JSON.parse(stored);
-        if (session.expiresAt && session.expiresAt > Date.now()) {
-          window.AUTH_GLOBAL = session;
-        } else {
-          clearAuth();
-          console.log('[Auth] Session expired - continuing as guest');
-          // Stay on page as guest instead of redirect
-          return;
+    function getOrCreateGuestSession() {
+        const stored = localStorage.getItem(GUEST_SESSION_KEY);
+        
+        if (stored) {
+            try {
+                const session = JSON.parse(stored);
+                if (session.expiresAt > Date.now()) {
+                    window.CURRENT_SESSION = session;
+                    console.log('[auth-global] Using existing guest session:', session.userId);
+                    return session;
+                }
+            } catch (e) {
+                console.warn('[auth-global] Corrupted guest session, creating new one');
+            }
         }
-      } catch (e) {
-        clearAuth();
-        console.log('[Auth] Session parse error - continuing as guest');
-        return;
-      }
+
+        return createGuestSession();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // AUTH STATUS CHECK (replaces hard redirects)
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    async function ensureAuthSession() {
+        const token = localStorage.getItem(SESSION_TOKEN_KEY);
+        const sessionActive = localStorage.getItem(SESSION_ACTIVE_KEY);
+
+        if (token && sessionActive === 'true') {
+            console.log('[auth-global] User has valid session token, checking with server...');
+            
+            try {
+                // Verify with server but don't block on error
+                const response = await fetch('/api/auth/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).catch(() => null);
+
+                if (response && response.ok) {
+                    const data = await response.json();
+                    window.CURRENT_SESSION = {
+                        userId: data.userId,
+                        authenticated: true,
+                        guest: false,
+                        token: token
+                    };
+                    console.log('[auth-global] ✅ Server session verified:', data.userId);
+                    return;
+                }
+            } catch (e) {
+                console.warn('[auth-global] Server verification failed, falling back to guest mode');
+            }
+        }
+
+        // No valid session found or server check failed → GUEST MODE
+        console.log('[auth-global] No valid session, creating guest mode');
+        getOrCreateGuestSession();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // LOGOUT (no hard redirect)
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    function handleLogout() {
+        console.log('[auth-global] Logging out, creating guest session...');
+        
+        localStorage.removeItem(SESSION_TOKEN_KEY);
+        localStorage.removeItem(SESSION_ACTIVE_KEY);
+        localStorage.removeItem(GUEST_SESSION_KEY);
+        
+        createGuestSession();
+        
+        // Optionally redirect to home, but don't force it
+        if (window.location.pathname === '/yt-new-clear.html' || window.location.pathname === '/') {
+            console.log('[auth-global] Already at home, staying in guest mode');
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // EXPOSE GLOBAL API
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    window.AuthGlobal = {
+        ensureAuthSession,
+        getOrCreateGuestSession,
+        createGuestSession,
+        handleLogout,
+        isGuest: () => window.CURRENT_SESSION && window.CURRENT_SESSION.guest,
+        isAuthenticated: () => window.CURRENT_SESSION && window.CURRENT_SESSION.authenticated,
+        getSession: () => window.CURRENT_SESSION
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // AUTO-INIT ON PAGE LOAD
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', ensureAuthSession);
     } else {
-      // No session at all — stay on page as guest
-      console.log('[Auth] No session - continuing as guest');
-      return;
+        // DOM already loaded
+        ensureAuthSession();
     }
-  }
 
-  // ── Public AuthAPI (used by iframes via postMessage) ─────
-
-  window.AuthAPI = {
-    getSession: function () {
-      return window.AUTH_GLOBAL;
-    },
-
-    isAuthenticated: function () {
-      return (
-        window.AUTH_GLOBAL &&
-        window.AUTH_GLOBAL.authenticated === true &&
-        window.AUTH_GLOBAL.expiresAt > Date.now()
-      );
-    },
-
-    getToken: function () {
-      return getCookie(TOKEN_COOKIE);
-    },
-
-    logout: function () {
-      clearAuth();
-      // Notify all iframes before redirect
-      window.broadcastAuth(null);
-      // Stay on page after logout instead of redirecting
-      console.log('[Auth] Logged out - staying on page as guest');
-    },
-
-    /**
-     * Called from login.html after successful authentication.
-     * @param {Object} session - { userId, email, sessionId, authenticated, timestamp, expiresAt, permissions }
-     * @param {string} jwt - JWT token string
-     */
-    setSession: function (session, jwt) {
-      window.AUTH_GLOBAL = session;
-      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-      if (jwt) {
-        document.cookie =
-          TOKEN_COOKIE + '=' + encodeURIComponent(jwt) +
-          '; path=/; max-age=86400; SameSite=Strict';
-      }
-      window.broadcastAuth(session);
-    }
-  };
-
-  // ── Iframe message handler ───────────────────────────────
-
-  function handleIframeMessage(event) {
-    if (!event.data || typeof event.data.type !== 'string') return;
-
-    switch (event.data.type) {
-      case 'auth:request':
-        if (event.source) {
-          event.source.postMessage({
-            type: 'auth:response',
-            auth: window.AuthAPI.getSession(),
-            token: window.AuthAPI.getToken()
-          }, '*');
-        }
-        break;
-
-      case 'auth:refresh':
-        // Token refresh — re-read from cookie/storage and broadcast
-        var freshStored = localStorage.getItem(SESSION_KEY);
-        if (freshStored) {
-          try {
-            window.AUTH_GLOBAL = JSON.parse(freshStored);
-          } catch (e) { /* ignore */ }
-        }
-        if (event.source) {
-          event.source.postMessage({
-            type: 'auth:response',
-            auth: window.AUTH_GLOBAL,
-            token: window.AuthAPI.getToken()
-          }, '*');
-        }
-        break;
-
-      case 'auth:logout':
-        window.AuthAPI.logout();
-        break;
-    }
-  }
-
-  window.addEventListener('message', handleIframeMessage);
-
-  // ── Broadcast to all child iframes ───────────────────────
-
-  window.broadcastAuth = function (authData) {
-    var iframes = document.querySelectorAll('iframe');
-    for (var i = 0; i < iframes.length; i++) {
-      try {
-        iframes[i].contentWindow.postMessage({
-          type: 'auth:update',
-          auth: authData
-        }, '*');
-      } catch (e) { /* cross-origin ignore */ }
-    }
-  };
-
-  // ── Periodic expiry check (every 60s) ────────────────────
-
-  setInterval(function () {
-    if (window.AUTH_GLOBAL && window.AUTH_GLOBAL.expiresAt <= Date.now()) {
-      console.warn('[Auth] Session expired');
-      window.AuthAPI.logout();
-    }
-  }, 60000);
-
-  console.log('[Auth] Global auth initialized for user:', window.AUTH_GLOBAL?.userId);
-})();
+    console.log('[auth-global] ✅ Loaded successfully - guest mode enabled');
+}
