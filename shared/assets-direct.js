@@ -252,6 +252,9 @@ if (typeof window.AssetsDirectBus === 'undefined') {
       document.querySelectorAll('iframe').forEach(iframe => {
         this.sendToIframe(iframe.contentWindow);
       });
+      
+      // Also send to parent window if we're in an iframe
+      this.sendToParent();
     }
     
     sendToIframe(targetWindow) {
@@ -263,6 +266,21 @@ if (typeof window.AssetsDirectBus === 'undefined') {
         data: snapshot,
         timestamp: Date.now()
       }, '*');
+    }
+    
+    sendToParent() {
+      if (window.parent === window) return; // Not in an iframe
+      
+      const snapshot = this.createSnapshot();
+      try {
+        window.parent.postMessage({
+          type: 'assetbus:snapshot',
+          data: snapshot,
+          timestamp: Date.now()
+        }, '*');
+      } catch(e) {
+        console.error('[AssetsDirect] Error sending to parent:', e);
+      }
     }
     
     createSnapshot() {

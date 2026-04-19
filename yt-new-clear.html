@@ -3898,6 +3898,47 @@ document.addEventListener('DOMContentLoaded', async function(){
             setTimeout(() => window.launchSafeCode?.(), 1000);
         }
     })();
+
+    // Listen for code updates from parent window
+    window.updateCodeDisplay = function(data) {
+        if (!data) return;
+        const codeEl = document.getElementById('code-display');
+        if (!codeEl) return;
+        
+        const codes = data.codes || [];
+        const latestCode = codes.length > 0 ? codes[codes.length - 1] : null;
+        
+        if (latestCode) {
+            codeEl.textContent = latestCode;
+            codeEl.style.display = 'block';
+        }
+    };
+    
+    window.addEventListener('message', function(ev) {
+        try {
+            const data = ev.data || {};
+            
+            // Listen for snapshot messages from parent
+            if (data.type === 'assetbus:snapshot' && data.data) {
+                window.updateCodeDisplay(data.data);
+            }
+            // Listen for assets sync messages
+            else if (data.type === 'CODEBANK_ASSETS_SYNC' && data.payload) {
+                window.updateCodeDisplay(data.payload);
+            }
+            // Listen for direct assets updates
+            else if (data.type === 'assets:updated' && data) {
+                window.updateCodeDisplay(data);
+            }
+        } catch(e) {
+            console.error('[YT-Clear] Error processing code update:', e);
+        }
+    });
+    
+    // Request initial code snapshot from parent on load
+    if (window.parent !== window) {
+        window.parent.postMessage({ type: 'bridge:request-assets' }, '*');
+    }
     </script>
 
     <!-- ZAGEL SYSTEM REMOVED - Only available in CodeBank (indexCB.html) -->
