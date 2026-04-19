@@ -46,34 +46,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// ───────────────────────────────────────────────────────────────────────────────
-// Static file serving with proper mime types
-// ───────────────────────────────────────────────────────────────────────────────
-app.use(express.static(path.join(__dirname, 'public'), {
-  setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.html')) {
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    }
-    if (filePath.endsWith('.js')) {
-      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-    }
-  },
-  maxAge: '1h'
-}));
-
-app.use(express.static(path.join(__dirname, 'codebank'), {
-  setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.html')) {
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    }
-  },
-  maxAge: '1h'
-}));
-
-app.use(express.static(__dirname, {
-  maxAge: '1h'
-}));
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // IN-MEMORY STORAGE (for demo - use DB in production)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -227,10 +199,10 @@ app.post("/api/chat", (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ROUTING
+// ROUTING (MUST BE BEFORE STATIC MIDDLEWARE)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// Root path serves YT-NEW-CLEAR.HTML (Main Entry Point)
+// 🚀 ROOT PATH MUST SERVE YT-NEW-CLEAR.HTML (NOT index.html!)
 app.get("/", (req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.sendFile(path.join(__dirname, "yt-new-clear.html"));
@@ -248,11 +220,39 @@ app.get("/ai-chat.html", (req, res) => {
   res.sendFile(path.join(__dirname, "codebank", "ai-chat.html"));
 });
 
-// Index fallback (CodeBank)
+// Index fallback (CodeBank) - for explicit access only
 app.get("/index.html", (req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.sendFile(path.join(__dirname, "index.html"));
 });
+
+// ───────────────────────────────────────────────────────────────────────────────
+// STATIC FILE SERVING (AFTER route handlers so they take precedence)
+// ───────────────────────────────────────────────────────────────────────────────
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    }
+    if (filePath.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    }
+  },
+  maxAge: '1h'
+}));
+
+app.use(express.static(path.join(__dirname, 'codebank'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    }
+  },
+  maxAge: '1h'
+}));
+
+app.use(express.static(__dirname, {
+  maxAge: '1h'
+}));
 
 // Fallback for undefined routes
 app.get("*", (req, res) => {
@@ -276,7 +276,7 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
-  console.log(`🎯 Entry Point: http://localhost:${PORT}/`);
+  console.log(`🎯 Entry Point: http://localhost:${PORT}/ → yt-new-clear.html`);
   console.log(`🔐 Auth API: /api/auth/*`);
   console.log(`💬 Chat API: /api/chat`);
   console.log(`📄 Demo Users: demo@example.com / test@example.com`);
