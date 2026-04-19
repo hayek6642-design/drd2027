@@ -13,13 +13,8 @@ app.use(express.static(path.join(__dirname)));
 
 // ===== ROUTING =====
 
-// Root path serves LOGIN.HTML (YT-Clear Hybrid Auth entry point)
+// Root path serves YT-NEW-CLEAR.HTML (Main Entry Point)
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "login.html"));
-});
-
-// After successful login, users navigate to the main app
-app.get("/app", (req, res) => {
   res.sendFile(path.join(__dirname, "yt-new-clear.html"));
 });
 
@@ -32,9 +27,9 @@ app.post("/api/auth/register", (req, res) => {
   res.json({ success: true, message: "Register endpoint" });
 });
 
-// Fallback: serve login.html for undefined routes
+// Fallback for undefined routes (serve yt-new-clear.html)
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "login.html"));
+  res.sendFile(path.join(__dirname, "yt-new-clear.html"));
 });
 
 // Error handling
@@ -46,6 +41,6 @@ app.use((err, req, res, next) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
-  console.log(`📱 Login page: http://localhost:${PORT}/`);
-  console.log(`🎯 Main app: http://localhost:${PORT}/app`);
+  console.log(`🎯 Entry Point: http://localhost:${PORT}/`);
+  console.log(`📄 File: yt-new-clear.html`);
 });
