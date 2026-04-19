@@ -1386,7 +1386,7 @@ function clearSessionAndLogout() {
             font-size: 14px;
             line-height: 1.6;
             box-sizing: border-box;
-            z-index: 30;
+            z-index: 100001;
             overflow: hidden;
             box-shadow: 0 -5px 10px rgba(0, 0, 0, 0.4);
             pointer-events: none;
@@ -2593,7 +2593,7 @@ function clearSessionAndLogout() {
                     // Send snapshot with last code
                     var sendSnapshotWithLastCode = function() {
                         try {
-                            var snap = AssetBus && typeof AssetBus.snapshot === 'function' ? AssetBus.snapshot() : {};
+                            var snap = window.AssetBus && typeof window.AssetBus.snapshot === 'function' ? window.AssetBus.snapshot() : {};
                             if (!snap) snap = { codes: [], silver: [], gold: [] };
                             
                             // Include last generated code if found
@@ -2630,7 +2630,7 @@ function clearSessionAndLogout() {
                     // Re-send after 1s if assets load
                     var resendSnapTimeout = setTimeout(function() {
                         try {
-                            var freshSnap = AssetBus && typeof AssetBus.snapshot === 'function' ? AssetBus.snapshot() : null;
+                            var freshSnap = window.AssetBus && typeof window.AssetBus.snapshot === 'function' ? window.AssetBus.snapshot() : null;
                             if (freshSnap && frame && frame.contentWindow) {
                                 var freshOut = sanitizeUISnapshot(Object.assign({}, freshSnap, { source: 'ui' }));
                                 if (freshOut && (freshOut.codes?.length > 0 || freshOut.silver?.length > 0 || freshOut.gold?.length > 0)) {
