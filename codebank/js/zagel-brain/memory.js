@@ -1,347 +1,157 @@
 /**
- * Zagel Brain - Memory Module
- * Short-term (10 messages) + Long-term (IndexedDB) memory with importance scoring
+ * Zagel Brain v3 - Memory Module
+ * Short-term (RAM) + Long-term (IndexedDB) with importance scoring
  */
-
-class ZagelMemory {
-  constructor() {
-    this.shortTermCapacity = 10;
-    this.shortTerm = []; // Last 10 messages
-    this.dbName = 'ZagelBrainDB';
-    this.storeName = 'longTermMemory';
-    this.db = null;
-    this.importanceThreshold = 0.5;
-    
-    this.initDB();
-  }
-  
-  /**
-   * Initialize IndexedDB for long-term memory
-   */
-  async initDB() {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, 1);
-      
-      request.onerror = () => {
-        console.warn('[ZagelMemory] IndexedDB not available, using localStorage fallback');
-        resolve(false);
-      };
-      
-      request.onsuccess = (event) => {
-        this.db = event.target.result;
-        console.log('[ZagelMemory] IndexedDB initialized');
-        resolve(true);
-      };
-      
-      request.onupgradeneeded = (event) => {
-        const db = event.target.result;
-        
-        if (!db.objectStoreNames.contains(this.storeName)) {
-          const store = db.createObjectStore(this.storeName, { keyPath: 'id', autoIncrement: true });
-          store.createIndex('timestamp', 'timestamp', { unique: false });
-          store.createIndex('importance', 'importance', { unique: false });
-          store.createIndex('type', 'type', { unique: false });
-        }
-      };
-    });
-  }
-  
-  /**
-   * Add a message to memory
-   */
-  async addMessage(userInput, zagelResponse, metadata = {}) {
-    const message = {
-      id: Date.now() + Math.random(),
-      userInput,
-      zagelResponse,
-      timestamp: Date.now(),
-      type: metadata.type || 'conversation',
-      ...metadata
-    };
-    
-    // Calculate importance score
-    message.importance = this.calculateImportance(userInput, zagelResponse);
-    
-    // Add to short-term memory
-    this.shortTerm.push(message);
-    
-    // Trim short-term to capacity
-    if (this.shortTerm.length > this.shortTermCapacity) {
-      this.shortTerm.shift();
+(function() {
+  'use strict';
+  const DB_NAME = 'ZagelBrainMemory';
+  const DB_VERSION = 1;
+  const STORE_NAME = 'memories';
+  const SHORT_TERM_LIMIT = 10;
+  const IMPORTANCE_THRESHOLD = 0.6;
+  class Memory {
+    constructor() {
+      this._shortTerm = [];
+      this._db = null;
+      this._ready = false;
+      this._initDB();
+      console.log('💾 [ZagelBrain-Memory] Online');
     }
-    
-    // Save important memories to long-term
-    if (message.importance >= this.importanceThreshold) {
-      await this.saveToLongTerm(message);
-    }
-    
-    return message;
-  }
-  
-  /**
-   * Calculate importance score (0-1)
-   */
-  calculateImportance(userInput, response) {
-    let score = 0.3; // Base score
-    
-    // Personal information detection
-    const personalPatterns = /(my name|i am|i'm|i'm from|i live|i work|عندي|اسمي|انا من)/gi;
-    if (personalPatterns.test(userInput)) {
-      score += 0.3;
-    }
-    
-    // Emotional content
-    const emotionalPatterns = /(love|hate|happy|sad|angry|excited|miss|worried|تعبان|بحب|اكره|سعيد)/gi;
-    if (emotionalPatterns.test(userInput)) {
-      score += 0.2;
-    }
-    
-    // Preferences (likes/dislikes)
-    const preferencePatterns = /(i like|i hate|i prefer|i enjoy|i dislike|i want|i wish|i hope|احب|اكره|اتمنى)/gi;
-    if (preferencePatterns.test(userInput)) {
-      score += 0.25;
-    }
-    
-    // Relationships
-    const relationshipPatterns = /(my (wife|husband|friend|mom|dad|brother|sister|son|daughter|family)| Husband|Wife|Family|صديقي|زوجي|اهلي)/gi;
-    if (relationshipPatterns.test(userInput)) {
-      score += 0.25;
-    }
-    
-    // Long messages are more likely to be important
-    if (userInput.length > 100) {
-      score += 0.1;
-    }
-    
-    // Repeated topics get boost
-    const recentTopics = this.shortTerm.map(m => this.extractTopic(m.userInput));
-    const currentTopic = this.extractTopic(userInput);
-    if (recentTopics.includes(currentTopic)) {
-      score += 0.15;
-    }
-    
-    return Math.min(1, score);
-  }
-  
-  /**
-   * Extract main topic from input
-   */
-  extractTopic(input) {
-    const words = input.toLowerCase().split(/\s+/);
-    // Return last meaningful word as topic
-    return words[words.length - 1] || 'unknown';
-  }
-  
-  /**
-   * Save to long-term memory
-   */
-  async saveToLongTerm(message) {
-    if (!this.db) {
-      // Fallback to localStorage
-      return this.saveToLocalStorage(message);
-    }
-    
-    return new Promise((resolve, reject) => {
-      try {
-        const transaction = this.db.transaction([this.storeName], 'readwrite');
-        const store = transaction.objectStore(this.storeName);
-        store.add(message);
-        
-        transaction.oncomplete = () => {
-          console.log('[ZagelMemory] Saved to long-term:', message.type);
-          resolve(true);
-        };
-        
-        transaction.onerror = (e) => {
-          console.error('[ZagelMemory] Save error:', e);
-          resolve(false);
-        };
-      } catch (e) {
-        resolve(this.saveToLocalStorage(message));
-      }
-    });
-  }
-  
-  /**
-   * LocalStorage fallback
-   */
-  saveToLocalStorage(message) {
-    try {
-      const key = `zagel_memory_${Date.now()}`;
-      localStorage.setItem(key, JSON.stringify(message));
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-  
-  /**
-   * Get recent conversation context
-   */
-  getContext(preferences = {}) {
-    const count = preferences.count || 5;
-    const recent = this.shortTerm.slice(-count);
-    
-    return {
-      recent,
-      hasHistory: this.shortTerm.length > 0,
-      messageCount: this.shortTerm.length,
-      topics: this.extractTopics()
-    };
-  }
-  
-  /**
-   * Extract mentioned topics from conversation
-   */
-  extractTopics() {
-    const topics = new Set();
-    
-    for (const msg of this.shortTerm) {
-      const topic = this.extractTopic(msg.userInput);
-      if (topic !== 'unknown') {
-        topics.add(topic);
-      }
-    }
-    
-    return Array.from(topics);
-  }
-  
-  /**
-   * Get user's preferences from memory
-   */
-  async getUserPreferences() {
-    const prefs = {
-      humorPreference: null,
-      preferredTone: null,
-      positiveSpin: false,
-      relationshipInfo: {},
-      mentionedNames: [],
-      interests: []
-    };
-    
-    // Scan short-term memory
-    for (const msg of this.shortTerm) {
-      // Humor preference
-      if (/funny|joke| comedy|ضحك/i.test(msg.userInput)) {
-        prefs.humorPreference = 'appreciates';
-      }
-      
-      // Tone preference
-      if (/serious|formal|جاد/i.test(msg.userInput)) {
-        prefs.preferredTone = 'formal';
-      } else if (/casual|fun|مرح/i.test(msg.userInput)) {
-        prefs.preferredTone = 'casual';
-      }
-      
-      // Positive spin expectation
-      if (/cheer me|make me feel better|positive|امل|افرحني/i.test(msg.userInput)) {
-        prefs.positiveSpin = true;
-      }
-      
-      // Names mentioned
-      const nameMatch = msg.userInput.match(/(my (wife|husband|friend|mom|dad|brother|sister|name is) (\w+))/gi);
-      if (nameMatch) {
-        prefs.mentionedNames.push(...nameMatch);
-      }
-    }
-    
-    // Try to get from long-term
-    if (this.db) {
-      const longTermPrefs = await this.getLongTermPreferences();
-      return { ...prefs, ...longTermPrefs };
-    }
-    
-    return prefs;
-  }
-  
-  /**
-   * Get preferences from long-term memory
-   */
-  async getLongTermPreferences() {
-    return new Promise((resolve) => {
-      if (!this.db) {
-        resolve({});
-        return;
-      }
-      
-      try {
-        const transaction = this.db.transaction([this.storeName], 'readonly');
-        const store = transaction.objectStore(this.storeName);
-        const request = store.getAll();
-        
-        request.onsuccess = () => {
-          const memories = request.result || [];
-          const prefs = {};
-          
-          for (const mem of memories) {
-            if (mem.type === 'preference') {
-              Object.assign(prefs, mem.data);
-            }
+    async _initDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            store.createIndex('importance', 'importance', { unique: false });
+            store.createIndex('sentiment', 'sentiment', { unique: false });
+            store.createIndex('timestamp', 'timestamp', { unique: false });
+            store.createIndex('topic', 'topic', { unique: false });
           }
-          
-          resolve(prefs);
         };
-        
-        request.onerror = () => resolve({});
-      } catch (e) {
-        resolve({});
-      }
-    });
-  }
-  
-  /**
-   * Search long-term memory
-   */
-  async search(query) {
-    const results = [];
-    
-    if (!this.db) {
-      // Search localStorage fallback
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key.startsWith('zagel_memory_')) {
-          try {
-            const item = JSON.parse(localStorage.getItem(key));
-            if (item.userInput.toLowerCase().includes(query.toLowerCase())) {
-              results.push(item);
-            }
-          } catch (e) {}
-        }
-      }
-      return results;
+        request.onsuccess = (e) => {
+          this._db = e.target.result;
+          this._ready = true;
+          resolve();
+        };
+        request.onerror = (e) => {
+          console.error('💾 [Memory] IndexedDB error:', e);
+          reject(e);
+        };
+      });
     }
-    
-    return new Promise((resolve) => {
-      try {
-        const transaction = this.db.transaction([this.storeName], 'readonly');
-        const store = transaction.objectStore(this.storeName);
-        const request = store.getAll();
-        
-        request.onsuccess = () => {
-          const all = request.result || [];
-          const filtered = all.filter(m => 
-            m.userInput.toLowerCase().includes(query.toLowerCase()) ||
-            m.zagelResponse?.toLowerCase().includes(query.toLowerCase())
-          );
-          resolve(filtered);
-        };
-        
-        request.onerror = () => resolve([]);
-      } catch (e) {
-        resolve([]);
+    store(message, metadata = {}) {
+      const entry = {
+        id: `mem_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`,
+        text: message,
+        role: metadata.role || 'user',
+        sentiment: metadata.sentiment || 'neutral',
+        confidence: metadata.confidence || 0,
+        topic: metadata.topic || 'general',
+        importance: this._calculateImportance(message, metadata),
+        timestamp: Date.now(),
+        tags: metadata.tags || [],
+        context: metadata.context || {}
+      };
+      this._shortTerm.push(entry);
+      if (this._shortTerm.length > SHORT_TERM_LIMIT) {
+        const evicted = this._shortTerm.shift();
+        if (evicted.importance >= IMPORTANCE_THRESHOLD) this._saveLongTerm(evicted);
       }
-    });
+      if (entry.importance >= IMPORTANCE_THRESHOLD) this._saveLongTerm(entry);
+      if (window.ZagelBus) window.ZagelBus.emit('brain:memory_stored', { id: entry.id, importance: entry.importance });
+      return entry;
+    }
+    _calculateImportance(text, metadata) {
+      let importance = 0.3;
+      if (metadata.confidence > 0.7) importance += 0.2;
+      if (metadata.sentiment && metadata.sentiment !== 'neutral') importance += 0.15;
+      if (/\?|؟/.test(text)) importance += 0.15;
+      if (/أنا|اسمي|my name|I am/i.test(text)) importance += 0.2;
+      if (text.length > 100) importance += 0.1;
+      if (/\d{2,}/.test(text)) importance += 0.1;
+      const recentTopics = this._shortTerm.map(m => m.topic);
+      const topicCount = recentTopics.filter(t => t === (metadata.topic || 'general')).length;
+      if (topicCount >= 2) importance += 0.15;
+      return Math.min(1, Math.round(importance * 100) / 100);
+    }
+    async _saveLongTerm(entry) {
+      if (!this._db) return;
+      try {
+        const tx = this._db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).put(entry);
+      } catch (e) {
+        console.error('💾 [Memory] Save error:', e);
+      }
+    }
+    getShortTerm() { return [...this._shortTerm]; }
+    getRecentContext(count = 5) {
+      return this._shortTerm.slice(-count).map(m => ({ role: m.role, text: m.text, sentiment: m.sentiment }));
+    }
+    async searchLongTerm(query, options = {}) {
+      if (!this._db) return [];
+      return new Promise((resolve) => {
+        const tx = this._db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const results = [];
+        store.openCursor().onsuccess = (e) => {
+          const cursor = e.target.result;
+          if (!cursor) {
+            results.sort((a, b) => b.relevance - a.relevance);
+            resolve(results.slice(0, options.limit || 10));
+            return;
+          }
+          const mem = cursor.value;
+          let relevance = 0;
+          const queryLower = query.toLowerCase();
+          if (mem.text.toLowerCase().includes(queryLower)) relevance += 0.5;
+          if (mem.tags.some(t => t.includes(queryLower))) relevance += 0.3;
+          if (options.sentiment && mem.sentiment === options.sentiment) relevance += 0.2;
+          const ageHours = (Date.now() - mem.timestamp) / (1000 * 60 * 60);
+          const timeFactor = Math.max(0, 1 - (ageHours / 720));
+          relevance *= (0.5 + 0.5 * timeFactor);
+          if (relevance > 0.1) results.push({ ...mem, relevance: Math.round(relevance * 100) / 100 });
+          cursor.continue();
+        };
+      });
+    }
+    async getImportantMemories(limit = 5) {
+      if (!this._db) return [];
+      return new Promise((resolve) => {
+        const tx = this._db.transaction(STORE_NAME, 'readonly');
+        const index = tx.objectStore(STORE_NAME).index('importance');
+        const results = [];
+        index.openCursor(null, 'prev').onsuccess = (e) => {
+          const cursor = e.target.result;
+          if (!cursor || results.length >= limit) {
+            resolve(results);
+            return;
+          }
+          results.push(cursor.value);
+          cursor.continue();
+        };
+      });
+    }
+    clearShortTerm() { this._shortTerm = []; }
+    async clearAll() {
+      this._shortTerm = [];
+      if (this._db) {
+        const tx = this._db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).clear();
+      }
+    }
+    getStats() {
+      return {
+        shortTermCount: this._shortTerm.length,
+        shortTermLimit: SHORT_TERM_LIMIT,
+        dbReady: this._ready,
+        avgImportance: this._shortTerm.length > 0
+          ? Math.round(this._shortTerm.reduce((s, m) => s + m.importance, 0) / this._shortTerm.length * 100) / 100
+          : 0
+      };
+    }
   }
-  
-  /**
-   * Clear memory
-   */
-  clear() {
-    this.shortTerm = [];
-    console.log('[ZagelMemory] Short-term cleared');
-  }
-}
-
-// Export
-window.ZagelMemory = ZagelMemory;
-window.zagelMemory = new ZagelMemory();
+  if (!window.ZagelBrainV3) window.ZagelBrainV3 = {};
+  window.ZagelBrainV3.Memory = new Memory();
+})();

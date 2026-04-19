@@ -1,221 +1,127 @@
 /**
- * Zagel Brain - Main Integration
- * Connects brain modules to existing 3D animations and Gemini API
- * 
- * Usage:
- *   // Include all brain modules
- *   <script src="zagel-brain/recognition.js"></script>
- *   <script src="zagel-brain/memory.js"></script>
- *   <script src="zagel-brain/personality.js"></script>
- *   <script src="zagel-brain/promptBuilder.js"></script>
- *   <script src="zagel-brain/responseEngine.js"></script>
- *   <script src="zagel-brain/zagel-integration.js"></script>
- *   
- *   // Initialize
- *   <script>
- *     await ZagelBrain.init('YOUR_GEMINI_API_KEY', doveAnimationController);
- *   </script>
+ * Zagel Brain v3 - Integration Layer
  */
-
-class ZagelBrain {
-  constructor() {
-    this.integration = null;
-    this.apiKey = null;
-    this.animationController = null;
-    this.isReady = false;
-    
-    // Callback for UI updates
-    this.onResponse = null;
-    this.onAnimation = null;
-    this.onTyping = null;
-  }
-  
-  /**
-   * Initialize Zagel Brain system
-   */
-  async init(apiKey, animationController = null, options = {}) {
-    this.apiKey = apiKey;
-    this.animationController = animationController;
-    
-    // Create integration instance
-    this.integration = new window.ZagelBrainIntegration();
-    
-    // Initialize with API key and animation controller
-    await this.integration.initialize(apiKey, animationController);
-    
-    // Set callbacks
-    this.onResponse = options.onResponse || null;
-    this.onAnimation = options.onAnimation || null;
-    this.onTyping = options.onTyping || null;
-    
-    this.isReady = true;
-    
-    console.log('[ZagelBrain] System initialized and ready');
-    
-    return this;
-  }
-  
-  /**
-   * Send message to Zagel
-   */
-  async send(message) {
-    if (!this.isReady) {
-      console.warn('[ZagelBrain] Not initialized');
-      return 'Brain not ready. Please initialize first.';
+(function() {
+  'use strict';
+  const API_ENDPOINT = '/api/ai/chat';
+  const DEFAULT_MODEL = 'gemini-1.5-flash';
+  class ZagelBrainIntegration {
+    constructor() {
+      this._initialized = false;
+      this._interceptInstalled = false;
+      this._chatHistory = [];
+      console.log('🧠🕊️ [ZagelBrain-Integration] Connector loading...');
     }
-    
-    // Show typing indicator
-    if (this.onTyping) {
-      this.onTyping(true);
+    async init() {
+      if (this._initialized) return;
+      const modules = ['Recognition', 'Memory', 'Personality', 'PromptBuilder', 'ResponseEngine'];
+      const missing = modules.filter(m => !window.ZagelBrainV3?.[m]);
+      if (missing.length > 0) console.warn(`🧠 [Integration] Missing modules: ${missing.join(', ')}`);
+      this._installConversationHook();
+      this._setupBusListeners();
+      this._initialized = true;
+      console.log('🧠🕊️ [ZagelBrain-Integration] ✅ All systems connected');
+      if (window.ZagelBus) window.ZagelBus.emit('brain:v3:ready', { modules: modules.filter(m => window.ZagelBrainV3?.[m]), version: '3.0.0' });
     }
-    
-    try {
-      // Process through brain
-      const result = await this.integration.respond(message);
-      
-      // Handle response
-      if (this.onResponse) {
-        this.onResponse(result.response, result);
+    async chat(message) {
+      const promptBuilder = window.ZagelBrainV3?.PromptBuilder;
+      const responseEngine = window.ZagelBrainV3?.ResponseEngine;
+      if (!promptBuilder || !responseEngine) {
+        console.error('🧠 [Integration] Missing PromptBuilder or ResponseEngine');
+        return { error: 'Brain modules not loaded', text: 'عندي مشكلة تقنية... استنى شوية 🕊️' };
       }
-      
-      // Trigger animation
-      if (result.animation && this.onAnimation) {
-        this.onAnimation(result.animation);
-      }
-      
-      // Hide typing
-      if (this.onTyping) {
-        this.onTyping(false);
-      }
-      
-      return result;
-      
-    } catch (error) {
-      console.error('[ZagelBrain] Error:', error);
-      
-      if (this.onTyping) {
-        this.onTyping(false);
-      }
-      
-      return '🐦 *something went wrong in the dove brain*';
-    }
-  }
-  
-  /**
-   * Get brain state
-   */
-  getState() {
-    return this.integration?.getState() || { initialized: false };
-  }
-  
-  /**
-   * Trigger specific animation
-   */
-  animate(trigger) {
-    this.integration?.animate(trigger);
-  }
-  
-  /**
-   * Reset brain memory
-   */
-  reset() {
-    this.integration?.reset();
-    console.log('[ZagelBrain] Memory reset');
-  }
-  
-  /**
-   * Quick greeting
-   */
-  greet() {
-    return this.send('hello');
-  }
-}
-
-// Global instance
-window.ZagelBrain = new ZagelBrain();
-
-// ==========================================
-// SIMPLE WRAPPER FUNCTIONS (for easy use)
-// ==========================================
-
-/**
- * Initialize Zagel Brain with API key
- */
-window.initZagelBrain = async function(apiKey, animationController) {
-  return await window.ZagelBrain.init(apiKey, animationController);
-};
-
-/**
- * Send message to Zagel
- */
-window.zagel = async function(message) {
-  return await window.ZagelBrain.send(message);
-};
-
-/**
- * Get Zagel brain state
- */
-window.zagelState = function() {
-  return window.ZagelBrain.getState();
-};
-
-/**
- * Reset Zagel memory
- */
-window.zagelReset = function() {
-  return window.ZagelBrain.reset();
-};
-
-// ==========================================
-// EXAMPLE INTEGRATION CODE
-// ==========================================
-/*
-// Example integration with existing 3D dove:
-
-// 1. Include all brain modules in your HTML
-// 2. Create animation controller wrapper
-const animationController = {
-  trigger: function(animationName) {
-    // Your existing 3D animation system
-    if (window.doveAnimator) {
-      window.doveAnimator.play(animationName);
-    }
-    // Or use Three.js directly
-    if (window.zagelModel) {
-      switch(animationName) {
-        case 'wingFlap': window.zagelModel.play('wing_flap'); break;
-        case 'headTilt': window.zagelModel.play('head_tilt'); break;
-        case 'hop': window.zagelModel.play('hop'); break;
-        case 'sideEye': window.zagelModel.play('side_eye'); break;
+      try {
+        const promptContext = await promptBuilder.build(message);
+        const rawResponse = await this._callAPI(promptContext);
+        const processed = responseEngine.process(rawResponse, promptContext);
+        this._chatHistory.push({
+          user: message,
+          assistant: processed.text,
+          sentiment: promptContext.sentiment,
+          animation: processed.animation,
+          ts: Date.now()
+        });
+        if (this._chatHistory.length > 50) this._chatHistory = this._chatHistory.slice(-30);
+        return processed;
+      } catch (error) {
+        console.error('🧠 [Integration] Chat error:', error);
+        const personality = window.ZagelBrainV3?.Personality;
+        const fallback = personality ? personality.getDoveMetaphor('thinking') : 'أنا تايه شوية... جرب تاني كمان شوية 🕊️';
+        return { text: fallback, animation: 'gentle-bob', error: error.message };
       }
     }
+    async _callAPI(promptContext) {
+      const response = await fetch(API_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: promptContext.userMessage,
+          model: DEFAULT_MODEL,
+          systemPrompt: promptContext.systemPrompt
+        })
+      });
+      if (!response.ok) throw new Error(`API ${response.status}: ${await response.text().catch(() => 'unknown')}`);
+      const data = await response.json();
+      return data.reply || data.response || data.message || data.text || '';
+    }
+    _installConversationHook() {
+      if (this._interceptInstalled) return;
+      const originalSend = window.ZagelConversation?.send?.bind(window.ZagelConversation);
+      if (originalSend) {
+        window.ZagelConversation.send = async (message, options = {}) => {
+          if (options.bypassBrain) return originalSend(message, options);
+          const result = await this.chat(message);
+          if (window.ZagelBus) window.ZagelBus.emit('conversation:response', { user: message, assistant: result.text, brainV3: true });
+          return { success: !result.error, response: result.text };
+        };
+        this._interceptInstalled = true;
+        console.log('🧠 [Integration] Conversation hook installed');
+      }
+    }
+    _setupBusListeners() {
+      if (!window.ZagelBus) return;
+      window.ZagelBus.on('user:reaction', (data) => {
+        const personality = window.ZagelBrainV3?.Personality;
+        if (!personality) return;
+        if (['😂', '🤣', '😆'].includes(data?.emoji)) personality.learnHumorPreference(true);
+      });
+      window.ZagelBus.on('conversation:user_message', async (data) => {
+        if (data?.message) {
+          const recognition = window.ZagelBrainV3?.Recognition;
+          if (recognition) recognition.analyze(data.message);
+        }
+      });
+    }
+    getChatHistory() { return [...this._chatHistory]; }
+    getSystemStatus() {
+      return {
+        initialized: this._initialized,
+        interceptInstalled: this._interceptInstalled,
+        modules: {
+          recognition: !!window.ZagelBrainV3?.Recognition,
+          memory: !!window.ZagelBrainV3?.Memory,
+          personality: !!window.ZagelBrainV3?.Personality,
+          promptBuilder: !!window.ZagelBrainV3?.PromptBuilder,
+          responseEngine: !!window.ZagelBrainV3?.ResponseEngine
+        },
+        chatHistoryLength: this._chatHistory.length,
+        memoryStats: window.ZagelBrainV3?.Memory?.getStats(),
+        personalitySummary: window.ZagelBrainV3?.Personality?.getPersonalitySummary(),
+        responseStats: window.ZagelBrainV3?.ResponseEngine?.getStats()
+      };
+    }
+    reset() {
+      this._chatHistory = [];
+      window.ZagelBrainV3?.Memory?.clearShortTerm();
+      console.log('🧠 [Integration] Brain reset');
+    }
   }
-};
-
-// 3. Initialize
-await window.initZagelBrain('YOUR_GEMINI_API_KEY', animationController);
-
-// 4. Handle responses
-window.ZagelBrain.onResponse = function(text, data) {
-  document.getElementById('zagel-response').innerText = text;
-};
-
-window.ZagelBrain.onAnimation = function(animation) {
-  console.log('Playing:', animation);
-};
-
-window.ZagelBrain.onTyping = function(isTyping) {
-  document.getElementById('typing-indicator').style.display = isTyping ? 'block' : 'none';
-};
-
-// 5. Use!
-await window.zagel('Hello, how are you?');
-*/
-
-// Export for module usage
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = ZagelBrain;
-}
-
-// Also export as default for ES modules
-export default window.ZagelBrain;
+  if (!window.ZagelBrainV3) window.ZagelBrainV3 = {};
+  const integration = new ZagelBrainIntegration();
+  window.ZagelBrainV3.Integration = integration;
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => integration.init());
+  } else {
+    setTimeout(() => integration.init(), 100);
+  }
+})();

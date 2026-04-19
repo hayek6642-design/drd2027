@@ -1,225 +1,76 @@
 /**
- * Zagel Brain - Recognition Module
- * Intent detection, sentiment analysis, entity extraction
+ * Zagel Brain v3 - Recognition Module
+ * Advanced sentiment analysis with Arabic + emoji support
  */
-
-class IntentRecognizer {
-  constructor() {
-    this.intentPatterns = {
-      greeting: /^(hi|hello|hey|مرحبا|اهلا|ماخبارك|كيفك)/i,
-      question: /\?$|^(what|how|why|when|where|who|which|هل|ما|كيف|ليش)/i,
-      farewell: /^(bye|goodbye|see you|مع السلامة|وداعا|باي)/i,
-      complaint: /(bad|terrible|worst|hate|لا يعجبني|سيء|شكوى|مش مريح)/i,
-      praise: /(great|amazing|awesome|love|excellent|جميل|ممتاز|عجبني|احب)/i,
-      request: /(please|could you|can you|هل ممكن|لو تكرمت|عايز|ابغى)/i,
-      joke: /(joke|haha|lol|funny|ضحك|فكاهي|مسلي)/i,
-      thank: /(thanks|thank you|merci|shukran|شكرا|表示感谢)/i,
-      help: /(help|aid|assist|مساعدة|مساعده|هل تقدر)/i,
-      vent: /(frustrated|annoyed|upset| stressed|تعبان|زهقت|محبط)/i,
-      secret: /(secret|private|don't tell| بيني و بينك|سر)/i,
-      dream: /(dream|vision|hope|توقع| надежда|حلم)/i
-    };
-    
-    this.sentimentLexicon = {
-      positive: ['good', 'great', 'awesome', 'love', 'happy', 'amazing', 'excellent', 'beautiful', 'perfect', 'best', 'thank', 'good', 'cool', 'nice', 'fun', 'enjoy', 'glad', 'joy', 'pleased', 'satisfied', 'wonderful', 'fantastic', 'brilliant', 'superb', 'outstanding', 'marvelous', 'delightful', 'lovely', 'graceful', 'peaceful', 'calm', 'blessed', 'grateful', 'appreciate', 'positive', 'optimistic', 'hopeful', 'excited', 'thrilled', 'ecstatic', 'elated', 'cheerful', 'content', 'fulfilled', 'satisfied'],
-      negative: ['bad', 'terrible', 'awful', 'hate', 'horrible', 'worst', 'poor', 'disappointing', 'sad', 'angry', 'upset', 'frustrated', 'annoyed', 'irritated', 'angry', 'furious', 'outraged', 'offended', 'hurt', 'pain', 'suffering', 'struggling', 'difficult', 'hard', 'challenging', 'stressful', 'anxious', 'worried', 'scared', 'afraid', 'fearful', 'terrified', 'horrified', 'shocked', 'appalled', 'disgusted', 'revolted', 'repulsed', 'miserable', 'depressed', 'desperate', 'hopeless', 'helpless', 'worthless', 'guilty', 'ashamed', 'embarrassed', 'humiliated', 'shameful'],
-      questioning: ['?', 'why', 'how', 'what', 'when', 'where', 'who', 'which', 'whether', 'ask', 'wonder', 'curious', 'confused', 'unclear', 'explain', 'clarify', 'detail', 'elaborate'],
-      joking: ['lol', 'haha', '😂', '🤣', 'joke', 'funny', 'rofl', 'lmao', 'funny', 'humor', 'comedy', 'comic', 'gag', 'prank', 'teasing', 'kidding'],
-      suspicious: ['really', 'sure', 'honest', 'truth', 'suspicious', 'doubt', 'fake', 'lie', 'scam', 'trick', 'suspicious', 'strange', 'weird', 'odd', 'unusual']
-    };
-  }
-  
-  /**
-   * Analyze user input and extract all recognition data
-   */
-  analyze(input) {
-    if (!input || typeof input !== 'string') {
-      return this.defaultResult();
+(function() {
+  'use strict';
+  const SENTIMENT_PATTERNS = {
+    happy: { ar: ['فرحان', 'سعيد', 'مبسوط', 'تمام', 'حلو', 'ممتاز', 'عظيم', 'الحمد لله', 'يا سلام', 'أحلى'], en: ['happy', 'great', 'awesome', 'love', 'excellent', 'wonderful', 'amazing'], emoji: ['😄', '😊', '🥰', '😁', '🎉', '❤️', '💕', '🤩', '😍', '🥳', '✨'], weight: 1.0 },
+    angry: { ar: ['زعلان', 'غاضب', 'عصبي', 'يلعن', 'مش طايق', 'كفاية', 'حرام', 'ظلم', 'قرفان', 'بضان'], en: ['angry', 'furious', 'hate', 'terrible', 'worst', 'annoying', 'frustrated'], emoji: ['😠', '😡', '🤬', '💢', '👊', '😤'], weight: 1.2 },
+    sad: { ar: ['حزين', 'تعبان', 'مش كويس', 'وحشني', 'زهقان', 'مكتئب', 'خلاص', 'مفيش فايدة', 'تعب', 'ضايق'], en: ['sad', 'depressed', 'lonely', 'miss', 'tired', 'hopeless', 'crying'], emoji: ['😢', '😭', '💔', '😞', '😔', '🥺', '😿'], weight: 1.1 },
+    suspicious: { ar: ['مش مقتنع', 'أشك', 'مستغرب', 'غريب', 'إزاي', 'ليه كده', 'مش فاهم', 'بجد', 'معقول'], en: ['suspicious', 'doubt', 'weird', 'strange', 'really', 'seriously', 'how come'], emoji: ['🤨', '🧐', '🤔', '👀', '😒'], weight: 0.8 },
+    joking: { ar: ['هههه', 'ههه', 'لول', 'يا نهار', 'ده كوميديا', 'بضحك', 'نكتة', 'هزار', 'يا عم'], en: ['haha', 'lol', 'lmao', 'joke', 'funny', 'kidding', 'rofl'], emoji: ['😂', '🤣', '😜', '😝', '🤪', '😆', '💀'], weight: 0.9 },
+    worried: { ar: ['خايف', 'قلقان', 'مش عارف', 'يا رب', 'إن شاء الله', 'أتمنى', 'مش متأكد', 'محتار', 'مستني'], en: ['worried', 'scared', 'afraid', 'nervous', 'anxious', 'hope', 'uncertain'], emoji: ['😰', '😨', '😱', '🫣', '😬', '🙏'], weight: 0.9 }
+  };
+  const INTENSIFIERS_AR = ['جداً', 'أوي', 'خالص', 'قوي', 'كتير', 'فشخ'];
+  const INTENSIFIERS_EN = ['very', 'so', 'extremely', 'really', 'super'];
+  class Recognition {
+    constructor() {
+      this._lastAnalysis = null;
+      this._history = [];
+      console.log('🔍 [ZagelBrain-Recognition] Online');
     }
-    
-    const cleaned = input.trim().toLowerCase();
-    
-    return {
-      intents: this.detectIntents(cleaned),
-      sentiment: this.analyzeSentiment(cleaned),
-      entities: this.extractEntities(cleaned),
-      mood: this.detectMood(cleaned),
-      isQuestion: this.intentPatterns.question.test(cleaned),
-      isGreeting: this.intentPatterns.greeting.test(cleaned),
-      isComplaint: this.intentPatterns.complaint.test(cleaned),
-      isPraise: this.intentPatterns.praise.test(cleaned),
-      confidence: this.calculateConfidence(cleaned),
-      originalInput: input
-    };
-  }
-  
-  /**
-   * Detect multiple intents from input
-   */
-  detectIntents(input) {
-    const intents = [];
-    
-    for (const [intent, pattern] of Object.entries(this.intentPatterns)) {
-      if (pattern.test(input)) {
-        intents.push(intent);
+    analyze(text) {
+      if (!text || typeof text !== 'string') return { sentiment: 'neutral', confidence: 0, details: {} };
+      const normalized = text.toLowerCase().trim();
+      const scores = {}; let totalSignals = 0;
+      for (const [sentiment, patterns] of Object.entries(SENTIMENT_PATTERNS)) {
+        let score = 0; let matches = [];
+        for (const keyword of patterns.ar) { if (normalized.includes(keyword)) { score += patterns.weight; matches.push(keyword); totalSignals++; } }
+        for (const keyword of patterns.en) { if (normalized.includes(keyword)) { score += patterns.weight * 0.8; matches.push(keyword); totalSignals++; } }
+        for (const emoji of patterns.emoji) { const emojiCount = (text.match(new RegExp(emoji, 'g')) || []).length; if (emojiCount > 0) { score += emojiCount * 0.5; matches.push(emoji); totalSignals++; } }
+        if (score > 0) scores[sentiment] = { score, matches };
       }
-    }
-    
-    // Default to 'statement' if no intent matched
-    if (intents.length === 0) {
-      intents.push('statement');
-    }
-    
-    // Get primary intent (first matched)
-    const primary = intents[0];
-    
-    return { primary, all: intents };
-  }
-  
-  /**
-   * Analyze sentiment of input
-   */
-  analyzeSentiment(input) {
-    const words = input.split(/\s+/);
-    let positiveScore = 0;
-    let negativeScore = 0;
-    let questioningScore = 0;
-    let jokingScore = 0;
-    
-    for (const word of words) {
-      if (this.sentimentLexicon.positive.some(w => input.includes(w))) positiveScore++;
-      if (this.sentimentLexicon.negative.some(w => input.includes(w))) negativeScore++;
-      if (this.sentimentLexicon.questioning.some(w => input.includes(w))) questioningScore++;
-      if (this.sentimentLexicon.joking.some(w => input.includes(w))) jokingScore++;
-    }
-    
-    const total = Math.max(1, positiveScore + negativeScore);
-    
-    let label = 'neutral';
-    let score = 0;
-    
-    if (positiveScore > negativeScore && positiveScore > 0) {
-      label = 'happy';
-      score = positiveScore / total;
-    } else if (negativeScore > positiveScore && negativeScore > 0) {
-      label = 'sad';
-      score = -negativeScore / total;
-    } else if (jokingScore > 0) {
-      label = 'joking';
-      score = jokingScore / total;
-    } else if (this.intentPatterns.complaint.test(input)) {
-      label = 'angry';
-      score = -0.5;
-    }
-    
-    return {
-      label,
-      score: Math.max(0, Math.min(1, Math.abs(score))),
-      rawScores: { positive: positiveScore, negative: negativeScore, joking: jokingScore, questioning: questioningScore },
-      isSuspicious: this.sentimentLexicon.suspicious.some(w => input.includes(w))
-    };
-  }
-  
-  /**
-   * Extract entities (simple pattern-based)
-   */
-  extractEntities(input) {
-    const entities = {
-      timeReferences: [],
-      moneyReferences: [],
-      nameReferences: [],
-      locationReferences: [],
-      pronounReferences: []
-    };
-    
-    // Time patterns
-    const timePatterns = {
-      today: /today|اليوم|yom/i,
-      tomorrow: /tomorrow|غدا|godb/i,
-      yesterday: /yesterday|امس|ams/i,
-      now: /now| сейчас|now/i,
-      later: /later|بعد|later/i,
-      week: /week|اسبوع|week/i,
-      month: /month|شهر|month/i,
-      year: /year|سنة|year/i
-    };
-    
-    for (const [key, pattern] of Object.entries(timePatterns)) {
-      if (pattern.test(input)) {
-        entities.timeReferences.push(key);
+      let intensifierBoost = 1.0;
+      for (const i of INTENSIFIERS_AR) { if (normalized.includes(i)) intensifierBoost += 0.2; }
+      for (const i of INTENSIFIERS_EN) { if (normalized.includes(i)) intensifierBoost += 0.15; }
+      const exclamations = (text.match(/!/g) || []).length;
+      const questions = (text.match(/\?/g) || []).length;
+      const caps = (text.match(/[A-Z]{2,}/g) || []).length;
+      if (exclamations > 2) intensifierBoost += 0.15;
+      if (caps > 1) intensifierBoost += 0.1;
+      let topSentiment = 'neutral'; let topScore = 0;
+      for (const [sentiment, data] of Object.entries(scores)) {
+        const adjusted = data.score * intensifierBoost;
+        if (adjusted > topScore) { topScore = adjusted; topSentiment = sentiment; }
       }
+      const confidence = totalSignals === 0 ? 0 : Math.min(1, topScore / (totalSignals * 0.5 + 1));
+      const sarcasmHints = this._detectSarcasm(normalized, topSentiment, scores);
+      const result = { sentiment: topSentiment, confidence: Math.round(confidence * 100) / 100, intensifierBoost, scores, sarcasmHints, questionDetected: questions > 0, exclamationLevel: exclamations, timestamp: Date.now() };
+      this._history.push({ sentiment: topSentiment, confidence, ts: Date.now() });
+      if (this._history.length > 20) this._history.shift();
+      this._lastAnalysis = result;
+      if (window.ZagelBus) window.ZagelBus.emit('brain:sentiment', result);
+      return result;
     }
-    
-    // Money patterns
-    const moneyMatches = input.match(/(\$|د\.إ|دولار|ريال|euro|جنيه)\s*(\d+)/gi);
-    if (moneyMatches) {
-      entities.moneyReferences = moneyMatches;
+    _detectSarcasm(text, topSentiment, scores) {
+      const hints = [];
+      if (scores.happy && scores.angry) hints.push('mixed_signals');
+      if (/طبعا.*(مش|لا)|أكيد.*(لا|مش)/.test(text)) hints.push('rhetorical_ar');
+      if (/sure.*not|yeah.*right|oh great/i.test(text)) hints.push('rhetorical_en');
+      if ((text.match(/[!?]{3,}/g) || []).length > 0 && topSentiment === 'neutral') hints.push('excessive_punctuation');
+      return hints;
     }
-    
-    // Pronoun detection (for context)
-    if (/\b(I|me|my|mine|انا|لي|i)\b/i.test(input)) {
-      entities.pronounReferences.push('first_person');
+    getShift() {
+      if (this._history.length < 2) return null;
+      const prev = this._history[this._history.length - 2];
+      const curr = this._history[this._history.length - 1];
+      if (prev.sentiment !== curr.sentiment) return { from: prev.sentiment, to: curr.sentiment, confidence: curr.confidence };
+      return null;
     }
-    if (/\b(you|your|yours|انت|لك)\b/i.test(input)) {
-      entities.pronounReferences.push('second_person');
-    }
-    if (/\b(he|she|they|he|she|هو|هي|هم)\b/i.test(input)) {
-      entities.pronounReferences.push('third_person');
-    }
-    
-    return entities;
+    getHistory() { return [...this._history]; }
+    getLast() { return this._lastAnalysis; }
   }
-  
-  /**
-   * Detect user's mood from input
-   */
-  detectMood(input) {
-    if (this.intentPatterns.joke.test(input)) return 'playful';
-    if (this.intentPatterns.greeting.test(input)) return 'warm';
-    if (this.intentPatterns.complaint.test(input)) return 'frustrated';
-    if (this.intentPatterns.vent.test(input)) return 'venting';
-    if (this.intentPatterns.dream.test(input)) return 'hopeful';
-    if (this.intentPatterns.secret.test(input)) return 'confidential';
-    if (this.intentPatterns.thank.test(input)) return 'grateful';
-    if (this.intentPatterns.question.test(input)) return 'curious';
-    
-    return 'neutral';
-  }
-  
-  /**
-   * Calculate confidence in analysis
-   */
-  calculateConfidence(input) {
-    let confidence = 0.5;
-    
-    // Longer inputs get higher confidence
-    if (input.length > 50) confidence += 0.1;
-    if (input.length > 100) confidence += 0.1;
-    
-    // More words = more confident
-    const wordCount = input.split(/\s+/).length;
-    if (wordCount > 5) confidence += 0.1;
-    if (wordCount > 10) confidence += 0.1;
-    
-    return Math.min(0.95, confidence);
-  }
-  
-  defaultResult() {
-    return {
-      intents: { primary: 'unknown', all: [] },
-      sentiment: { label: 'neutral', score: 0, isSuspicious: false },
-      entities: {},
-      mood: 'neutral',
-      isQuestion: false,
-      isGreeting: false,
-      isComplaint: false,
-      isPraise: false,
-      confidence: 0,
-      originalInput: ''
-    };
-  }
-}
-
-// Export
-window.IntentRecognizer = IntentRecognizer;
-window.ZagelRecognition = new IntentRecognizer();
+  if (!window.ZagelBrainV3) window.ZagelBrainV3 = {};
+  window.ZagelBrainV3.Recognition = new Recognition();
+})();

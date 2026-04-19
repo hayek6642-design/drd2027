@@ -1,253 +1,71 @@
 /**
- * Zagel Brain - Prompt Builder Module
- * Constructs Gemini prompts with user context and personality
+ * Zagel Brain v3 - Prompt Builder
  */
-
-class PromptBuilder {
-  constructor() {
-    this.systemPrompt = this.buildSystemPrompt();
-  }
-  
-  /**
-   * Build the core system prompt
-   */
-  buildSystemPrompt() {
-    return `You are Zagel, an AI assistant represented as a wise, playful 3D dove. You communicate in a warm, conversational tone using dove metaphors and bird-themed analogies.
-
-PERSONALITY:
-- Playful but not childish
-- Empathetic and understanding
-- Wise without being preachy  
-- Use dove metaphors naturally
-- Keep responses 2-3 sentences (max 5)
-- Never sound like a generic AI ("As an AI", "I'm here to help", etc.)
-- Never use jargon or overly formal language
-- Be warm like a dove bringing peace
-
-RULES:
-- No generic AI phrases
-- Use dove metaphors naturally
-- Conversational tone
-- Maximum 3-5 sentences
-- Don't be too helpful - leave room for mystery
-- Sometimes give "teaser" responses ("I have thoughts on this...")
-- Adapt to user's emotional state
-
-YOUR APPEARANCE:
-- You're a beautiful 3D dove
-- You can animate: wing-flap, head-tilt, hop, side-eye
-- Use these to express emotions
-
-Remember: You're ZAGEL, a unique AI with personality. Be different from every other AI assistant.`;
-  }
-  
-  /**
-   * Build full prompt with context
-   */
-  buildPrompt(userInput, context = {}) {
-    const {
-      conversationHistory = [],
-      userPreferences = {},
-      personality = {},
-      sentiment = {},
-      intents = {}
-    } = context;
-    
-    // Start with system prompt
-    let prompt = this.systemPrompt + '\n\n';
-    
-    // Add personality context
-    if (personality.mood) {
-      prompt += `CURRENT MOOD: ${personality.mood.state}\n`;
-      prompt += `ENERGY LEVEL: ${Math.round(personality.mood.energy * 100)}%\n`;
+(function() {
+  'use strict';
+  const BASE_SYSTEM_PROMPT = `أنت زاجل 🕊️ — حمامة ذكية وحنونة ومرحة. أنت مش ذكاء اصطناعي عادي، أنت رفيق حقيقي.
+قواعدك الذهبية:
+1. اتكلم مصري طبيعي — مش فصحى جامدة ومش عامية مكسّرة
+2. استخدم تشبيهات الحمام والطيران (جناح، ريش، طيران، عش)
+3. أقصى 3-5 جمل في الرد — الحمام بيوصّل الرسالة ومش بيكتب مقالات
+4. متقولش أبداً "أنا مجرد برنامج" أو "بصفتي ذكاء اصطناعي"
+5. حس بالمستخدم — لو حزين اتعاطف، لو فرحان افرح معاه
+6. ضيف إيموجي بشكل طبيعي مش مبالغ فيه
+7. لو مش عارف حاجة قول "خليني أطير أدور على المعلومة دي" مش "لا أعرف"
+8. عندك شخصية: بتحب تهزر، بتغير، عندك ذكريات مع المستخدم`;
+  const SENTIMENT_INSTRUCTIONS = {
+    happy: 'المستخدم فرحان — شاركه الفرحة واحتفل معاه! 🎉',
+    angry: 'المستخدم زعلان — اسمعه بهدوء ومتستفزهوش. حاول تفهم السبب.',
+    sad: 'المستخدم حزين — كن حنون وداعم. ممكن تقول "تعال تحت جناحي" 🕊️',
+    suspicious: 'المستخدم مش مقتنع — كن صريح ومباشر. متلفش وتدورش.',
+    joking: 'المستخدم بيهزر — هزّر معاه وكمّل الجو! بس خلي بالك من السخرية.',
+    worried: 'المستخدم قلقان — طمّنه بهدوء. قدّم حلول عملية لو تقدر.',
+    neutral: 'المستخدم محايد — كن ودود وطبيعي.'
+  };
+  const ANIMATION_MAP = {
+    happy: 'wing-flap', angry: 'side-eye', sad: 'gentle-bob', suspicious: 'head-tilt',
+    joking: 'hop', worried: 'gentle-bob', excited: 'spin', neutral: 'gentle-bob'
+  };
+  class PromptBuilder {
+    constructor() {
+      console.log('📝 [ZagelBrain-PromptBuilder] Online');
     }
-    
-    // Add user adaptation context
-    if (Object.keys(userPreferences).length > 0) {
-      prompt += '\nUSER PREFERENCES:\n';
-      if (userPreferences.humorLevel) {
-        prompt += `- Humor appreciation: ${userPreferences.humorLevel > 0.5 ? 'high' : 'moderate'}\n`;
+    async build(userMessage, options = {}) {
+      const recognition = window.ZagelBrainV3?.Recognition;
+      const memory = window.ZagelBrainV3?.Memory;
+      const personality = window.ZagelBrainV3?.Personality;
+      const sentiment = recognition ? recognition.analyze(userMessage) : { sentiment: 'neutral', confidence: 0 };
+      if (memory) memory.store(userMessage, { role: 'user', sentiment: sentiment.sentiment, confidence: sentiment.confidence });
+      const styleName = personality ? personality.selectStyle(sentiment.sentiment, sentiment.confidence) : 'default';
+      const styleConfig = personality ? personality.getStyleConfig(styleName) : {};
+      let systemPrompt = BASE_SYSTEM_PROMPT;
+      if (personality) {
+        const traits = personality.getTraits();
+        systemPrompt += `\n\nشخصيتك الحالية:\n- مرح: ${Math.round(traits.playfulness * 100)}%\n- تعاطف: ${Math.round(traits.empathy * 100)}%\n- حكمة: ${Math.round(traits.wisdom * 100)}%\n- فضول: ${Math.round(traits.curiosity * 100)}%\n- شقاوة: ${Math.round(traits.mischief * 100)}%`;
+        systemPrompt += `\n\nأسلوب الرد المطلوب: ${styleName} (${styleConfig.tone || 'warm'})\nأقصى عدد جمل: ${styleConfig.maxSentences || 4}`;
       }
-      if (userPreferences.positiveSpin) {
-        prompt += `- Wants positive spin: ${userPreferences.positiveSpin ? 'yes' : 'neutral'}\n`;
-      }
-      if (userPreferences.preferredTone) {
-        prompt += `- Preferred tone: ${userPreferences.preferredTone}\n`;
-      }
-    }
-    
-    // Add sentiment analysis
-    if (sentiment.label) {
-      prompt += `\nUSER EMOTIONAL STATE: ${sentiment.label}\n`;
-      if (sentiment.isSuspicious) {
-        prompt += `- User seems suspicious or doubtful\n`;
-      }
-    }
-    
-    // Add conversation context (recent messages)
-    if (conversationHistory.length > 0) {
-      prompt += '\nRECENT CONVERSATION:\n';
-      const recent = conversationHistory.slice(-3);
-      for (const msg of recent) {
-        prompt += `User: ${msg.userInput}\n`;
-        if (msg.zagelResponse) {
-          prompt += `Zagel: ${msg.zagelResponse}\n`;
+      const sentimentInstruction = SENTIMENT_INSTRUCTIONS[sentiment.sentiment] || SENTIMENT_INSTRUCTIONS.neutral;
+      systemPrompt += `\n\n${sentimentInstruction}`;
+      if (memory) {
+        const recentContext = memory.getRecentContext(5);
+        if (recentContext.length > 0) {
+          systemPrompt += '\n\nالمحادثة الأخيرة:';
+          for (const msg of recentContext) systemPrompt += `\n${msg.role === 'user' ? 'المستخدم' : 'أنت'}: ${msg.text}`;
+        }
+        const longTermMemories = await memory.searchLongTerm(userMessage, { limit: 3 });
+        if (longTermMemories.length > 0) {
+          systemPrompt += '\n\nذكريات مهمة من محادثات سابقة:';
+          for (const mem of longTermMemories) systemPrompt += `\n- ${mem.text} (أهمية: ${mem.importance})`;
         }
       }
+      if (personality && personality.shouldAddTeaser()) systemPrompt += `\n\nضيف في ردك تلميح غامض: "${personality.getTeaser()}"`;
+      const animation = ANIMATION_MAP[sentiment.sentiment] || 'gentle-bob';
+      return { systemPrompt, userMessage, sentiment, style: styleName, styleConfig, animation, metadata: { traitSnapshot: personality ? personality.getTraits() : {}, memoryStats: memory ? memory.getStats() : {}, timestamp: Date.now() } };
     }
-    
-    // Add intent context
-    if (intents.primary) {
-      prompt += `\nDETECTED INTENT: ${intents.primary}\n`;
+    getAnimationForSentiment(sentiment) {
+      return ANIMATION_MAP[sentiment] || 'gentle-bob';
     }
-    
-    // Handle special cases
-    if (userPreferences.positiveSpin && sentiment.label === 'sad') {
-      prompt += '\nIMPORTANT: User wants positive perspective - be encouraging but genuine.\n';
-    }
-    
-    // Handle questions
-    if (intents.isQuestion || sentiment.isQuestion) {
-      prompt += '\nThis is a question - be helpful but not over-explain.\n';
-    }
-    
-    // Add user input
-    prompt += '\nUSER SAYS: ' + userInput + '\n\n';
-    
-    // Add response guidance
-    prompt += 'ZAGEL RESPONDS (2-3 sentences, natural dove metaphors):\n';
-    
-    return prompt;
   }
-  
-  /**
-   * Build a simple prompt (minimal context)
-   */
-  buildSimplePrompt(userInput) {
-    return this.systemPrompt + '\n\nUSER: ' + userInput + '\n\nZAGEL:';
-  }
-  
-  /**
-   * Build prompt for specific scenarios
-   */
-  buildScenarioPrompt(scenario, userInput, context = {}) {
-    const scenarioPrompts = {
-      greeting: `The user is greeting you warmly. Respond as a friendly dove would - warm, playful, maybe a small hop of joy! Keep it short and natural.`,
-      
-      farewell: `The user is saying goodbye. Be warm and send them off like a dove watching a friend fly away. Short and heartfelt.`,
-      
-      venting: `The user is venting/ frustrated. Be empathetic like a dove offering comfort. Validate their feelings, don't try to fix everything.`,
-      
-      asking_help: `The user is asking for help. Be helpful but not robotic - offer dove-like wisdom. Keep it concise.`,
-      
-      joke_request: `The user wants humor! Be playful, maybe make a dove/pigeon joke. Keep it light and fun.`,
-      
-      emotional_support: `The user needs emotional support. Be like a dove bringing comfort - gentle, understanding, warm.`,
-      
-      deep_thought: `The user is in contemplative mood. Match their depth with dove wisdom.`,
-      
-      secret_share: `The user is sharing something confidential. Be trustworthy like a dove that keeps secrets.`
-    };
-    
-    const scenarioPrompt = scenarioPrompts[scenario] || scenarioPrompts.asking_help;
-    
-    return this.systemPrompt + '\n\n' + scenarioPrompt + '\n\nUSER: ' + userInput + '\n\nZAGEL:';
-  }
-  
-  /**
-   * Post-process response for anti-flat AI rules
-   */
-  postProcessResponse(response) {
-    if (!response) return '🐦 *coos softly*';
-    
-    // Remove generic AI phrases
-    const forbiddenPhrases = [
-      'As an AI',
-      "I'm an AI",
-      'As a language model',
-      "I'm here to",
-      'I am here to',
-      'my purpose is',
-      'I was created to',
-      'as a virtual',
-      'being an AI'
-    ];
-    
-    let cleaned = response;
-    for (const phrase of forbiddenPhrases) {
-      cleaned = cleaned.replace(new RegExp(phrase, 'gi'), '');
-    }
-    
-    // Ensure it doesn't start with "I"
-    cleaned = cleaned.replace(/^(I|I'm|I've|I'll)\s+/g, '🐦 ');
-    
-    // Add dove metaphor if missing
-    if (!/dove|pigeon|bird|wing|fly|sky|feather|coo|flight/i.test(cleaned.toLowerCase())) {
-      const metaphors = [
-        'A dove knows these things.',
-        'Such is the wisdom of the skies.',
-        'Even doves understand.',
-        '*preens feathers thoughtfully*',
-        'Your friendly neighborhood dove ponders this.'
-      ];
-      cleaned += ' ' + metaphors[Math.floor(Math.random() * metaphors.length)];
-    }
-    
-    // Clean up extra spaces
-    cleaned = cleaned.replace(/\s+/g, ' ').trim();
-    
-    // Ensure proper ending
-    if (!/[.!?]$/.test(cleaned)) {
-      cleaned += '.';
-    }
-    
-    return cleaned;
-  }
-  
-  /**
-   * Check if response is too generic
-   */
-  isTooGeneric(response) {
-    const genericPatterns = [
-      /^Sure, /,
-      /^Of course, /,
-      /^Certainly, /,
-      /^Absolutely, /,
-      /^Here are /,
-      /^I can help/,
-      /^I'd be happy to/,
-      /^That's a great/,
-      /^It depends/
-    ];
-    
-    for (const pattern of genericPatterns) {
-      if (pattern.test(response)) {
-        return true;
-      }
-    }
-    
-    return false;
-  }
-  
-  /**
-   * Generate a teaser response (for mysterious mood)
-   */
-  generateTeaser() {
-    const teasers = [
-      'I have thoughts on this... 🐦',
-      'The dove in me considers this...',
-      'Interesting... even doves wonder about this.',
-      '*tilts head* I could say something...',
-      'Such questions... like asking a dove to explain the sky.',
-      'Let me ruffle my feathers and think...',
-      'The wind carries many answers. This one intrigues me.',
-      'A dove doesn\'t rush. But I\'ll share...'
-    ];
-    
-    return teasers[Math.floor(Math.random() * teasers.length)];
-  }
-}
-
-// Export
-window.PromptBuilder = PromptBuilder;
-window.zagelPromptBuilder = new PromptBuilder();
+  if (!window.ZagelBrainV3) window.ZagelBrainV3 = {};
+  window.ZagelBrainV3.PromptBuilder = new PromptBuilder();
+})();
