@@ -143,6 +143,35 @@ app.post("/api/auth/login", (req, res) => {
   });
 });
 
+// Client configuration endpoint - returns env vars safely to client
+app.get('/api/config/client', (req, res) => {
+  console.log('[API /config/client] Request received');
+
+  const clientConfig = {
+    google: { clientId: process.env.GOOGLE_CLIENT_ID || '' },
+    cloudinary: {
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME || 'dhpyneqgk',
+      apiKey: process.env.CLOUDINARY_API_KEY || ''
+    },
+    database: {
+      isConfigured: !!process.env.DATABASE_URL
+    },
+    debug: {
+      hasGoogle: !!process.env.GOOGLE_CLIENT_ID,
+      hasCloudinary: !!process.env.CLOUDINARY_CLOUD_NAME,
+      hasDatabase: !!process.env.DATABASE_URL
+    }
+  };
+
+  console.log('[API /config/client] Sending:', {
+    google: !!clientConfig.google.clientId,
+    cloudinary: clientConfig.cloudinary.cloudName,
+    database: clientConfig.database.isConfigured ? 'configured' : 'MISSING'
+  });
+
+  res.json(clientConfig);
+});
+
 // Get current user (verify token)
 app.get("/api/auth/me", (req, res) => {
   const authHeader = req.headers.authorization;
