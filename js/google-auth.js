@@ -1,4 +1,7 @@
-// COMPLETE GOOGLE SIGN-IN IMPLEMENTATION
+/**
+ * GoogleAuthManager - Google OAuth 2.0 Handler
+ * Initializes Google Sign-In button and handles credential responses
+ */
 class GoogleAuthManager {
   constructor() {
     this.clientId = null;
@@ -9,123 +12,93 @@ class GoogleAuthManager {
   async init() {
     console.log('[GoogleAuth] Initializing...');
     
-    // Wait for config to load
-    let attempts = 0;
-    while (!window.AppConfig?.loaded && attempts < 100) {
-      await new Promise(r => setTimeout(r, 50));
-      attempts++;
-    }
-    
-    if (!window.AppConfig?.loaded) {
-      console.error('[GoogleAuth] ✗ Config never loaded');
-      this.hideGoogleButton();
-      return false;
-    }
-
-    // Get client ID from config
-    const config = await window.AppConfig.load();
+    // Load config from server
+    const config = await this.loadConfig();
     this.clientId = config?.google?.clientId;
     
     if (!this.clientId) {
-      console.error('[GoogleAuth] ✗ No Google Client ID in config - Google button hidden');
+      console.warn('[GoogleAuth] No Google Client ID - hiding button');
       this.hideGoogleButton();
       return false;
     }
 
-    console.log('[GoogleAuth] ✓ Client ID found, loading Google SDK...');
-    
-    // Load Google SDK
-    const sdkLoaded = await this.loadGoogleScript();
-    if (!sdkLoaded) {
-      console.error('[GoogleAuth] ✗ Failed to load Google SDK');
-      this.hideGoogleButton();
-      return false;
-    }
-
-    // Initialize Google Accounts
+    // Load Google Script
     try {
-      google.accounts.id.initialize({
-        client_id: this.clientId,
-        callback: this.handleCredentialResponse.bind(this),
-        auto_select: false,
-        cancel_on_tap_outside: true
-      });
-
-      console.log('[GoogleAuth] ✓ Google Accounts initialized');
-
-      // Render button
-      await this.renderButton();
-      this.initialized = true;
-      console.log('[GoogleAuth] ✅ READY');
-      return true;
+      await this.loadGoogleScript();
     } catch (e) {
-      console.error('[GoogleAuth] ✗ Initialization failed:', e);
+      console.error('[GoogleAuth] Failed to load Google script:', e);
       this.hideGoogleButton();
       return false;
+    }
+
+    // Initialize Google Sign-In
+    google.accounts.id.initialize({
+      client_id: this.clientId,
+      callback: this.handleCredentialResponse.bind(this),
+      auto_select: false,
+      cancel_on_tap_outside: true
+    });
+
+    // Render button
+    this.renderButton();
+    this.initialized = true;
+    console.log('[GoogleAuth] ✓ Initialized successfully');
+    return true;
+  }
+
+  async loadConfig() {
+    try {
+      const response = await fetch('/api/config/client');
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.json();
+    } catch (e) {
+      console.error('[GoogleAuth] Config load failed:', e.message);
+      return null;
     }
   }
 
   loadGoogleScript() {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       // Check if already loaded
-      if (window.google?.accounts?.id) {
-        console.log('[GoogleAuth] Google SDK already loaded');
-        resolve(true);
+      if (document.getElementById('google-jssdk') || window.google) {
+        resolve();
         return;
       }
 
-      if (document.getElementById('google-jssdk')) {
-        console.log('[GoogleAuth] Google SDK script already exists');
-        resolve(true);
-        return;
-      }
-      
       const script = document.createElement('script');
       script.id = 'google-jssdk';
       script.src = 'https://accounts.google.com/gsi/client';
       script.async = true;
       script.defer = true;
-      
       script.onload = () => {
-        console.log('[GoogleAuth] ✓ Google SDK script loaded');
-        resolve(true);
+        console.log('[GoogleAuth] Google script loaded');
+        resolve();
       };
-      
       script.onerror = () => {
-        console.error('[GoogleAuth] ✗ Failed to load Google SDK script');
-        resolve(false);
+        reject(new Error('Failed to load Google script'));
       };
-      
       document.head.appendChild(script);
     });
   }
 
   renderButton() {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const btnContainer = document.getElementById('google-signin-btn');
-        if (!btnContainer) {
-          console.error('[GoogleAuth] ✗ Button container #google-signin-btn not found in DOM');
-          resolve(false);
-          return;
-        }
+    const btnContainer = document.getElementById('google-signin-btn');
+    if (!btnContainer) {
+      console.warn('[GoogleAuth] Button container not found');
+      return;
+    }
 
-        try {
-          google.accounts.id.renderButton(btnContainer, {
-            theme: 'outline',
-            size: 'large',
-            width: 250,
-            locale: 'en'
-          });
-
-          console.log('[GoogleAuth] ✓ Google button rendered in DOM');
-          resolve(true);
-        } catch (e) {
-          console.error('[GoogleAuth] ✗ Failed to render button:', e);
-          resolve(false);
-        }
-      }, 100);
-    });
+    try {
+      google.accounts.id.renderButton(btnContainer, {
+        theme: 'outline',
+        size: 'large',
+        width: 250,
+        locale: 'en'
+      });
+      console.log('[GoogleAuth] Button rendered successfully');
+    } catch (e) {
+      console.error('[GoogleAuth] Button render failed:', e);
+    }
   }
 
   hideGoogleButton() {
@@ -137,8 +110,7 @@ class GoogleAuthManager {
   }
 
   async handleCredentialResponse(response) {
-    console.log('[GoogleAuth] Credential received from Google');
-    
+    console.log('[GoogleAuth] Credential received, verifying...');
     try {
       const res = await fetch('/api/auth/google', {
         method: 'POST',
@@ -149,24 +121,21 @@ class GoogleAuthManager {
 
       const data = await res.json();
       
-      console.log('[GoogleAuth] Server response:', data);
-      
       if (data.success) {
-        console.log('[GoogleAuth] ✓ Authentication successful');
+        console.log('[GoogleAuth] ✓ Verification successful');
         this.saveSession(data);
-        this.updateUI(data.user);
-        
-        // Notify other services
-        window.dispatchEvent(new CustomEvent('auth:success', { 
-          detail: { user: data.user, token: data.token } 
-        }));
+        if (typeof authUI !== 'undefined') {
+          authUI.showLoggedIn(data.user);
+        }
+        // Trigger event for other services to listen to
+        window.dispatchEvent(new CustomEvent('auth:loggedin', { detail: data.user }));
       } else {
-        console.error('[GoogleAuth] Auth failed:', data.error);
+        console.error('[GoogleAuth] Verification failed:', data.error);
         alert('Google sign-in failed: ' + (data.error || 'Unknown error'));
       }
     } catch (e) {
-      console.error('[GoogleAuth] Auth error:', e);
-      alert('Sign-in error. Please try again.');
+      console.error('[GoogleAuth] Auth request failed:', e.message);
+      alert('Sign-in error: ' + e.message + '. Please try again.');
     }
   }
 
@@ -174,55 +143,34 @@ class GoogleAuthManager {
     localStorage.setItem('session_token', data.token);
     localStorage.setItem('userId', data.user.id);
     localStorage.setItem('user_email', data.user.email);
+    localStorage.setItem('user_avatar', data.user.picture || '');
     localStorage.setItem('session_active', 'true');
-    console.log('[GoogleAuth] Session saved for:', data.user.email);
-  }
-
-  updateUI(user) {
-    console.log('[GoogleAuth] Updating UI for user:', user.email);
-    
-    // HIDE sign-in/sign-up forms
-    const signinContainer = document.getElementById('signin-form-container');
-    const signupContainer = document.getElementById('signup-form-container');
-    const userDisplay = document.getElementById('user-display');
-    
-    if (signinContainer) signinContainer.style.display = 'none';
-    if (signupContainer) signupContainer.style.display = 'none';
-    
-    if (userDisplay) {
-      userDisplay.style.display = 'flex';
-      userDisplay.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <img src="${user.picture || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2232%22 height=%2232%22 viewBox=%220 0 32 32%22%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%2216%22 fill=%22%23ccc%22/%3E%3C/svg%3E'}" 
-               alt="User" style="width:32px;height:32px;border-radius:50%;">
-          <span style="font-weight: 500;">${user.email}</span>
-          <button onclick="window.googleAuth.logout()" style="margin-left:10px; padding: 5px 10px; cursor: pointer;">Sign Out</button>
-        </div>
-      `;
-    }
-
-    console.log('[GoogleAuth] ✓ UI updated');
+    console.log('[GoogleAuth] Session saved');
   }
 
   logout() {
     console.log('[GoogleAuth] Logging out...');
+    this.clearSession();
+    // Also sign out from Google
+    if (window.google) {
+      google.accounts.id.disableAutoSelect();
+    }
+    location.reload();
+  }
+
+  clearSession() {
     localStorage.removeItem('session_token');
     localStorage.removeItem('userId');
     localStorage.removeItem('user_email');
+    localStorage.removeItem('user_avatar');
     localStorage.removeItem('session_active');
-    
-    // Reload page to clear state
-    location.reload();
   }
 }
 
-// Create global instance
+// Initialize globally
 window.googleAuth = new GoogleAuthManager();
 
-// Initialize on DOMContentLoaded
+// Auto-init on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('[GoogleAuth] DOMContentLoaded - starting initialization');
   window.googleAuth.init();
 });
-
-console.log('[GoogleAuth] Script loaded and ready');

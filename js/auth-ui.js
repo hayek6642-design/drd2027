@@ -1,114 +1,129 @@
-// AUTH UI CONTROLLER - ONLY ONE FORM VISIBLE AT A TIME
+/**
+ * AuthUIController - Manages Sign In / Sign Up / Logged In views
+ * Ensures only one view is shown at a time
+ */
 class AuthUIController {
   constructor() {
-    this.currentView = 'signin'; // 'signin' | 'signup' | 'loggedin'
+    this.currentView = 'signin'; // signin | signup | loggedin
   }
 
   init() {
     console.log('[AuthUI] Initializing...');
     this.bindEvents();
     this.checkExistingSession();
+    this.setupStorageListener();
   }
 
   bindEvents() {
-    console.log('[AuthUI] Binding event listeners...');
-    
-    // Toggle links
+    // Tab switching buttons in navbar
     const showSignup = document.getElementById('show-signup');
     const showSignin = document.getElementById('show-signin');
-    
+
     if (showSignup) {
       showSignup.addEventListener('click', (e) => {
         e.preventDefault();
         this.showSignup();
       });
-      console.log('[AuthUI] ✓ Show signup link bound');
-    } else {
-      console.warn('[AuthUI] #show-signup not found');
     }
-    
+
     if (showSignin) {
       showSignin.addEventListener('click', (e) => {
         e.preventDefault();
         this.showSignin();
       });
-      console.log('[AuthUI] ✓ Show signin link bound');
-    } else {
-      console.warn('[AuthUI] #show-signin not found');
     }
 
     // Form submissions
     const signinForm = document.getElementById('signin-form');
     const signupForm = document.getElementById('signup-form');
-    
+
     if (signinForm) {
       signinForm.addEventListener('submit', (e) => this.handleSignin(e));
-      console.log('[AuthUI] ✓ Sign in form bound');
-    } else {
-      console.warn('[AuthUI] #signin-form not found');
     }
-    
+
     if (signupForm) {
       signupForm.addEventListener('submit', (e) => this.handleSignup(e));
-      console.log('[AuthUI] ✓ Sign up form bound');
-    } else {
-      console.warn('[AuthUI] #signup-form not found');
     }
+
+    console.log('[AuthUI] Events bound');
   }
 
   showSignin() {
-    console.log('[AuthUI] Showing signin form');
+    console.log('[AuthUI] Switching to SIGN IN view');
     this.currentView = 'signin';
-    
-    const signinForm = document.getElementById('signin-form-container');
-    const signupForm = document.getElementById('signup-form-container');
+
+    const signinContainer = document.getElementById('signin-form-container');
+    const signupContainer = document.getElementById('signup-form-container');
     const userDisplay = document.getElementById('user-display');
     const googleBtn = document.getElementById('google-signin-btn');
-    
-    if (signinForm) signinForm.style.display = 'block';
-    if (signupForm) signupForm.style.display = 'none';
+
+    if (signinContainer) signinContainer.style.display = 'block';
+    if (signupContainer) signupContainer.style.display = 'none';
     if (userDisplay) userDisplay.style.display = 'none';
     if (googleBtn) googleBtn.style.display = 'block';
+
+    // Update navbar buttons
+    this.updateNavbarButtons();
   }
 
   showSignup() {
-    console.log('[AuthUI] Showing signup form');
+    console.log('[AuthUI] Switching to SIGN UP view');
     this.currentView = 'signup';
-    
-    const signinForm = document.getElementById('signin-form-container');
-    const signupForm = document.getElementById('signup-form-container');
+
+    const signinContainer = document.getElementById('signin-form-container');
+    const signupContainer = document.getElementById('signup-form-container');
     const userDisplay = document.getElementById('user-display');
     const googleBtn = document.getElementById('google-signin-btn');
-    
-    if (signinForm) signinForm.style.display = 'none';
-    if (signupForm) signupForm.style.display = 'block';
+
+    if (signinContainer) signinContainer.style.display = 'none';
+    if (signupContainer) signupContainer.style.display = 'block';
     if (userDisplay) userDisplay.style.display = 'none';
-    if (googleBtn) googleBtn.style.display = 'block';
+    if (googleBtn) googleBtn.style.display = 'none';
+
+    // Update navbar buttons
+    this.updateNavbarButtons();
   }
 
   showLoggedIn(user) {
-    console.log('[AuthUI] Showing logged in state for:', user.email);
+    console.log('[AuthUI] Switching to LOGGED IN view for:', user.email);
     this.currentView = 'loggedin';
-    
-    const signinForm = document.getElementById('signin-form-container');
-    const signupForm = document.getElementById('signup-form-container');
+
+    const signinContainer = document.getElementById('signin-form-container');
+    const signupContainer = document.getElementById('signup-form-container');
     const userDisplay = document.getElementById('user-display');
     const googleBtn = document.getElementById('google-signin-btn');
-    
-    if (signinForm) signinForm.style.display = 'none';
-    if (signupForm) signupForm.style.display = 'none';
+
+    if (signinContainer) signinContainer.style.display = 'none';
+    if (signupContainer) signupContainer.style.display = 'none';
     if (googleBtn) googleBtn.style.display = 'none';
-    
+
     if (userDisplay) {
       userDisplay.style.display = 'flex';
+      const avatar = user.avatar || user.picture || 'default-avatar.png';
       userDisplay.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 10px; padding: 10px;">
-          <img src="${user.avatar || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2232%22 height=%2232%22 viewBox=%220 0 32 32%22%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%2216%22 fill=%22%230066cc%22/%3E%3C/svg%3E'}" 
-               class="user-avatar" style="width:32px;height:32px;border-radius:50%;">
-          <span class="user-email" style="font-weight: 500;">${user.email}</span>
-          <button onclick="window.authUI.logout()" class="btn-signout" style="margin-left:10px; padding: 5px 10px; cursor: pointer;">Sign Out</button>
-        </div>
+        <img src="${avatar}" alt="User" style="width:32px;height:32px;border-radius:50%;margin-right:10px;">
+        <span style="flex:1;font-weight:500;">${user.email}</span>
+        <button onclick="authUI.logout()" class="logout-btn" style="margin-left:10px;">🚪 Sign Out</button>
       `;
+    }
+
+    // Update navbar buttons
+    this.updateNavbarButtons();
+  }
+
+  updateNavbarButtons() {
+    const signupNavBtn = document.getElementById('signupNavBtn');
+    const loginNavBtn = document.getElementById('loginNavBtn');
+    const signoutNavBtn = document.getElementById('signoutNavBtn');
+
+    if (this.currentView === 'loggedin') {
+      if (signupNavBtn) signupNavBtn.style.display = 'none';
+      if (loginNavBtn) loginNavBtn.style.display = 'none';
+      if (signoutNavBtn) signoutNavBtn.style.display = 'block';
+    } else {
+      if (signupNavBtn) signupNavBtn.style.display = 'block';
+      if (loginNavBtn) loginNavBtn.style.display = 'block';
+      if (signoutNavBtn) signoutNavBtn.style.display = 'none';
     }
   }
 
@@ -116,14 +131,14 @@ class AuthUIController {
     e.preventDefault();
     const email = document.getElementById('signin-email')?.value;
     const password = document.getElementById('signin-password')?.value;
-    
+
     if (!email || !password) {
       alert('Please enter email and password');
       return;
     }
 
-    console.log('[AuthUI] Signing in user:', email);
-    
+    console.log('[AuthUI] Signing in:', email);
+
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -131,24 +146,21 @@ class AuthUIController {
         credentials: 'include',
         body: JSON.stringify({ email, password })
       });
-      
+
       const data = await res.json();
-      console.log('[AuthUI] Sign in response:', data.success ? '✓ Success' : '✗ Failed');
-      
+
       if (data.success) {
+        console.log('[AuthUI] ✓ Login successful');
         this.saveSession(data);
         this.showLoggedIn(data.user);
-        
-        // Notify other services
-        window.dispatchEvent(new CustomEvent('auth:success', { 
-          detail: { user: data.user, token: data.token } 
-        }));
+        window.dispatchEvent(new CustomEvent('auth:loggedin', { detail: data.user }));
       } else {
+        console.error('[AuthUI] Login failed:', data.error);
         alert(data.error || 'Login failed');
       }
     } catch (err) {
-      console.error('[AuthUI] Login error:', err);
-      alert('Network error');
+      console.error('[AuthUI] Network error:', err);
+      alert('Network error. Please try again.');
     }
   }
 
@@ -157,7 +169,7 @@ class AuthUIController {
     const email = document.getElementById('signup-email')?.value;
     const password = document.getElementById('signup-password')?.value;
     const confirm = document.getElementById('signup-confirm')?.value;
-    
+
     if (!email || !password || !confirm) {
       alert('Please fill all fields');
       return;
@@ -167,9 +179,9 @@ class AuthUIController {
       alert('Passwords do not match');
       return;
     }
-    
-    console.log('[AuthUI] Registering user:', email);
-    
+
+    console.log('[AuthUI] Signing up:', email);
+
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
@@ -177,23 +189,22 @@ class AuthUIController {
         credentials: 'include',
         body: JSON.stringify({ email, password })
       });
-      
+
       const data = await res.json();
-      console.log('[AuthUI] Registration response:', data.success ? '✓ Success' : '✗ Failed');
-      
+
       if (data.success) {
+        console.log('[AuthUI] ✓ Registration successful');
         alert('✓ Account created! Please sign in.');
-        // Clear form and show signin
-        document.getElementById('signup-email').value = '';
-        document.getElementById('signup-password').value = '';
-        document.getElementById('signup-confirm').value = '';
         this.showSignin();
+        // Clear form
+        document.getElementById('signup-form')?.reset();
       } else {
+        console.error('[AuthUI] Registration failed:', data.error);
         alert(data.error || 'Registration failed');
       }
     } catch (err) {
-      console.error('[AuthUI] Registration error:', err);
-      alert('Network error');
+      console.error('[AuthUI] Network error:', err);
+      alert('Network error. Please try again.');
     }
   }
 
@@ -201,43 +212,45 @@ class AuthUIController {
     localStorage.setItem('session_token', data.token);
     localStorage.setItem('userId', data.user.id);
     localStorage.setItem('user_email', data.user.email);
-    console.log('[AuthUI] Session saved');
+    localStorage.setItem('user_avatar', data.user.picture || '');
   }
 
   checkExistingSession() {
     const token = localStorage.getItem('session_token');
     const email = localStorage.getItem('user_email');
-    
-    console.log('[AuthUI] Checking existing session...', token ? '✓ Token found' : '✗ No token');
-    
+
     if (token && email) {
-      // Verify with server
+      console.log('[AuthUI] Existing session found, verifying...');
       this.verifySession(token, email);
     } else {
-      // Default to signin
+      console.log('[AuthUI] No existing session');
       this.showSignin();
     }
   }
 
   async verifySession(token, email) {
     try {
-      console.log('[AuthUI] Verifying session...');
       const res = await fetch('/api/auth/verify', {
         headers: { 'Authorization': `Bearer ${token}` },
         credentials: 'include'
       });
-      
+
       if (res.ok) {
         const data = await res.json();
-        console.log('[AuthUI] ✓ Session valid');
-        this.showLoggedIn({ email, ...data.user });
+        console.log('[AuthUI] ✓ Session verified');
+        this.showLoggedIn({
+          email,
+          picture: localStorage.getItem('user_avatar'),
+          ...data.user
+        });
       } else {
-        console.log('[AuthUI] ✗ Session invalid');
+        console.warn('[AuthUI] Session verification failed');
         this.clearSession();
         this.showSignin();
       }
     } catch (e) {
-      console.error('[AuthUI] Verify error:', e);
+      console.error('[AuthUI] Session check error:', e);
+      this.clearSession();
       this.showSignin();
     }
   }
@@ -246,23 +259,42 @@ class AuthUIController {
     localStorage.removeItem('session_token');
     localStorage.removeItem('userId');
     localStorage.removeItem('user_email');
-    console.log('[AuthUI] Session cleared');
+    localStorage.removeItem('user_avatar');
   }
 
   logout() {
-    console.log('[AuthUI] User logging out');
+    console.log('[AuthUI] Logging out...');
     this.clearSession();
+
+    // Call logout API
+    fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include'
+    }).catch(e => console.error('Logout API error:', e));
+
     location.reload();
+  }
+
+  setupStorageListener() {
+    // Listen for storage changes from other tabs
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'session_token') {
+        console.log('[AuthUI] Session changed in another tab');
+        if (!e.newValue) {
+          this.clearSession();
+          this.showSignin();
+        } else {
+          this.checkExistingSession();
+        }
+      }
+    });
   }
 }
 
-// Create global instance
+// Initialize globally
 window.authUI = new AuthUIController();
 
-// Initialize
+// Auto-init on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('[AuthUI] DOMContentLoaded - initializing');
   window.authUI.init();
 });
-
-console.log('[AuthUI] Script loaded');
