@@ -55,7 +55,7 @@ if (typeof window.AssetsDirectBus === 'undefined') {
             
             if (!sessionId || !userId) {
                 console.log('[AssetsDirect] Guest mode - using localStorage only');
-                AssetsDirectBus.loadFromCache();
+                if (typeof AssetsDirectBus !== 'undefined' && typeof AssetsDirectBus.loadFromCache === 'function') { AssetsDirectBus.loadFromCache(); }
                 return;
             }
             
