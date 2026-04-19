@@ -13,6 +13,49 @@ const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-producti
 // MIDDLEWARE
 // ═══════════════════════════════════════════════════════════════════════════════
 
+
+// ════════════════════════════════════════════════════════════════
+// ENVIRONMENT VARIABLE DIAGNOSTICS - Render.com Compatible
+// ════════════════════════════════════════════════════════════════
+(function logEnvironment() {
+  console.log('[🔍 ENV CHECK] Starting with environment:');
+  console.log('  NODE_ENV:', process.env.NODE_ENV || 'NOT SET');
+  console.log('  GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? '✓' : '✗ MISSING');
+  console.log('  DATABASE_URL:', process.env.DATABASE_URL ? '✓' : '✗ MISSING');
+  console.log('  CLOUDINARY_CLOUD_NAME:', process.env.CLOUDINARY_CLOUD_NAME ? '✓' : '✗ MISSING');
+  
+  const required = ['GOOGLE_CLIENT_ID', 'DATABASE_URL', 'CLOUDINARY_CLOUD_NAME'];
+  const missing = required.filter(v => !process.env[v]);
+  if (missing.length > 0) {
+    console.warn('[⚠️  WARN] Missing environment variables:', missing.join(', '));
+    console.warn('[⚠️  WARN] These must be set in Render Dashboard → Environment');
+  } else {
+    console.log('[✅ OK] All required environment variables are set');
+  }
+})();
+
+// Health check endpoints
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.get('/api/health/env', (req, res) => {
+  res.json({
+    status: 'ok',
+    environment: {
+      nodeEnv: process.env.NODE_ENV || 'not-set',
+      envVarsLoaded: {
+        google_client_id: !!process.env.GOOGLE_CLIENT_ID,
+        database_url: !!process.env.DATABASE_URL,
+        cloudinary_cloud_name: !!process.env.CLOUDINARY_CLOUD_NAME,
+        jwt_secret: !!process.env.JWT_SECRET,
+        session_secret: !!process.env.SESSION_SECRET
+      }
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
