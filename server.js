@@ -34,6 +34,24 @@ if (tursoUrl) {
 
 const PORT = process.env.PORT || 3001;
 
+// ============================================================================
+// Define SSE registry EARLY - before WebSocket setup uses it
+// ============================================================================
+global.__sseRegistry = global.__sseRegistry || new Map();
+global.__sseEmitToSession = function(sessionId, data) {
+    try {
+        const client = global.__sseRegistry.get(sessionId);
+        if (client && !client.destroyed) {
+            client.write(`data: ${JSON.stringify(data)}\\n\\n`);
+            return true;
+        }
+    } catch(e) {
+        console.error("[SSE] Emit error:", e.message);
+    }
+    return false;
+};
+
+
 // Global error handlers with enhanced logging
 process.on('uncaughtException', (err) => {
   console.error('[CRASH] [CRITICAL] UNCAUGHT EXCEPTION:', err.message);
@@ -447,20 +465,7 @@ app.get('/services/yt-clear/*', (req, res) => {
 // EMERGENCY RENDER FIX - Missing app.listen() + SSE Functions
 // ============================================================================
 
-// Define missing global SSE registry BEFORE any module tries to use it
-global.__sseRegistry = global.__sseRegistry || new Map();
-global.__sseEmitToSession = function(sessionId, data) {
-    try {
-        const client = global.__sseRegistry.get(sessionId);
-        if (client && !client.destroyed) {
-            client.write(`data: ${JSON.stringify(data)}\n\n`);
-            return true;
-        }
-    } catch(e) {
-        console.error('[SSE] Emit error:', e.message);
-    }
-    return false;
-};
+
 
 
 // Health check endpoint (REQUIRED - Render monitoring depends on this)
