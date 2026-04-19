@@ -3377,6 +3377,21 @@ document.addEventListener('DOMContentLoaded', async function(){
         }
       });
 
+      // Fallback: poll for code changes every 2 seconds
+      setInterval(function() {
+        try {
+          var assets = JSON.parse(localStorage.getItem('acc_assets') || '{"codes":[]}');
+          var codes = assets.codes || [];
+          if (codes.length === 0) return;
+          var latestCode = codes[codes.length - 1];
+          var codeVal = typeof latestCode === 'string' ? latestCode : (latestCode.code || latestCode);
+          if (codeVal && codeVal !== lastDisplayedCode) {
+            console.log('[UI SYNC] Polling detected new code:', codeVal);
+            updateUI(codeVal, 'polling');
+          }
+        } catch(e) { /* ignore polling errors */ }
+      }, 2000);
+
       // Initial check
       window.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
