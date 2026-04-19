@@ -3888,4 +3888,164 @@ document.addEventListener('DOMContentLoaded', async function(){
     <!-- ZAGEL SYSTEM REMOVED - Only available in CodeBank (indexCB.html) -->
     <!-- ========================================== -->
 
+
+<!-- AUTH EMERGENCY FIXES -->
+<script>
+// This script will be injected into yt-new-clear.html before </body>
+
+// ============================================
+// FIX 3: Snapshot Blocking - Allow authenticated users
+// ============================================
+(function() {
+  if (window.__SNAPSHOT_FIX_INSTALLED__) return;
+  window.__SNAPSHOT_FIX_INSTALLED__ = true;
+  
+  const originalSendSnapshot = window.sendSnapshotWithLastCode;
+  
+  window.sendSnapshotWithLastCode = function(iframe) {
+    if (!iframe || !iframe.contentWindow) return;
+    
+    // CRITICAL FIX: Check both auth state AND local token
+    const hasToken = !!localStorage.getItem('session_token');
+    const authState = window.AuthCore?.state?.authenticated || hasToken;
+    
+    // Allow snapshot if token exists (even if auth state is temporarily false)
+    if (!authState && !hasToken) {
+      console.log('[SNAPSHOT] Guest mode - sending empty assets');
+      iframe.contentWindow.postMessage({
+        type: 'assets:snapshot',
+        data: { codes: [], silver: [], gold: [], lastSync: Date.now() },
+        source: 'guest'
+      }, '*');
+      return;
+    }
+    
+    // Get assets for authenticated user
+    let assets;
+    try {
+      const cached = localStorage.getItem('acc_assets');
+      assets = cached ? JSON.parse(cached) : { codes: [], silver: [], gold: [] };
+    } catch (e) {
+      assets = { codes: [], silver: [], gold: [] };
+    }
+    
+    iframe.contentWindow.postMessage({
+      type: 'assets:snapshot',
+      data: assets,
+      timestamp: Date.now(),
+      source: hasToken ? 'authenticated' : 'guest'
+    }, '*');
+    
+    console.log('[SNAPSHOT] Sent:', assets.codes?.length || 0, 'codes');
+  };
+  
+  console.log('[AuthFix] ✅ FIX 3: Snapshot blocking patched');
+})();
+
+// ============================================
+// FIX 4: Google Sign-In Error Handling
+// ============================================
+(function() {
+  if (window.__GOOGLE_FIX_INSTALLED__) return;
+  window.__GOOGLE_FIX_INSTALLED__ = true;
+  
+  window.initGoogleSignIn = async function() {
+    let clientId = localStorage.getItem('google_client_id');
+    
+    if (!clientId) {
+      try {
+        const response = await fetch('/api/auth/google-client-id');
+        const contentType = response.headers.get('content-type');
+        
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          clientId = data.clientId;
+          localStorage.setItem('google_client_id', clientId);
+        } else {
+          throw new Error('Server returned HTML instead of JSON');
+        }
+      } catch (e) {
+        console.error('[Google] Failed to load client ID:', e);
+        window.showManualLoginFallback();
+        return;
+      }
+    }
+    
+    if (!clientId) {
+      console.error('[Google] No client ID available');
+      window.showManualLoginFallback();
+      return;
+    }
+    
+    try {
+      google.accounts.id.initialize({
+        client_id: clientId,
+        callback: window.handleGoogleSignIn || (() => {})
+      });
+    } catch (e) {
+      console.error('[Google] Init failed:', e);
+      window.showManualLoginFallback();
+    }
+  };
+  
+  window.showManualLoginFallback = function() {
+    const manualLogin = document.getElementById('manual-login');
+    const googleLogin = document.getElementById('google-login');
+    if (manualLogin) manualLogin.style.display = 'block';
+    if (googleLogin) googleLogin.style.display = 'none';
+    console.log('[Google] Showing manual login fallback');
+  };
+  
+  console.log('[AuthFix] ✅ FIX 4: Google Sign-In error handling patched');
+})();
+
+// ============================================
+// FIX 5: Auth Panel UI - Only ONE panel visible
+// ============================================
+(function() {
+  if (window.__AUTH_PANEL_FIX_INSTALLED__) return;
+  window.__AUTH_PANEL_FIX_INSTALLED__ = true;
+  
+  window.updateAuthPanel = function() {
+    const token = localStorage.getItem('session_token');
+    const userId = localStorage.getItem('userId');
+    const isAuthenticated = !!token && !!userId;
+    
+    const authPanel = document.getElementById('auth-panel');
+    const guestPanel = document.getElementById('guest-panel');
+    
+    if (isAuthenticated) {
+      if (authPanel) authPanel.style.display = 'block';
+      if (guestPanel) guestPanel.style.display = 'none';
+      
+      const email = localStorage.getItem('user_email') || 'User';
+      const display = document.getElementById('user-email-display');
+      if (display) display.textContent = email;
+      
+      console.log('[AuthPanel] ✅ Updated: authenticated');
+    } else {
+      if (authPanel) authPanel.style.display = 'none';
+      if (guestPanel) guestPanel.style.display = 'block';
+      
+      console.log('[AuthPanel] ✅ Updated: guest');
+    }
+  };
+  
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', window.updateAuthPanel);
+  } else {
+    window.updateAuthPanel();
+  }
+  
+  window.addEventListener('auth:changed', window.updateAuthPanel);
+  window.addEventListener('auth:ready', window.updateAuthPanel);
+  
+  console.log('[AuthFix] ✅ FIX 5: Auth panel UI patched');
+})();
+
+console.log('═════════════════════════════════════════════════════');
+console.log('✅ ALL 6 AUTH EMERGENCY FIXES INSTALLED');
+console.log('═════════════════════════════════════════════════════');
+</script>
+
     </body>

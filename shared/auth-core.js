@@ -1039,3 +1039,50 @@
      AuthCore.init();
    } catch(_){}
  })();
+// ============================================
+// FIX 1: Session Flag Corrector
+// ============================================
+function fixSessionFlags() {
+  const token = localStorage.getItem('session_token');
+  const userId = localStorage.getItem('userId');
+  
+  if (token && userId) {
+    // Force session flags to true
+    localStorage.setItem('sessionId', userId);
+    localStorage.setItem('session_active', 'true');
+    
+    console.log('[AuthFix] Session flags corrected:', {
+      sessionId: userId,
+      session_active: true
+    });
+    
+    return true;
+  }
+  return false;
+}
+
+// Run immediately on load
+fixSessionFlags();
+
+// ============================================
+// FIX 6: Global Fetch Interceptor for Guest Mode
+// ============================================
+if (!window.__FETCH_INTERCEPTOR_INSTALLED__) {
+  window.__FETCH_INTERCEPTOR_INSTALLED__ = true;
+  const originalFetch = window.fetch;
+  
+  window.fetch = async function(...args) {
+    const [url, options = {}] = args;
+    
+    // If no auth token, add guest header to prevent 401 on public endpoints
+    const token = localStorage.getItem('session_token');
+    if (!token && typeof url === 'string' && !url.includes('/auth/')) {
+      options.headers = {
+        ...options.headers,
+        'X-Guest-Mode': 'true'
+      };
+    }
+    
+    return originalFetch.apply(window, [url, options]);
+  };
+}
