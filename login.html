@@ -9,29 +9,138 @@
   body { 
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
     margin: 0;
-    padding: 20px; 
+    padding: 0; 
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
     min-height: 100vh;
     color: #fff;
   }
+
+  /* ═══ HORIZONTAL NAVBAR (like File/Edit/etc tabs) ═══ */
+  .navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 12px 20px;
+    background: rgba(0,0,0,0.3);
+    border-bottom: 2px solid rgba(0,212,255,0.2);
+    flex-wrap: wrap;
+  }
+
+  .navbar-title {
+    font-weight: 700;
+    color: #00d4ff;
+    font-size: 18px;
+    letter-spacing: 1px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .navbar-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+
+  .navbar-btn {
+    padding: 8px 16px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .navbar-btn:hover {
+    background: rgba(0,212,255,0.1);
+    border-color: #00d4ff;
+    color: #00d4ff;
+  }
+
+  .navbar-btn.active {
+    background: rgba(0,212,255,0.15);
+    border-color: #00d4ff;
+    color: #00d4ff;
+    font-weight: 600;
+  }
+
+  .navbar-separator {
+    width: 1px;
+    height: 24px;
+    background: rgba(255,255,255,0.1);
+  }
+
+  /* Language selector */
+  .language-select {
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .language-select:hover {
+    background: rgba(0,212,255,0.1);
+    border-color: #00d4ff;
+  }
+
+  .language-select option {
+    background: #1a1a2e;
+    color: #fff;
+  }
+
+  /* User email badge (shown when authenticated) */
+  .user-badge {
+    display: none;
+    padding: 8px 14px;
+    background: rgba(0,200,83,0.15);
+    border: 1px solid rgba(0,200,83,0.5);
+    border-radius: 6px;
+    color: #00c853;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .user-badge.active {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .user-badge::before {
+    content: "👤";
+  }
+
+  /* Main container */
   .container {
     max-width: 500px;
-    margin: 0 auto;
+    margin: 40px auto;
     background: rgba(255,255,255,0.05);
     backdrop-filter: blur(10px);
     border-radius: 20px;
     padding: 30px;
     border: 1px solid rgba(255,255,255,0.1);
   }
+
   h2 { 
     text-align: center; 
     margin-bottom: 30px;
     color: #00d4ff;
     font-size: 28px;
   }
+
   .form-group {
     margin-bottom: 20px;
   }
+
   label {
     display: block;
     margin-bottom: 8px;
@@ -40,6 +149,7 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
+
   input, select {
     width: 100%;
     padding: 12px 15px;
@@ -50,15 +160,18 @@
     font-size: 16px;
     transition: all 0.3s ease;
   }
+
   input:focus, select:focus {
     outline: none;
     border-color: #00d4ff;
     background: rgba(0,0,0,0.5);
   }
+
   select option {
     background: #1a1a2e;
     color: #fff;
   }
+
   button {
     width: 100%;
     padding: 15px;
@@ -72,26 +185,38 @@
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
   }
+
   button:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 10px 20px rgba(0,212,255,0.3);
   }
+
   button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
+
   button.secondary {
     background: rgba(255,255,255,0.1);
     border: 1px solid rgba(255,255,255,0.2);
   }
+
+  button.logout-btn {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+    margin-top: 0;
+    margin-left: 0;
+  }
+
   .phone-group {
     display: flex;
     gap: 10px;
   }
+
   .phone-group select {
     width: 140px;
     flex-shrink: 0;
   }
+
   .verification-section {
     display: none;
     margin-top: 20px;
@@ -100,14 +225,17 @@
     border-radius: 10px;
     border: 1px solid rgba(0,212,255,0.3);
   }
+
   .verification-section.active {
     display: block;
     animation: slideDown 0.3s ease;
   }
+
   @keyframes slideDown {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
   }
+
   .channel-status {
     display: flex;
     align-items: center;
@@ -117,33 +245,40 @@
     border-radius: 8px;
     margin-bottom: 15px;
   }
+
   .channel-status.verified {
     background: rgba(0,255,0,0.1);
     border: 1px solid #00ff00;
   }
+
   .channel-status.pending {
     background: rgba(255,165,0,0.1);
     border: 1px solid #ffa500;
   }
+
   .status-icon {
     font-size: 24px;
   }
+
   .otp-input-group {
     display: flex;
     gap: 10px;
     margin-top: 10px;
   }
+
   .otp-input-group input {
     text-align: center;
     letter-spacing: 5px;
     font-size: 20px;
   }
+
   .timer {
     text-align: center;
     color: #ff6b6b;
     font-size: 14px;
     margin-top: 10px;
   }
+
   .status-message {
     padding: 12px;
     border-radius: 8px;
@@ -152,23 +287,27 @@
     font-size: 14px;
     display: none;
   }
+
   .status-message.success {
     background: rgba(0,255,0,0.1);
     border: 1px solid #00ff00;
     color: #00ff00;
     display: block;
   }
+
   .status-message.error {
     background: rgba(255,0,0,0.1);
     border: 1px solid #ff0000;
     color: #ff0000;
     display: block;
   }
+
   .tab-switcher {
     display: flex;
     gap: 10px;
     margin-bottom: 30px;
   }
+
   .tab-btn {
     flex: 1;
     padding: 12px;
@@ -176,12 +315,17 @@
     border: 2px solid transparent;
     color: #aaa;
     font-size: 14px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s ease;
   }
+
   .tab-btn.active {
     background: rgba(0,212,255,0.1);
     border-color: #00d4ff;
     color: #00d4ff;
   }
+
   pre { 
     background: #0f0f1a; 
     padding: 15px; 
@@ -193,6 +337,7 @@
     color: #00ff00;
     margin-top: 20px;
   }
+
   .loading {
     display: inline-block;
     width: 20px;
@@ -202,14 +347,17 @@
     border-top-color: #fff;
     animation: spin 1s ease-in-out infinite;
   }
+
   @keyframes spin {
     to { transform: rotate(360deg); }
   }
+
   .select-loading {
     color: #aaa;
     font-size: 12px;
     margin-left: 10px;
   }
+
   .info-box {
     background: rgba(0,212,255,0.1);
     border-left: 4px solid #00d4ff;
@@ -232,7 +380,6 @@ window._NativeBio = {
     try { const r = await p.isAvailable(); return r.isAvailable === true; } catch(_) { return false; }
   },
 
-  // Persist session to BOTH localStorage AND Capacitor Preferences
   async saveSession(sessionId, userData) {
     localStorage.setItem('session_active', 'true');
     if (sessionId) localStorage.setItem('session_token', sessionId);
@@ -247,7 +394,6 @@ window._NativeBio = {
     }
   },
 
-  // Restore session from Capacitor Preferences → localStorage
   async restoreSession() {
     const pr = this.prefs();
     if (!pr) return false;
@@ -267,6 +413,49 @@ window._NativeBio = {
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- HORIZONTAL NAVBAR (like File/Edit/etc tabs) -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="navbar">
+  <div class="navbar-title">🏦 CodeBank</div>
+  
+  <div class="navbar-controls">
+    <!-- DRD-MAIL Button -->
+    <button class="navbar-btn" id="drdMailBtn" title="Open DRD-Mail" onclick="openDrdMail()">
+      📧 DRD-Mail
+    </button>
+
+    <!-- Language Selector -->
+    <select class="language-select" id="languageSelect" onchange="changeLanguage(this.value)">
+      <option value="en">🇺🇸 English</option>
+      <option value="ar">🇸🇦 العربية</option>
+      <option value="fr">🇫🇷 Français</option>
+      <option value="es">🇪🇸 Español</option>
+    </select>
+
+    <div class="navbar-separator"></div>
+
+    <!-- Sign Up Button (shown when NOT authenticated) -->
+    <button class="navbar-btn" id="signupNavBtn" onclick="switchTab('signup', event)">
+      📝 Sign Up
+    </button>
+
+    <!-- Log In Button (shown when NOT authenticated) -->
+    <button class="navbar-btn" id="loginNavBtn" onclick="switchTab('login', event)">
+      🔑 Log In
+    </button>
+
+    <!-- Sign Out Button (shown when authenticated) -->
+    <button class="navbar-btn logout-btn" id="signoutNavBtn" style="display: none;" onclick="handleLogout()">
+      🚪 Sign Out
+    </button>
+
+    <!-- User Email Badge (shown when authenticated) -->
+    <div class="user-badge" id="userBadge"></div>
+  </div>
+</div>
+
 <!-- Single-Session Kickout Banner -->
 <script>
 (function() {
@@ -275,7 +464,6 @@ window._NativeBio = {
     var msg = sessionStorage.getItem('__kickout_reason__') ||
       'Your account was opened on another device. Sign in here to continue.';
     sessionStorage.removeItem('__kickout_reason__');
-    // Inject banner after body opens
     document.addEventListener('DOMContentLoaded', function() {
       var banner = document.createElement('div');
       banner.id = 'kickout-banner';
@@ -285,14 +473,13 @@ window._NativeBio = {
         'color:#fff', 'text-align:center', 'padding:12px 20px',
         'font-size:14px', 'font-family:-apple-system,BlinkMacSystemFont,sans-serif',
         'box-shadow:0 2px 12px rgba(0,0,0,0.4)', 'display:flex',
-        'align-items:center', 'justify-content:center', 'gap:10px'
+        'align-items:center', 'justify-content:center', 'gap:10px', 'margin-top: 60px'
       ].join(';');
       banner.innerHTML = '<span>📱</span><span>' + msg + '</span>' +
         '<button onclick="this.parentElement.remove()" ' +
         'style="background:rgba(255,255,255,0.2);border:none;color:#fff;' +
         'padding:4px 10px;border-radius:4px;cursor:pointer;font-size:13px;margin-left:8px">✕</button>';
       document.body.insertBefore(banner, document.body.firstChild);
-      // Auto-dismiss after 8s
       setTimeout(function() {
         var b = document.getElementById('kickout-banner');
         if (b) b.remove();
@@ -328,7 +515,7 @@ window._NativeBio = {
       <div style="display:flex;gap:8px;align-items:center;">
         <input type="email" id="signupEmail" placeholder="your@email.com" required style="flex:1;">
         <button type="button" id="sendOtpEmailBtn" onclick="sendEmailOTPCode()" 
-          style="white-space:nowrap;padding:10px 14px;font-size:13px;background:linear-gradient(135deg,#0066cc,#00d4ff);color:#fff;border:none;border-radius:8px;cursor:pointer;transition:opacity .2s;">
+          style="white-space:nowrap;padding:10px 14px;font-size:13px;background:linear-gradient(135deg,#0066cc,#00d4ff);color:#fff;border:none;border-radius:8px;cursor:pointer;transition:opacity .2s;width:auto;">
           Send Code
         </button>
       </div>
@@ -469,82 +656,166 @@ const API_BASE = '';
 console.log('🔥 API_BASE:', API_BASE);
 console.log('🔥 Window origin:', window.location.origin);
 
-  // 🧠 Auth Flow Control: Auto-redirect if session is ACTUALLY active
-  // 🛡️ FIX: Don't blindly trust localStorage — validate with server first
-  //   Also check Capacitor Preferences (native storage) for persisted sessions.
-  (async function checkExistingSession() {
-    // First: try to restore from Capacitor Preferences (survives app kill on Android)
-    const localActive = localStorage.getItem("session_active") === "true";
-    if (!localActive && window._NativeBio && window._NativeBio.isNative()) {
-      await window._NativeBio.restoreSession();
-    }
+// ═══════════════════════════════════════════════════════════
+// AUTH STATE MANAGEMENT & UI SYNC
+// ═══════════════════════════════════════════════════════════
 
-    if (localStorage.getItem("session_active") === "true") {
-      // Quick gate: if the cookie is already gone, no point asking the server
-      if (!document.cookie.includes('session_token=')) {
-        localStorage.removeItem("session_active");
-        localStorage.removeItem("session_token");
-        localStorage.removeItem("user_data");
-        localStorage.removeItem("__cached_user__");
-        localStorage.removeItem("__cached_session_id__");
-      } else {
-        // Cookie exists — ask the server if it's still valid
-        fetch('/api/auth/me', { credentials: 'include' })
-          .then(function(r) { 
-            if (r.status === 200) return r.json();
-            throw new Error('not authenticated');
-          })
-          .then(function(data) {
-            console.log('[Session] /auth/me response:', data);
-            if (data.success && data.user) {
-              // 🔄 SYNC ASSETS ON SESSION RESTORE
-              if (window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
-                console.log('[Session] Syncing restored session assets...');
-                window.AssetsManager.sync();
-              }
-              window.location.href = "/yt-new-clear.html";
-            } else {
-              // Server says NO — nuke stale client state
-              console.log('[Session] No valid user, clearing state');
-              localStorage.removeItem("session_active");
-              localStorage.removeItem("session_token");
-              localStorage.removeItem("user_data");
-              localStorage.removeItem("__cached_user__");
-              localStorage.removeItem("__cached_session_id__");
-              document.cookie = "session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-            }
-          })
-          .catch(function() {
-            // Network error — clear stale flag so user isn't stuck
-            localStorage.removeItem("session_active");
-          });
-      }
+function updateAuthUI() {
+  const isAuthenticated = localStorage.getItem('session_active') === 'true';
+  const userDataStr = localStorage.getItem('user_data');
+  let userEmail = null;
+  
+  if (userDataStr) {
+    try {
+      const userData = JSON.parse(userDataStr);
+      userEmail = userData.email || userData.user?.email;
+    } catch(e) {}
+  }
+
+  const signupNavBtn = document.getElementById('signupNavBtn');
+  const loginNavBtn = document.getElementById('loginNavBtn');
+  const signoutNavBtn = document.getElementById('signoutNavBtn');
+  const userBadge = document.getElementById('userBadge');
+
+  if (isAuthenticated && userEmail) {
+    // User is authenticated
+    if (signupNavBtn) signupNavBtn.style.display = 'none';
+    if (loginNavBtn) loginNavBtn.style.display = 'none';
+    if (signoutNavBtn) signoutNavBtn.style.display = 'block';
+    if (userBadge) {
+      userBadge.classList.add('active');
+      userBadge.textContent = userEmail;
+    }
+  } else {
+    // User is NOT authenticated
+    if (signupNavBtn) signupNavBtn.style.display = 'block';
+    if (loginNavBtn) loginNavBtn.style.display = 'block';
+    if (signoutNavBtn) signoutNavBtn.style.display = 'none';
+    if (userBadge) {
+      userBadge.classList.remove('active');
+      userBadge.textContent = '';
+    }
+  }
+}
+
+function handleLogout() {
+  fetch(`${API_BASE}/api/auth/logout`, {
+    method: 'POST',
+    credentials: 'include'
+  }).then(() => {
+    // Clear all auth state
+    localStorage.removeItem('session_active');
+    localStorage.removeItem('session_token');
+    localStorage.removeItem('user_data');
+    localStorage.removeItem('__cached_user__');
+    localStorage.removeItem('__cached_session_id__');
+    document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    
+    console.log('✅ Logged out successfully');
+    updateAuthUI();
+    showStatus('✅ Signed out successfully', 'success');
+    
+    // Optionally redirect or show signup form
+    setTimeout(() => {
+      switchTab('signup', null);
+    }, 1000);
+  }).catch(err => {
+    console.error('Logout error:', err);
+    updateAuthUI();
+  });
+}
+
+// Call on page load
+document.addEventListener('DOMContentLoaded', updateAuthUI);
+
+// Also update UI when storage changes (from other tabs)
+window.addEventListener('storage', updateAuthUI);
+
+// Helper functions
+function openDrdMail() {
+  window.open('https://mail.drd.com', '_blank');
+}
+
+function changeLanguage(lang) {
+  localStorage.setItem('language', lang);
+  console.log('Language changed to:', lang);
+  // You can add actual translation logic here
+  alert('Language changed to: ' + lang);
+}
+
+// ═══════════════════════════════════════════════════════════
+// EXISTING AUTH FUNCTIONS (from original login.html)
+// ═══════════════════════════════════════════════════════════
+
+// 🧠 Auth Flow Control: Auto-redirect if session is ACTUALLY active
+(async function checkExistingSession() {
+  const localActive = localStorage.getItem("session_active") === "true";
+  if (!localActive && window._NativeBio && window._NativeBio.isNative()) {
+    await window._NativeBio.restoreSession();
+  }
+
+  if (localStorage.getItem("session_active") === "true") {
+    if (!document.cookie.includes('session_token=')) {
+      localStorage.removeItem("session_active");
+      localStorage.removeItem("session_token");
+      localStorage.removeItem("user_data");
+      localStorage.removeItem("__cached_user__");
+      localStorage.removeItem("__cached_session_id__");
     } else {
-      // No session in either storage — also check if biometric can auto-login
-      if (window._NativeBio && window._NativeBio.isNative()) {
-        const bioAvailable = await window._NativeBio.isAvailable();
-        const prefs = window._NativeBio.prefs();
-        if (bioAvailable && prefs) {
-          try {
-            const t = await prefs.get({ key: 'session_token' });
-            if (t.value) {
-              document.getElementById('biometricSection').style.display = 'block';
+      fetch('/api/auth/me', { credentials: 'include' })
+        .then(function(r) { 
+          if (r.status === 200) return r.json();
+          throw new Error('not authenticated');
+        })
+        .then(function(data) {
+          console.log('[Session] /auth/me response:', data);
+          if (data.success && data.user) {
+            if (window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
+              console.log('[Session] Syncing restored session assets...');
+              window.AssetsManager.sync();
             }
-          } catch(_) {}
-        }
+            window.location.href = "/yt-new-clear.html";
+          } else {
+            console.log('[Session] No valid user, clearing state');
+            localStorage.removeItem("session_active");
+            localStorage.removeItem("session_token");
+            localStorage.removeItem("user_data");
+            localStorage.removeItem("__cached_user__");
+            localStorage.removeItem("__cached_session_id__");
+            document.cookie = "session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            updateAuthUI();
+          }
+        })
+        .catch(function() {
+          localStorage.removeItem("session_active");
+          updateAuthUI();
+        });
+    }
+  } else {
+    if (window._NativeBio && window._NativeBio.isNative()) {
+      const bioAvailable = await window._NativeBio.isAvailable();
+      const prefs = window._NativeBio.prefs();
+      if (bioAvailable && prefs) {
+        try {
+          const t = await prefs.get({ key: 'session_token' });
+          if (t.value) {
+            document.getElementById('biometricSection').style.display = 'block';
+          }
+        } catch(_) {}
       }
     }
-  })();
+  }
+})();
 
-  let sessionId = null;
+let sessionId = null;
 let verificationStatus = { email: false, phone: false };
-let emailOtpSessionId = null; // tracks active email-OTP session
+let emailOtpSessionId = null;
 let countriesData = [];
 let religionsData = [];
 
-// Load data on page load
 document.addEventListener('DOMContentLoaded', async () => {
   await Promise.all([loadCountries(), loadReligions()]);
+  updateAuthUI();
 });
 
 async function loadCountries() {
@@ -575,7 +846,6 @@ async function loadReligions() {
       populateReligionSelect();
     }
   } catch (error) {
-    // Fallback
     religionsData = [
       { value: 'Islam', label: 'Islam', icon: '☪️' },
       { value: 'Christianity', label: 'Christianity', icon: '✝️' },
@@ -672,11 +942,11 @@ function showStatus(message, type) {
   }, 5000);
 }
 
-// ── Email OTP client functions (freemium) ────────────────────────────────────
+// ── Email OTP functions ────────────────────────────────────────
 
 async function sendEmailOTPCode() {
   const email = document.getElementById('signupEmail').value.trim();
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
     showStatus('Please enter a valid email address first', 'error'); return;
   }
   const btn = document.getElementById('sendOtpEmailBtn');
@@ -697,7 +967,6 @@ async function sendEmailOTPCode() {
       btn.textContent = 'Resend';
       btn.disabled = false;
       showStatus(data.message || 'Code sent! Check your inbox.', 'success');
-      // Dev: show mock OTP in console
       if (data.mockOtp) console.warn('[DEV] Email OTP:', data.mockOtp);
     } else {
       showStatus(data.error || 'Failed to send code', 'error');
@@ -741,172 +1010,6 @@ async function resendEmailOTPCode() {
   await sendEmailOTPCode();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
-async function sendHybridOTP() {
-  const email = document.getElementById('signupEmail').value.trim();
-  const phone = document.getElementById('phoneNumber').value.trim();
-  const countryCode = document.getElementById('countryCode').value;
-  
-  console.log('🔥 Sending OTP with:', { email, phone, countryCode });
-  
-  if (!email || !phone || !countryCode) {
-    showStatus('Please fill in all fields', 'error');
-    return;
-  }
-  
-  const sendBtn = document.getElementById('sendOtpBtn');
-  sendBtn.disabled = true;
-  sendBtn.innerHTML = '<span class="loading"></span> Sending...';
-  
-  try {
-    // Debug: Log the exact URL being called
-    const url = `${API_BASE}/api/auth/send-hybrid-otp`;
-    console.log('🔥 Fetching URL:', url);
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      credentials: 'include', // 🛡️ CRITICAL for cookies
-      body: JSON.stringify({ email, phone, countryCode })
-    });
-    
-    console.log('🔥 Response status:', response.status);
-    
-    const data = await response.json();
-    console.log('🔥 Response data:', data);
-    
-    if (data.success) {
-      sessionId = data.sessionId;
-      document.getElementById('verificationSection').classList.add('active');
-      showStatus(data.message, 'success');
-      
-      // Show mock OTP in development
-      if (data.mockOtp) {
-        console.log('🔐 DEVELOPMENT OTP:', data.mockOtp);
-        // Only display OTP on screen in local development (never in production)
-        if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
-          const output = document.getElementById('output');
-          if (output) output.textContent = `[DEV MOCK OTP]: ${data.mockOtp}`;
-        }
-      }
-      
-      startTimer();
-    } else {
-      showStatus(data.error || 'Failed to send OTP', 'error');
-    }
-    
-  } catch (error) {
-    // 🛡️ CRITICAL: Log the actual error
-    console.error('🔥 Fetch error:', error);
-    console.error('Error name:', error.name);
-    console.error('Error message:', error.message);
-    
-    showStatus(`Network error: ${error.message}`, 'error');
-  } finally {
-    sendBtn.disabled = false;
-    sendBtn.textContent = 'Send Verification Codes';
-  }
-}
-
-async function verifyOTP(channel) {
-  const otpInput = channel === 'email' ? 'emailOtp' : 'phoneOtp';
-  const otp = document.getElementById(otpInput).value.trim();
-  
-  if (!otp || otp.length !== 6) {
-    showStatus(`Please enter the 6-digit OTP`, 'error');
-    return;
-  }
-  
-  try {
-    const response = await fetch(`${API_BASE}/api/auth/verify-hybrid-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId, otp, channel })
-    });
-    
-    const data = await response.json();
-    
-    if (data.success) {
-      verificationStatus[channel] = true;
-      updateChannelStatus(channel, true);
-      
-      if (data.verified) {
-        showStatus('Phone number verified! You can now complete signup.', 'success');
-        document.getElementById('signupBtn').disabled = false;
-        if (document.getElementById('phoneOtpInput')) {
-          document.getElementById('phoneOtpInput').style.display = 'none';
-        }
-      }
-    } else {
-      showStatus(data.error || 'Invalid OTP', 'error');
-    }
-  } catch (error) {
-    showStatus('Verification failed. Please try again.', 'error');
-  }
-}
-
-async function resendOTP(channel) {
-  try {
-    const response = await fetch(`${API_BASE}/api/auth/resend-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId, channel })
-    });
-    
-    const data = await response.json();
-    
-    if (data.success) {
-      showStatus(`OTP resent via ${channel}`, 'success');
-    } else {
-      showStatus(data.error || 'Failed to resend', 'error');
-    }
-  } catch (error) {
-    showStatus('Failed to resend OTP', 'error');
-  }
-}
-
-function updateChannelStatus(channel, verified) {
-  const channelEl = document.getElementById(channel + 'Channel');
-  const statusEl = document.getElementById(channel + 'Status');
-  const inputEl = document.getElementById(channel + 'OtpInput');
-  
-  if (verified && channelEl && statusEl && inputEl) {
-    channelEl.classList.remove('pending');
-    channelEl.classList.add('verified');
-    statusEl.textContent = '✓ Verified';
-    inputEl.style.display = 'none';
-    
-    // Enable signup button when verification is successful
-    if (channel === 'phone') {
-      const signupBtn = document.getElementById('signupBtn');
-      if (signupBtn) signupBtn.disabled = false;
-    }
-  }
-}
-
-function startTimer() {
-  let seconds = 600; // 10 minutes
-  
-  const timerEl = document.getElementById('timer');
-  if (!timerEl) return;
-
-  const interval = setInterval(() => {
-    seconds--;
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    timerEl.textContent = `Codes expire in ${mins}:${secs.toString().padStart(2, '0')}`;
-    
-    if (seconds <= 0) {
-      clearInterval(interval);
-      timerEl.textContent = 'Codes expired. Please request new codes.';
-    }
-  }, 1000);
-}
-
 async function handleSignup() {
   const email = document.getElementById('signupEmail').value.trim();
   const username = document.getElementById('signupUsername').value.trim();
@@ -921,14 +1024,12 @@ async function handleSignup() {
     return;
   }
   
-  // 🔒 OTP gate — must verify email before completing signup
   if (!verificationStatus.email) {
     showStatus('Please verify your email address first — click "Send Code"', 'error');
     document.getElementById('signupEmail').focus();
     return;
   }
   
-  // Password strength validation
   if (password.length < 8) {
     showStatus('Password must be at least 8 characters long', 'error');
     return;
@@ -963,7 +1064,6 @@ async function handleSignup() {
     if (data.status === 'success') {
       showStatus('Account created successfully! Redirecting...', 'success');
       
-      // 🛡️ CRITICAL: Store session and update auth state
       const session = {
         userId: data.userId,
         sessionId: data.sessionId,
@@ -974,13 +1074,8 @@ async function handleSignup() {
       localStorage.setItem('session_active', 'true');
       localStorage.setItem('user_data', JSON.stringify(data.user));
       
-      // 🧠 Auth Flow Control
-      localStorage.setItem('session_active', 'true');
-
-      // 📱 NATIVE: Persist to Capacitor Preferences so session survives app kill
       if (window._NativeBio) window._NativeBio.saveSession(data.sessionId, data.user);
       
-      // FIXED: Update auth state to authenticated in AuthCore
       if (window.AuthCore && typeof window.AuthCore._setState === 'function') {
         window.AuthCore._setState({
           authenticated: true,
@@ -991,7 +1086,6 @@ async function handleSignup() {
         });
       }
 
-      // 🔄 SYNC ASSETS IMMEDIATELY AFTER SIGNUP
       if (window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
         console.log('[Signup] Syncing assets after account creation...');
         window.AssetsManager.sync();
@@ -1000,6 +1094,7 @@ async function handleSignup() {
         detail: { user: data.user, sessionId: data.sessionId } 
       }));
 
+      updateAuthUI();
       setTimeout(() => {
         window.location.href = '/yt-new-clear.html';
       }, 1500);
@@ -1041,21 +1136,15 @@ async function handleLogin() {
     if (data.status === 'success') {
       showStatus('Login successful! Redirecting...', 'success');
       
-      // 🛡️ CRITICAL: Store session and update auth state
       localStorage.setItem('session_token', data.sessionId);
       localStorage.setItem('__cached_session_id__', data.sessionId);
       localStorage.setItem('session_active', 'true');
       if (data.user) {
         localStorage.setItem('user_data', JSON.stringify(data.user));
       }
-      
-      // 🧠 Auth Flow Control
-      localStorage.setItem('session_active', 'true');
 
-      // 📱 NATIVE: Persist to Capacitor Preferences so session survives app kill
       if (window._NativeBio) window._NativeBio.saveSession(data.sessionId, data.user);
       
-      // FIXED: Update auth state to authenticated in AuthCore
       if (window.AuthCore && typeof window.AuthCore._setState === 'function') {
         window.AuthCore._setState({
           authenticated: true,
@@ -1067,17 +1156,14 @@ async function handleLogin() {
       }
       
       localStorage.setItem('last_login_email', email);
-      // 🔄 SYNC ASSETS IMMEDIATELY AFTER LOGIN
       if (window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
         console.log('[Login] Syncing assets after login...');
         window.AssetsManager.sync();
       }
-      // Also emit event for any listeners
       window.dispatchEvent(new CustomEvent('auth:login', { 
         detail: { user: data.user, sessionId: data.sessionId } 
       }));
 
-      // Offer biometric registration if device supports it (native only)
       if (window._NativeBio && window._NativeBio.isNative()) {
         window._NativeBio.isAvailable().then(bioOk => {
           if (bioOk) {
@@ -1088,6 +1174,7 @@ async function handleLogin() {
           window.location.href = '/yt-new-clear.html';
         });
       } else {
+        updateAuthUI();
         setTimeout(() => { window.location.href = '/yt-new-clear.html'; }, 1500);
       }
     } else {
@@ -1098,12 +1185,7 @@ async function handleLogin() {
   }
 }
 
-
-// ══════════════════════════════════════════════════════
-//  BIOMETRIC — Uses capacitor-native-biometric plugin
-// ══════════════════════════════════════════════════════
-
-// On page load: check if native biometric is available + stored session exists
+// BIOMETRIC functions
 document.addEventListener('DOMContentLoaded', async () => {
   if (!window._NativeBio || !window._NativeBio.isNative()) return;
   try {
@@ -1112,7 +1194,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (bioAvailable && prefs) {
       const t = await prefs.get({ key: 'session_token' });
       if (t.value) {
-        // Restore last known email to the input
         const emailResult = await prefs.get({ key: 'user_data' });
         if (emailResult.value) {
           try {
@@ -1137,7 +1218,6 @@ async function handleBiometricLogin() {
       throw new Error('Biometric login is only available on the mobile app');
     }
 
-    // Step 1: Trigger native biometric prompt (fingerprint / face)
     const NativeBiometric = window.Capacitor.Plugins.NativeBiometric;
     await NativeBiometric.verifyIdentity({
       reason: 'Sign in to CodeBank',
@@ -1146,7 +1226,6 @@ async function handleBiometricLogin() {
       negativeButtonText: 'Use Password Instead'
     });
 
-    // Step 2: Biometric passed — restore session from Capacitor Preferences
     const prefs = window._NativeBio.prefs();
     if (!prefs) throw new Error('Storage unavailable');
 
@@ -1155,22 +1234,20 @@ async function handleBiometricLogin() {
       throw new Error('No saved session. Please log in with your password first.');
     }
 
-    // Restore to localStorage
     localStorage.setItem('session_token', tokenResult.value);
     const userData = await prefs.get({ key: 'user_data' });
     if (userData.value) localStorage.setItem('user_data', userData.value);
     localStorage.setItem('session_active', 'true');
 
-    // Step 3: Validate the restored session with the server
     showStatus('Verifying session...', 'info');
     const resp = await fetch('/api/auth/me', { credentials: 'include' });
     const data = await resp.json();
 
     if (data.success || data.authenticated || data.ok) {
       showStatus('✅ Welcome back!', 'success');
+      updateAuthUI();
       setTimeout(() => { window.location.href = '/yt-new-clear.html'; }, 800);
     } else {
-      // Session expired — clear it
       localStorage.removeItem('session_active');
       localStorage.removeItem('session_token');
       await prefs.remove({ key: 'session_active' });
@@ -1200,11 +1277,9 @@ async function registerBiometric() {
   try {
     section.innerHTML = '<div style="text-align:center;padding:10px"><span class="loading"></span> Checking biometric...</div>';
 
-    // Verify biometric is available
     const available = await window._NativeBio.isAvailable();
     if (!available) throw new Error('No biometric hardware found on this device');
 
-    // Test that biometric works (optional prompt)
     const NativeBiometric = window.Capacitor.Plugins.NativeBiometric;
     await NativeBiometric.verifyIdentity({
       reason: 'Enable biometric login for CodeBank',
@@ -1213,8 +1288,6 @@ async function registerBiometric() {
       negativeButtonText: 'Cancel'
     });
 
-    // Session data is already saved to Capacitor Preferences after login.
-    // Biometric is now "registered" — just mark it
     localStorage.setItem('biometric_registered', '1');
     const prefs = window._NativeBio.prefs();
     if (prefs) await prefs.set({ key: 'biometric_registered', value: '1' });
@@ -1251,7 +1324,6 @@ async function initGoogleSignIn() {
     
     console.log('[Google] Server response:', data);
     
-    // Validate it's a real Google client ID (not empty or placeholder)
     const isValidClientId = data.clientId &&
       data.clientId !== 'your_google_client_id.apps.googleusercontent.com' &&
       /^\d+(-\w+)?\.apps\.googleusercontent\.com$/.test(data.clientId);
@@ -1269,7 +1341,6 @@ async function initGoogleSignIn() {
       console.warn('     7. Restart the server');
       console.warn('  For now, Google Sign-In buttons are disabled.');
       
-      // Hide Google auth UI
       document.querySelectorAll('.google-login-wrapper, #google-login-wrapper, #google-signup-wrapper, #google-divider-login, #google-divider-signup').forEach(el => {
         if (el) el.style.display = 'none';
       });
@@ -1285,7 +1356,6 @@ async function initGoogleSignIn() {
       context: 'signin'
     });
 
-    // Render in login form
     const loginBtn = document.getElementById('google-signin-login');
     if (loginBtn) {
       google.accounts.id.renderButton(loginBtn, {
@@ -1300,7 +1370,6 @@ async function initGoogleSignIn() {
       document.getElementById('google-divider-login').style.display = 'flex';
     }
 
-    // Render in signup form
     const signupBtn = document.getElementById('google-signin-signup');
     if (signupBtn) {
       google.accounts.id.renderButton(signupBtn, {
@@ -1351,7 +1420,6 @@ async function handleGoogleCredential(response) {
       if (data.user) localStorage.setItem('user_data', JSON.stringify(data.user));
       if (data.user && data.user.email) localStorage.setItem('last_login_email', data.user.email);
       
-      // 📱 NATIVE: Persist to Capacitor Preferences so session survives app kill
       if (window._NativeBio) window._NativeBio.saveSession(data.sessionId, data.user);
 
       if (window.AuthCore && typeof window.AuthCore._setState === 'function') {
@@ -1369,6 +1437,7 @@ async function handleGoogleCredential(response) {
         statusEl.className = 'status-message success';
       }
 
+      updateAuthUI();
       setTimeout(function() { window.location.href = '/yt-new-clear.html'; }, 1000);
     } else {
       console.error('[Google] Server error response:', data);
@@ -1388,7 +1457,6 @@ async function handleGoogleCredential(response) {
   }
 }
 
-// Wait for Google library to load, then initialize
 function _tryInitGoogle() {
   if (window.google && window.google.accounts) {
     initGoogleSignIn();
