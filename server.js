@@ -613,7 +613,7 @@ app.get('/api/admin/stats', (req, res) => {
 // MAIN ROUTES
 // ============================================
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'yt-new-clear.html'));
+  res.sendFile(path.join(__dirname, 'yt-new-clear.html'));
 });
 
 app.get('/health', (req, res) => {
