@@ -437,6 +437,31 @@ app.get('/api/auth/google-client-id', (req, res) => {
 });
 
 // Validate session (GET /api/auth/me)
+// Get auth config (GET /api/auth/config)
+app.get('/api/auth/config', (req, res) => {
+  try {
+    const clientId = process.env.GOOGLE_CLIENT_ID || null;
+    if (!clientId) {
+      return res.json({
+        success: false,
+        message: 'Google auth not configured - using guest mode',
+        authenticated: false,
+        googleClientId: null
+      });
+    }
+    res.json({
+      success: true,
+      authenticated: false,
+      googleClientId: clientId
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 app.get('/api/auth/me', (req, res) => {
   try {
     const sessionToken = req.headers['x-session-token'] || req.query.sessionToken;
