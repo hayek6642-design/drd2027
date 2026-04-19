@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Farragna - TikTok-style video streaming platform">
+  <title>Farragna - Live Video Feed</title>
+  
+  <!-- Cache Buster -->
+  <script>
+    window.__CACHE_BUST_VERSION = 'v' + Date.now();
+    const _origFetch = window.fetch;
+    window.fetch = function(...args) {
+        let [url, opts] = args;
+        if (typeof url === 'string' && (url.includes('.js') || url.includes('.css'))) {
+            const sep = url.includes('?') ? '&' : '?';
+            url = url + sep + 'cb=' + window.__CACHE_BUST_VERSION;
+        }
+        return _origFetch(url, opts);
+    };
+  </script>
+  
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #000;
+      color: #fff;
+      overflow: hidden;
+    }
+    
+    #app {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #000;
+    }
+    
+    .video-feed {
+      flex: 1;
+      width: 100%;
+      overflow: auto;
+      scroll-snap-type: y mandatory;
+    }
+    
+    .video-item {
+      width: 100%;
+      height: 100vh;
+      scroll-snap-align: start;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #111;
+      border-bottom: 1px solid #222;
+    }
+    
+    .video-container {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    
+    .video-info {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 10;
+      color: #fff;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    }
+    
+    .video-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    
+    .video-source {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+    
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #666;
+    }
+    
+    .error {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #f44;
+      background: #1a0a0a;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(0,0,0,0.9);
+    }
+    
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      background: #1a1a1a;
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    
+    button:hover {
+      background: #333;
+    }
+    
+    .auth-panel {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 100;
+      background: rgba(0,0,0,0.9);
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-size: 12px;
+      border: 1px solid #333;
+    }
+    
+    .auth-panel.guest::before {
+      content: '👤 ';
+    }
+    
+    .auth-panel.authenticated::before {
+      content: '✅ ';
+    }
+    
+    .guardian-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 50;
+      width: 60px;
+      height: 60px;
+      background: rgba(0,0,0,0.8);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #00d4ff;
+    }
+    
+    #guardian-dog-container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="auth-panel guest" id="authPanel">Guest Mode</div>
+    
+    <div class="video-feed" id="videoFeed">
+      <div class="loading">Loading video feed...</div>
+    </div>
+  </div>
+  
+  <!-- Guardian 3D Container -->
+  <div class="guardian-container">
+    <div id="guardian-dog-container"></div>
+  </div>
+  
+  <!-- Core Scripts (Load in order) -->
+  <script src="/auth-core.js?v=1"></script>
+  <script src="/storage-adapter.js?v=1"></script>
+  <script src="/assets-direct.js?v=2"></script>
+  
+  <!-- Feed System -->
+  <script src="/feed-api.js?v=1"></script>
+  
+  <!-- UI and Performance -->
+  <script src="/performance-monitor.js?v=1"></script>
+  <script src="/guardian-3d.js?v=1"></script>
+  <script src="/iframe-cleanup-fix.js?v=1"></script>
+  
+  <!-- App Initialization -->
+  <script>
+    (async function() {
+      console.log('[App] Initializing Farragna...');
+      
+      try {
+        // Check auth status
+        if (typeof authManager !== 'undefined') {
+          const session = await authManager.checkSession();
+          const authPanel = document.getElementById('authPanel');
+          if (session && session.authenticated) {
+            authPanel.textContent = '✅ ' + (session.user?.email || 'Authenticated');
+            authPanel.classList.remove('guest');
+            authPanel.classList.add('authenticated');
+          }
+        }
+        
+        // Initialize video feed
+        if (typeof FeedAPI !== 'undefined') {
+          const feed = new FeedAPI();
+          const videos = await feed.getVideos(10);
+          renderVideos(videos);
+        } else {
+          document.getElementById('videoFeed').innerHTML = '<div class="error">Feed API not available</div>';
+        }
+        
+        // Initialize performance monitoring
+        if (typeof PerformanceMonitor !== 'undefined') {
+          const monitor = new PerformanceMonitor();
+          monitor.start();
+        }
+        
+        // Initialize guardian
+        if (typeof Guardian3D !== 'undefined') {
+          const guardian = new Guardian3D('guardian-dog-container');
+          guardian.init();
+        }
+        
+        console.log('[App] ✅ Initialization complete');
+      } catch (error) {
+        console.error('[App] ❌ Initialization error:', error);
+        document.getElementById('videoFeed').innerHTML = '<div class="error">Error loading app: ' + error.message + '</div>';
+      }
+    })();
+    
+    function renderVideos(videos) {
+      const feed = document.getElementById('videoFeed');
+      if (!videos || videos.length === 0) {
+        feed.innerHTML = '<div class="error">No videos available</div>';
+        return;
+      }
+      
+      feed.innerHTML = videos.map((video, idx) => `
+        <div class="video-item" data-video-id="${video.id}">
+          <video class="video-container" controls autoplay muted>
+            <source src="${video.url}" type="video/mp4">
+            Your browser doesn't support HTML5 video.
+          </video>
+          <div class="video-info">
+            <div class="video-title">${video.title || 'Untitled'}</div>
+            <div class="video-source">📹 ${video.source}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+  </script>
+</body>
+</html>
