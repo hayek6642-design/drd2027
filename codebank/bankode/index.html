@@ -80,34 +80,55 @@
 </head>
 <body class="bg-gray-900 text-white font-sans">
   <div class="min-h-screen flex flex-col">
-    <!-- Header -->
-    <header class="bg-gray-800 border-b border-gray-700 px-4 py-3">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-          <i class="fas fa-university text-2xl text-blue-400"></i>
-          <h1 class="text-xl font-bold">Bankode Dashboard</h1>
+    <!-- Header with BanKode Title -->
+    <header class="bg-gray-800 border-b border-gray-700 px-6 py-6">
+      <div class="max-w-7xl mx-auto">
+        <!-- Large BanKode Title -->
+        <h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-300 bg-clip-text text-transparent">
+          BanKode
+        </h1>
+        
+        <!-- Auth Navigation Bar -->
+        <div class="flex items-center justify-between bg-gray-900 rounded-lg px-4 py-3 border border-gray-700">
+          <div class="text-sm text-gray-400">Secure Banking Platform</div>
+          
+          <div class="flex items-center space-x-3">
+            <!-- Google Sign-In Button -->
+            <button id="googleSignInBtn" class="flex items-center space-x-2 px-4 py-2 bg-white text-gray-900 rounded-lg hover:bg-gray-100 transition font-medium text-sm">
+              <i class="fab fa-google"></i>
+              <span>Google</span>
+            </button>
+            
+            <!-- Sign In Button -->
+            <button id="signInBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm">
+              <i class="fas fa-sign-in-alt"></i>
+              <span>Sign In</span>
+            </button>
+            
+            <!-- Sign Up Button -->
+            <button id="signUpBtn" class="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition font-medium text-sm">
+              <i class="fas fa-user-plus"></i>
+              <span>Sign Up</span>
+            </button>
+            
+            <!-- DRD Mail Button -->
+            <button id="drdMailBtn" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium text-sm">
+              <i class="fas fa-envelope"></i>
+              <span>DRD Mail</span>
+            </button>
+            
+            <!-- Language Button -->
+            <button id="languageBtn" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition font-medium text-sm">
+              <i class="fas fa-globe"></i>
+              <span>EN</span>
+            </button>
+          </div>
         </div>
-        <div class="flex items-center space-x-4"></div>
       </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col lg:flex-row">
-      <!-- Sidebar -->
-      <aside class="w-full lg:w-64 bg-gray-800 border-r border-gray-700 p-4">
-        <nav class="space-y-2">
-          <button id="dashboardBtn" class="w-full text-left px-3 py-2 bg-blue-600 text-white rounded flex items-center space-x-2">
-            <i class="fas fa-tachometer-alt"></i><span>Dashboard</span>
-          </button>
-          <button id="transactionsBtn" class="w-full text-left px-3 py-2 text-gray-300 hover:bg-gray-700 rounded flex items-center space-x-2">
-            <i class="fas fa-exchange-alt"></i><span>Transactions</span>
-          </button>
-          <button id="settingsBtn" class="w-full text-left px-3 py-2 text-gray-300 hover:bg-gray-700 rounded flex items-center space-x-2">
-            <i class="fas fa-cog"></i><span>Settings</span>
-          </button>
-        </nav>
-      </aside>
-
+    <!-- Main Content (no sidebar) -->
+    <main class="flex-1 flex flex-col">
       <!-- Dashboard Content -->
       <div class="flex-1 p-6 overflow-auto">
         <!-- Balance Cards (IDs must match what dashboard.js expects in fallback) -->
@@ -224,6 +245,318 @@
       <div id="adminStatus" class="mt-4 text-center text-sm"></div>
     </div>
   </div>
+
+  <!-- Auth Modal -->
+  <style>
+    .auth-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .auth-modal.active {
+      display: flex;
+    }
+    
+    .auth-modal-content {
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 12px;
+      padding: 32px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    
+    .auth-modal-title {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 24px;
+      color: #fff;
+    }
+    
+    .auth-modal-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .auth-form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .auth-form-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+    
+    .auth-form-input {
+      padding: 10px 12px;
+      border: 1px solid #4b5563;
+      border-radius: 8px;
+      background: #111827;
+      color: #fff;
+      font-size: 14px;
+    }
+    
+    .auth-form-input:focus {
+      outline: none;
+      border-color: #00d4ff;
+      box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+    }
+    
+    .auth-form-button {
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: #00d4ff;
+      color: #111827;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 8px;
+    }
+    
+    .auth-form-button:hover {
+      background: #00b8d4;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(0, 212, 255, 0.2);
+    }
+    
+    .auth-modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: #9ca3af;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .auth-modal-close:hover {
+      color: #fff;
+    }
+    
+    .auth-error {
+      padding: 12px;
+      border-radius: 8px;
+      background: rgba(239, 68, 68, 0.1);
+      color: #fca5a5;
+      border: 1px solid #ef4444;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    
+    .auth-success {
+      padding: 12px;
+      border-radius: 8px;
+      background: rgba(34, 197, 94, 0.1);
+      color: #86efac;
+      border: 1px solid #22c55e;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+  </style>
+
+  <!-- Sign In Modal -->
+  <div id="signInModal" class="auth-modal">
+    <div class="auth-modal-content" style="position: relative;">
+      <button class="auth-modal-close" onclick="closeAuthModal('signInModal')">&times;</button>
+      <h2 class="auth-modal-title">Sign In</h2>
+      <div id="signInError" class="auth-error" style="display: none;"></div>
+      <form class="auth-modal-form" onsubmit="handleSignIn(event)">
+        <div class="auth-form-group">
+          <label class="auth-form-label">Email</label>
+          <input type="email" id="signInEmail" class="auth-form-input" required>
+        </div>
+        <div class="auth-form-group">
+          <label class="auth-form-label">Password</label>
+          <input type="password" id="signInPassword" class="auth-form-input" required>
+        </div>
+        <button type="submit" class="auth-form-button">Sign In</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Sign Up Modal -->
+  <div id="signUpModal" class="auth-modal">
+    <div class="auth-modal-content" style="position: relative;">
+      <button class="auth-modal-close" onclick="closeAuthModal('signUpModal')">&times;</button>
+      <h2 class="auth-modal-title">Create Account</h2>
+      <div id="signUpError" class="auth-error" style="display: none;"></div>
+      <div id="signUpSuccess" class="auth-success" style="display: none;"></div>
+      <form class="auth-modal-form" onsubmit="handleSignUp(event)">
+        <div class="auth-form-group">
+          <label class="auth-form-label">Full Name</label>
+          <input type="text" id="signUpName" class="auth-form-input" required>
+        </div>
+        <div class="auth-form-group">
+          <label class="auth-form-label">Email</label>
+          <input type="email" id="signUpEmail" class="auth-form-input" required>
+        </div>
+        <div class="auth-form-group">
+          <label class="auth-form-label">Password</label>
+          <input type="password" id="signUpPassword" class="auth-form-input" required>
+        </div>
+        <div class="auth-form-group">
+          <label class="auth-form-label">Confirm Password</label>
+          <input type="password" id="signUpPasswordConfirm" class="auth-form-input" required>
+        </div>
+        <button type="submit" class="auth-form-button">Create Account</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Authentication Script -->
+  <script>
+    // Open/Close modals
+    function openAuthModal(modalId) {
+      document.getElementById(modalId).classList.add('active');
+    }
+    
+    function closeAuthModal(modalId) {
+      document.getElementById(modalId).classList.remove('active');
+      // Clear errors
+      const errorEl = document.getElementById(modalId.replace('Modal', 'Error'));
+      if (errorEl) errorEl.style.display = 'none';
+    }
+    
+    // Close modal when clicking outside
+    document.querySelectorAll('.auth-modal').forEach(modal => {
+      modal.addEventListener('click', function(e) {
+        if (e.target === this) {
+          this.classList.remove('active');
+        }
+      });
+    });
+    
+    // Handle Sign In
+    async function handleSignIn(event) {
+      event.preventDefault();
+      const email = document.getElementById('signInEmail').value;
+      const password = document.getElementById('signInPassword').value;
+      const errorEl = document.getElementById('signInError');
+      
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Sign in failed');
+        }
+        
+        // Store session
+        localStorage.setItem('sessionId', data.sessionId);
+        localStorage.setItem('userId', data.userId);
+        localStorage.setItem('authToken', data.token);
+        
+        // Update UI
+        window.CODEBANK_TRUSTED_USER_ID = data.userId;
+        
+        // Close modal and reload
+        closeAuthModal('signInModal');
+        setTimeout(() => window.location.reload(), 500);
+      } catch (error) {
+        errorEl.textContent = error.message;
+        errorEl.style.display = 'block';
+      }
+    }
+    
+    // Handle Sign Up
+    async function handleSignUp(event) {
+      event.preventDefault();
+      const name = document.getElementById('signUpName').value;
+      const email = document.getElementById('signUpEmail').value;
+      const password = document.getElementById('signUpPassword').value;
+      const passwordConfirm = document.getElementById('signUpPasswordConfirm').value;
+      const errorEl = document.getElementById('signUpError');
+      const successEl = document.getElementById('signUpSuccess');
+      
+      // Clear previous messages
+      errorEl.style.display = 'none';
+      successEl.style.display = 'none';
+      
+      if (password !== passwordConfirm) {
+        errorEl.textContent = 'Passwords do not match';
+        errorEl.style.display = 'block';
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, name })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Sign up failed');
+        }
+        
+        // Store session
+        localStorage.setItem('sessionId', data.sessionId);
+        localStorage.setItem('userId', data.user.id);
+        localStorage.setItem('authToken', data.token);
+        
+        // Update UI
+        window.CODEBANK_TRUSTED_USER_ID = data.user.id;
+        
+        // Show success
+        successEl.textContent = 'Account created successfully! Redirecting...';
+        successEl.style.display = 'block';
+        
+        // Redirect
+        setTimeout(() => {
+          closeAuthModal('signUpModal');
+          window.location.reload();
+        }, 1500);
+      } catch (error) {
+        errorEl.textContent = error.message;
+        errorEl.style.display = 'block';
+      }
+    }
+    
+    // Setup button listeners
+    document.getElementById('signInBtn').addEventListener('click', () => openAuthModal('signInModal'));
+    document.getElementById('signUpBtn').addEventListener('click', () => openAuthModal('signUpModal'));
+    
+    document.getElementById('googleSignInBtn').addEventListener('click', () => {
+      alert('Google Sign-In will be configured with proper OAuth setup');
+    });
+    
+    document.getElementById('drdMailBtn').addEventListener('click', () => {
+      // Navigate to DRD Mail
+      window.location.href = '/codebank/drmail.html';
+    });
+    
+    document.getElementById('languageBtn').addEventListener('click', () => {
+      alert('Language selection coming soon');
+    });
+  </script>
 
   <!-- Direct Asset Manager - loads before dashboard -->
   <script src="/codebank/js/assets-direct.js"></script>
