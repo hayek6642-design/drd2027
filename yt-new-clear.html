@@ -127,6 +127,59 @@ function clearSessionAndLogout() {
     })();
     </script>
     
+    <!-- INITIALIZATION STATE TRACKER - Delay hiding progress until ready -->
+    <script>
+    (function InitStateTracker() {
+        window.InitState = {
+            steps: { domReady: false, authLoaded: false, assetsLoaded: false, codeReady: false, bridgeLoaded: false, configLoaded: false },
+            startTime: Date.now(),
+            minDisplayTime: 2000,
+            
+            checkComplete: function() {
+                const elapsed = Date.now() - this.startTime;
+                const timeOk = elapsed >= this.minDisplayTime;
+                const codeReady = this.steps.codeReady || this.steps.configLoaded;
+                console.log('[InitState] Check:', { elapsed: elapsed, codeReady: codeReady, timeOk: timeOk, hide: codeReady && timeOk });
+                return codeReady && timeOk;
+            },
+            
+            markReady: function(step) {
+                if (this.steps[step] !== undefined && this.steps[step] === true) return;
+                this.steps[step] = true;
+                console.log('[InitState] Ready:', step);
+                if (step === 'codeReady' || step === 'configLoaded') this.hideProgressPage();
+            },
+            
+            hideProgressPage: function() {
+                if (this._hidden) return;
+                if (!this.checkComplete()) return;
+                this._hidden = true;
+                console.log('[InitState] Hiding progress after', Date.now() - this.startTime, 'ms');
+                
+                // Fade progress elements
+                ['loading-progress-bar', 'progress-container', 'init-container'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) { el.style.transition = 'opacity 0.5s'; el.style.opacity = '0'; }
+                });
+                
+                // Clear "Waiting" message if still showing
+                const codeDisplay = document.getElementById('code-display');
+                if (codeDisplay && codeDisplay.textContent === 'Waiting for code...') {
+                    codeDisplay.textContent = window.__currentCode || '';
+                }
+            },
+            
+            autoHide: function() {
+                setTimeout(() => { if (!this._hidden) { console.log('[InitState] Auto-timeout'); this._hidden = true; } }, 10000);
+            }
+        };
+        
+        window.addEventListener('DOMContentLoaded', () => window.InitState.markReady('domReady'));
+        window.InitState.autoHide();
+        console.log('[InitState] Tracker ready');
+    })();
+    </script>
+
     <!-- EMERGENCY AUTH LOCK - Prevents redirect loop -->
     <script>
     (function() {
@@ -3255,6 +3308,12 @@ document.addEventListener('DOMContentLoaded', async function(){
         // Visual feedback
         codeDisplay.classList.add('pulse');
         setTimeout(() => codeDisplay.classList.remove('pulse'), 800);
+        
+        // Mark InitState as code ready
+        if (window.InitState) {
+            window.InitState.markReady('codeReady');
+            window.__currentCode = code;
+        }
       }
 
       function handleEvent(e) {
@@ -3315,6 +3374,10 @@ document.addEventListener('DOMContentLoaded', async function(){
           if (codeVal && codeVal !== lastDisplayedCode) {
             console.log('[UI SYNC] Polling detected new code:', codeVal);
             updateUI(codeVal, 'polling');
+            if (window.InitState) {
+                window.InitState.markReady('codeReady');
+                window.__currentCode = codeVal;
+            }
           }
         } catch(e) { /* ignore polling errors */ }
       }, 2000);
