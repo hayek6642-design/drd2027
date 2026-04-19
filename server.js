@@ -115,15 +115,15 @@ initDatabase();
 // ============================================
 // FARRAGNA FEED API IMPORTS
 // ============================================
-const FeedAPI = require('./farragna-feed/api/feed-api.js');
-const URLCache = require('./farragna-feed/cache/url-cache.js');
-const PexelsClient = require('./farragna-feed/services/pexels-client.js');
-const PixabayClient = require('./farragna-feed/services/pixabay-client.js');
-const MixkitClient = require('./farragna-feed/services/mixkit-client.js');
+// DISABLED: const FeedAPI = require('./farragna-feed/api/feed-api.js');
+// DISABLED: const URLCache = require('./farragna-feed/cache/url-cache.js');
+// DISABLED: const PexelsClient = require('./farragna-feed/services/pexels-client.js');
+// DISABLED: const PixabayClient = require('./farragna-feed/services/pixabay-client.js');
+// DISABLED: const MixkitClient = require('./farragna-feed/services/mixkit-client.js');
 
 // Initialize Feed API
-const feedAPI = new FeedAPI(db);
-const urlCache = new URLCache();
+// const feedAPI = new FeedAPI(db);
+// const urlCache = new URLCache();
 
 // ============================================
 // 🎬 FARRAGNA VIDEO FEED ROUTES
