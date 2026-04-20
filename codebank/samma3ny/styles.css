@@ -914,7 +914,53 @@ body {
     transform: translateY(-1px) translateZ(3px) scale(1.02);
 }
 
+/* Skip Button Styling */
+.action-btn.skip-btn:hover {
+    background: linear-gradient(145deg, rgba(255, 193, 7, 0.3), rgba(255, 193, 7, 0.1));
+    color: #ffc107;
+    border-color: #ffc107;
+    transform: translateY(-3px) translateZ(6px) scale(1.08);
+    box-shadow:
+        0 6px 12px rgba(255, 193, 7, 0.4),
+        0 3px 6px rgba(255, 193, 7, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
 
+.action-btn.skip-btn:active {
+    transform: translateY(-1px) translateZ(3px) scale(1.02);
+}
+
+.action-btn.skip-btn.skipped {
+    color: #ffc107;
+    background: linear-gradient(145deg, rgba(255, 193, 7, 0.3), rgba(255, 193, 7, 0.1));
+    border-color: #ffc107;
+    animation: skipClick 0.3s ease-in-out;
+    will-change: transform;
+    transition: color 0.3s ease-in-out, background 0.3s ease-in-out, border-color 0.3s ease-in-out;
+    box-shadow:
+        0 4px 8px rgba(255, 193, 7, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
+
+.action-btn.skip-btn.skipped:hover {
+    color: #ffc107;
+    background: linear-gradient(145deg, rgba(255, 193, 7, 0.4), rgba(255, 193, 7, 0.2));
+    transform: translateY(-3px) translateZ(8px) scale(1.1);
+    box-shadow:
+        0 8px 16px rgba(255, 193, 7, 0.4),
+        0 4px 8px rgba(255, 193, 7, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
+
+@keyframes skipClick {
+    0% { transform: scale(0.9) translateZ(0); }
+    40% { transform: scale(1.1) translateZ(3px); }
+    70% { transform: scale(0.98) translateZ(1px); }
+    100% { transform: scale(1) translateZ(0); }
+}
 
 
 

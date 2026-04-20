@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Combined playlist from all sources with caching
     let playlist = [];
     let likedTracks = JSON.parse(localStorage.getItem('likedTracks') || '[]');
+    let skippedTracks = JSON.parse(localStorage.getItem('skippedTracks') || '[]');
     let _updatingTrackDisplay = false;
     
     // Cache management for API responses
@@ -603,6 +604,40 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         localStorage.setItem('likedStats', JSON.stringify(likedStats));
         if (triggerBtn) triggerBtn.blur();
+    }
+
+    // Skip song - flags track to be hidden from playlist
+    function skipSong(track, triggerBtn) {
+        const index = skippedTracks.indexOf(track.id);
+        
+        if (index === -1) {
+            // Add to skipped
+            skippedTracks.push(track.id);
+            console.log(`⏭️  Track flagged as skipped: ${track.title}`);
+            if (triggerBtn) {
+                triggerBtn.classList.add('skipped');
+                triggerBtn.title = 'Unskip';
+            }
+        } else {
+            // Remove from skipped
+            skippedTracks.splice(index, 1);
+            console.log(`✅ Track unskipped: ${track.title}`);
+            if (triggerBtn) {
+                triggerBtn.classList.remove('skipped');
+                triggerBtn.title = 'Skip this song';
+            }
+        }
+        
+        localStorage.setItem('skippedTracks', JSON.stringify(skippedTracks));
+        if (triggerBtn) triggerBtn.blur();
+        
+        // Refresh playlist to hide/show the track
+        refreshPlaylistView();
+    }
+
+    // Refresh playlist view to reflect skip changes
+    function refreshPlaylistView() {
+        renderPlaylist();
     }
 
     // --- Show storage usage info ---
@@ -1318,8 +1353,11 @@ console.log(`🗑️ Cleaned up ${tracksToRemove.length} old downloads to free s
         const allSongsContainer = document.getElementById('playlist-container');
         if (!allSongsContainer) return;
 
+        // Filter out skipped tracks
+        const visiblePlaylist = playlist.filter(track => !skippedTracks.includes(track.id));
+
         // Calculate total pages
-        totalPages = Math.ceil(playlist.length / songsPerPage);
+        totalPages = Math.ceil(visiblePlaylist.length / songsPerPage);
         
         // Ensure current page is valid
         if (currentPage > totalPages) currentPage = totalPages;
@@ -1331,7 +1369,7 @@ console.log(`🗑️ Cleaned up ${tracksToRemove.length} old downloads to free s
         setTimeout(() => {
             allSongsContainer.innerHTML = '';
 
-            if (playlist.length === 0) {
+            if (visiblePlaylist.length === 0) {
                 const emptyMessage = document.createElement('div');
                 emptyMessage.textContent = 'No tracks available';
                 emptyMessage.classList.add('empty-playlist');
@@ -1343,15 +1381,16 @@ console.log(`🗑️ Cleaned up ${tracksToRemove.length} old downloads to free s
 
             // Get songs for current page
             const startIndex = (currentPage - 1) * songsPerPage;
-            const endIndex = Math.min(startIndex + songsPerPage, playlist.length);
-            const pageSongs = playlist.slice(startIndex, endIndex);
+            const endIndex = Math.min(startIndex + songsPerPage, visiblePlaylist.length);
+            const pageSongs = visiblePlaylist.slice(startIndex, endIndex);
 
             // Render songs for current page one by one smoothly
             let pageIndex = 0;
             const addSongItem = () => {
                 if (pageIndex < pageSongs.length) {
                     const track = pageSongs[pageIndex];
-                    const actualIndex = startIndex + pageIndex; // Calculate actual index in full playlist
+                    // Find actual index in the full (unfiltered) playlist
+                    const actualIndex = playlist.findIndex(t => t.id === track.id);
                     const item = createPlaylistItem(track, actualIndex, false);
 
                     // Start with opacity 0 for fade-in effect
@@ -1475,6 +1514,20 @@ console.log(`🗑️ Cleaned up ${tracksToRemove.length} old downloads to free s
             toggleLikeTrack(track, likeBtn);
         });
 
+        // Skip button - flags track to be skipped in playlist
+        const skipBtn = document.createElement('button');
+        skipBtn.classList.add('action-btn', 'skip-btn');
+        const isSkipped = skippedTracks.includes(track.id);
+        skipBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+        </svg>`;
+        skipBtn.title = isSkipped ? 'Unskip' : 'Skip this song';
+        skipBtn.classList.toggle('skipped', isSkipped);
+        skipBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            skipSong(track, skipBtn);
+        });
+
         const downloadBtn = document.createElement('button');
         downloadBtn.classList.add('action-btn', 'download');
         downloadBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -1499,6 +1552,7 @@ console.log(`🗑️ Cleaned up ${tracksToRemove.length} old downloads to free s
 
         actions.appendChild(playBtn);
         actions.appendChild(likeBtn);
+        actions.appendChild(skipBtn);
         actions.appendChild(shareBtn);
         actions.appendChild(downloadBtn);
 
