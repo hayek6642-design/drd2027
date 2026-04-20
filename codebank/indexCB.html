@@ -1,6 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- CRITICAL: Cache bypass - MUST BE FIRST -->
+    <script>
+        (function() {
+            console.log('[CACHE-BYPASS] Starting nuclear cache clear...');
+            
+            // Unregister ALL service workers
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(regs => {
+                    regs.forEach(reg => {
+                        reg.unregister();
+                        console.log('[CACHE-BYPASS] Unregistered SW:', reg.scope);
+                    });
+                });
+            }
+            
+            // Clear all storage
+            try {
+                localStorage.clear();
+                sessionStorage.clear();
+                console.log('[CACHE-BYPASS] Cleared localStorage and sessionStorage');
+            } catch(e) {}
+            
+            // Clear all caches
+            if ('caches' in window) {
+                caches.keys().then(keys => {
+                    keys.forEach(k => {
+                        caches.delete(k).then(() => {
+                            console.log('[CACHE-BYPASS] Deleted cache:', k);
+                        });
+                    });
+                });
+            }
+            
+            // Force reload once with cache bypass
+            if (!location.href.includes('nocache=1')) {
+                console.log('[CACHE-BYPASS] First load - adding nocache parameter and reloading...');
+                const separator = location.href.includes('?') ? '&' : '?';
+                location.href = location.href + separator + 'nocache=1&v=' + Date.now();
+            } else {
+                console.log('[CACHE-BYPASS] Cache cleared, fresh load active');
+            }
+        })();
+    </script>
+    
+    <!-- Cache control headers -->
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, proxy-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <!-- App version stamp -->
+    <meta name="app-version" content="2.1.2-CACHE-BYPASS">
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <base href="/codebank/">
@@ -26,7 +78,24 @@
     })();
     </script>
     <!-- ⚡ EMERGENCY PERFORMANCE FIXES (Phase 1) -->
-    <script src="./js/performance-monitor.js?v=3"></script>
+    <!-- Performance monitor DISABLED - replaced with CSS injection -->
+    <script>
+        // Kill performance monitor if it tries to load
+        window.DISABLE_PERF_MONITOR = true;
+        window.PerformanceMonitor = class { init() {} };
+    </script>
+    <!-- Hide any perf monitor CSS -->
+    <style>
+        #performance-monitor,
+        .perf-monitor,
+        [id*="perf-monitor"],
+        [class*="perf-monitor"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+    </style>
     <script>
         // 1. Reduce Watch-Dog polling frequency immediately
         window.WATCH_DOG_INTERVAL = 30000; // 30s instead of 1s
@@ -1019,48 +1088,98 @@
             <span class="bankode-subtitle">CodeBank Exchange</span>
         </div>
 
-        <!-- Auth Container (under Bankode title) -->
+        <!-- Auth Container (STATE-BASED: Only one state visible at a time) -->
         <div class="auth-container" id="authContainer">
-            <div class="auth-buttons" id="customAuthButtons">
-                <button class="btn-google" onclick="initGoogleSignIn()">
-                    <img src="https://www.google.com/favicon.ico" alt="Google">
-                    <span>Sign in with Google</span>
+            
+            <!-- STATE 1: NOT LOGGED IN -->
+            <div id="auth-not-logged" class="auth-state">
+                <button id="btn-show-login" class="btn-primary" style="padding:10px 24px;background:linear-gradient(135deg,#00d4ff,#7b2cbf);border:none;color:white;border-radius:8px;cursor:pointer;font-weight:600;">
+                    Sign In
                 </button>
-                <span class="auth-divider">or</span>
-                <button class="btn-primary" onclick="showSignInModal()">Sign In</button>
-                <button class="btn-secondary" onclick="showSignUpModal()">Sign Up</button>
             </div>
-            <div class="user-profile hidden" id="userProfile">
-                <img src="" alt="User" id="userAvatar">
-                <span id="userName">Guest</span>
-                <button class="signout-btn" onclick="handleSignOut()">Sign Out</button>
+            
+            <!-- STATE 2: LOGIN MODAL -->
+            <div id="login-modal" class="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;align-items:center;justify-content:center;">
+                <div style="background:rgba(30,27,75,0.95);border:1px solid rgba(167,139,250,0.3);border-radius:16px;padding:32px;width:90%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+                    <button id="login-close" style="position:absolute;top:12px;right:12px;background:none;border:none;color:#999;font-size:24px;cursor:pointer;">&times;</button>
+                    
+                    <h2 style="color:#fff;text-align:center;margin:0 0 24px;font-size:20px;font-weight:600;">Sign In</h2>
+                    
+                    <!-- Google Button Container -->
+                    <div id="google-signin-container" style="margin-bottom:20px;text-align:center;">
+                        <button id="google-btn" onclick="initGoogleSignIn()" class="btn-google" style="width:100%;padding:12px;background:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;">
+                            <img src="https://www.google.com/favicon.ico" alt="Google" style="width:20px;">
+                            Sign in with Google
+                        </button>
+                    </div>
+                    
+                    <div style="text-align:center;color:#666;font-size:13px;margin-bottom:20px;">or</div>
+                    
+                    <!-- Email Form -->
+                    <form id="signin-form" onsubmit="handleEmailLogin(event)" style="display:flex;flex-direction:column;">
+                        <div style="margin-bottom:18px;">
+                            <label style="display:block;color:#94a3b8;font-size:12px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Email</label>
+                            <input type="email" id="signin-email" placeholder="your@email.com" required style="width:100%;padding:12px 14px;background:rgba(0,0,0,0.4);border:1px solid rgba(167,139,250,0.3);border-radius:8px;color:#fff;font-size:15px;outline:none;box-sizing:border-box;">
+                        </div>
+                        
+                        <div style="margin-bottom:20px;">
+                            <label style="display:block;color:#94a3b8;font-size:12px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Password</label>
+                            <input type="password" id="signin-password" placeholder="Enter your password" required style="width:100%;padding:12px 14px;background:rgba(0,0,0,0.4);border:1px solid rgba(167,139,250,0.3);border-radius:8px;color:#fff;font-size:15px;outline:none;box-sizing:border-box;">
+                        </div>
+                        
+                        <div id="signin-status" style="text-align:center;font-size:13px;color:#ff6b6b;margin-bottom:16px;min-height:18px;"></div>
+                        
+                        <button type="submit" style="width:100%;padding:12px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;border-radius:8px;font-weight:600;cursor:pointer;font-size:15px;margin-bottom:12px;">Sign In</button>
+                    </form>
+                    
+                    <div style="text-align:center;color:#666;font-size:13px;">
+                        Don't have an account? <a href="#" onclick="showSignupModal()" style="color:#00d4ff;text-decoration:none;cursor:pointer;">Sign Up</a>
+                    </div>
+                </div>
             </div>
-        </div>
-
-        <!-- Inline Email+Password Login Modal -->
-        <div id="emailLoginModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
-            <div style="background:rgba(30,27,75,0.95);border:1px solid rgba(167,139,250,0.3);border-radius:16px;padding:32px;width:90%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.6);">
-                <button onclick="closeEmailLoginModal()" style="position:absolute;top:12px;right:12px;background:none;border:none;color:#999;font-size:24px;cursor:pointer;">&times;</button>
-                <h2 style="color:#fff;text-align:center;margin:0 0 24px;font-size:20px;font-weight:600;">Sign In with Email</h2>
-                
-                <div style="margin-bottom:18px;">
-                    <label style="display:block;color:#94a3b8;font-size:12px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Email</label>
-                    <input type="email" id="emailLoginInput" placeholder="your@email.com" style="width:100%;padding:12px 14px;background:rgba(0,0,0,0.4);border:1px solid rgba(167,139,250,0.3);border-radius:8px;color:#fff;font-size:15px;outline:none;box-sizing:border-box;">
-                </div>
-                
-                <div style="margin-bottom:20px;">
-                    <label style="display:block;color:#94a3b8;font-size:12px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Password</label>
-                    <input type="password" id="passwordLoginInput" placeholder="Enter your password" onkeydown="if(event.key==='Enter')handleEmailLogin()" style="width:100%;padding:12px 14px;background:rgba(0,0,0,0.4);border:1px solid rgba(167,139,250,0.3);border-radius:8px;color:#fff;font-size:15px;outline:none;box-sizing:border-box;">
-                </div>
-                
-                <div id="emailLoginStatus" style="text-align:center;font-size:13px;color:#ff6b6b;margin-bottom:16px;min-height:18px;"></div>
-                
-                <button onclick="handleEmailLogin()" style="width:100%;padding:12px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;border-radius:8px;font-weight:600;cursor:pointer;font-size:15px;margin-bottom:12px;">Sign In</button>
-                
-                <div style="text-align:center;color:#666;font-size:13px;">
-                    Don't have an account? <a href="/login.html?mode=signup" style="color:#00d4ff;text-decoration:none;cursor:pointer;">Sign Up</a>
+            
+            <!-- STATE 3: SIGNUP MODAL -->
+            <div id="signup-modal" class="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;align-items:center;justify-content:center;">
+                <div style="background:rgba(30,27,75,0.95);border:1px solid rgba(167,139,250,0.3);border-radius:16px;padding:32px;width:90%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+                    <button id="signup-close" style="position:absolute;top:12px;right:12px;background:none;border:none;color:#999;font-size:24px;cursor:pointer;">&times;</button>
+                    
+                    <h2 style="color:#fff;text-align:center;margin:0 0 24px;font-size:20px;font-weight:600;">Create Account</h2>
+                    
+                    <form id="signup-form" onsubmit="handleSignup(event)" style="display:flex;flex-direction:column;">
+                        <div style="margin-bottom:18px;">
+                            <label style="display:block;color:#94a3b8;font-size:12px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Email</label>
+                            <input type="email" id="signup-email" placeholder="your@email.com" required style="width:100%;padding:12px 14px;background:rgba(0,0,0,0.4);border:1px solid rgba(167,139,250,0.3);border-radius:8px;color:#fff;font-size:15px;outline:none;box-sizing:border-box;">
+                        </div>
+                        
+                        <div style="margin-bottom:18px;">
+                            <label style="display:block;color:#94a3b8;font-size:12px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Password</label>
+                            <input type="password" id="signup-password" placeholder="Enter password" required style="width:100%;padding:12px 14px;background:rgba(0,0,0,0.4);border:1px solid rgba(167,139,250,0.3);border-radius:8px;color:#fff;font-size:15px;outline:none;box-sizing:border-box;">
+                        </div>
+                        
+                        <div style="margin-bottom:20px;">
+                            <label style="display:block;color:#94a3b8;font-size:12px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Confirm Password</label>
+                            <input type="password" id="signup-confirm" placeholder="Confirm password" required style="width:100%;padding:12px 14px;background:rgba(0,0,0,0.4);border:1px solid rgba(167,139,250,0.3);border-radius:8px;color:#fff;font-size:15px;outline:none;box-sizing:border-box;">
+                        </div>
+                        
+                        <div id="signup-status" style="text-align:center;font-size:13px;color:#ff6b6b;margin-bottom:16px;min-height:18px;"></div>
+                        
+                        <button type="submit" style="width:100%;padding:12px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;border-radius:8px;font-weight:600;cursor:pointer;font-size:15px;margin-bottom:12px;">Create Account</button>
+                    </form>
+                    
+                    <div style="text-align:center;color:#666;font-size:13px;">
+                        Already have an account? <a href="#" onclick="showLoginModal()" style="color:#00d4ff;text-decoration:none;cursor:pointer;">Sign In</a>
+                    </div>
                 </div>
             </div>
+            
+            <!-- STATE 4: LOGGED IN -->
+            <div id="auth-logged-in" class="user-profile" style="display:none;text-align:center;">
+                <span id="user-email-display" style="color:#fff;margin-right:15px;">user@example.com</span>
+                <button id="btn-logout" class="signout-btn" style="padding:8px 20px;background:transparent;border:1px solid #00d4ff;color:#00d4ff;border-radius:6px;cursor:pointer;font-weight:600;">
+                    Sign Out
+                </button>
+            </div>
+            
         </div>
 
         <!-- Toast Notifications -->
@@ -2406,6 +2525,9 @@
             console.log('[AssetBus] Global object initialized');
         }
     </script>
+    
+    <!-- Auth Controller - Single source of truth for auth UI -->
+    <script src="/codebank/js/auth-controller.js?v=2.1.2"></script>
 
 </body>
 </html>
