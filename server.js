@@ -201,6 +201,14 @@ app.get("/api/auth/me", (req, res) => {
   }
 });
 
+// Google Client ID endpoint
+app.get('/api/auth/google-client-id', (req, res) => {
+  const raw = process.env.GOOGLE_CLIENT_ID || '';
+  const isValid = raw && raw !== 'your_google_client_id.apps.googleusercontent.com' && 
+    /^\d+(-[a-z0-9]+)?\.apps\.googleusercontent\.com$/.test(raw);
+  res.json({ clientId: isValid ? raw : '', configured: isValid });
+});
+
 // Get auth status
 app.get("/api/auth/status", (req, res) => {
   const sessionId = req.cookies?.sessionId || req.headers['x-session-id'];
