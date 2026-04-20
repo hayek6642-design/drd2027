@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YT-Clear Hybrid Auth</title>
+    
+    <!-- BLOCK ALL AUTH POPUPS/SIDE PANELS -->
+    <script>
+    (function() {
+      // Hide all Google Sign-In popups BEFORE anything loads
+      const hideAuthPanels = () => {
+        // Block Google credential picker
+        const gsiContainers = document.querySelectorAll('[id*="gsi"], [id*="credential"], [class*="gsi"]');
+        gsiContainers.forEach(el => {
+          if (el && el.style) {
+            el.style.display = 'none !important';
+            el.style.visibility = 'hidden !important';
+            el.style.pointerEvents = 'none !important';
+            el.style.opacity = '0 !important';
+          }
+        });
+        
+        // Hide any iframes from Google
+        const iframes = document.querySelectorAll('iframe');
+        iframes.forEach(iframe => {
+          const src = iframe.src || '';
+          if (src.includes('gstatic') || src.includes('accounts.google') || src.includes('credential')) {
+            iframe.style.display = 'none !important';
+            if (iframe.parentElement) iframe.parentElement.style.display = 'none !important';
+          }
+        });
+      };
+      
+      // Run before DOM loads
+      hideAuthPanels();
+      document.addEventListener('DOMContentLoaded', hideAuthPanels);
+      
+      // Watch for mutations
+      const observer = new MutationObserver(hideAuthPanels);
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+      
+      window.__authPanelsBlocked = true;
+    })();
+    </script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0d1117 0%, #1a1f2e 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #e6edf3;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+        }
+
+        .auth-box {
+            background: linear-gradient(135deg, #161b22 0%, #0d1117 100%);
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #58a6ff 0%, #79c0ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #8b949e;
+            font-size: 14px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #30363d;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            background: transparent;
+            color: #8b949e;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .tab-button.active {
+            color: #58a6ff;
+            border-bottom-color: #58a6ff;
+        }
+
+        .tab-button:hover {
+            color: #79c0ff;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .error-message {
+            background-color: rgba(248, 81, 73, 0.15);
+            border: 1px solid #f85149;
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            color: #f85149;
+            font-size: 13px;
+            line-height: 1.5;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .field-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            font-size: 13px;
+            color: #c9d1d9;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        input[type="tel"],
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            background: #0d1117;
+            color: #c9d1d9;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="password"]:focus,
+        input[type="tel"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+            background: #0d1117;
+        }
+
+        input::placeholder {
+            color: #6e7681;
+        }
+
+        .submit-button {
+            width: 100%;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #00d9ff 0%, #00bfff 100%);
+            border: none;
+            border-radius: 6px;
+            color: #0d1117;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .submit-button:hover:not(:disabled) {
+            box-shadow: 0 8px 20px rgba(0, 217, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .submit-button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .submit-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .google-button {
+            width: 100%;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #4285f4 0%, #357ae8 100%);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .google-button:hover {
+            box-shadow: 0 8px 20px rgba(66, 133, 244, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .divider {
+            text-align: center;
+            margin: 20px 0;
+            position: relative;
+            color: #8b949e;
+            font-size: 12px;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 100%;
+            height: 1px;
+            background: #30363d;
+            z-index: 0;
+        }
+
+        .divider span {
+            background: #0d1117;
+            padding: 0 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #30363d;
+            border-top-color: #58a6ff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #8b949e;
+            font-size: 13px;
+            margin-left: 8px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #30363d;
+            color: #6e7681;
+            font-size: 11px;
+        }
+
+        .footer-link {
+            color: #58a6ff;
+            text-decoration: none;
+        }
+
+        .footer-link:hover {
+            text-decoration: underline;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="auth-box">
+            <div class="header">
+                <div class="icon">🔐</div>
+                <h1 class="title">YT-Clear Hybrid Auth</h1>
+                <p class="subtitle">Sign in or create your account</p>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab-button active" data-tab="login">Login</button>
+                <button class="tab-button" data-tab="signup">Sign Up</button>
+            </div>
+
+            <!-- LOGIN TAB -->
+            <div id="login" class="tab-content active">
+                <div class="error-message" id="login-error"></div>
+
+                <!-- Google Sign-In Button -->
+                <button type="button" class="google-button" id="google-signin-btn">
+                    🔵 Continue with Google
+                </button>
+
+                <div class="divider"><span>or</span></div>
+
+                <form id="login-form">
+                    <div class="field-group">
+                        <label for="login-email">Email Address</label>
+                        <input
+                            type="email"
+                            id="login-email"
+                            name="email"
+                            placeholder="you@example.com"
+                            required
+                        />
+                    </div>
+
+                    <div class="field-group">
+                        <label for="login-password">Password</label>
+                        <input
+                            type="password"
+                            id="login-password"
+                            name="password"
+                            placeholder="••••••••"
+                            required
+                        />
+                    </div>
+
+                    <button type="submit" class="submit-button">Sign In</button>
+                    <div class="loading" id="login-loading">
+                        <div class="spinner"></div>
+                        <span class="loading-text">Signing in...</span>
+                    </div>
+                </form>
+            </div>
+
+            <!-- SIGNUP TAB -->
+            <div id="signup" class="tab-content">
+                <div class="error-message" id="signup-error"></div>
+
+                <form id="signup-form">
+                    <div class="field-group">
+                        <label for="signup-email">Email Address</label>
+                        <input
+                            type="email"
+                            id="signup-email"
+                            name="email"
+                            placeholder="you@example.com"
+                            required
+                        />
+                    </div>
+
+                    <div class="field-group">
+                        <label for="signup-username">Username (Optional)</label>
+                        <input
+                            type="text"
+                            id="signup-username"
+                            name="username"
+                            placeholder="your username"
+                        />
+                    </div>
+
+                    <div class="field-group">
+                        <label for="signup-password">Password</label>
+                        <input
+                            type="password"
+                            id="signup-password"
+                            name="password"
+                            placeholder="••••••••"
+                            required
+                        />
+                    </div>
+
+                    <div class="field-group">
+                        <label for="signup-confirm">Confirm Password</label>
+                        <input
+                            type="password"
+                            id="signup-confirm"
+                            name="confirm"
+                            placeholder="••••••••"
+                            required
+                        />
+                    </div>
+
+                    <div class="field-group">
+                        <label for="signup-religion">Religion</label>
+                        <select id="signup-religion" name="religion" required>
+                            <option value="">Select your religion</option>
+                            <option value="Islam">Islam</option>
+                            <option value="Christianity">Christianity</option>
+                            <option value="Judaism">Judaism</option>
+                            <option value="Hinduism">Hinduism</option>
+                            <option value="Buddhism">Buddhism</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="field-group">
+                        <label for="signup-country">Country</label>
+                        <select id="signup-country" name="country" required>
+                            <option value="">Select your country</option>
+                            <option value="EG">Egypt</option>
+                            <option value="SA">Saudi Arabia</option>
+                            <option value="AE">United Arab Emirates</option>
+                            <option value="US">United States</option>
+                            <option value="GB">United Kingdom</option>
+                            <option value="CA">Canada</option>
+                            <option value="AU">Australia</option>
+                        </select>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="field-group">
+                            <label for="signup-country-code">Country Code</label>
+                            <select id="signup-country-code" name="countryCode" required>
+                                <option value="">Code</option>
+                                <option value="+20">+20 (Egypt)</option>
+                                <option value="+966">+966 (Saudi)</option>
+                                <option value="+971">+971 (UAE)</option>
+                                <option value="+1">+1 (US/Canada)</option>
+                                <option value="+44">+44 (UK)</option>
+                                <option value="+61">+61 (Australia)</option>
+                            </select>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="signup-phone">Phone Number</label>
+                            <input
+                                type="tel"
+                                id="signup-phone"
+                                name="phone"
+                                placeholder="123456789"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <button type="submit" class="submit-button">Sign Up</button>
+                    <div class="loading" id="signup-loading">
+                        <div class="spinner"></div>
+                        <span class="loading-text">Creating account...</span>
+                    </div>
+                </form>
+            </div>
+
+            <div class="footer">
+                <p>Powered by <a href="#" class="footer-link">YT-Clear Hybrid Authentication</a></p>
+                <p style="margin-top: 8px;">Secure authentication for your assets</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Google Sign-In Script -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <script>
+        // Initialize Google Sign-In
+        function initGoogleSignIn() {
+            if (!window.google?.accounts?.id) {
+                console.warn('[GOOGLE] API not ready yet');
+                setTimeout(initGoogleSignIn, 500);
+                return;
+            }
+
+            // Fetch client ID from server
+            fetch('/api/auth/google-client-id')
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.clientId || !data.isValid) {
+                        console.warn('[GOOGLE] Invalid client ID from server:', data);
+                        document.getElementById('google-signin-btn').style.display = 'none';
+                        return;
+                    }
+
+                    window.GOOGLE_CLIENT_ID = data.clientId;
+
+                    // Initialize with no auto_select, no fedcm, no popups
+                    window.google.accounts.id.initialize({
+                        client_id: data.clientId,
+                        callback: handleGoogleSignIn,
+                        auto_select: false,
+                        use_fedcm_for_prompt: false
+                    });
+
+                    console.log('[GOOGLE] Initialized with client_id:', data.clientId);
+                })
+                .catch(err => {
+                    console.error('[GOOGLE] Failed to fetch client ID:', err);
+                    document.getElementById('google-signin-btn').style.display = 'none';
+                });
+        }
+
+        // Handle Google Sign-In response
+        async function handleGoogleSignIn(response) {
+            const { credential } = response;
+
+            if (!credential) {
+                showLoginError('Google Sign-In failed: No credential received');
+                return;
+            }
+
+            document.getElementById('login-loading').classList.add('show');
+            document.getElementById('google-signin-btn').disabled = true;
+
+            try {
+                const res = await fetch('/api/auth/google', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ credential })
+                });
+
+                const data = await res.json();
+
+                if (data.success || data.authenticated) {
+                    // Save session info
+                    if (data.token) localStorage.setItem('session_token', data.token);
+                    if (data.sessionId) localStorage.setItem('sessionId', data.sessionId);
+                    if (data.userId) localStorage.setItem('userId', data.userId);
+
+                    // Redirect to home
+                    window.location.href = '/';
+                } else {
+                    showLoginError('Google authentication failed: ' + (data.error || data.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('[GOOGLE AUTH ERROR]', error);
+                showLoginError('Network error: ' + error.message);
+            } finally {
+                document.getElementById('login-loading').classList.remove('show');
+                document.getElementById('google-signin-btn').disabled = false;
+            }
+        }
+
+        // Tab switching
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tabName = button.dataset.tab;
+
+                document.querySelectorAll('.tab-content').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+
+                document.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+
+                document.getElementById(tabName).classList.add('active');
+                button.classList.add('active');
+
+                document.getElementById('login-error').classList.remove('show');
+                document.getElementById('signup-error').classList.remove('show');
+            });
+        });
+
+        // LOGIN FORM HANDLER
+        document.getElementById('login-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const email = document.getElementById('login-email').value?.trim();
+            const password = document.getElementById('login-password').value?.trim();
+            const errorDiv = document.getElementById('login-error');
+            const loadingDiv = document.getElementById('login-loading');
+            const submitButton = event.target.querySelector('button[type="submit"]');
+
+            if (!email || !password) {
+                showLoginError('Please fill in all fields (email and password).');
+                return;
+            }
+
+            if (!email.includes('@')) {
+                showLoginError('Please enter a valid email address.');
+                return;
+            }
+
+            errorDiv.classList.remove('show');
+            loadingDiv.classList.add('show');
+            submitButton.disabled = true;
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success' || response.ok) {
+                    window.location.href = '/';
+                } else {
+                    showLoginError(data.error || 'Login failed. Please try again.');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showLoginError('Network error: ' + error.message);
+            } finally {
+                loadingDiv.classList.remove('show');
+                submitButton.disabled = false;
+            }
+        });
+
+        // SIGNUP FORM HANDLER
+        document.getElementById('signup-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const email = document.getElementById('signup-email').value?.trim();
+            const username = document.getElementById('signup-username').value?.trim();
+            const password = document.getElementById('signup-password').value?.trim();
+            const confirm = document.getElementById('signup-confirm').value?.trim();
+            const religion = document.getElementById('signup-religion').value?.trim();
+            const country = document.getElementById('signup-country').value?.trim();
+            const countryCode = document.getElementById('signup-country-code').value?.trim();
+            const phone = document.getElementById('signup-phone').value?.trim();
+
+            const errorDiv = document.getElementById('signup-error');
+            const loadingDiv = document.getElementById('signup-loading');
+            const submitButton = event.target.querySelector('button[type="submit"]');
+
+            if (!email || !password || !confirm || !religion || !country || !countryCode || !phone) {
+                showSignupError('All fields are required (username is optional).');
+                return;
+            }
+
+            if (!email.includes('@')) {
+                showSignupError('Please enter a valid email address.');
+                return;
+            }
+
+            if (password.length < 6) {
+                showSignupError('Password must be at least 6 characters long.');
+                return;
+            }
+
+            if (password !== confirm) {
+                showSignupError('Passwords do not match.');
+                return;
+            }
+
+            errorDiv.classList.remove('show');
+            loadingDiv.classList.add('show');
+            submitButton.disabled = true;
+
+            try {
+                const response = await fetch('/api/auth/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        email,
+                        username: username || email.split('@')[0],
+                        password,
+                        religion,
+                        country,
+                        countryCode,
+                        phone
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success' || response.ok) {
+                    window.location.href = '/';
+                } else if (data.error === 'USER_EXISTS') {
+                    showSignupError('This email is already registered. Please sign in instead.');
+                } else {
+                    showSignupError(data.error || 'Signup failed. Please try again.');
+                }
+            } catch (error) {
+                console.error('Signup error:', error);
+                showSignupError('Network error: ' + error.message);
+            } finally {
+                loadingDiv.classList.remove('show');
+                submitButton.disabled = false;
+            }
+        });
+
+        function showLoginError(msg) {
+            const errorDiv = document.getElementById('login-error');
+            errorDiv.textContent = msg;
+            errorDiv.classList.add('show');
+        }
+
+        function showSignupError(msg) {
+            const errorDiv = document.getElementById('signup-error');
+            errorDiv.textContent = msg;
+            errorDiv.classList.add('show');
+        }
+
+        // Google Button Click Handler
+        document.getElementById('google-signin-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            if (window.google?.accounts?.id) {
+                window.google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                        // Fallback if prompt doesn't work
+                        window.google.accounts.id.renderButton(
+                            document.getElementById('google-signin-btn'),
+                            {
+                                theme: 'filled_blue',
+                                size: 'large',
+                                text: 'signin_with'
+                            }
+                        );
+                    }
+                });
+            }
+        });
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', initGoogleSignIn);
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initGoogleSignIn);
+        } else {
+            initGoogleSignIn();
+        }
+    </script>
+</body>
+</html>
