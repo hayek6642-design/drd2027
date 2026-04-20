@@ -3,558 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Chat Hub - Modern</title>
-    
-    <!-- EMERGENCY: Clear corrupted cache -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    
-    <script>
-        // Force unregister all service workers + clear cache
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-                registrations.forEach(registration => {
-                    console.log('[Init] Unregistering SW:', registration.scope);
-                    registration.unregister();
-                });
-            });
-        }
-        
-        // Clear all caches
-        if (window.caches) {
-            caches.keys().then(names => {
-                names.forEach(name => {
-                    console.log('[Init] Deleting cache:', name);
-                    caches.delete(name);
-                });
-            });
-        }
-    </script>
-
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-            background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 50%, #16213e 100%);
-            color: #e0e0e0;
-            height: 100vh;
-            display: flex;
-            overflow: hidden;
-            position: relative;
-        }
-
-        /* Chat Container */
-        .chat-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-            overflow: hidden;
-        }
-
-        .chat-header {
-            background: rgba(26, 26, 46, 0.8);
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(10px);
-        }
-
-        .chat-header h1 {
-            font-size: 1.2rem;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .status-indicator {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #4ade80;
-            animation: pulse 2s infinite;
-            display: inline-block;
-            margin-right: 8px;
-        }
-
-        .status-indicator.error {
-            background: #ef4444;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        /* Messages */
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .message {
-            display: flex;
-            gap: 10px;
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .message.user {
-            justify-content: flex-end;
-        }
-
-        .message-content {
-            max-width: 70%;
-            padding: 12px 15px;
-            border-radius: 10px;
-            word-wrap: break-word;
-        }
-
-        .message.bot .message-content {
-            background: rgba(102, 126, 234, 0.15);
-            border: 1px solid rgba(102, 126, 234, 0.3);
-            color: #e0e0e0;
-        }
-
-        .message.user .message-content {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: #fff;
-        }
-
-        .empty-state {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: #666;
-            text-align: center;
-        }
-
-        .empty-state-icon {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            opacity: 0.5;
-        }
-
-        /* Input Area */
-        .chat-input-container {
-            padding: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(15, 20, 25, 0.5);
-            backdrop-filter: blur(10px);
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .input-row {
-            display: flex;
-            gap: 10px;
-            width: 100%;
-        }
-
-        .model-selector, .chat-input {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 8px;
-            color: #fff;
-            padding: 10px 15px;
-            font-size: 0.95rem;
-            transition: all 0.2s;
-        }
-
-        .model-selector:focus, .chat-input:focus {
-            outline: none;
-            background: rgba(255, 255, 255, 0.12);
-            border-color: rgba(102, 126, 234, 0.5);
-            box-shadow: 0 0 10px rgba(102, 126, 234, 0.2);
-        }
-
-        .chat-input {
-            flex: 1;
-        }
-
-        .input-controls {
-            display: flex;
-            gap: 6px;
-        }
-
-        .icon-btn, .send-btn {
-            border-radius: 6px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-            transition: all 0.2s;
-            border: none;
-            padding: 10px;
-        }
-
-        .icon-btn {
-            background: rgba(102, 126, 234, 0.2);
-            border: 1px solid rgba(102, 126, 234, 0.4);
-            color: #667eea;
-        }
-
-        .icon-btn:hover {
-            background: rgba(102, 126, 234, 0.3);
-            color: #7c8eef;
-        }
-
-        .send-btn {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: #fff;
-            padding: 10px 20px;
-            font-weight: 500;
-        }
-
-        .send-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
-        }
-
-        .error-message {
-            background: rgba(239, 68, 68, 0.15);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            color: #fca5a5;
-            padding: 12px 15px;
-            border-radius: 8px;
-            margin: 10px 0;
-        }
-
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: rgba(102, 126, 234, 0.3);
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(102, 126, 234, 0.5);
-        }
-    </style>
+    <title>AI Chat - CodeBank</title>
+    <link rel="stylesheet" href="ai-chat.css">
 </head>
 <body>
-    <div class="chat-container">
-        <div class="chat-header">
-            <h1>🤖 AI Chat Hub</h1>
-            <div>
-                <span style="margin-right: 15px;">
-                    <span class="status-indicator" id="statusIndicator"></span>
-                    <span id="statusText">Ready</span>
-                </span>
+    <div class="ai-chat-container">
+        <!-- Left Panel: Chat Threads -->
+        <div class="chat-threads-list">
+            <div class="threads-header">
+                <h3>💬 Conversations</h3>
+                <button class="new-chat-btn" id="newChatBtn">+ New</button>
+            </div>
+
+            <div class="threads-container" id="threadsContainer">
+                <!-- Chat threads populated here -->
             </div>
         </div>
 
-        <div class="chat-messages" id="chatMessages">
-            <div class="empty-state">
-                <div class="empty-state-icon">💬</div>
-                <h2>Welcome to AI Chat Hub</h2>
-                <p>Select a model and start chatting</p>
-            </div>
-        </div>
-
-        <div class="chat-input-container">
-            <div class="input-row">
-                <select class="model-selector" id="modelSelect">
-                    <option value="">Select an AI Model...</option>
-                    <optgroup label="Groq (Free)">
-                        <option value="groq:llama-3.1-8b-instant">Llama 3.1 8B</option>
-                        <option value="groq:mixtral-8x7b-32768">Mixtral 8x7B</option>
-                    </optgroup>
-                    <optgroup label="OpenRouter (Free + Paid)">
-                        <option value="openrouter:meta-llama/llama-2-13b-chat">Llama 2 13B</option>
-                        <option value="openrouter:mistralai/mistral-7b-instruct">Mistral 7B</option>
-                    </optgroup>
-                </select>
-            </div>
-
-            <div class="input-row">
-                <input 
-                    type="text" 
-                    class="chat-input" 
-                    id="chatInput" 
-                    placeholder="Type your message... (Ctrl+Enter to send)"
-                    autocomplete="off"
-                >
-                <div class="input-controls">
-                    <button class="icon-btn" id="fileBtn" title="Attach file">📎</button>
-                    <button class="icon-btn" id="voiceBtn" title="Voice input">🎤</button>
-                    <button class="send-btn" id="sendBtn">Send</button>
+        <!-- Right Panel: Chat View -->
+        <div class="chat-view">
+            <!-- No Chat State -->
+            <div class="no-chat-state" id="noChatState">
+                <div class="welcome-box">
+                    <h2>🤖 AI Chat</h2>
+                    <p>Start a new conversation or select one from the list</p>
+                    <button class="start-btn" id="startNewChatBtn">Start Chat</button>
                 </div>
             </div>
-            <input type="file" id="fileInput" style="display:none;" accept="*/*">
+
+            <!-- Active Chat -->
+            <div class="active-chat" id="activeChat" style="display: none;">
+                <div class="chat-header">
+                    <div>
+                        <h2 id="chatTitle">New Conversation</h2>
+                        <p id="chatSubtitle" class="chat-subtitle">AI Assistant</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn-icon" id="infoBtn" title="Info">ℹ️</button>
+                        <button class="btn-icon delete" id="deleteBtn" title="Delete">🗑️</button>
+                    </div>
+                </div>
+
+                <div class="messages-container" id="messagesContainer">
+                    <!-- Messages populated here -->
+                </div>
+
+                <div class="input-area">
+                    <form id="chatForm">
+                        <input type="text" id="messageInput" placeholder="Type your message..." class="message-input" autocomplete="off">
+                        <button type="submit" class="send-btn">Send</button>
+                    </form>
+                </div>
+
+                <div class="quick-actions">
+                    <button class="quick-action-btn" data-prompt="Help me with...">Help me with...</button>
+                    <button class="quick-action-btn" data-prompt="Explain...">Explain...</button>
+                    <button class="quick-action-btn" data-prompt="Write...">Write...</button>
+                    <button class="quick-action-btn" data-prompt="Code...">Code...</button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <script>
-        // ═══════════════════════════════════════════════════════════
-        // CORE CONFIG
-        // ═══════════════════════════════════════════════════════════
-        
-        const API_KEY_OPENROUTER = localStorage.getItem('openrouter_api_key') || 'sk-or-v1-' + Math.random().toString(36).substr(2, 40);
-        const API_KEY_GROQ = localStorage.getItem('groq_api_key') || 'gsk_' + Math.random().toString(36).substr(2, 40);
-        const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-        const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
-
-        let isRecording = false;
-        let mediaRecorder = null;
-        let audioChunks = [];
-
-        // ═══════════════════════════════════════════════════════════
-        // API CALL FUNCTION
-        // ═══════════════════════════════════════════════════════════
-
-        async function callAI(model, message) {
-            const [provider, modelName] = model.split(':');
-            
-            let url, headers, body;
-
-            if (provider === 'groq') {
-                url = GROQ_URL;
-                headers = {
-                    'Authorization': `Bearer ${API_KEY_GROQ}`,
-                    'Content-Type': 'application/json'
-                };
-                body = {
-                    model: modelName,
-                    messages: [{ role: 'user', content: message }],
-                    temperature: 0.7,
-                    max_tokens: 1024
-                };
-            } else if (provider === 'openrouter') {
-                url = OPENROUTER_URL;
-                headers = {
-                    'Authorization': `Bearer ${API_KEY_OPENROUTER}`,
-                    'Content-Type': 'application/json',
-                    'HTTP-Referer': window.location.origin,
-                    'X-Title': 'AI Chat Hub'
-                };
-                body = {
-                    model: modelName,
-                    messages: [{ role: 'user', content: message }],
-                    temperature: 0.7,
-                    max_tokens: 1024
-                };
-            } else {
-                throw new Error('Unknown provider: ' + provider);
-            }
-
-            try {
-                updateStatus('Sending...', false);
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: headers,
-                    body: JSON.stringify(body)
-                });
-
-                if (!response.ok) {
-                    const error = await response.json().catch(() => ({ message: response.statusText }));
-                    throw new Error(error.error?.message || error.message || `API Error: ${response.status}`);
-                }
-
-                const data = await response.json();
-                updateStatus('Ready', true);
-                return data.choices[0].message.content;
-            } catch (error) {
-                updateStatus('Error: ' + error.message, false);
-                throw error;
-            }
-        }
-
-        // ═══════════════════════════════════════════════════════════
-        // CHAT FUNCTIONS
-        // ═══════════════════════════════════════════════════════════
-
-        async function sendMessage() {
-            const input = document.getElementById('chatInput');
-            const message = input.value.trim();
-            const model = document.getElementById('modelSelect').value;
-
-            if (!message || !model) {
-                alert('Please select a model and enter a message');
-                return;
-            }
-
-            addMessage('user', message);
-            input.value = '';
-
-            try {
-                addMessage('bot', '⏳ Thinking...');
-                const response = await callAI(model, message);
-                
-                // Remove "thinking" message and add real response
-                const messagesDiv = document.getElementById('chatMessages');
-                const lastMessage = messagesDiv.lastChild;
-                if (lastMessage && lastMessage.textContent.includes('⏳')) {
-                    messagesDiv.removeChild(lastMessage);
-                }
-                
-                addMessage('bot', response);
-            } catch (error) {
-                addMessage('bot', `❌ Error: ${error.message}`);
-            }
-        }
-
-        function addMessage(sender, content) {
-            const messagesDiv = document.getElementById('chatMessages');
-            
-            if (messagesDiv.innerHTML.includes('empty-state')) {
-                messagesDiv.innerHTML = '';
-            }
-
-            const messageEl = document.createElement('div');
-            messageEl.className = `message ${sender}`;
-            messageEl.innerHTML = `<div class="message-content">${escapeHtml(content)}</div>`;
-            messagesDiv.appendChild(messageEl);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
-
-        function escapeHtml(text) {
-            const map = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            };
-            return text.replace(/[&<>"']/g, m => map[m]);
-        }
-
-        function updateStatus(text, isGood) {
-            document.getElementById('statusText').textContent = text;
-            const indicator = document.getElementById('statusIndicator');
-            if (isGood) {
-                indicator.classList.remove('error');
-                indicator.style.background = '#4ade80';
-            } else {
-                indicator.classList.add('error');
-                indicator.style.background = '#ef4444';
-            }
-        }
-
-        // ═══════════════════════════════════════════════════════════
-        // FILE UPLOAD
-        // ═══════════════════════════════════════════════════════════
-
-        document.getElementById('fileBtn').addEventListener('click', () => {
-            document.getElementById('fileInput').click();
-        });
-
-        document.getElementById('fileInput').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const filename = file.name;
-                    const size = (file.size / 1024).toFixed(2);
-                    addMessage('user', `📎 Attached: ${filename} (${size}KB)`);
-                    document.getElementById('fileInput').value = '';
-                };
-                reader.readAsText(file).catch(() => {
-                    addMessage('user', `📎 Attached: ${file.name}`);
-                });
-            }
-        });
-
-        // ═══════════════════════════════════════════════════════════
-        // VOICE INPUT (SpeechRecognition)
-        // ═══════════════════════════════════════════════════════════
-
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        
-        if (SpeechRecognition) {
-            const recognition = new SpeechRecognition();
-            recognition.continuous = false;
-            recognition.interimResults = true;
-            recognition.lang = 'en-US';
-
-            document.getElementById('voiceBtn').addEventListener('click', () => {
-                if (!isRecording) {
-                    isRecording = true;
-                    document.getElementById('voiceBtn').style.opacity = '0.5';
-                    document.getElementById('voiceBtn').style.background = 'rgba(239, 68, 68, 0.3)';
-                    recognition.start();
-                    updateStatus('Listening...', false);
-                } else {
-                    isRecording = false;
-                    document.getElementById('voiceBtn').style.opacity = '1';
-                    document.getElementById('voiceBtn').style.background = 'rgba(102, 126, 234, 0.2)';
-                    recognition.stop();
-                    updateStatus('Ready', true);
-                }
-            });
-
-            recognition.onresult = (event) => {
-                let transcript = '';
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                    transcript += event.results[i][0].transcript;
-                }
-                document.getElementById('chatInput').value = transcript;
-            };
-
-            recognition.onerror = (event) => {
-                updateStatus(`Voice Error: ${event.error}`, false);
-                isRecording = false;
-            };
-
-            recognition.onend = () => {
-                isRecording = false;
-                document.getElementById('voiceBtn').style.opacity = '1';
-                document.getElementById('voiceBtn').style.background = 'rgba(102, 126, 234, 0.2)';
-            };
-        } else {
-            console.warn('SpeechRecognition not supported in this browser');
-            document.getElementById('voiceBtn').style.opacity = '0.5';
-            document.getElementById('voiceBtn').title = 'Voice input not supported in this browser';
-        }
-
-        // ═══════════════════════════════════════════════════════════
-        // EVENT LISTENERS
-        // ═══════════════════════════════════════════════════════════
-
-        document.getElementById('sendBtn').addEventListener('click', sendMessage);
-        document.getElementById('chatInput').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                sendMessage();
-            }
-        });
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('✅ AI Chat Hub Ready');
-            updateStatus('Ready', true);
-        });
-    </script>
+    <script src="ai-chat.js"></script>
 </body>
 </html>
