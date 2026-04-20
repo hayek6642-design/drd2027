@@ -1353,8 +1353,8 @@ console.log(`🗑️ Cleaned up ${tracksToRemove.length} old downloads to free s
         const allSongsContainer = document.getElementById('playlist-container');
         if (!allSongsContainer) return;
 
-        // Filter out skipped tracks
-        const visiblePlaylist = playlist.filter(track => !skippedTracks.includes(track.id));
+        // Show all tracks (skipped ones will be styled differently)
+        const visiblePlaylist = playlist;
 
         // Calculate total pages
         totalPages = Math.ceil(visiblePlaylist.length / songsPerPage);
@@ -1445,6 +1445,11 @@ console.log(`🗑️ Cleaned up ${tracksToRemove.length} old downloads to free s
 
         if (mainIndex === currentTrackIndex) {
             item.classList.add('active');
+        }
+
+        // Add 'skipped-track' class if track is in skipped list
+        if (skippedTracks.includes(track.id)) {
+            item.classList.add('skipped-track');
         }
 
         // Track thumbnail

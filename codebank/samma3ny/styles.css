@@ -962,8 +962,29 @@ body {
     100% { transform: scale(1) translateZ(0); }
 }
 
+/* ===== SKIPPED TRACK STYLING ===== */
+.playlist-item.skipped-track {
+    opacity: 0.45;
+    filter: grayscale(60%);
+    transition: opacity 0.3s ease, filter 0.3s ease;
+}
 
+.playlist-item.skipped-track .track-name {
+    text-decoration: line-through;
+    text-decoration-color: rgba(255, 193, 7, 0.5);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+    color: rgba(255, 255, 255, 0.5);
+}
 
+.playlist-item.skipped-track .track-meta {
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.playlist-item.skipped-track:hover {
+    opacity: 0.6;
+    filter: grayscale(50%);
+}
 
 
 /* ===== LOADING AND ERROR STATES ===== */
