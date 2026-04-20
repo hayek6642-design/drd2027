@@ -373,11 +373,26 @@ app.use(express.static(path.join(__dirname, 'codebank'), {
     if (filePath.endsWith('.html')) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
     }
+    if (filePath.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    }
   },
   maxAge: '1h'
 }));
 
+// Serve root directory files with proper MIME types
 app.use(express.static(__dirname, {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.js') || filePath.endsWith('.mjs')) {
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    } else if (filePath.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css; charset=utf-8');
+    } else if (filePath.endsWith('.json')) {
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    } else if (filePath.endsWith('.html')) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    }
+  },
   maxAge: '1h'
 }));
 
@@ -506,7 +521,16 @@ app.post("/api/auth/google", async (req, res) => {
 
 // Fallback for undefined routes
 app.get("*", (req, res) => {
-  // Serve static files if they exist, otherwise serve main app
+  // Don't serve HTML for asset file requests (.js, .css, .json, .png, etc.)
+  const assetExtensions = ['.js', '.mjs', '.css', '.json', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.woff', '.woff2', '.ttf', '.eot', '.mp3', '.wav'];
+  const hasAssetExtension = assetExtensions.some(ext => req.path.endsWith(ext));
+  
+  if (hasAssetExtension) {
+    // Asset not found - return 404, don't serve HTML
+    return res.status(404).json({ error: 'Asset not found: ' + req.path });
+  }
+  
+  // For actual page navigation, serve the main app
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.sendFile(path.join(__dirname, "yt-new-clear.html"));
 });
