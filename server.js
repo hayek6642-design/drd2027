@@ -249,10 +249,57 @@ app.post("/api/auth/logout", (req, res) => {
 
 // Register endpoint
 app.post("/api/auth/register", (req, res) => {
-  res.json({ 
-    success: true, 
-    message: "Register endpoint - feature coming soon",
-    status: "demo"
+  const { email, password } = req.body;
+  
+  if (!email || !password) {
+    return res.status(400).json({ 
+      success: false,
+      error: "Email and password required" 
+    });
+  }
+
+  // Check if user already exists
+  if (demoUsers.some(u => u.email === email)) {
+    return res.status(400).json({ 
+      success: false,
+      error: "User already exists" 
+    });
+  }
+
+  // Create new user
+  const newUser = {
+    id: Math.random().toString(36).substr(2, 9),
+    email: email,
+    password: password,
+    name: email.split('@')[0]
+  };
+
+  demoUsers.push(newUser);
+
+  const token = jwt.sign(
+    { userId: newUser.id, email: newUser.email },
+    JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+
+  const sessionId = Math.random().toString(36).substr(2, 9);
+  sessions.set(sessionId, {
+    userId: newUser.id,
+    email: newUser.email,
+    token: token,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000)
+  });
+
+  res.json({
+    success: true,
+    sessionId: sessionId,
+    token: token,
+    user: {
+      id: newUser.id,
+      email: newUser.email,
+      name: newUser.name
+    }
   });
 });
 
@@ -333,6 +380,129 @@ app.use(express.static(path.join(__dirname, 'codebank'), {
 app.use(express.static(__dirname, {
   maxAge: '1h'
 }));
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADDITIONAL AUTH ENDPOINTS (Verify, Google, Register)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Verify session/token
+app.get("/api/auth/verify", (req, res) => {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ 
+      success: false,
+      error: "No token provided" 
+    });
+  }
+
+  const token = authHeader.substring(7);
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || JWT_SECRET);
+    const user = demoUsers.find(u => u.id === decoded.userId);
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        error: "User not found" 
+      });
+    }
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name
+      }
+    });
+  } catch (error) {
+    res.status(401).json({ 
+      success: false,
+      error: "Invalid token" 
+    });
+  }
+});
+
+// Google sign-in endpoint
+app.post("/api/auth/google", async (req, res) => {
+  const { credential } = req.body;
+
+  if (!credential) {
+    return res.status(400).json({ 
+      success: false,
+      error: "No credential provided" 
+    });
+  }
+
+  try {
+    // For demo, just decode (NOT SECURE - for testing only)
+    const parts = credential.split('.');
+    let payload;
+    try {
+      payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+    } catch (e) {
+      return res.status(400).json({ 
+        success: false,
+        error: "Invalid credential format" 
+      });
+    }
+
+    const email = payload.email;
+    const name = payload.name || 'User';
+    const picture = payload.picture;
+
+    // Find or create user
+    let user = demoUsers.find(u => u.email === email);
+    
+    if (!user) {
+      user = {
+        id: Math.random().toString(36).substr(2, 9),
+        email: email,
+        name: name,
+        password: 'google-oauth',
+        picture: picture
+      };
+      demoUsers.push(user);
+      console.log('[Google Auth] New user created:', email);
+    }
+
+    // Create session
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    const sessionId = Math.random().toString(36).substr(2, 9);
+    sessions.set(sessionId, {
+      userId: user.id,
+      email: user.email,
+      token: token,
+      createdAt: Date.now(),
+      expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000)
+    });
+
+    res.json({
+      success: true,
+      sessionId: sessionId,
+      token: token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        picture: picture
+      }
+    });
+  } catch (error) {
+    console.error('[Google Auth] Error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: "Authentication failed" 
+    });
+  }
+});
 
 // Fallback for undefined routes
 app.get("*", (req, res) => {
