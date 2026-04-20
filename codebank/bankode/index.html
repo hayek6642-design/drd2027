@@ -12,6 +12,183 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <link rel="icon" href="favicon.ico" type="image/x-icon">
 
+  <!-- Service Styles (loaded before custom CSS) -->
+  <link rel="stylesheet" href="../quran.css" onerror="console.warn('quran.css not found')">
+  <link rel="stylesheet" href="../ai-chat.css" onerror="console.warn('ai-chat.css not found')">
+  <link rel="stylesheet" href="../phone-calls.css" onerror="console.warn('phone-calls.css not found')">
+  <link rel="stylesheet" href="../platform-manager.css" onerror="console.warn('platform-manager.css not found')">
+  <link rel="stylesheet" href="../drd-mail.css" onerror="console.warn('drd-mail.css not found')">
+
+  <!-- Custom integrated UI CSS -->
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+
+    .main-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+      padding: 0 16px;
+    }
+
+    .service-card {
+      padding: 16px;
+      background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+      border: 2px solid #3b82f6;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+      text-decoration: none;
+      color: white;
+      font-weight: 600;
+    }
+
+    .service-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 16px rgba(59, 130, 246, 0.4);
+      border-color: #60a5fa;
+    }
+
+    .service-card.active {
+      background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+      border-color: #06b6d4;
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.5);
+    }
+
+    .service-card-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .service-card-name {
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .services-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .service-view {
+      flex: 1;
+      overflow: auto;
+      display: none;
+    }
+
+    .service-view.active {
+      display: block;
+    }
+
+    .service-view iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: white;
+    }
+
+    .zagel-panel {
+      height: 120px;
+      background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
+      border-top: 2px solid #f59e0b;
+      padding: 12px;
+      overflow-y: auto;
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .zagel-header {
+      font-weight: 600;
+      color: #fbbf24;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .zagel-content {
+      font-size: 13px;
+      color: #fcd34d;
+      line-height: 1.4;
+    }
+
+    .zagel-input-area {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .zagel-input {
+      flex: 1;
+      padding: 6px 10px;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid #f59e0b;
+      border-radius: 4px;
+      color: #fcd34d;
+      font-size: 12px;
+    }
+
+    .zagel-input:focus {
+      outline: none;
+      border-color: #fbbf24;
+      box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
+    }
+
+    .zagel-send-btn {
+      padding: 6px 12px;
+      background: #f59e0b;
+      border: none;
+      border-radius: 4px;
+      color: #000;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.3s;
+    }
+
+    .zagel-send-btn:hover {
+      background: #fbbf24;
+      transform: translateY(-2px);
+    }
+
+    @media (max-width: 768px) {
+      .services-grid {
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 8px;
+      }
+
+      .service-card {
+        padding: 12px;
+      }
+
+      .zagel-panel {
+        height: 100px;
+      }
+    }
+  </style>
+
   <script>
     window.CODEBANK_TRUSTED_USER_ID = (window.opener && window.opener.CODEBANK_TRUSTED_USER_ID) || (window.parent && window.parent.CODEBANK_TRUSTED_USER_ID) || null;
     window.CODEBANK_TRUSTED_USER_EMAIL = (window.opener && window.opener.CODEBANK_TRUSTED_USER_EMAIL) || (window.parent && window.parent.CODEBANK_TRUSTED_USER_EMAIL) || null;
@@ -27,31 +204,6 @@
             window.CODEBANK_TRUSTED_USER_ID = e.detail.userId;
             window.CODEBANK_TRUSTED_USER_EMAIL = e.detail.user?.email || null;
             console.log('[Bankode] Updated CODEBANK_TRUSTED_USER_ID from auth:ready:', e.detail.userId);
-            if (window.BankodeDashboard && window.BankodeDashboard.init) {
-                window.BankodeDashboard.init();
-            }
-            // Also refresh RPC instance's supabase ref
-            if (window.BankodeRPC) {
-                window.BankodeRPC.supabase = window.supabase;
-            }
-        }
-    });
-    window.addEventListener('auth:changed', function(e) {
-        if (e.detail && e.detail.authenticated && e.detail.userId) {
-            window.CODEBANK_TRUSTED_USER_ID = e.detail.userId;
-            window.CODEBANK_TRUSTED_USER_EMAIL = e.detail.user?.email || null;
-            console.log('[Bankode] Updated CODEBANK_TRUSTED_USER_ID from auth:changed:', e.detail.userId);
-            if (window.BankodeDashboard && window.BankodeDashboard.init) {
-                window.BankodeDashboard.init();
-            }
-        }
-    });
-    // Listen for AUTH_SYNC postMessage from parent iframe
-    window.addEventListener('message', function(event) {
-        if (event.data && event.data.type === 'AUTH_SYNC' && event.data.authenticated && event.data.userId) {
-            window.CODEBANK_TRUSTED_USER_ID = event.data.userId;
-            window.CODEBANK_TRUSTED_USER_EMAIL = event.data.user?.email || null;
-            console.log('[Bankode] Updated CODEBANK_TRUSTED_USER_ID from AUTH_SYNC postMessage:', event.data.userId);
             if (window.BankodeDashboard && window.BankodeDashboard.init) {
                 window.BankodeDashboard.init();
             }
@@ -79,7 +231,7 @@
   <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
 </head>
 <body class="bg-gray-900 text-white font-sans">
-  <div class="min-h-screen flex flex-col">
+  <div class="main-container">
     <!-- Header with BanKode Title -->
     <header class="bg-gray-800 border-b border-gray-700 px-6 py-6">
       <div class="max-w-7xl mx-auto">
@@ -111,12 +263,6 @@
               <span>Sign Up</span>
             </button>
             
-            <!-- DRD Mail Button -->
-            <button id="drdMailBtn" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium text-sm">
-              <i class="fas fa-envelope"></i>
-              <span>DRD Mail</span>
-            </button>
-            
             <!-- Language Button -->
             <button id="languageBtn" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition font-medium text-sm">
               <i class="fas fa-globe"></i>
@@ -127,17 +273,47 @@
       </div>
     </header>
 
-    <!-- Main Content (no sidebar) -->
-    <main class="flex-1 flex flex-col">
-      <!-- Dashboard Content -->
-      <div class="flex-1 p-6 overflow-auto">
-        <!-- Balance Cards (IDs must match what dashboard.js expects in fallback) -->
+    <!-- Services Section -->
+    <div class="px-6 py-4 bg-gray-850 border-b border-gray-700">
+      <h2 class="text-lg font-semibold mb-4">CodeBank Services</h2>
+      <div class="services-grid" id="servicesGrid">
+        <a href="#" data-service="dashboard" class="service-card active">
+          <span class="service-card-icon">💰</span>
+          <span class="service-card-name">Dashboard</span>
+        </a>
+        <a href="#" data-service="quran" class="service-card">
+          <span class="service-card-icon">📖</span>
+          <span class="service-card-name">Quran</span>
+        </a>
+        <a href="#" data-service="ai-chat" class="service-card">
+          <span class="service-card-icon">🤖</span>
+          <span class="service-card-name">AI Chat</span>
+        </a>
+        <a href="#" data-service="phone-calls" class="service-card">
+          <span class="service-card-icon">📞</span>
+          <span class="service-card-name">Phone</span>
+        </a>
+        <a href="#" data-service="platform-manager" class="service-card">
+          <span class="service-card-icon">⚙️</span>
+          <span class="service-card-name">Manager</span>
+        </a>
+        <a href="#" data-service="drd-mail" class="service-card">
+          <span class="service-card-icon">📧</span>
+          <span class="service-card-name">DRD Mail</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Services Container -->
+    <div class="services-container">
+      <!-- Dashboard View -->
+      <div id="dashboard-view" class="service-view active p-6 overflow-auto">
+        <!-- Balance Cards -->
         <div id="balanceCards" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div class="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-lg shadow-lg">
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-lg font-semibold">Codes Balance</h3><i class="fas fa-code text-2xl"></i>
             </div>
-            <!-- NOTE: dashboard.js fallback looks for 'codes-balance' id -->
             <div class="text-3xl font-bold" id="codes-balance">0</div>
             <div class="text-sm text-blue-100 mt-2">Available Codes</div>
           </div>
@@ -146,7 +322,6 @@
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-lg font-semibold">Silver Balance</h3><i class="fas fa-coins text-2xl"></i>
             </div>
-            <!-- NOTE: dashboard.js fallback looks for 'silver-balance' id -->
             <div class="text-3xl font-bold" id="silver-balance">0</div>
             <div class="text-sm text-gray-100 mt-2">Available Silver</div>
           </div>
@@ -155,7 +330,6 @@
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-lg font-semibold">Gold Balance</h3><i class="fas fa-gem text-2xl"></i>
             </div>
-            <!-- NOTE: dashboard.js fallback looks for 'gold-balance' id -->
             <div class="text-3xl font-bold" id="gold-balance">0</div>
             <div class="text-sm text-yellow-100 mt-2">Available Gold</div>
           </div>
@@ -190,63 +364,50 @@
           </div>
         </div>
       </div>
-    </main>
-  </div>
 
-  
-
-  <!-- Admin modal used by dashboard.js (IDs must match) -->
-  <div id="adminPanelModal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center z-50">
-    <div class="bg-gray-800 rounded-lg p-6 w-full max-w-2xl relative">
-      <button id="closeAdminPanel" class="absolute top-4 right-4 text-gray-400 hover:text-white">
-        <i class="fas fa-times text-xl"></i>
-      </button>
-      <h2 class="text-xl font-bold mb-4 text-center">Admin Panel</h2>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <label for="adminUserId" class="block text-sm font-medium mb-1">User ID</label>
-          <input type="text" id="adminUserId" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded" placeholder="User ID">
-        </div>
-
-        <div>
-          <label for="adminCurrency" class="block text-sm font-medium mb-1">Currency</label>
-          <select id="adminCurrency" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded">
-            <option value="codes">Codes</option>
-            <option value="silver">Silver</option>
-            <option value="gold">Gold</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="adminAmount" class="block text-sm font-medium mb-1">Amount</label>
-          <input type="number" id="adminAmount" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded" placeholder="Amount">
-        </div>
-
-        <div>
-          <label for="adminAction" class="block text-sm font-medium mb-1">Action</label>
-          <select id="adminAction" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded">
-            <option value="add">Add</option>
-            <option value="subtract">Subtract</option>
-            <option value="set">Set</option>
-          </select>
-        </div>
+      <!-- Quran View -->
+      <div id="quran-view" class="service-view">
+        <iframe src="../quran.html" style="width: 100%; height: 100%; border: none;"></iframe>
       </div>
 
-      <div class="flex space-x-2">
-        <button id="adminExecuteBtn" class="flex-1 bg-green-600 hover:bg-green-700 py-2 px-4 rounded">
-          <i class="fas fa-check"></i> Execute
-        </button>
-        <button id="adminCancelBtn" class="flex-1 bg-gray-600 hover:bg-gray-700 py-2 px-4 rounded">
-          <i class="fas fa-times"></i> Cancel
-        </button>
+      <!-- AI Chat View -->
+      <div id="ai-chat-view" class="service-view">
+        <iframe src="../ai-chat.html" style="width: 100%; height: 100%; border: none;"></iframe>
       </div>
 
-      <div id="adminStatus" class="mt-4 text-center text-sm"></div>
+      <!-- Phone Calls View -->
+      <div id="phone-calls-view" class="service-view">
+        <iframe src="../phone-calls.html" style="width: 100%; height: 100%; border: none;"></iframe>
+      </div>
+
+      <!-- Platform Manager View -->
+      <div id="platform-manager-view" class="service-view">
+        <iframe src="../platform-manager.html" style="width: 100%; height: 100%; border: none;"></iframe>
+      </div>
+
+      <!-- DRD Mail View -->
+      <div id="drd-mail-view" class="service-view">
+        <iframe src="../drd-mail.html" style="width: 100%; height: 100%; border: none;"></iframe>
+      </div>
+    </div>
+
+    <!-- Zagel Voice Panel (Bottom) -->
+    <div class="zagel-panel">
+      <div class="zagel-header">
+        <i class="fas fa-brain"></i>
+        <span>Zagel Voice Assistant</span>
+      </div>
+      <div class="zagel-content" id="zagelContent">
+        Ready to assist. Try asking me something!
+      </div>
+      <div class="zagel-input-area">
+        <input type="text" id="zagelInput" class="zagel-input" placeholder="Ask Zagel...">
+        <button class="zagel-send-btn" id="zagelSendBtn">Send</button>
+      </div>
     </div>
   </div>
 
-  <!-- Auth Modal -->
+  <!-- Auth Modals (kept same as original) -->
   <style>
     .auth-modal {
       display: none;
@@ -378,7 +539,7 @@
   <!-- Sign In Modal -->
   <div id="signInModal" class="auth-modal">
     <div class="auth-modal-content" style="position: relative;">
-      <button class="auth-modal-close" onclick="closeAuthModal('signInModal')">&times;</button>
+      <button class="auth-modal-close" onclick="closeAuthModal('signInModal')">×</button>
       <h2 class="auth-modal-title">Sign In</h2>
       <div id="signInError" class="auth-error" style="display: none;"></div>
       <form class="auth-modal-form" onsubmit="handleSignIn(event)">
@@ -398,7 +559,7 @@
   <!-- Sign Up Modal -->
   <div id="signUpModal" class="auth-modal">
     <div class="auth-modal-content" style="position: relative;">
-      <button class="auth-modal-close" onclick="closeAuthModal('signUpModal')">&times;</button>
+      <button class="auth-modal-close" onclick="closeAuthModal('signUpModal')">×</button>
       <h2 class="auth-modal-title">Create Account</h2>
       <div id="signUpError" class="auth-error" style="display: none;"></div>
       <div id="signUpSuccess" class="auth-success" style="display: none;"></div>
@@ -433,7 +594,6 @@
     
     function closeAuthModal(modalId) {
       document.getElementById(modalId).classList.remove('active');
-      // Clear errors
       const errorEl = document.getElementById(modalId.replace('Modal', 'Error'));
       if (errorEl) errorEl.style.display = 'none';
     }
@@ -467,15 +627,11 @@
           throw new Error(data.error || 'Sign in failed');
         }
         
-        // Store session
         localStorage.setItem('sessionId', data.sessionId);
         localStorage.setItem('userId', data.userId);
         localStorage.setItem('authToken', data.token);
-        
-        // Update UI
         window.CODEBANK_TRUSTED_USER_ID = data.userId;
         
-        // Close modal and reload
         closeAuthModal('signInModal');
         setTimeout(() => window.location.reload(), 500);
       } catch (error) {
@@ -494,7 +650,6 @@
       const errorEl = document.getElementById('signUpError');
       const successEl = document.getElementById('signUpSuccess');
       
-      // Clear previous messages
       errorEl.style.display = 'none';
       successEl.style.display = 'none';
       
@@ -517,19 +672,14 @@
           throw new Error(data.error || 'Sign up failed');
         }
         
-        // Store session
         localStorage.setItem('sessionId', data.sessionId);
         localStorage.setItem('userId', data.user.id);
         localStorage.setItem('authToken', data.token);
-        
-        // Update UI
         window.CODEBANK_TRUSTED_USER_ID = data.user.id;
         
-        // Show success
         successEl.textContent = 'Account created successfully! Redirecting...';
         successEl.style.display = 'block';
         
-        // Redirect
         setTimeout(() => {
           closeAuthModal('signUpModal');
           window.location.reload();
@@ -548,18 +698,64 @@
       alert('Google Sign-In will be configured with proper OAuth setup');
     });
     
-    document.getElementById('drdMailBtn').addEventListener('click', () => {
-      // Navigate to DRD Mail
-      window.location.href = '/codebank/drmail.html';
-    });
-    
     document.getElementById('languageBtn').addEventListener('click', () => {
       alert('Language selection coming soon');
+    });
+
+    // Service Navigation
+    document.querySelectorAll('[data-service]').forEach(card => {
+      card.addEventListener('click', (e) => {
+        e.preventDefault();
+        const service = card.getAttribute('data-service');
+        
+        // Remove active class from all cards
+        document.querySelectorAll('[data-service]').forEach(c => c.classList.remove('active'));
+        
+        // Add active class to clicked card
+        card.classList.add('active');
+        
+        // Hide all views
+        document.querySelectorAll('.service-view').forEach(view => view.classList.remove('active'));
+        
+        // Show selected view
+        const viewId = `${service}-view`;
+        const view = document.getElementById(viewId);
+        if (view) {
+          view.classList.add('active');
+        }
+      });
+    });
+
+    // Zagel Voice Assistant
+    const zagelInput = document.getElementById('zagelInput');
+    const zagelSendBtn = document.getElementById('zagelSendBtn');
+    const zagelContent = document.getElementById('zagelContent');
+
+    zagelSendBtn.addEventListener('click', () => {
+      const message = zagelInput.value.trim();
+      if (!message) return;
+      
+      zagelContent.innerHTML = `<div style="color: #fbbf24;">You: ${message}</div>
+      <div style="margin-top: 4px; color: #fcd34d;">Zagel: Processing your request...</div>`;
+      
+      zagelInput.value = '';
+      
+      // TODO: Connect to actual Zagel backend
+      setTimeout(() => {
+        zagelContent.innerHTML = `<div style="color: #fbbf24;">You: ${message}</div>
+        <div style="margin-top: 4px; color: #fcd34d;">Zagel: I'm here to help! What would you like assistance with?</div>`;
+      }, 1000);
+    });
+
+    zagelInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        zagelSendBtn.click();
+      }
     });
   </script>
 
   <!-- Direct Asset Manager - loads before dashboard -->
-  <script src="/codebank/js/assets-direct.js"></script>
+  <script src="/codebank/js/assets-direct.js" onerror="console.warn('assets-direct.js not found')"></script>
 
   <!-- Listen for asset updates and update dashboard UI -->
   <script>
@@ -567,7 +763,6 @@
       const assets = e.detail || {};
       console.log('[Bankode] Assets updated:', assets);
       
-      // Update balance elements if they exist
       const codesBalance = document.getElementById('codes-balance');
       const silverBalance = document.getElementById('silver-balance');
       const goldBalance = document.getElementById('gold-balance');
@@ -584,38 +779,46 @@
     });
   </script>
 
-  <!-- Dependency Helper Functions (MUST load first) -->
-  <script src="utils/dependency-helpers.js"></script>
+  <!-- Service Scripts (with error handling) -->
+  <script src="../quran.js" onerror="console.warn('quran.js not found')"></script>
+  <script src="../ai-chat.js" onerror="console.warn('ai-chat.js not found')"></script>
+  <script src="../phone-calls.js" onerror="console.warn('phone-calls.js not found')"></script>
+  <script src="../platform-manager.js" onerror="console.warn('platform-manager.js not found')"></script>
+  <script src="../drd-mail.js" onerror="console.warn('drd-mail.js not found')"></script>
+
+  <!-- Zagel Bridge Integration -->
+  <script src="/zajel-voice-engine/src/integration/zagelBridge.js" onerror="console.warn('zagelBridge.js not found')"></script>
 
   <!-- Core Scripts -->
-  <script src="bankodeConfig.js"></script>
-  <script src="rpc.js"></script>
-  <script src="utils/helpers.js"></script>
-  <script src="utils/validators.js"></script>
-  <script src="utils/formatters.js"></script>
-  <script src="unifiedStorage.js"></script>
-
-  <!-- Components -->
-  <script src="components/Card.js"></script>
-  <script src="components/Table.js"></script>
-  <script src="components/Button.js"></script>
-  <script src="components/Modal.js"></script>
-
-  
+  <script src="utils/dependency-helpers.js" onerror="console.warn('dependency-helpers.js not found')"></script>
+  <script src="bankodeConfig.js" onerror="console.warn('bankodeConfig.js not found')"></script>
+  <script src="rpc.js" onerror="console.warn('rpc.js not found')"></script>
+  <script src="utils/helpers.js" onerror="console.warn('helpers.js not found')"></script>
+  <script src="utils/validators.js" onerror="console.warn('validators.js not found')"></script>
+  <script src="utils/formatters.js" onerror="console.warn('formatters.js not found')"></script>
+  <script src="unifiedStorage.js" onerror="console.warn('unifiedStorage.js not found')"></script>
 
   <!-- Dashboard -->
-  <script src="dashboard.js"></script>
+  <script src="dashboard.js" onerror="console.warn('dashboard.js not found')"></script>
 
   <!-- Validation Test -->
-  <script src="bankode-validation-test.js"></script>
+  <script src="bankode-validation-test.js" onerror="console.warn('bankode-validation-test.js not found')"></script>
 
   <script>
     async function initApp() {
       if (window.BankodeDashboard?.init) {
-        try { await window.BankodeDashboard.init(); } catch (err) { console.error('Dashboard initialization error:', err); }
+        try { 
+          await window.BankodeDashboard.init(); 
+        } catch (err) { 
+          console.error('Dashboard initialization error:', err); 
+        }
       }
     }
-    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', initApp); } else { initApp(); }
+    if (document.readyState === 'loading') { 
+      document.addEventListener('DOMContentLoaded', initApp); 
+    } else { 
+      initApp(); 
+    }
   </script>
 </body>
 </html>
