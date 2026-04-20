@@ -266,6 +266,11 @@ app.get('/api/phone-code/:countryCode', (req, res) => {
   }
 });
 
+// ============================================================================
+// SAMMA3NY - CLOUDINARY SONGS API
+// ============================================================================
+app.get('/api/samma3ny/songs', handleSamma3nySongs);
+
 const server = http.createServer(app);
 let wss = null;
 try {
