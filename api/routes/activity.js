@@ -9,7 +9,7 @@
  */
 
 import express from 'express';
-import { authenticateToken } from '../middleware/auth.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -24,7 +24,7 @@ const activityLog = {
  * SYNC BATCH - Accept all user activities and acknowledge
  * POST /api/activity/sync
  */
-router.post('/sync', authenticateToken, (req, res) => {
+router.post('/sync', requireAuth, (req, res) => {
   try {
     const userId = req.user?.id || req.userId;
     const { actions = [], watchTimes = [], codes = [] } = req.body;
@@ -77,7 +77,7 @@ router.post('/sync', authenticateToken, (req, res) => {
  * GET STATS - Get activity summary
  * GET /api/activity/stats
  */
-router.get('/stats', authenticateToken, (req, res) => {
+router.get('/stats', requireAuth, (req, res) => {
   try {
     const userId = req.user?.id || req.userId;
 
