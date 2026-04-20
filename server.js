@@ -106,6 +106,7 @@ import battaloodaRouter from './api/routes/battalooda.js';
 import activityRouter from './api/routes/activity.js';
 import aiRoutes from './api/routes/ai-routes.js';
 import zagelRouter from './api/routes/zagel.js';
+import { setupZagelEventBridge } from './api/routes/zagel-events.js';
 
 // Zagel Brain System - Served statically to frontend
 // Frontend loads: /codebank/js/zagel-brain/zagel-integration.js
@@ -465,6 +466,26 @@ app.use('/api/persistence', persistenceRouter);
 
 // Register Activity Tracker routes (comprehensive user activity sync)
 app.use('/api/activity', activityRouter);
+
+// ============================================================================
+// ZAGEL COMMAND WHEEL - Real-time Event & Service Integration
+// ============================================================================
+
+// Mount Zagel routes for all services
+app.use('/api/sse', zagelRouter);           // SSE event streaming
+app.use('/api/e7ki', zagelRouter);          // E7KI messaging
+app.use('/api/mail', zagelRouter);          // Email service
+app.use('/api/farragna', zagelRouter);      // Dating/Social service
+app.use('/api/pebalaash', zagelRouter);     // Bartering service
+app.use('/api/assets', zagelRouter);        // Asset/Code management
+app.use('/api/battalooda', zagelRouter);    // Studio recording
+app.use('/api/sms', zagelRouter);           // SMS service
+app.use('/api/zagel', zagelRouter);         // Zagel system endpoints
+
+// Initialize Zagel event bridge (connects to AssetBus and other systems)
+setupZagelEventBridge(app, io); // io is optional (for Socket.IO support)
+
+console.log('[Zagel] Command Wheel integrated - SSE streaming active');
 
 // Redirect old paths to new structure (fallback for missed paths)
 app.get('/services/yt-clear/*', (req, res) => {
