@@ -98,20 +98,38 @@ document.addEventListener('DOMContentLoaded', async function() {
             const pageEnd = Math.min(pageStart + songsPerPage - 1, playlist.length - 1);
 
             if (currentTrackIndex < playlist.length - 1) {
-                // Move to next track
-                const nextIndex = currentTrackIndex + 1;
-                const nextPage = Math.floor(nextIndex / songsPerPage) + 1;
-                if (nextPage !== currentPage) {
-                    goToPage(nextPage, true);
-                    setTimeout(() => { if (container) container.scrollTop = prevScroll; }, 200);
+                // Find next non-skipped track
+                const nextIndex = getNextNonSkippedTrack(currentTrackIndex);
+                
+                if (nextIndex !== -1) {
+                    // Found a non-skipped track
+                    const nextPage = Math.floor(nextIndex / songsPerPage) + 1;
+                    if (nextPage !== currentPage) {
+                        goToPage(nextPage, true);
+                        setTimeout(() => { if (container) container.scrollTop = prevScroll; }, 200);
+                    }
+                    loadTrack(nextIndex, true);
+                } else {
+                    // All remaining tracks are skipped, go to end of playlist
+                    goToPage(1, true);
+                    setTimeout(() => { if (container) container.scrollTop = 0; }, 200);
+                    pauseTrack();
                 }
-                loadTrack(nextIndex, true);
             } else {
-                // End of playlist: loop to first page, keep UI stable
-                goToPage(1, true);
-                setTimeout(() => { if (container) container.scrollTop = 0; }, 200);
-                loadTrack(0, false);
-                pauseTrack();
+                // End of playlist: loop to first page, find first non-skipped track
+                const nextIndex = getNextNonSkippedTrack(playlist.length - 1);
+                
+                if (nextIndex !== -1) {
+                    const nextPage = Math.floor(nextIndex / songsPerPage) + 1;
+                    goToPage(nextPage, true);
+                    setTimeout(() => { if (container) container.scrollTop = 0; }, 200);
+                    loadTrack(nextIndex, nextIndex === 0 ? false : true);
+                } else {
+                    // All tracks are skipped
+                    goToPage(1, true);
+                    setTimeout(() => { if (container) container.scrollTop = 0; }, 200);
+                    pauseTrack();
+                }
             }
         });
 
@@ -126,6 +144,46 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Initialize audio event listeners
     setupAudioEventListeners();
+    
+    // Helper function to check if a track is flagged/skipped
+    function isTrackSkipped(index) {
+        if (index >= 0 && index < playlist.length) {
+            const track = playlist[index];
+            return skippedTracks.includes(track.id);
+        }
+        return false;
+    }
+    
+    // Helper function to find the next non-skipped track
+    function getNextNonSkippedTrack(startIndex) {
+        let nextIndex = startIndex + 1;
+        let attempts = 0;
+        const maxAttempts = playlist.length; // Prevent infinite loop
+        
+        while (attempts < maxAttempts && nextIndex < playlist.length) {
+            if (!isTrackSkipped(nextIndex)) {
+                return nextIndex;
+            }
+            nextIndex++;
+            attempts++;
+        }
+        
+        // If we reached the end and still finding skipped tracks, wrap to beginning
+        if (nextIndex >= playlist.length) {
+            nextIndex = 0;
+            attempts = 0;
+            while (attempts < maxAttempts && nextIndex < startIndex) {
+                if (!isTrackSkipped(nextIndex)) {
+                    return nextIndex;
+                }
+                nextIndex++;
+                attempts++;
+            }
+        }
+        
+        // If all tracks are skipped or no non-skipped found, return -1
+        return -1;
+    }
     
     // Enhanced Cloudinary song loading function - loads from API
     async function loadCloudinaryTracks() {
@@ -1577,6 +1635,21 @@ console.log(`🗑️ Cleaned up ${tracksToRemove.length} old downloads to free s
 
     // Enhanced playback handler
     function handleTrackPlayback(index) {
+        // Check if the requested track is skipped - if so, find next non-skipped
+        if (isTrackSkipped(index)) {
+            const nextIndex = getNextNonSkippedTrack(index);
+            if (nextIndex !== -1) {
+                // Found a non-skipped track, play it instead
+                showNotification('This track is flagged. Playing next available track...');
+                handleTrackPlayback(nextIndex);
+                return;
+            } else {
+                // All remaining tracks are skipped
+                showError('Cannot play - this track is flagged and no other tracks available.');
+                return;
+            }
+        }
+        
         if (index === currentTrackIndex) {
             // Same track - toggle play/pause
             if (isPlaying) {
@@ -1722,6 +1795,16 @@ console.log(`🗑️ Cleaned up ${tracksToRemove.length} old downloads to free s
     function hideError() {
         if (errorMessage) {
             errorMessage.style.display = 'none';
+        }
+    }
+    // Show notification (auto-hides after 3 seconds)
+    function showNotification(message) {
+        if (errorMessage) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 3000);
         }
     }
     
