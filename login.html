@@ -1472,9 +1472,93 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- ═══════════════════════════════════════════════════════════ -->
 <!-- NEW AUTH SYSTEM: Config, Google Auth, UI Controller -->
 <!-- ═══════════════════════════════════════════════════════════ -->
+<!-- Load Enhanced SessionManager -->
+<script src="/src/core/session-manager-v2.js"></script>
 <script src="/js/config-loader.js"></script>
 <script src="/js/google-auth.js"></script>
 <script src="/js/auth-ui.js"></script>
 
 </body>
 </html>
+
+<!-- SessionManager Integration -->
+<script>
+// Initialize SessionManager on page load
+let sessionManager = null;
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.SessionManager) {
+    sessionManager = new SessionManager();
+    console.log('✅ SessionManager initialized');
+    
+    // Subscribe to session changes
+    sessionManager.subscribe((session) => {
+      console.log('📢 Session changed:', session);
+      updateAuthUI();
+    });
+    
+    // Log initial state
+    console.log('🔍 Initial session:', sessionManager.getDebugInfo());
+  } else {
+    console.warn('⚠️ SessionManager not found - falling back to legacy auth');
+  }
+});
+
+// Enhanced login handler using SessionManager
+const originalHandleLogin = window.handleLogin;
+window.handleLogin = async function() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+
+  if (!email || !password) {
+    showStatus('Email and password required', 'error');
+    return;
+  }
+
+  try {
+    // Use SessionManager if available
+    if (sessionManager) {
+      const result = await sessionManager.login(email, password);
+      if (result.success) {
+        showStatus('✅ Login successful! Redirecting...', 'success');
+        localStorage.setItem('session_token', sessionManager.getToken());
+        localStorage.setItem('session_active', 'true');
+        localStorage.setItem('user_data', JSON.stringify(result.user));
+        updateAuthUI();
+        setTimeout(() => { window.location.href = '/yt-new-clear.html'; }, 1500);
+      } else {
+        showStatus('❌ ' + (result.error || 'Login failed'), 'error');
+      }
+    } else {
+      // Fall back to original login
+      await originalHandleLogin();
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    showStatus('❌ ' + error.message, 'error');
+  }
+};
+
+// Enhanced logout handler using SessionManager
+const originalHandleLogout = window.handleLogout;
+window.handleLogout = async function() {
+  try {
+    if (sessionManager) {
+      await sessionManager.logout();
+      console.log('✅ Logged out via SessionManager');
+      localStorage.removeItem('session_active');
+      localStorage.removeItem('session_token');
+      localStorage.removeItem('user_data');
+      updateAuthUI();
+      showStatus('✅ Signed out successfully', 'success');
+      setTimeout(() => { switchTab('signup', null); }, 1000);
+    } else {
+      await originalHandleLogout();
+    }
+  } catch (error) {
+    console.error('Logout error:', error);
+    showStatus('Error during logout', 'error');
+  }
+};
+
+console.log('🔐 Enhanced auth handlers registered with SessionManager');
+</script>
