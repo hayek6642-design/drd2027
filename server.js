@@ -103,6 +103,7 @@ import { query, pool } from './api/config/db.js';
 import { watchdog } from './services/watchdog/watchdog.js';
 import watchdogRoutes from './routes/watchdog.js';
 import battaloodaRouter from './api/routes/battalooda.js';
+import activityRouter from './api/routes/activity.js';
 import aiRoutes from './api/routes/ai-routes.js';
 import zagelRouter from './api/routes/zagel.js';
 
@@ -461,6 +462,9 @@ app.use('/api/trust', trustRouter);
 
 // Register Persistence/Sync routes (watching time, likes, comments, etc.)
 app.use('/api/persistence', persistenceRouter);
+
+// Register Activity Tracker routes (comprehensive user activity sync)
+app.use('/api/activity', activityRouter);
 
 // Redirect old paths to new structure (fallback for missed paths)
 app.get('/services/yt-clear/*', (req, res) => {
