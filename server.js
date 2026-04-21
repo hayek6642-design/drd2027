@@ -148,6 +148,7 @@ import {
 // [SECURITY] Security Middleware
 import { requireAuth, devSessions } from './api/middleware/auth.js';
 import { enforceFinancialSecurity, enforceWatchDog, storeIdempotencyResponse } from './shared/security-middleware.js';
+import { identifyRequester as guestAuthIdentifier } from './server/middleware/guest-auth.js';
 
 // Watch-Dog Guardian
 import { WatchDogGuardian } from './shared/watch-dog-guardian.js';
@@ -1029,6 +1030,31 @@ app.get('/capacitor-update/manifest.json', (req, res) => {
     });
 });
 
+
+// ============================================================================
+// GUEST CONTENT SYSTEM - Upload, Like, Comment for Farragna, Nostalgia, Battalooda
+// ============================================================================
+// Import guest content routes
+import guestContentRouter from './api/routes/guest-content.js';
+app.use('/api/guest-content', guestContentRouter);
+console.log('[Guest Content] Routes registered');
+
+// ============================================================================
+// RUN DATABASE MIGRATIONS
+// ============================================================================
+import { MigrationRunner } from './server/database/migration-runner.js';
+(async () => {
+  try {
+    if (dbAdapter?.isConnected) {
+      const migrationRunner = new MigrationRunner(dbAdapter);
+      await migrationRunner.runPendingMigrations();
+    } else {
+      console.warn('[Migrations] Database not connected - skipping migrations');
+    }
+  } catch (err) {
+    console.error('[Migrations] Error running migrations:', err.message);
+  }
+})();
 
 // 404 handler
 app.use((req, res) => {
