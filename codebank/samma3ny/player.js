@@ -204,7 +204,46 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     // Initialize player
-    async function initPlayer() {
+    async 
+// Initialize storage manager
+const storageManager = new StorageManager(userId || 'default-user');
+
+// Load persisted user actions on app start
+async function loadPersistedUserActions() {
+    try {
+        const likedTracks = await storageManager.getLikedTracks();
+        const flaggedTracks = await storageManager.getFlaggedTracks();
+        
+        // Apply likes to UI
+        likedTracks.forEach(trackId => {
+            const btn = document.querySelector(`[data-track-id="${trackId}"] .like-btn`);
+            if (btn) btn.classList.add('liked');
+        });
+        
+        // Apply flags to UI
+        flaggedTracks.forEach(trackId => {
+            const item = document.querySelector(`[data-track-id="${trackId}"]`);
+            if (item) item.classList.add('flagged');
+        });
+        
+        // Load app state
+        const counter = await storageManager.getAppState('counter');
+        if (counter && window.updateCounterDisplay) {
+            window.updateCounterDisplay(counter);
+        }
+    } catch (e) {
+        console.error('Error loading persisted data:', e);
+    }
+}
+
+// Load data when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadPersistedUserActions);
+} else {
+    loadPersistedUserActions();
+}
+
+function initPlayer() {
         showLoading(true);
         try {
             // Enhanced track loading with comprehensive pagination
