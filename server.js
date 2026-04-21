@@ -195,6 +195,20 @@ async function query(sql, params = []) {
   }
 }
 
+// Database schema migration
+async function fixSchema() {
+  try {
+    await query(`ALTER TABLE e7ki_messages ADD COLUMN conversation_id TEXT`);
+  } catch(e) { /* ignore if exists */ }
+  try {
+    await query(`ALTER TABLE zagel_messages ADD COLUMN conversation_id TEXT`);
+  } catch(e) { /* ignore if exists */ }
+  await query(`CREATE INDEX IF NOT EXISTS idx_e7ki_messages_conversation_id ON e7ki_messages(conversation_id)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_zagel_messages_conversation_id ON zagel_messages(conversation_id)`);
+  console.log('[DB] Schema migration complete');
+}
+fixSchema();
+
 const app = express();
 // Share devSessions with all routers via req.app.get('devSessions')
 app.set('devSessions', devSessions);
@@ -624,23 +638,6 @@ app.get('/api/auth/google-client-id', (req, res) => {
       isPlaceholder: raw === 'your_google_client_id.apps.googleusercontent.com',
       isValid: isValid
     }
-  });
-});
-
-// Google auth initiation
-// GET Google Client ID (PUBLIC - no auth required)
-app.get('/api/auth/google-client-id', (req, res) => {
-  const clientId = process.env.GOOGLE_CLIENT_ID || '';
-  const isValid = clientId && !clientId.includes('your_google') && clientId.includes('.apps.googleusercontent.com');
-  
-  if (!isValid) {
-    console.warn('[GOOGLE] Client ID not properly configured:', clientId);
-  }
-  
-  res.json({
-    clientId: clientId,
-    isValid: isValid,
-    configured: !!process.env.GOOGLE_CLIENT_ID
   });
 });
 

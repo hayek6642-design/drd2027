@@ -203,10 +203,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    // Initialize player
-    async 
-// Initialize storage manager
-const storageManager = new StorageManager(userId || 'default-user');
+    // Initialize storage manager
+    const storageManager = new StorageManager(userId || 'default-user');
 
 // Load persisted user actions on app start
 async function loadPersistedUserActions() {
@@ -243,7 +241,7 @@ if (document.readyState === 'loading') {
     loadPersistedUserActions();
 }
 
-function initPlayer() {
+async function initPlayer() {
         showLoading(true);
         try {
             // Enhanced track loading with comprehensive pagination
