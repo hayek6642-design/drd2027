@@ -166,13 +166,13 @@
         }
         
         // UI components (lazy)
-        let renderAppGrid;
+        let renderAppGrid = null;
         try {
-          const uiModule = await import('./src/components/app-grid.js');
+          const uiModule = await import('/src/components/app-grid.js');
           renderAppGrid = uiModule.renderAppGrid;
         } catch (e) {
           console.warn('[LoadApp] Failed to load UI components:', e.message);
-          renderAppGrid = () => console.log('UI components unavailable');
+          renderAppGrid = null;
         }
         
         // Initialize globals
@@ -181,14 +181,43 @@
         window.watchDog = watchDog;
         
         // Render UI
-        renderAppGrid(document.getElementById('app'));
+        const container = document.getElementById('app');
+        if (!renderAppGrid) {
+          console.warn('[LoadApp] renderAppGrid is not available, using fallback');
+          // Fallback UI if renderAppGrid is not available
+          if (container) {
+            container.innerHTML = `
+              <div style="padding: 20px; color: #fff; text-align: center;">
+                <h1>CodeBank</h1>
+                <p>Application loaded (minimal mode)</p>
+                <p style="font-size: 12px; opacity: 0.6; margin-top: 20px;">
+                  Some UI components are unavailable. Core functionality is operational.
+                </p>
+              </div>
+            `;
+          }
+        } else {
+          try {
+            renderAppGrid(container);
+          } catch (e) {
+            console.error('[LoadApp] Error rendering app grid:', e);
+            if (container) {
+              container.innerHTML = '<p style="color: #fff; padding: 20px;">Error rendering UI</p>';
+            }
+          }
+        }
         
         // Remove loading screen
-        document.getElementById('loading').remove();
+        const loadingEl = document.getElementById('loading');
+        if (loadingEl) loadingEl.remove();
         
         // Load performance monitor (dev only)
         if (location.hostname === 'localhost' || location.search.includes('debug')) {
-          await import('./src/utils/performance-monitor.js');
+          try {
+            await import('/src/utils/performance-monitor.js');
+          } catch (e) {
+            console.warn('[LoadApp] Performance monitor not available:', e.message);
+          }
         }
         
         console.log('[CodeBank] App loaded successfully');
