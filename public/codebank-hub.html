@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeBank Services Hub</title>
+  <script src="auth-bridge.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 100%);
+      color: #fff;
+      min-height: 100vh;
+    }
+    .header {
+      background: rgba(0,0,0,0.4);
+      border-bottom: 2px solid rgba(0,212,255,0.3);
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 {
+      margin: 0;
+      color: #00d4ff;
+      font-size: 28px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .auth-status {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 12px 20px;
+      background: rgba(0,212,255,0.1);
+      border-radius: 20px;
+      border: 1px solid rgba(0,212,255,0.3);
+    }
+    .auth-status.offline {
+      background: rgba(255,100,100,0.1);
+      border-color: rgba(255,100,100,0.3);
+    }
+    .auth-status span {
+      font-size: 12px;
+      color: #aaa;
+    }
+    .auth-status .user-email {
+      font-weight: 600;
+      color: #00d4ff;
+    }
+    .logout-btn {
+      background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+      border: none;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform 0.2s;
+    }
+    .logout-btn:hover {
+      transform: translateY(-2px);
+    }
+    .container {
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-top: 30px;
+    }
+    .service-card {
+      background: rgba(255,255,255,0.05);
+      border: 2px solid rgba(0,212,255,0.2);
+      border-radius: 15px;
+      padding: 25px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .service-card:hover {
+      transform: translateY(-5px);
+      border-color: #00d4ff;
+      background: rgba(0,212,255,0.1);
+      box-shadow: 0 10px 30px rgba(0,212,255,0.2);
+    }
+    .service-icon {
+      font-size: 48px;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,212,255,0.1);
+      border-radius: 12px;
+      border: 2px solid rgba(0,212,255,0.3);
+    }
+    .service-name {
+      font-size: 22px;
+      font-weight: 600;
+      color: #00d4ff;
+    }
+    .service-desc {
+      font-size: 14px;
+      color: #aaa;
+      flex-grow: 1;
+    }
+    .service-btn {
+      background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+      border: none;
+      color: #000;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .service-btn:hover {
+      transform: scale(1.02);
+      box-shadow: 0 5px 15px rgba(0,212,255,0.3);
+    }
+    .service-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .auth-required {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.95);
+      border: 2px solid #ff6b6b;
+      border-radius: 15px;
+      padding: 40px;
+      text-align: center;
+      z-index: 1000;
+      max-width: 500px;
+    }
+    .auth-required h2 {
+      color: #ff6b6b;
+      margin-top: 0;
+    }
+    .auth-required p {
+      color: #aaa;
+      margin: 15px 0;
+    }
+    .login-btn {
+      background: linear-gradient(135deg, #00d4ff, #0099cc);
+      border: none;
+      color: #000;
+      padding: 15px 40px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 16px;
+      transition: transform 0.2s;
+    }
+    .login-btn:hover {
+      transform: translateY(-2px);
+    }
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 999;
+      display: none;
+    }
+    .overlay.active {
+      display: block;
+    }
+    .sidebar {
+      position: fixed;
+      left: -300px;
+      top: 0;
+      width: 300px;
+      height: 100vh;
+      background: rgba(0,0,0,0.95);
+      border-right: 2px solid rgba(0,212,255,0.2);
+      padding: 20px;
+      transition: left 0.3s ease;
+      overflow-y: auto;
+      z-index: 1001;
+    }
+    .sidebar.open {
+      left: 0;
+    }
+    .sidebar-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: none;
+      border: none;
+      color: #00d4ff;
+      font-size: 28px;
+      cursor: pointer;
+    }
+    .sidebar h3 {
+      color: #00d4ff;
+      margin-top: 40px;
+      margin-bottom: 15px;
+      font-size: 14px;
+      text-transform: uppercase;
+    }
+    .sidebar a {
+      display: block;
+      padding: 12px;
+      color: #aaa;
+      text-decoration: none;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      transition: all 0.2s;
+    }
+    .sidebar a:hover {
+      background: rgba(0,212,255,0.1);
+      color: #00d4ff;
+    }
+    .menu-btn {
+      position: fixed;
+      left: 20px;
+      top: 20px;
+      background: rgba(0,212,255,0.2);
+      border: 1px solid rgba(0,212,255,0.5);
+      color: #00d4ff;
+      padding: 10px 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 20px;
+      z-index: 100;
+    }
+    .menu-btn:hover {
+      background: rgba(0,212,255,0.3);
+    }
+  </style>
+</head>
+<body>
+
+<button class="menu-btn" onclick="toggleMenu()">☰</button>
+
+<div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+
+<div class="sidebar" id="sidebar">
+  <button class="sidebar-close" onclick="toggleMenu()">✕</button>
+  <h3>Services</h3>
+  <a href="javascript:openService('quran')">📖 Quran Browser</a>
+  <a href="javascript:openService('mail')">📧 DRD-Mail</a>
+  <a href="javascript:openService('phone')">☎️ Phone System</a>
+  <a href="javascript:openService('chat')">🤖 AI Chat</a>
+  <a href="javascript:openService('manager')">🏗️ Platform Manager</a>
+  <h3>Resources</h3>
+  <a href="/login.html" target="_blank">🔐 Login Page</a>
+  <a href="javascript:if(confirm('Return to main app?'))window.location.href='/'">🏠 Main App</a>
+</div>
+
+<div class="header">
+  <h1>
+    <span>🏦</span>
+    CodeBank Services
+  </h1>
+  <div class="auth-status" id="authStatus">
+    <span>Loading authentication...</span>
+  </div>
+</div>
+
+<div class="container">
+  <div class="services-grid" id="servicesGrid">
+    <!-- Cards will be populated by JavaScript -->
+  </div>
+</div>
+
+<div id="authRequiredModal" class="auth-required" style="display: none;">
+  <h2>🔐 Authentication Required</h2>
+  <p>You need to be logged in to access CodeBank services.</p>
+  <p>Please log in first to continue.</p>
+  <button class="login-btn" onclick="window.location.href='/login.html'">Go to Login</button>
+</div>
+
+<script>
+// Services configuration
+const SERVICES = [
+  {
+    id: 'quran',
+    name: 'Quran Browser',
+    icon: '📖',
+    desc: 'Read, search, and explore the Quran with translations and explanations',
+    url: 'codebank/quran.html'
+  },
+  {
+    id: 'mail',
+    name: 'DRD-Mail',
+    icon: '📧',
+    desc: 'Professional email client with folders, drafts, and contacts management',
+    url: 'codebank/drd-mail.html'
+  },
+  {
+    id: 'phone',
+    name: 'Phone System',
+    icon: '☎️',
+    desc: 'Complete phone dialer with call history, contacts, and duration tracking',
+    url: 'codebank/phone-calls.html'
+  },
+  {
+    id: 'chat',
+    name: 'AI Chat',
+    icon: '🤖',
+    desc: 'Advanced AI chat with multi-threading, quick prompts, and message history',
+    url: 'codebank/ai-chat.html'
+  },
+  {
+    id: 'manager',
+    name: 'Platform Manager',
+    icon: '🏗️',
+    desc: 'Dashboard for system metrics, logs, and service management',
+    url: 'codebank/platform-manager.html'
+  }
+];
+
+// Listen to auth changes
+authBridge.onAuthChange((user, token) => {
+  updateAuthStatus(user, token);
+  renderServices(user, token);
+});
+
+function updateAuthStatus(user, token) {
+  const statusEl = document.getElementById('authStatus');
+  if (!statusEl) return;
+  
+  if (user && token) {
+    statusEl.innerHTML = `
+      <span>Logged in as:</span>
+      <span class="user-email">${user.email || user.name || 'User'}</span>
+      <button class="logout-btn" onclick="handleLogout()">Logout</button>
+    `;
+    statusEl.classList.remove('offline');
+  } else {
+    statusEl.innerHTML = '<span>⚠️ Not authenticated</span>';
+    statusEl.classList.add('offline');
+  }
+}
+
+function renderServices(user, token) {
+  const grid = document.getElementById('servicesGrid');
+  if (!grid) return;
+  
+  if (!user || !token) {
+    grid.innerHTML = '';
+    document.getElementById('authRequiredModal').style.display = 'block';
+    return;
+  }
+  
+  document.getElementById('authRequiredModal').style.display = 'none';
+  
+  grid.innerHTML = SERVICES.map(service => `
+    <div class="service-card">
+      <div class="service-icon">${service.icon}</div>
+      <div class="service-name">${service.name}</div>
+      <div class="service-desc">${service.desc}</div>
+      <button class="service-btn" onclick="openService('${service.id}')">
+        Open Service →
+      </button>
+    </div>
+  `).join('');
+}
+
+function openService(serviceId) {
+  if (!authBridge.isAuthenticated()) {
+    alert('Please log in first');
+    window.location.href = '/login.html';
+    return;
+  }
+  
+  const service = SERVICES.find(s => s.id === serviceId);
+  if (service) {
+    window.open(service.url, '_blank');
+  }
+}
+
+function handleLogout() {
+  if (confirm('Are you sure you want to logout?')) {
+    // Clear all auth data
+    authBridge.logout();
+    localStorage.clear();
+    window.location.href = '/login.html';
+  }
+}
+
+function toggleMenu() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('active');
+}
+
+// Initial render
+window.addEventListener('DOMContentLoaded', () => {
+  if (authBridge.isAuthenticated()) {
+    updateAuthStatus(authBridge.user, authBridge.token);
+    renderServices(authBridge.user, authBridge.token);
+  }
+});
+</script>
+
+</body>
+</html>
