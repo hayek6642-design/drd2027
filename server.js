@@ -1036,7 +1036,9 @@ app.get('/capacitor-update/manifest.json', (req, res) => {
 // ============================================================================
 // Import guest content routes
 import guestContentRouter from './api/routes/guest-content.js';
+import guestMigrationRouter from './server/routes/guest-migration.js';
 app.use('/api/guest-content', guestContentRouter);
+app.use('/api/auth', guestMigrationRouter);
 console.log('[Guest Content] Routes registered');
 
 // ============================================================================
