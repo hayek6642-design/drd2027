@@ -471,6 +471,57 @@ const API_BASE = '';
 console.log('🔥 API_BASE:', API_BASE);
 console.log('🔥 Window origin:', window.location.origin);
 
+/**
+ * BROADCAST AUTH STATE TO ALL SERVICES
+ * Called when user logs in/signs up on login.html
+ * All services listen via auth-bridge.js
+ */
+function broadcastAuthChange(user, token) {
+  try {
+    // Store in localStorage for all services to access
+    const authData = {
+      user: user,
+      token: token,
+      expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24h
+    };
+    localStorage.setItem('farragna_auth', JSON.stringify(authData));
+    
+    // Notify all open iframes/windows
+    window.postMessage({
+      type: 'AUTH_CHANGE',
+      user: user,
+      token: token
+    }, window.location.origin);
+    
+    // Also notify via window event
+    window.dispatchEvent(new CustomEvent('auth:broadcast', {
+      detail: { user, token }
+    }));
+    
+    console.log('[Auth Bridge] Broadcast to all services:', user?.email);
+  } catch (error) {
+    console.error('[Auth Bridge] Broadcast error:', error);
+  }
+}
+
+/**
+ * LOGOUT - Clears auth for all services
+ */
+function broadcastLogout() {
+  try {
+    localStorage.removeItem('farragna_auth');
+    window.postMessage({
+      type: 'AUTH_CHANGE',
+      user: null,
+      token: null
+    }, window.location.origin);
+    window.dispatchEvent(new CustomEvent('auth:logout', {}));
+    console.log('[Auth Bridge] Logout broadcast to all services');
+  } catch (error) {
+    console.error('[Auth Bridge] Logout error:', error);
+  }
+}
+
   // 🧠 Auth Flow Control: Auto-redirect if session is ACTUALLY active
   // 🛡️ FIX: Don't blindly trust localStorage — validate with server first
   //   Also check Capacitor Preferences (native storage) for persisted sessions.
@@ -998,6 +1049,10 @@ async function handleSignup() {
         console.log('[Signup] Syncing assets after account creation...');
         window.AssetsManager.sync();
       }
+      
+      // 📡 BROADCAST AUTH TO ALL SERVICES
+      broadcastAuthChange(data.user, data.sessionId);
+      
       window.dispatchEvent(new CustomEvent('auth:signup', { 
         detail: { user: data.user, sessionId: data.sessionId } 
       }));
@@ -1074,6 +1129,10 @@ async function handleLogin() {
         console.log('[Login] Syncing assets after login...');
         window.AssetsManager.sync();
       }
+      
+      // 📡 BROADCAST AUTH TO ALL SERVICES
+      broadcastAuthChange(data.user, data.sessionId);
+      
       // Also emit event for any listeners
       window.dispatchEvent(new CustomEvent('auth:login', { 
         detail: { user: data.user, sessionId: data.sessionId } 
@@ -1346,6 +1405,9 @@ async function handleGoogleCredential(response) {
         });
       }
 
+      // 📡 BROADCAST AUTH TO ALL SERVICES
+      broadcastAuthChange(data.user, data.sessionId);
+      
       if (statusEl) {
         statusEl.textContent = '✅ Signed in with Google! Redirecting...';
         statusEl.className = 'status-message success';
