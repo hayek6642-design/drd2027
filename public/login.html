@@ -4,8 +4,27 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>YT-Clear - Hybrid Authentication</title>
-<script src="/auth-core.js"></script>
-<script src="/login-session-fix.js"></script>
+
+<!-- Optional: Try to load auth modules - graceful fail if missing -->
+<script>
+(function loadAuthModules() {
+  const modules = [
+    '/auth-core.js',
+    '/login-session-fix.js',
+    '/shared/auth-core.js'
+  ];
+  
+  modules.forEach(module => {
+    const script = document.createElement('script');
+    script.src = module;
+    script.async = true;
+    script.onerror = function() {
+      console.log('[Public/Login] Optional auth module not found:', module);
+    };
+    document.head.appendChild(script);
+  });
+})();
+</script>
 <style>
   * { box-sizing: border-box; }
   body { 

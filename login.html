@@ -1454,14 +1454,55 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <!-- ═══════════════════════════════════════════════════════════ -->
-<!-- NEW AUTH SYSTEM: Config, Google Auth, UI Controller -->
+<!-- FALLBACK AUTH INLINE - Graceful Degradation -->
 <!-- ═══════════════════════════════════════════════════════════ -->
-<!-- Load Enhanced SessionManager -->
-<script src="/js/session-manager.js"></script>
-<script src="/js/init-session.js"></script>
-<script src="/js/config-loader.js"></script>
-<script src="/js/google-auth.js"></script>
-<script src="/js/auth-ui.js"></script>
+<script>
+// Minimal fallback implementations - scripts from /js/ are optional
+window.SessionManager = window.SessionManager || class {
+  constructor() {
+    this.session = JSON.parse(localStorage.getItem('session') || 'null');
+  }
+  getSession() {
+    return this.session;
+  }
+  setSession(s) {
+    localStorage.setItem('session', JSON.stringify(s));
+    this.session = s;
+  }
+};
+
+// Initialize fallback session manager
+let sessionManager = null;
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.SessionManager) {
+    sessionManager = new SessionManager();
+  }
+});
+</script>
+
+<!-- Optional: Attempt to load enhanced modules (graceful failure) -->
+<script>
+// Try to load optional modules without breaking the page
+(function loadOptionalModules() {
+  const modules = [
+    '/js/session-manager.js',
+    '/js/init-session.js', 
+    '/js/config-loader.js',
+    '/js/google-auth.js',
+    '/js/auth-ui.js'
+  ];
+  
+  modules.forEach(module => {
+    const script = document.createElement('script');
+    script.src = module;
+    script.async = true;
+    script.onerror = function() {
+      console.log('[Login] Optional module not found:', module);
+    };
+    document.head.appendChild(script);
+  });
+})();
+</script>
 
 </body>
 </html>

@@ -146,15 +146,34 @@
         const session = sessionManager.getSession();
         console.log('[CodeBank] Session loaded:', session.type);
 
-        // Core modules first
-        const [{ serviceManager }, { assetBus }, { watchDog }] = await Promise.all([
-          import('./src/core/service-manager-v2.js'),
-          import('./src/core/assetbus-v2.js'),
-          import('./src/core/watch-dog-optimized.js')
-        ]);
+        // Core modules first - use correct paths from root
+        let serviceManager, assetBus, watchDog;
+        try {
+          const modules = await Promise.all([
+            import('/src/core/service-manager-v2.js'),
+            import('/src/core/assetbus-v2.js'),
+            import('/src/core/watch-dog-optimized.js')
+          ]);
+          serviceManager = modules[0].serviceManager;
+          assetBus = modules[1].assetBus;
+          watchDog = modules[2].watchDog;
+        } catch (e) {
+          console.warn('[LoadApp] Failed to load core modules:', e.message);
+          // Create minimal fallback modules
+          serviceManager = {};
+          assetBus = { emit: () => {} };
+          watchDog = { feed: () => {} };
+        }
         
         // UI components (lazy)
-        const { renderAppGrid } = await import('./src/components/app-grid.js');
+        let renderAppGrid;
+        try {
+          const uiModule = await import('./src/components/app-grid.js');
+          renderAppGrid = uiModule.renderAppGrid;
+        } catch (e) {
+          console.warn('[LoadApp] Failed to load UI components:', e.message);
+          renderAppGrid = () => console.log('UI components unavailable');
+        }
         
         // Initialize globals
         window.serviceManager = serviceManager;
