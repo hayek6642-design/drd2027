@@ -148,7 +148,6 @@ import {
 // [SECURITY] Security Middleware
 import { requireAuth, devSessions } from './api/middleware/auth.js';
 import { enforceFinancialSecurity, enforceWatchDog, storeIdempotencyResponse } from './shared/security-middleware.js';
-import { identifyRequester as guestAuthIdentifier } from './server/middleware/guest-auth.js';
 
 // Watch-Dog Guardian
 import { WatchDogGuardian } from './shared/watch-dog-guardian.js';
