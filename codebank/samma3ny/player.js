@@ -203,8 +203,22 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    // Wait for authentication before initializing storage manager
+    let userId = 'default-user';
+    try {
+        const authReady = await window.Auth?.waitForAuth(5000) || false;
+        if (authReady && window.Auth?.getUser()?.id) {
+            userId = window.Auth.getUser().id;
+            console.log('[Player] Authenticated user:', userId);
+        } else {
+            console.log('[Player] Using default user (not authenticated)');
+        }
+    } catch (e) {
+        console.warn('[Player] Auth check failed, using default user:', e.message);
+    }
+
     // Initialize storage manager
-    const storageManager = new StorageManager(userId || 'default-user');
+    const storageManager = new StorageManager(userId);
 
 // Load persisted user actions on app start
 async function loadPersistedUserActions() {
