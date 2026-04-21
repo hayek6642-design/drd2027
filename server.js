@@ -166,6 +166,35 @@ function signJwt(userId, email) {
   return token;
 }
 
+// ─────────────────────────────────────────────────────────────
+// ✅ DATABASE QUERY WRAPPER - CRITICAL FIX
+// ─────────────────────────────────────────────────────────────
+/**
+ * Unified query function for login/signup endpoints
+ * Works with both local SQLite and Turso
+ */
+async function query(sql, params = []) {
+  try {
+    if (!dbAdapter || !dbAdapter.isConnected) {
+      console.warn('[DB] Database not ready, returning empty result');
+      return { rows: [] };
+    }
+    
+    // Call the adapter's execute method which handles both Turso and SQLite
+    const result = await dbAdapter.query(sql, params);
+    
+    // Normalize result to { rows: [...] } format
+    return {
+      rows: Array.isArray(result) ? result : (result?.rows || []),
+      changes: result?.changes || 0,
+      lastInsertRowid: result?.lastInsertRowid
+    };
+  } catch (error) {
+    console.error('[DB] Query error:', error.message, 'SQL:', sql);
+    throw error;
+  }
+}
+
 const app = express();
 // Share devSessions with all routers via req.app.get('devSessions')
 app.set('devSessions', devSessions);
@@ -797,7 +826,9 @@ app.post('/api/auth/resend-otp', async (req, res) => {
 // Sign Up - Create new user account with hashed password
 app.post('/api/auth/signup', async (req, res) => {
   try {
-    const { email, password, name, phone, country, religion, gender } = req.body;
+    const { email, password } = req.body;
+    
+    // ✅ SIMPLIFIED: Only email and password required
     if (!email || !password) {
       return res.status(400).json({ success: false, error: 'Email and password required' });
     }
@@ -805,17 +836,29 @@ app.post('/api/auth/signup', async (req, res) => {
     const userEmail = email.toLowerCase().trim();
     const userId = crypto.randomUUID();
     
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(userEmail)) {
+      return res.status(400).json({ success: false, error: 'Invalid email format' });
+    }
+    
+    // Validate password strength
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 6 characters' });
+    }
+    
     // ✅ HASH the password with bcrypt (10 salt rounds)
     const passwordHash = await bcrypt.hash(password, 10);
     
     try {
-      // Store user with hashed password in database
+      // Store user with hashed password in database (ONLY email + password_hash)
       await query(
-        'INSERT INTO users (id, email, password_hash) VALUES (?, ?, ?)',
-        [userId, userEmail, passwordHash]
+        'INSERT INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)',
+        [userId, userEmail, passwordHash, Date.now()]
       );
     } catch (dbError) {
-      if (dbError.message?.includes('UNIQUE constraint failed')) {
+      console.error('[SIGNUP] DB Error:', dbError.message);
+      if (dbError.message?.includes('UNIQUE constraint failed') || dbError.message?.includes('UNIQUE')) {
         return res.status(409).json({ success: false, error: 'Email already registered' });
       }
       throw dbError;
@@ -828,10 +871,11 @@ app.post('/api/auth/signup', async (req, res) => {
       userId,
       role: 'user',
       sessionId,
-      email: userEmail
+      email: userEmail,
+      createdAt: Date.now()
     });
     
-    console.log('[SIGNUP] ✅ New user created with hashed password:', userId, userEmail);
+    console.log('[SIGNUP] ✅ New user created:', userId, userEmail);
     
     res.json({
       success: true,
@@ -840,7 +884,11 @@ app.post('/api/auth/signup', async (req, res) => {
       sessionId,
       token,
       userId,
-      user: { id: userId, email: userEmail, name: name || userEmail.split('@')[0] }
+      user: { 
+        id: userId, 
+        email: userEmail,
+        name: userEmail.split('@')[0] 
+      }
     });
   } catch (error) {
     console.error('[SIGNUP ERROR]', error.message);
@@ -874,27 +922,32 @@ app.post('/api/auth/login', async (req, res) => {
       
       userEmail = email.toLowerCase().trim();
       
-      // Query database for user
-      const result = await query('SELECT id, password_hash FROM users WHERE email = ?', [userEmail]);
-      
-      // ✅ FIXED: Check result.rows (not result.length)
-      if (!result || !result.rows || result.rows.length === 0) {
-        console.warn('[LOGIN] ❌ User not found:', userEmail);
-        return res.status(401).json({ success: false, error: 'Invalid email or password' });
+      try {
+        // Query database for user
+        const result = await query('SELECT id, password_hash FROM users WHERE email = ?', [userEmail]);
+        
+        // ✅ FIXED: Check result.rows (not result.length)
+        if (!result || !result.rows || result.rows.length === 0) {
+          console.warn('[LOGIN] ❌ User not found:', userEmail);
+          return res.status(401).json({ success: false, error: 'Invalid email or password' });
+        }
+        
+        userId = result.rows[0].id;
+        const storedHash = result.rows[0].password_hash;
+        
+        // ✅ Compare password with bcrypt hash
+        const passwordMatch = await bcrypt.compare(password, storedHash);
+        
+        if (!passwordMatch) {
+          console.warn('[LOGIN] ❌ Invalid password for:', userEmail);
+          return res.status(401).json({ success: false, error: 'Invalid email or password' });
+        }
+        
+        console.log('[LOGIN] ✅ Password validated for:', userEmail);
+      } catch (dbError) {
+        console.error('[LOGIN] Database error:', dbError.message);
+        return res.status(500).json({ success: false, error: 'Database error during login', details: dbError.message });
       }
-      
-      userId = result.rows[0].id;
-      const storedHash = result.rows[0].password_hash;
-      
-      // ✅ Compare password with bcrypt hash
-      const passwordMatch = await bcrypt.compare(password, storedHash);
-      
-      if (!passwordMatch) {
-        console.warn('[LOGIN] ❌ Invalid password for:', userEmail);
-        return res.status(401).json({ success: false, error: 'Invalid email or password' });
-      }
-      
-      console.log('[LOGIN] ✅ Password validated for:', userEmail);
     }
     
     // Create session
@@ -904,10 +957,11 @@ app.post('/api/auth/login', async (req, res) => {
       userId,
       role: 'user',
       sessionId,
-      email: userEmail
+      email: userEmail,
+      createdAt: Date.now()
     });
     
-    // Update last login
+    // Update last login (non-blocking)
     try {
       await query('UPDATE users SET last_login = ? WHERE id = ?', [Date.now(), userId]);
     } catch (e) {
@@ -1144,6 +1198,16 @@ app.use((req, res) => {
 });
 
 // ============================================================================
+// ✅ DATABASE INITIALIZATION - CRITICAL FIX
+// ============================================================================
+console.log('[DB] Initializing database adapter...');
+await dbAdapter.init().catch(err => {
+  console.error('[DB] Database initialization error (non-blocking):', err.message);
+  console.log('[DB] Server will continue with fallback mode');
+});
+console.log('[DB] Database ready for queries');
+
+// ============================================================================
 // FINAL: Bind to port with timeout verification
 // ============================================================================
 
@@ -1153,6 +1217,7 @@ let startupTimer = null;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ [CRITICAL] Server bound to 0.0.0.0:${PORT}`);
     console.log(`✅ [BOOT] Dr.D Backend v2.0 is now listening`);
+    console.log(`✅ [AUTH] Database ready for auth endpoints`);
     
     if (startupTimer) clearTimeout(startupTimer);
 });
