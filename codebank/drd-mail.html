@@ -5,7 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DRD-Mail - CodeBank</title>
     <link rel="stylesheet" href="drd-mail.css">
-</head>
+
+  <script src="../auth-bridge.js"></script>
+  <script>
+    // Listen for auth changes from main app
+    authBridge.onAuthChange((user, token) => {
+      if (!user || !token) {
+        console.warn('[Service Auth] Not authenticated. Redirecting to login...');
+        // Show auth required message
+        if (document.body) {
+          document.body.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:linear-gradient(135deg,#0f0f1a,#1a1a2e);font-family:sans-serif;color:#fff;">
+              <div style="text-align:center;padding:40px;">
+                <div style="font-size:64px;margin-bottom:20px;">🔐</div>
+                <h1 style="margin:0;color:#00d4ff;">Authentication Required</h1>
+                <p style="color:#aaa;margin:10px 0 20px;">Please log in first to access this service.</p>
+                <a href="/login.html" style="background:linear-gradient(135deg,#00d4ff,#0099cc);color:#000;padding:12px 30px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">Go to Login</a>
+              </div>
+            </div>
+          `;
+        }
+        return;
+      }
+      console.log('[Service Auth] User authenticated:', user.email);
+      // Initialize service with authenticated user
+      if (window.serviceInit && typeof window.serviceInit === 'function') {
+        window.serviceInit(user, token);
+      }
+    });
+  </script>
+  </head>
 <body>
     <div class="mail-container">
         <!-- Header -->
