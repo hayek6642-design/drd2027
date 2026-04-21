@@ -817,13 +817,14 @@ app.post('/api/auth/login', async (req, res) => {
       // Query database for user
       const result = await query('SELECT id, password_hash FROM users WHERE email = ?', [userEmail]);
       
-      if (!result || result.length === 0) {
+      // ✅ FIXED: Check result.rows (not result.length)
+      if (!result || !result.rows || result.rows.length === 0) {
         console.warn('[LOGIN] ❌ User not found:', userEmail);
         return res.status(401).json({ success: false, error: 'Invalid email or password' });
       }
       
-      userId = result[0].id;
-      const storedHash = result[0].password_hash;
+      userId = result.rows[0].id;
+      const storedHash = result.rows[0].password_hash;
       
       // ✅ Compare password with bcrypt hash
       const passwordMatch = await bcrypt.compare(password, storedHash);
