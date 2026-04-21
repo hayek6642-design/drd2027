@@ -541,26 +541,48 @@ app.get('/health', (req, res) => {
 // Auth endpoint (stub for unauthenticated requests)
 app.get('/api/auth/me', (req, res) => {
   try {
-    // Check for valid session from Authorization header, cookies, or custom header
-    const sessionId = req.headers.authorization?.split(' ')[1] || 
-                      req.cookies?.session_token || 
+    // ✅ FIXED: Support both JWT tokens and sessionIds
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.split(' ')[1];
+    const sessionId = req.cookies?.session_token || 
                       req.headers['x-session-id'] ||
                       req.headers['x-session'];
     
-    if (!sessionId) {
-      return res.status(401).json({
-        authenticated: false,
-        message: 'No session provided',
-        user: null
-      });
+    let userId = null;
+    let email = null;
+    let sessionKey = null;
+    
+    // Try JWT token first
+    if (token) {
+      try {
+        const secret = process.env.JWT_SECRET || 'dev-secret-key-change-in-production';
+        const decoded = jwt.verify(token, secret);
+        userId = decoded.userId;
+        email = decoded.email;
+        sessionKey = token;
+        console.log('[AUTH/ME] ✅ JWT token validated:', userId);
+      } catch (jwtError) {
+        console.warn('[AUTH/ME] JWT validation failed:', jwtError.message);
+        // Fall through to sessionId check
+      }
     }
     
-    // Look up session in memory
-    const session = devSessions.get(sessionId);
-    if (!session || !session.userId) {
+    // Try sessionId lookup
+    if (!userId && sessionId) {
+      const session = devSessions.get(sessionId);
+      if (session && session.userId) {
+        userId = session.userId;
+        email = session.email;
+        sessionKey = sessionId;
+        console.log('[AUTH/ME] ✅ Session found:', userId);
+      }
+    }
+    
+    // Return result
+    if (!userId) {
       return res.status(401).json({
         authenticated: false,
-        message: 'Invalid or expired session',
+        message: 'Guest mode - no auth token provided',
         user: null
       });
     }
@@ -570,10 +592,10 @@ app.get('/api/auth/me', (req, res) => {
       authenticated: true,
       message: 'User authenticated',
       user: {
-        id: session.userId,
-        email: session.email
+        id: userId,
+        email: email
       },
-      sessionId: sessionId
+      sessionId: sessionKey
     });
   } catch (error) {
     console.error('[AUTH/ME]', error.message);
