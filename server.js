@@ -759,7 +759,7 @@ app.post('/api/auth/resend-otp', async (req, res) => {
   }
 });
 
-// Sign Up - Create new user account
+// Sign Up - Create new user account with hashed password
 app.post('/api/auth/signup', async (req, res) => {
   try {
     const { email, password, name, phone, country, religion, gender } = req.body;
@@ -767,9 +767,24 @@ app.post('/api/auth/signup', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Email and password required' });
     }
     
-    const userId = crypto.randomUUID();
     const userEmail = email.toLowerCase().trim();
-    const displayName = name || email.split('@')[0];
+    const userId = crypto.randomUUID();
+    
+    // ✅ HASH the password with bcrypt (10 salt rounds)
+    const passwordHash = await bcrypt.hash(password, 10);
+    
+    try {
+      // Store user with hashed password in database
+      await query(
+        'INSERT INTO users (id, email, password_hash) VALUES (?, ?, ?)',
+        [userId, userEmail, passwordHash]
+      );
+    } catch (dbError) {
+      if (dbError.message?.includes('UNIQUE constraint failed')) {
+        return res.status(409).json({ success: false, error: 'Email already registered' });
+      }
+      throw dbError;
+    }
     
     // Create session
     const token = signJwt(userId, userEmail);
@@ -781,7 +796,7 @@ app.post('/api/auth/signup', async (req, res) => {
       email: userEmail
     });
     
-    console.log('[SIGNUP] New user created:', userId, userEmail);
+    console.log('[SIGNUP] ✅ New user created with hashed password:', userId, userEmail);
     
     res.json({
       success: true,
@@ -790,7 +805,7 @@ app.post('/api/auth/signup', async (req, res) => {
       sessionId,
       token,
       userId,
-      user: { id: userId, email: userEmail, name: displayName }
+      user: { id: userId, email: userEmail, name: name || userEmail.split('@')[0] }
     });
   } catch (error) {
     console.error('[SIGNUP ERROR]', error.message);
@@ -803,7 +818,6 @@ app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password, phone, otp, verificationMethod } = req.body;
     
-    // Support both email/password and phone/OTP
     let userId = null;
     let userEmail = null;
     
@@ -818,13 +832,33 @@ app.post('/api/auth/login', async (req, res) => {
       userEmail = phone + '@phone.local';
       console.log('[LOGIN] Phone OTP login:', phone);
     } else {
-      // Default: email/password
+      // ✅ FIXED: Email/password login with proper validation
       if (!email || !password) {
         return res.status(400).json({ success: false, error: 'Email and password required' });
       }
+      
       userEmail = email.toLowerCase().trim();
-      userId = crypto.randomUUID();
-      console.log('[LOGIN] Email/password login:', userEmail);
+      
+      // Query database for user
+      const result = await query('SELECT id, password_hash FROM users WHERE email = ?', [userEmail]);
+      
+      if (!result || result.length === 0) {
+        console.warn('[LOGIN] ❌ User not found:', userEmail);
+        return res.status(401).json({ success: false, error: 'Invalid email or password' });
+      }
+      
+      userId = result[0].id;
+      const storedHash = result[0].password_hash;
+      
+      // ✅ Compare password with bcrypt hash
+      const passwordMatch = await bcrypt.compare(password, storedHash);
+      
+      if (!passwordMatch) {
+        console.warn('[LOGIN] ❌ Invalid password for:', userEmail);
+        return res.status(401).json({ success: false, error: 'Invalid email or password' });
+      }
+      
+      console.log('[LOGIN] ✅ Password validated for:', userEmail);
     }
     
     // Create session
@@ -837,7 +871,14 @@ app.post('/api/auth/login', async (req, res) => {
       email: userEmail
     });
     
-    console.log('[LOGIN] User authenticated:', userId, userEmail);
+    // Update last login
+    try {
+      await query('UPDATE users SET last_login = ? WHERE id = ?', [Date.now(), userId]);
+    } catch (e) {
+      console.warn('[LOGIN] Could not update last_login:', e.message);
+    }
+    
+    console.log('[LOGIN] ✅ User authenticated:', userId, userEmail);
     
     res.json({
       success: true,
