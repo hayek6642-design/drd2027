@@ -203,15 +203,16 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    // Wait for authentication before initializing storage manager
+    // Initialize storage manager (works with or without authentication)
     let userId = 'default-user';
+
+    // Try to get authenticated user ID, but don't wait/block if not authenticated
     try {
-        const authReady = await window.Auth?.waitForAuth(5000) || false;
-        if (authReady && window.Auth?.getUser()?.id) {
+        if (window.Auth?.isAuthenticated?.() && window.Auth?.getUser()?.id) {
             userId = window.Auth.getUser().id;
             console.log('[Player] Authenticated user:', userId);
         } else {
-            console.log('[Player] Using default user (not authenticated)');
+            console.log('[Player] Using default user (not authenticated or auth not ready)');
         }
     } catch (e) {
         console.warn('[Player] Auth check failed, using default user:', e.message);
