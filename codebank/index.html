@@ -141,7 +141,9 @@
           window.sessionManager = { getSession: () => ({ type: 'guest' }) };
         }
 
-        const session = sm.getSession();
+        // Use the session manager (or fallback)
+        const sessionManager = sm || window.sessionManager;
+        const session = sessionManager.getSession();
         console.log('[CodeBank] Session loaded:', session.type);
 
         // Core modules first

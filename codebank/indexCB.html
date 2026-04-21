@@ -177,6 +177,32 @@
     <script src="/shared/client-session-manager.js?v=1"></script>
     <script type="module" src="/codebank/js/sync-test.js"></script>
 
+    <!-- Fallback session managers for compatibility -->
+    <script>
+        // Create fallback ZagelSessionManager if not exists
+        if (!window.ZagelSessionManager) {
+            window.ZagelSessionManager = {
+                getSession: function() {
+                    // Try to get from various auth sources
+                    if (window.Auth?.getUser()) {
+                        return window.Auth.getUser();
+                    }
+                    if (window.CodeBankAuth?.getAuthState?.()?.user) {
+                        return window.CodeBankAuth.getAuthState().user;
+                    }
+                    // Fallback to localStorage
+                    try {
+                        const stored = localStorage.getItem('zagelsession') || localStorage.getItem('codebank_auth');
+                        return stored ? JSON.parse(stored) : { type: 'guest' };
+                    } catch(e) {
+                        return { type: 'guest' };
+                    }
+                }
+            };
+            console.log('[CodeBank] Created fallback ZagelSessionManager');
+        }
+    </script>
+
     <style>
         :root {
             --primary-color: #FF6B35;

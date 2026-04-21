@@ -8,7 +8,6 @@ const DYNAMIC_CACHE = 'codebank-dynamic-v2';
 // Core app shell to cache on install
 const APP_SHELL = [
   '/',
-  '/index.html',
   '/login.html',
   '/manifest.json',
   '/icons/icon-192x192.png',
