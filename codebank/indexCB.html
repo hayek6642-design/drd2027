@@ -2158,10 +2158,22 @@
         }
     };
     
-    window.handleEmailLogin = async function() {
-        const email = document.getElementById('emailLoginInput').value.trim();
-        const password = document.getElementById('passwordLoginInput').value;
-        const statusEl = document.getElementById('emailLoginStatus');
+    window.handleEmailLogin = async function(event) {
+        if (event) event.preventDefault();
+        
+        // ✅ FIXED: Use correct element IDs from HTML
+        const emailEl = document.getElementById('signin-email');
+        const passwordEl = document.getElementById('signin-password');
+        const statusEl = document.getElementById('signin-status');
+        
+        // ✅ FIXED: Null check before reading .value
+        if (!emailEl || !passwordEl || !statusEl) {
+            console.error('[Auth] Form elements not found:', { emailEl, passwordEl, statusEl });
+            return;
+        }
+        
+        const email = emailEl.value.trim();
+        const password = passwordEl.value;
         
         if (!email || !password) {
             statusEl.textContent = '⚠️ Email and password required';
@@ -2177,7 +2189,23 @@
                 body: JSON.stringify({ email, password })
             });
             
-            const data = await response.json();
+            // ✅ FIXED: Handle non-JSON responses (500 errors)
+            let data;
+            try {
+                data = await response.json();
+            } catch (e) {
+                console.error('[Auth] Server returned non-JSON (likely 500):', response.status, e);
+                statusEl.textContent = '❌ Server error. Please check your credentials and try again.';
+                statusEl.style.color = '#ff6b6b';
+                return;
+            }
+            
+            // ✅ Check response status
+            if (!response.ok) {
+                statusEl.textContent = data.error || `❌ Login failed (${response.status})`;
+                statusEl.style.color = '#ff6b6b';
+                return;
+            }
             
             if (data.status === 'success' || data.success) {
                 // Store session tokens
