@@ -138,7 +138,44 @@
         if (!sm) {
           console.warn('[CodeBank] SessionManager not loaded, creating fallback');
           // Fallback if SessionManager fails to load
-          window.sessionManager = { getSession: () => ({ type: 'guest' }) };
+          window.sessionManager = {
+            getSession: () => ({
+              type: 'guest',
+              user: null,
+              token: null,
+              authenticated: false,
+              guest: true
+            }),
+            
+            // Auth state checks
+            isUser: () => false,
+            isAdmin: () => false,
+            isGuest: () => true,
+            isAuthenticated: () => false,
+            
+            // Getter methods
+            getUser: () => null,
+            getToken: () => null,
+            getEmail: () => null,
+            getId: () => null,
+            
+            // Session management
+            setSession: () => {},
+            clearSession: () => {},
+            refreshSession: async () => false,
+            saveSession: () => {},
+            
+            // Auth operations
+            login: async () => ({ success: false, error: 'SessionManager not loaded' }),
+            logout: async () => {},
+            register: async () => ({ success: false, error: 'SessionManager not loaded' }),
+            
+            // Check auth state
+            checkAuth: async () => ({ authenticated: false, guest: true }),
+            
+            // Debug info
+            getDebugInfo: () => ({ type: 'guest', isUser: false, isGuest: true })
+          };
         }
 
         // Use the session manager (or fallback)
@@ -182,6 +219,7 @@
         
         // Render UI
         const container = document.getElementById('app');
+        let renderSuccess = false;
         if (!renderAppGrid) {
           console.warn('[LoadApp] renderAppGrid is not available, using fallback');
           // Fallback UI if renderAppGrid is not available
@@ -199,6 +237,7 @@
         } else {
           try {
             renderAppGrid(container);
+            renderSuccess = true;
           } catch (e) {
             console.error('[LoadApp] Error rendering app grid:', e);
             if (container) {
@@ -220,7 +259,12 @@
           }
         }
         
-        console.log('[CodeBank] App loaded successfully');
+        // Only show success if we actually succeeded
+        if (renderSuccess) {
+          console.log('[CodeBank] App loaded successfully');
+        } else {
+          console.log('[CodeBank] App loaded (minimal mode)');
+        }
         
       } catch (err) {
         console.error('[CodeBank] Failed to load app:', err);

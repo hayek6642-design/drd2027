@@ -574,7 +574,10 @@ class AppGrid {
   }
 
   checkAuthStatus() {
-    const isLoggedIn = window.sessionManager && window.sessionManager.isUser();
+    // Safe check: method exists AND returns truthy
+    const isLoggedIn = window.sessionManager && 
+                     typeof window.sessionManager.isUser === 'function' &&
+                     window.sessionManager.isUser();
     const buttonsGroup = document.getElementById('authButtonsGroup');
     const userInfo = document.getElementById('authUserInfo');
 
