@@ -486,12 +486,47 @@ app.get('/health', (req, res) => {
 
 // Auth endpoint (stub for unauthenticated requests)
 app.get('/api/auth/me', (req, res) => {
-    res.status(401).json({
+  try {
+    // Check for valid session from Authorization header, cookies, or custom header
+    const sessionId = req.headers.authorization?.split(' ')[1] || 
+                      req.cookies?.session_token || 
+                      req.headers['x-session-id'] ||
+                      req.headers['x-session'];
+    
+    if (!sessionId) {
+      return res.status(401).json({
         authenticated: false,
-        message: 'Guest mode - no auth token provided',
+        message: 'No session provided',
         user: null
+      });
+    }
+    
+    // Look up session in memory
+    const session = devSessions.get(sessionId);
+    if (!session || !session.userId) {
+      return res.status(401).json({
+        authenticated: false,
+        message: 'Invalid or expired session',
+        user: null
+      });
+    }
+    
+    // Return authenticated user
+    res.status(200).json({
+      authenticated: true,
+      message: 'User authenticated',
+      user: {
+        id: session.userId,
+        email: session.email
+      },
+      sessionId: sessionId
     });
+  } catch (error) {
+    console.error('[AUTH/ME]', error.message);
+    res.status(500).json({ authenticated: false, error: error.message });
+  }
 });
+
 // Auth configuration endpoint (for Google Client ID)
 app.get('/api/auth/google-client-id', (req, res) => {
   const raw = process.env.GOOGLE_CLIENT_ID || '';

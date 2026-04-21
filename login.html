@@ -1012,21 +1012,10 @@ async function resendEmailOTPCode() {
 
 async function handleSignup() {
   const email = document.getElementById('signupEmail').value.trim();
-  const username = document.getElementById('signupUsername').value.trim();
   const password = document.getElementById('signupPassword').value;
-  const religion = document.getElementById('religion').value;
-  const country = document.getElementById('country').value;
-  const countryCode = document.getElementById('countryCode').value;
-  const phone = document.getElementById('phoneNumber').value.trim();
   
-  if (!email || !username || !password || !religion || !country || !phone) {
+  if (!email || !password) {
     showStatus('Please fill in all fields', 'error');
-    return;
-  }
-  
-  if (!verificationStatus.email) {
-    showStatus('Please verify your email address first — click "Send Code"', 'error');
-    document.getElementById('signupEmail').focus();
     return;
   }
   
@@ -1050,18 +1039,13 @@ async function handleSignup() {
       credentials: 'include',
       body: JSON.stringify({
         email,
-        username,
-        password,
-        religion,
-        country,
-        phone,
-        countryCode
+        password
       })
     });
     
     const data = await response.json();
     
-    if (data.status === 'success') {
+    if (data.success === true) {
       showStatus('Account created successfully! Redirecting...', 'success');
       
       const session = {
@@ -1133,7 +1117,7 @@ async function handleLogin() {
 
     const data = await response.json();
 
-    if (data.status === 'success') {
+    if (data.success === true) {
       showStatus('Login successful! Redirecting...', 'success');
       
       localStorage.setItem('session_token', data.sessionId);
