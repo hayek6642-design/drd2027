@@ -314,17 +314,6 @@ window._NativeBio = {
 
   <!-- SIGNUP FORM -->
     <div id="signupForm">
-
-    <!-- Google Sign-In (signup) -->
-    <div id="google-signup-wrapper" style="display:none;margin-bottom:10px;">
-      <div id="google-signin-signup" style="display:flex;justify-content:center;"></div>
-    </div>
-    <div id="google-divider-signup" style="display:none;align-items:center;gap:10px;margin:16px 0 20px;">
-      <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
-      <span style="color:#666;font-size:12px;white-space:nowrap;">or sign up with email</span>
-      <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
-    </div>
-
     <div class="form-group">
       <label>Email Address</label>
       <div style="display:flex;gap:8px;align-items:center;">
@@ -396,21 +385,21 @@ window._NativeBio = {
     <div id="statusMessage" class="status-message"></div>
     
     <button onclick="handleSignup()" id="signupBtn">🔒 Verify Email First</button>
+
+    <!-- Google Sign-In Integration (Modern Layout) -->
+    <div id="google-divider-signup" style="display:none;align-items:center;gap:12px;margin:24px 0;">
+      <div style="flex:1;height:1px;background:rgba(255,255,255,0.1)"></div>
+      <span style="color:rgba(255,255,255,0.4);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">or sign up via google</span>
+      <div style="flex:1;height:1px;background:rgba(255,255,255,0.1)"></div>
+    </div>
+
+    <div id="google-signup-wrapper" style="display:none;margin-top:10px;">
+      <div id="google-signin-signup" style="display:flex;justify-content:center;"></div>
+    </div>
   </div>
 
   <!-- LOGIN FORM -->
   <div id="loginForm" style="display: none;">
-
-    <!-- Google Sign-In -->
-    <div id="google-login-wrapper" style="display:none;margin-bottom:10px;">
-      <div id="google-signin-login" style="display:flex;justify-content:center;"></div>
-    </div>
-    <div id="google-divider-login" style="display:none;align-items:center;gap:10px;margin:16px 0 20px;">
-      <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
-      <span style="color:#666;font-size:12px;white-space:nowrap;">or sign in with email</span>
-      <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
-    </div>
-
     <div class="form-group">
       <label>Email Address</label>
       <input type="email" id="loginEmail" placeholder="your@email.com" required>
@@ -422,8 +411,18 @@ window._NativeBio = {
         onkeypress="if(event.key === 'Enter') handleLogin()">
     </div>
     
-
     <button onclick="handleLogin()" id="loginBtnMain">Login</button>
+
+    <!-- Google Sign-In Integration (Modern Layout) -->
+    <div id="google-divider-login" style="display:none;align-items:center;gap:12px;margin:24px 0;">
+      <div style="flex:1;height:1px;background:rgba(255,255,255,0.1)"></div>
+      <span style="color:rgba(255,255,255,0.4);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">or sign in via google</span>
+      <div style="flex:1;height:1px;background:rgba(255,255,255,0.1)"></div>
+    </div>
+    
+    <div id="google-login-wrapper" style="display:none;margin-top:10px;">
+      <div id="google-signin-login" style="display:flex;justify-content:center;"></div>
+    </div>
 
     <!-- ─── Biometric Login ──────────────────────────────────── -->
     <div id="biometricSection" style="display:none; margin-top:16px;">
@@ -599,6 +598,19 @@ let religionsData = [];
 // Load data on page load
 document.addEventListener('DOMContentLoaded', async () => {
   await Promise.all([loadCountries(), loadReligions()]);
+  
+  // 🔄 AUTO-SWITCH TAB BASED ON URL PARAMS
+  const params = new URLSearchParams(window.location.search);
+  const mode = params.get('mode');
+  if (mode === 'login') {
+    switchTab('login');
+    // Also update the UI buttons
+    const loginBtn = document.querySelector('.tab-btn[onclick*="login"]');
+    if (loginBtn) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        loginBtn.classList.add('active');
+    }
+  }
 });
 
 async function loadCountries() {
