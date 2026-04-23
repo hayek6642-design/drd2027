@@ -202,6 +202,8 @@
   .google-section {
     margin-top: 25px;
     text-align: center;
+    width: 100%;
+    display: flex !important; /* Force visibility */
   }
 
   .divider {
@@ -230,6 +232,17 @@
     justify-content: center;
     min-height: 44px;
     width: 100%;
+    margin: 0 auto;
+    overflow: hidden;
+    position: relative; /* Add position for better rendering */
+    z-index: 100;
+  }
+
+  /* Force child iframe visibility if Google library injects it */
+  .google-btn-container iframe {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
   }
 
   .status-message {
@@ -376,6 +389,12 @@ const API_BASE = '';
 // ── UI Logic ────────────────────────────────────────────────────────────────
 let currentTab = 'signup';
 
+// Global error handler
+window.onerror = function(msg, url, line) {
+  showStatus(`JS Error: ${msg} (line ${line})`, 'error');
+  return false;
+};
+
 function switchTab(tab) {
   currentTab = tab;
   const isLogin = tab === 'login';
@@ -404,28 +423,39 @@ function switchTab(tab) {
   document.getElementById('loginStatus').style.display = 'none';
   document.getElementById('signupStatus').style.display = 'none';
 
-  // Re-render Google button for the active tab (prevents rendering into hidden divs)
-  setTimeout(renderGoogleButtons, 50);
+  // IMPORTANT: Re-render Google buttons when switching tabs to ensure 
+  // visibility in the newly active tab's container.
+  if (googleClientId) {
+    console.log('[Tab] Switched to', tab, '- Triggering re-render');
+    setTimeout(renderGoogleButtons, 50); 
+  }
 }
 
 function showStatus(msg, type) {
   const statusId = currentTab === 'login' ? 'loginStatus' : 'signupStatus';
   const statusEl = document.getElementById(statusId);
-  if (!statusEl) return;
+  if (!statusEl) {
+    alert(msg); // Ultimate fallback
+    return;
+  }
   
   statusEl.textContent = msg;
   statusEl.className = `status-message ${type}`;
   statusEl.style.display = 'block';
+  statusEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 // ── Data Loading ────────────────────────────────────────────────────────────
 async function loadStaticData() {
   try {
     const res = await fetch(`${API_BASE}/api/countries`);
+    if (!res.ok) throw new Error('Failed to fetch countries');
     const data = await res.json();
-    if (data.success) {
-      const countrySelect = document.getElementById('country');
-      const codeSelect = document.getElementById('countryCode');
+    
+    const countrySelect = document.getElementById('country');
+    const codeSelect = document.getElementById('countryCode');
+    
+    if (data.success && data.countries) {
       countrySelect.innerHTML = '<option value="">-- Select Country --</option>';
       codeSelect.innerHTML = '<option value="">Code</option>';
       
@@ -433,8 +463,25 @@ async function loadStaticData() {
         countrySelect.innerHTML += `<option value="${c.code}" data-phone="${c.phoneCode}">${c.flag} ${c.name}</option>`;
         codeSelect.innerHTML += `<option value="${c.phoneCode}">${c.flag} ${c.phoneCode}</option>`;
       });
+    } else {
+      // Fallback if API fails but returns 200
+      throw new Error('API returned success:false');
     }
-  } catch (e) { console.error('[Data] Load error:', e); }
+  } catch (e) { 
+    console.error('[Data] Load error:', e);
+    // Fallback static data
+    const countrySelect = document.getElementById('country');
+    if (countrySelect) {
+      countrySelect.innerHTML = `
+        <option value="">-- Select Country --</option>
+        <option value="US" data-phone="+1">🇺🇸 United States (+1)</option>
+        <option value="GB" data-phone="+44">🇬🇧 United Kingdom (+44)</option>
+        <option value="EG" data-phone="+20">🇪🇬 Egypt (+20)</option>
+        <option value="SA" data-phone="+966">🇸🇦 Saudi Arabia (+966)</option>
+        <option value="AE" data-phone="+971">🇦🇪 UAE (+971)</option>
+      `;
+    }
+  }
 }
 
 function updateCountryCode() {
@@ -572,42 +619,57 @@ async function fetchGoogleConfig() {
 }
 
 function renderGoogleButtons() {
-  if (!googleClientId || !window.google || !window.google.accounts) return;
+  if (!googleClientId || !window.google || !window.google.accounts) {
+    console.warn('[Google] Missing Client ID or SDK. Retrying in 1s...');
+    setTimeout(renderGoogleButtons, 1000);
+    return;
+  }
 
   try {
-    if (!googleInitStarted) {
-      google.accounts.id.initialize({
-        client_id: googleClientId,
-        callback: handleGoogleResponse,
-        auto_select: false
-      });
-      googleInitStarted = true;
-    }
+    console.log('[Google] Initializing with Client ID:', googleClientId);
+    google.accounts.id.initialize({
+      client_id: googleClientId,
+      callback: handleGoogleResponse,
+      auto_select: false,
+      ux_mode: 'popup', // Explicitly set popup mode
+      context: 'signin'
+    });
 
-    const options = { 
+    const renderOptions = { 
       theme: 'filled_blue', 
       size: 'large', 
-      width: 350, // Fixed width for reliability
-      shape: 'pill'
+      width: 350, // Slightly wider for better text fit
+      shape: 'rectangular', // Rectangular often renders more reliably than pill
+      logo_alignment: 'left'
     };
     
-    const isLogin = currentTab === 'login';
-    const containerId = isLogin ? 'google-signin-login' : 'google-signin-signup';
-    const container = document.getElementById(containerId);
+    // Use requestAnimationFrame to ensure the DOM is ready for painting
+    requestAnimationFrame(() => {
+      const loginG = document.getElementById('google-signin-login');
+      const signupG = document.getElementById('google-signin-signup');
+      
+      if (loginG && currentTab === 'login') {
+        console.log('[Google] Rendering into login container...');
+        loginG.innerHTML = ''; // Clear existing
+        google.accounts.id.renderButton(loginG, { ...renderOptions, text: 'signin_with' });
+      }
+      
+      if (signupG && currentTab === 'signup') {
+        console.log('[Google] Rendering into signup container...');
+        signupG.innerHTML = ''; // Clear existing
+        google.accounts.id.renderButton(signupG, { ...renderOptions, text: 'signup_with' });
+      }
+
+      // Force show the sections
+      document.querySelectorAll('.google-section').forEach(el => {
+        el.style.setProperty('display', 'block', 'important');
+        el.style.setProperty('visibility', 'visible', 'important');
+        el.style.setProperty('opacity', '1', 'important');
+      });
+    });
     
-    if (container) {
-      // Small delay to ensure container is fully painted
-      setTimeout(() => {
-        container.innerHTML = ''; 
-        google.accounts.id.renderButton(container, {
-          ...options,
-          text: isLogin ? 'signin_with' : 'signup_with'
-        });
-        console.log(`[Google] Button rendered into ${containerId}`);
-      }, 50);
-    }
   } catch (e) {
-    console.error('[Google] Render error:', e);
+    console.error('[Google] Critical Render Error:', e);
   }
 }
 
