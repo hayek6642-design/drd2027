@@ -418,11 +418,12 @@ window._NativeBio = {
     
     <div class="form-group">
       <label>Password</label>
-      <input type="password" id="loginPassword" placeholder="Enter your password" required>
+      <input type="password" id="loginPassword" placeholder="Enter your password" required 
+        onkeypress="if(event.key === 'Enter') handleLogin()">
     </div>
     
 
-    <button onclick="handleLogin()">Login</button>
+    <button onclick="handleLogin()" id="loginBtnMain">Login</button>
 
     <!-- ─── Biometric Login ──────────────────────────────────── -->
     <div id="biometricSection" style="display:none; margin-top:16px;">
@@ -1053,12 +1054,12 @@ async function handleSignup() {
       // 📡 BROADCAST AUTH TO ALL SERVICES
       broadcastAuthChange(data.user, data.sessionId);
       
-      window.dispatchEvent(new CustomEvent('auth:signup', { 
-        detail: { user: data.user, sessionId: data.sessionId } 
-      }));
-
       setTimeout(() => {
-        window.sessionRedirectFix.redirectAfterSignup(data.sessionId, data.userId, data.user || {});
+        if (window.sessionRedirectFix) {
+          window.sessionRedirectFix.redirectAfterSignup(data.sessionId, data.userId, data.user || {});
+        } else {
+          window.location.href = '/codebank/indexCB.html';
+        }
       }, 1500);
     } else {
       if (data.error === 'USER_EXISTS') {
@@ -1083,6 +1084,12 @@ async function handleLogin() {
   if (!email || !password) {
     showStatus('Email and password required', 'error');
     return;
+  }
+
+  const loginBtn = document.getElementById('loginBtnMain');
+  if (loginBtn) {
+    loginBtn.disabled = true;
+    loginBtn.innerHTML = '<span class="loading"></span> Logging in...';
   }
 
   try {
@@ -1133,29 +1140,48 @@ async function handleLogin() {
       // 📡 BROADCAST AUTH TO ALL SERVICES
       broadcastAuthChange(data.user, data.sessionId);
       
-      // Also emit event for any listeners
-      window.dispatchEvent(new CustomEvent('auth:login', { 
-        detail: { user: data.user, sessionId: data.sessionId } 
-      }));
-
       // Offer biometric registration if device supports it (native only)
       if (window._NativeBio && window._NativeBio.isNative()) {
         window._NativeBio.isAvailable().then(bioOk => {
           if (bioOk) {
             document.getElementById('registerBiometricSection').style.display = 'block';
-            setTimeout(() => { window.sessionRedirectFix.redirectAfterLogin(data.sessionId, data.user || {}); }, 3000);
+            setTimeout(() => { 
+                if (window.sessionRedirectFix) {
+                    window.sessionRedirectFix.redirectAfterLogin(data.sessionId, data.user || {});
+                } else {
+                    window.location.href = '/codebank/indexCB.html';
+                }
+            }, 3000);
             return;
           }
-          window.sessionRedirectFix.redirectAfterLogin(data.sessionId, data.user || {});
+          if (window.sessionRedirectFix) {
+            window.sessionRedirectFix.redirectAfterLogin(data.sessionId, data.user || {});
+          } else {
+            window.location.href = '/codebank/indexCB.html';
+          }
         });
       } else {
-        setTimeout(() => { window.sessionRedirectFix.redirectAfterLogin(data.sessionId, data.user || {}); }, 1500);
+        setTimeout(() => { 
+            if (window.sessionRedirectFix) {
+                window.sessionRedirectFix.redirectAfterLogin(data.sessionId, data.user || {});
+            } else {
+                window.location.href = '/codebank/indexCB.html';
+            }
+        }, 1500);
       }
     } else {
       showStatus(data.error || 'Login failed', 'error');
+      if (loginBtn) {
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Login';
+      }
     }
   } catch (error) {
     showStatus('Network error. Please try again.', 'error');
+    if (loginBtn) {
+      loginBtn.disabled = false;
+      loginBtn.textContent = 'Login';
+    }
   }
 }
 

@@ -1116,12 +1116,24 @@
         <!-- Main Navigation Navbar (below bankode title) -->
         <div class="main-navbar">
             <div class="navbar-section navbar-left">
-                <button class="nav-btn nav-btn-primary" onclick="window.location.href='/login.html'">
-                    <span class="btn-icon">👤</span> Login
-                </button>
-                <button class="nav-btn nav-btn-google" onclick="window.location.href='/login.html'">
-                    <span class="btn-icon">🔐</span> Google Sign-In
-                </button>
+                <div id="auth-buttons-group" style="display: flex; gap: 10px;">
+                    <button class="nav-btn nav-btn-primary" onclick="window.location.href='/login.html'">
+                        <span class="btn-icon">👤</span> Login
+                    </button>
+                    <button class="nav-btn nav-btn-google" onclick="window.location.href='/login.html'">
+                        <span class="btn-icon">🔐</span> Google Sign-In
+                    </button>
+                </div>
+                
+                <div id="user-profile-group" style="display: none; align-items: center; gap: 15px;">
+                    <div class="user-info" style="display: flex; flex-direction: column; align-items: flex-end;">
+                        <span id="nav-user-email" style="color: #fff; font-size: 12px; font-weight: 600; opacity: 0.9;">user@example.com</span>
+                        <span style="color: #00d4ff; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Premium Member</span>
+                    </div>
+                    <button class="nav-btn" onclick="handleSignOut()" style="width: 100px; height: 36px; background: rgba(255, 71, 87, 0.1); border-color: rgba(255, 71, 87, 0.3); color: #ff4757;">
+                        Sign Out
+                    </button>
+                </div>
             </div>
             
             <div class="navbar-section navbar-center">
@@ -1307,29 +1319,62 @@
 
         <!-- Navbar JavaScript Functions -->
         <script>
-            function showLoginModal() {
-                // Redirect to login.html page instead of showing modal
-                window.location.href = '/login.html';
-                console.log('[Navbar] Redirecting to login page');
-            }
-            
-            function triggerGoogleSignIn() {
-                console.log('[Navbar] Triggering Google Sign-In');
-                // This will call the google.accounts.id.renderButton or similar
-                if (window.google && window.google.accounts) {
-                    // Trigger Google Sign-In
-                    document.querySelector('[data-text="signin_with"]')?.click?.();
+            // ✅ IMPROVED: Consolidated Auth State Management
+            function updateNavbarAuthState() {
+                const sessionToken = localStorage.getItem('session_token');
+                const userDataStr = localStorage.getItem('user_data');
+                
+                const authButtons = document.getElementById('auth-buttons-group');
+                const userProfile = document.getElementById('user-profile-group');
+                const emailDisplay = document.getElementById('nav-user-email');
+                
+                if (sessionToken && userDataStr) {
+                    try {
+                        const user = JSON.parse(userDataStr);
+                        if (authButtons) authButtons.style.display = 'none';
+                        if (userProfile) userProfile.style.display = 'flex';
+                        if (emailDisplay) emailDisplay.textContent = user.email || 'User';
+                        console.log('[Navbar] User is logged in:', user.email);
+                    } catch (e) {
+                        console.error('[Navbar] Error parsing user data:', e);
+                        showLoggedOutState();
+                    }
+                } else {
+                    showLoggedOutState();
                 }
+            }
+
+            function showLoggedOutState() {
+                const authButtons = document.getElementById('auth-buttons-group');
+                const userProfile = document.getElementById('user-profile-group');
+                if (authButtons) authButtons.style.display = 'flex';
+                if (userProfile) userProfile.style.display = 'none';
+                console.log('[Navbar] User is logged out');
+            }
+
+            function handleSignOut() {
+                console.log('[Navbar] Signing out...');
+                localStorage.removeItem('session_token');
+                localStorage.removeItem('user_data');
+                localStorage.removeItem('session_active');
+                localStorage.removeItem('codebank_auth');
+                
+                // Clear cookies if possible
+                document.cookie = "session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                
+                window.location.reload();
+            }
+
+            function showLoginModal() {
+                window.location.href = '/login.html';
             }
             
             function changeLanguage(lang) {
                 console.log(`[Navbar] Language changed to: ${lang}`);
                 localStorage.setItem('preferred_language', lang);
-                // Trigger language change event
                 window.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: lang } }));
             }
             
-            // Update mail badge count
             function updateMailBadge(count) {
                 const badge = document.getElementById('mail-count');
                 if (badge) {
@@ -1342,14 +1387,20 @@
                 }
             }
             
-            // Restore language preference on load
+            // Run on load
             window.addEventListener('load', () => {
+                updateNavbarAuthState();
+                
                 const saved_lang = localStorage.getItem('preferred_language') || 'en';
                 const lang_select = document.getElementById('language-select');
                 if (lang_select) {
                     lang_select.value = saved_lang;
                 }
             });
+            
+            // Listen for login events from other components
+            window.addEventListener('auth:login', updateNavbarAuthState);
+            window.addEventListener('auth:signup', updateNavbarAuthState);
             
             console.log('[Navbar] Navigation bar initialized');
         </script>
