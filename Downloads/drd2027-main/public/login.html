@@ -1026,17 +1026,15 @@ async function handleSignup() {
     
     const data = await response.json();
     
-    if (data.status === 'success') {
+    if (data.success === true || data.status === 'success') {
       showStatus('Account created successfully! Redirecting...', 'success');
       
+      const sessionId = data.sessionId || data.session_id;
+      const userId = data.userId || data.user_id;
+
       // 🛡️ CRITICAL: Store session and update auth state
-      const session = {
-        userId: data.userId,
-        sessionId: data.sessionId,
-        user: data.user
-      };
-      localStorage.setItem('session_token', data.sessionId);
-      localStorage.setItem('__cached_session_id__', data.sessionId);
+      localStorage.setItem('session_token', sessionId);
+      localStorage.setItem('__cached_session_id__', sessionId);
       localStorage.setItem('session_active', 'true');
       localStorage.setItem('user_data', JSON.stringify(data.user));
       
@@ -1044,15 +1042,15 @@ async function handleSignup() {
       localStorage.setItem('session_active', 'true');
 
       // 📱 NATIVE: Persist to Capacitor Preferences so session survives app kill
-      if (window._NativeBio) window._NativeBio.saveSession(data.sessionId, data.user);
+      if (window._NativeBio) window._NativeBio.saveSession(sessionId, data.user);
       
       // FIXED: Update auth state to authenticated in AuthCore
       if (window.AuthCore && typeof window.AuthCore._setState === 'function') {
         window.AuthCore._setState({
           authenticated: true,
           status: 'active',
-          userId: data.userId,
-          sessionId: data.sessionId,
+          userId: userId,
+          sessionId: sessionId,
           user: data.user
         });
       }
@@ -1064,21 +1062,21 @@ async function handleSignup() {
       }
       
       // 📡 BROADCAST AUTH TO ALL SERVICES
-      broadcastAuthChange(data.user, data.sessionId);
+      broadcastAuthChange(data.user, sessionId);
       
       setTimeout(() => {
         if (window.sessionRedirectFix) {
-          window.sessionRedirectFix.redirectAfterSignup(data.sessionId, data.userId, data.user || {});
+          window.sessionRedirectFix.redirectAfterSignup(sessionId, userId, data.user || {});
         } else {
           window.location.href = '/codebank/indexCB.html';
         }
       }, 1500);
     } else {
-      if (data.error === 'USER_EXISTS') {
+      if (data.error === 'USER_EXISTS' || data.error === 'Email already registered') {
         showStatus('Account already exists. Please sign in.', 'error');
         return;
       }
-      showStatus(data.error || 'Signup failed', 'error');
+      showStatus(data.error || data.message || 'Signup failed', 'error');
       signupBtn.disabled = false;
       signupBtn.textContent = 'Complete Sign Up';
     }
@@ -1090,8 +1088,18 @@ async function handleSignup() {
 }
 
 async function handleLogin() {
-  const email = document.getElementById('loginEmail').value.trim();
-  const password = document.getElementById('loginPassword').value;
+  console.log('[Auth] handleLogin triggered');
+  
+  const emailEl = document.getElementById('loginEmail');
+  const passwordEl = document.getElementById('loginPassword');
+  
+  if (!emailEl || !passwordEl) {
+    console.error('[Auth] Login inputs not found in DOM');
+    return;
+  }
+
+  const email = emailEl.value.trim();
+  const password = passwordEl.value;
 
   if (!email || !password) {
     showStatus('Email and password required', 'error');
@@ -1105,6 +1113,7 @@ async function handleLogin() {
   }
 
   try {
+    console.log('[Auth] Sending login request to /api/auth/login');
     const response = await fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1113,13 +1122,17 @@ async function handleLogin() {
     });
 
     const data = await response.json();
+    console.log('[Auth] Login response received:', data);
 
-    if (data.status === 'success') {
+    if (data.success === true || data.status === 'success') {
       showStatus('Login successful! Redirecting...', 'success');
       
+      const sessionId = data.sessionId || data.session_id;
+      const userId = data.userId || data.user_id;
+      
       // 🛡️ CRITICAL: Store session and update auth state
-      localStorage.setItem('session_token', data.sessionId);
-      localStorage.setItem('__cached_session_id__', data.sessionId);
+      localStorage.setItem('session_token', sessionId);
+      localStorage.setItem('__cached_session_id__', sessionId);
       localStorage.setItem('session_active', 'true');
       if (data.user) {
         localStorage.setItem('user_data', JSON.stringify(data.user));
@@ -1129,15 +1142,15 @@ async function handleLogin() {
       localStorage.setItem('session_active', 'true');
 
       // 📱 NATIVE: Persist to Capacitor Preferences so session survives app kill
-      if (window._NativeBio) window._NativeBio.saveSession(data.sessionId, data.user);
+      if (window._NativeBio) window._NativeBio.saveSession(sessionId, data.user);
       
       // FIXED: Update auth state to authenticated in AuthCore
       if (window.AuthCore && typeof window.AuthCore._setState === 'function') {
         window.AuthCore._setState({
           authenticated: true,
           status: 'active',
-          userId: data.userId,
-          sessionId: data.sessionId,
+          userId: userId,
+          sessionId: sessionId,
           user: data.user
         });
       }
@@ -1150,7 +1163,7 @@ async function handleLogin() {
       }
       
       // 📡 BROADCAST AUTH TO ALL SERVICES
-      broadcastAuthChange(data.user, data.sessionId);
+      broadcastAuthChange(data.user, sessionId);
       
       // Offer biometric registration if device supports it (native only)
       if (window._NativeBio && window._NativeBio.isNative()) {
@@ -1159,7 +1172,7 @@ async function handleLogin() {
             document.getElementById('registerBiometricSection').style.display = 'block';
             setTimeout(() => { 
                 if (window.sessionRedirectFix) {
-                    window.sessionRedirectFix.redirectAfterLogin(data.sessionId, data.user || {});
+                    window.sessionRedirectFix.redirectAfterLogin(sessionId, data.user || {});
                 } else {
                     window.location.href = '/codebank/indexCB.html';
                 }
@@ -1167,7 +1180,7 @@ async function handleLogin() {
             return;
           }
           if (window.sessionRedirectFix) {
-            window.sessionRedirectFix.redirectAfterLogin(data.sessionId, data.user || {});
+            window.sessionRedirectFix.redirectAfterLogin(sessionId, data.user || {});
           } else {
             window.location.href = '/codebank/indexCB.html';
           }
@@ -1175,14 +1188,14 @@ async function handleLogin() {
       } else {
         setTimeout(() => { 
             if (window.sessionRedirectFix) {
-                window.sessionRedirectFix.redirectAfterLogin(data.sessionId, data.user || {});
+                window.sessionRedirectFix.redirectAfterLogin(sessionId, data.user || {});
             } else {
                 window.location.href = '/codebank/indexCB.html';
             }
         }, 1500);
       }
     } else {
-      showStatus(data.error || 'Login failed', 'error');
+      showStatus(data.error || data.message || 'Login failed', 'error');
       if (loginBtn) {
         loginBtn.disabled = false;
         loginBtn.textContent = 'Login';
