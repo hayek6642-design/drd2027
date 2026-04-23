@@ -531,15 +531,18 @@
             letter-spacing: 1px;
         }
         .auth-container {
-            position: fixed;
-            top: 90px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1001;
+            position: static;
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
             align-items: center;
             gap: 10px;
+            justify-content: flex-end;
+            padding: 0 20px;
+        }
+        
+        /* Hide the duplicate Sign In button from auth-state - navbar has the buttons */
+        #auth-not-logged {
+            display: none !important;
         }
         .auth-buttons {
             display: flex;
@@ -1089,12 +1092,12 @@
         <!-- Main Navigation Navbar (below bankode title) -->
         <div class="main-navbar">
             <div class="navbar-left">
-                <button class="nav-btn nav-btn-primary" onclick="showLoginModal()">
-                    <span class="btn-icon">👤</span> Login
-                </button>
-                <button class="nav-btn nav-btn-google" onclick="triggerGoogleSignIn()">
-                    <span class="btn-icon">🔐</span> Google Sign-In
-                </button>
+            <button class="nav-btn nav-btn-primary" onclick="window.location.href='/login.html'">
+                <span class="btn-icon">👤</span> Login
+            </button>
+            <button class="nav-btn nav-btn-google" onclick="window.location.href='/login.html'">
+                <span class="btn-icon">🔐</span> Google Sign-In
+            </button>
             </div>
             
             <div class="navbar-center">
@@ -1284,11 +1287,9 @@
         <!-- Navbar JavaScript Functions -->
         <script>
             function showLoginModal() {
-                const loginModal = document.getElementById('login-modal') || document.querySelector('.login-modal');
-                if (loginModal) {
-                    loginModal.style.display = 'block';
-                    console.log('[Navbar] Login modal opened');
-                }
+                // Redirect to login.html page instead of showing modal
+                window.location.href = '/login.html';
+                console.log('[Navbar] Redirecting to login page');
             }
             
             function triggerGoogleSignIn() {
@@ -1363,7 +1364,7 @@
                     <div style="text-align:center;color:#666;font-size:13px;margin-bottom:20px;">or</div>
                     
                     <!-- Email Form -->
-                    <form id="signin-form" onsubmit="handleEmailLogin(event)" style="display:flex;flex-direction:column;">
+                    <form id="signin-form" style="display:flex;flex-direction:column;">
                         <div style="margin-bottom:18px;">
                             <label style="display:block;color:#94a3b8;font-size:12px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Email</label>
                             <input type="email" id="signin-email" placeholder="your@email.com" required style="width:100%;padding:12px 14px;background:rgba(0,0,0,0.4);border:1px solid rgba(167,139,250,0.3);border-radius:8px;color:#fff;font-size:15px;outline:none;box-sizing:border-box;">
@@ -1380,7 +1381,7 @@
                     </form>
                     
                     <div style="text-align:center;color:#666;font-size:13px;">
-                        Don't have an account? <a href="#" onclick="showSignupModal()" style="color:#00d4ff;text-decoration:none;cursor:pointer;">Sign Up</a>
+                        Don't have an account? <a href="/login.html?mode=signup" style="color:#00d4ff;text-decoration:none;cursor:pointer;">Sign Up</a>
                     </div>
                 </div>
             </div>
@@ -1392,7 +1393,7 @@
                     
                     <h2 style="color:#fff;text-align:center;margin:0 0 24px;font-size:20px;font-weight:600;">Create Account</h2>
                     
-                    <form id="signup-form" onsubmit="handleSignup(event)" style="display:flex;flex-direction:column;">
+                    <form id="signup-form" style="display:flex;flex-direction:column;">
                         <div style="margin-bottom:18px;">
                             <label style="display:block;color:#94a3b8;font-size:12px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Email</label>
                             <input type="email" id="signup-email" placeholder="your@email.com" required style="width:100%;padding:12px 14px;background:rgba(0,0,0,0.4);border:1px solid rgba(167,139,250,0.3);border-radius:8px;color:#fff;font-size:15px;outline:none;box-sizing:border-box;">
@@ -1414,7 +1415,7 @@
                     </form>
                     
                     <div style="text-align:center;color:#666;font-size:13px;">
-                        Already have an account? <a href="#" onclick="showLoginModal()" style="color:#00d4ff;text-decoration:none;cursor:pointer;">Sign In</a>
+                        Already have an account? <a href="/login.html" style="color:#00d4ff;text-decoration:none;cursor:pointer;">Sign In</a>
                     </div>
                 </div>
             </div>
@@ -2858,15 +2859,13 @@ class AuthController {
     }
 
     showLoginModal() {
-        this.setState('login-modal');
-        const signinStatus = document.getElementById('signin-status');
-        if (signinStatus) signinStatus.textContent = '';
+        // Redirect to login.html instead of showing modal
+        window.location.href = '/login.html';
     }
 
     showSignupModal() {
-        this.setState('signup-modal');
-        const signupStatus = document.getElementById('signup-status');
-        if (signupStatus) signupStatus.textContent = '';
+        // Redirect to login.html with signup mode
+        window.location.href = '/login.html?mode=signup';
     }
 
     closeModals() {
@@ -2881,11 +2880,13 @@ class AuthController {
         const signinStatus = document.getElementById('signin-status');
 
         if (!email || !password) {
-            if (signinStatus) signinStatus.textContent = 'Email and password required';
+            if (signinStatus) signinStatus.textContent = '⚠️ Email and password required';
             return;
         }
 
         try {
+            if (signinStatus) signinStatus.textContent = '🔄 Signing in...';
+            
             const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -2896,15 +2897,24 @@ class AuthController {
 
             if (data.success) {
                 this.saveSession(data);
-                this.setLoggedIn(data.user);
+                if (signinStatus) signinStatus.textContent = '✅ Login successful!';
+                if (signinStatus) signinStatus.style.color = '#00c853';
+                setTimeout(() => {
+                    this.setLoggedIn(data.user);
+                    window.location.reload();
+                }, 800);
             } else {
                 if (signinStatus) {
-                    signinStatus.textContent = data.error || 'Login failed';
+                    signinStatus.textContent = '❌ ' + (data.error || 'Login failed');
+                    signinStatus.style.color = '#ff6b6b';
                 }
             }
         } catch (error) {
             console.error('[AuthController] Sign in error:', error);
-            if (signinStatus) signinStatus.textContent = 'Network error: ' + error.message;
+            if (signinStatus) {
+                signinStatus.textContent = '❌ Network error: ' + error.message;
+                signinStatus.style.color = '#ff6b6b';
+            }
         }
     }
 
@@ -2917,22 +2927,24 @@ class AuthController {
         const signupStatus = document.getElementById('signup-status');
 
         if (!email || !password || !confirm) {
-            if (signupStatus) signupStatus.textContent = 'All fields required';
+            if (signupStatus) signupStatus.textContent = '⚠️ All fields required';
             return;
         }
 
         if (password !== confirm) {
-            if (signupStatus) signupStatus.textContent = 'Passwords do not match';
+            if (signupStatus) signupStatus.textContent = '⚠️ Passwords do not match';
             return;
         }
 
         if (password.length < 6) {
-            if (signupStatus) signupStatus.textContent = 'Password must be at least 6 characters';
+            if (signupStatus) signupStatus.textContent = '⚠️ Password must be at least 6 characters';
             return;
         }
 
         try {
-            const response = await fetch('/api/auth/register', {
+            if (signupStatus) signupStatus.textContent = '🔄 Creating account...';
+            
+            const response = await fetch('/api/auth/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
@@ -2941,16 +2953,26 @@ class AuthController {
             const data = await response.json();
 
             if (data.success) {
-                alert('Account created! Please sign in.');
-                this.showLoginModal();
+                // Auto-login after signup
+                this.saveSession(data);
+                if (signupStatus) signupStatus.textContent = '✅ Account created successfully!';
+                if (signupStatus) signupStatus.style.color = '#00c853';
+                setTimeout(() => {
+                    this.setLoggedIn(data.user);
+                    window.location.reload();
+                }, 1500);
             } else {
                 if (signupStatus) {
-                    signupStatus.textContent = data.error || 'Registration failed';
+                    signupStatus.textContent = '❌ ' + (data.error || 'Registration failed');
+                    signupStatus.style.color = '#ff6b6b';
                 }
             }
         } catch (error) {
             console.error('[AuthController] Sign up error:', error);
-            if (signupStatus) signupStatus.textContent = 'Network error: ' + error.message;
+            if (signupStatus) {
+                signupStatus.textContent = '❌ Network error: ' + error.message;
+                signupStatus.style.color = '#ff6b6b';
+            }
         }
     }
 
@@ -2990,7 +3012,7 @@ class AuthController {
         }
 
         try {
-            const response = await fetch('/api/auth/verify', {
+            const response = await fetch('/api/auth/session', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -3037,8 +3059,8 @@ if (document.readyState === 'loading') {
 }
 
 // Make functions global
-window.showLoginModal = () => window.authController?.showLoginModal();
-window.showSignupModal = () => window.authController?.showSignupModal();
+window.showLoginModal = () => window.location.href = '/login.html';
+window.showSignupModal = () => window.location.href = '/login.html?mode=signup';
 window.handleSignIn = (e) => window.authController?.handleSignIn(e);
 window.handleSignUp = (e) => window.authController?.handleSignUp(e);
 window.closeModals = () => window.authController?.closeModals();
@@ -3049,13 +3071,6 @@ window.closeModals = () => window.authController?.closeModals();
      LOGIN/SIGNUP MODAL WIDTH EMERGENCY FIX
      ============================================ -->
 <style>
-/* Hide modals by default - prevent overlay on navbar */
-#login-modal,
-#signup-modal {
-    display: none !important;
-    visibility: hidden !important;
-}
-
 /* Target the modal by all possible selectors */
 #auth-modal,
 #signup-modal,
@@ -3302,9 +3317,9 @@ window.closeModals = () => window.authController?.closeModals();
     
     // Override global functions
     window.showAuthModal = openAuthModal;
-    window.showSignupModal = () => openAuthModal('signup');
+    window.showSignupModal = () => window.location.href = '/login.html?mode=signup';
     window.showSigninModal = () => openAuthModal('signin');
-    window.showLoginModal = () => openAuthModal('signin');
+    window.showLoginModal = () => window.location.href = '/login.html';
     
     // Hook into existing auth controller if present
     if (window.AuthController) {
