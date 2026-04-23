@@ -563,10 +563,26 @@ async function handleLogin() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
-    
+
+    // Check content-type before parsing — server might return HTML error page
+    const contentType = res.headers.get('content-type') || '';
+    const isJson = contentType.includes('application/json');
+
     if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.error || errorData.message || 'Login failed');
+      if (isJson) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || errorData.message || `Login failed (${res.status})`);
+      } else {
+        const text = await res.text();
+        console.error('[Login] Server returned HTML:', text.substring(0, 200));
+        throw new Error(`Server error ${res.status}. Make sure the backend is running.`);
+      }
+    }
+
+    if (!isJson) {
+      const text = await res.text();
+      console.error('[Login] Expected JSON, got:', text.substring(0, 200));
+      throw new Error('Invalid server response. Backend may be misconfigured.');
     }
 
     const data = await res.json();
@@ -625,9 +641,25 @@ async function handleSignup() {
       })
     });
 
+    // Check content-type before parsing — server might return HTML error page
+    const contentType = res.headers.get('content-type') || '';
+    const isJson = contentType.includes('application/json');
+
     if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.error || errorData.message || 'Signup failed');
+      if (isJson) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || errorData.message || `Signup failed (${res.status})`);
+      } else {
+        const text = await res.text();
+        console.error('[Signup] Server returned HTML:', text.substring(0, 200));
+        throw new Error(`Server error ${res.status}. Make sure the backend is running.`);
+      }
+    }
+
+    if (!isJson) {
+      const text = await res.text();
+      console.error('[Signup] Expected JSON, got:', text.substring(0, 200));
+      throw new Error('Invalid server response. Backend may be misconfigured.');
     }
 
     const data = await res.json();
