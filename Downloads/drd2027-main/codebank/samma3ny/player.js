@@ -203,8 +203,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    // Initialize player
-    async 
 // Initialize storage manager
 const storageManager = new StorageManager(userId || 'default-user');
 
