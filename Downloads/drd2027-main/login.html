@@ -580,22 +580,22 @@ window._NativeBio = {
     
     <div id="statusMessage" class="status-message"></div>
     
-    <button onclick="handleSignup()" id="signupBtn">🔒 Verify Email First</button>
+    <button type="button" onclick="handleSignup()" id="signupBtn">🔒 Verify Email First</button>
+
+    <!-- Google Sign-In Integration (Modern Layout) -->
+    <div id="google-divider-signup" style="display:none;align-items:center;gap:12px;margin:24px 0;">
+      <div style="flex:1;height:1px;background:rgba(255,255,255,0.1)"></div>
+      <span style="color:rgba(255,255,255,0.4);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">or sign up via google</span>
+      <div style="flex:1;height:1px;background:rgba(255,255,255,0.1)"></div>
+    </div>
+
+    <div id="google-signup-wrapper" style="display:none;margin-top:10px;">
+      <div id="google-signin-signup" style="display:flex;justify-content:center;"></div>
+    </div>
   </div>
 
   <!-- LOGIN FORM -->
   <div id="loginForm" style="display: none;">
-
-    <!-- Google Sign-In -->
-    <div id="google-login-wrapper" style="display:none;margin-bottom:10px;">
-      <div id="google-signin-login" style="display:flex;justify-content:center;"></div>
-    </div>
-    <div id="google-divider-login" style="display:none;align-items:center;gap:10px;margin:16px 0 20px;">
-      <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
-      <span style="color:#666;font-size:12px;white-space:nowrap;">or sign in with email</span>
-      <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
-    </div>
-
     <div class="form-group">
       <label>Email Address</label>
       <input type="email" id="loginEmail" placeholder="your@email.com" required>
@@ -603,11 +603,22 @@ window._NativeBio = {
     
     <div class="form-group">
       <label>Password</label>
-      <input type="password" id="loginPassword" placeholder="Enter your password" required>
+      <input type="password" id="loginPassword" placeholder="Enter your password" required 
+        onkeypress="if(event.key === 'Enter') handleLogin()">
+    </div>
+
+    <button type="button" onclick="handleLogin()" id="loginBtnMain">Login</button>
+
+    <!-- Google Sign-In Integration (Modern Layout) -->
+    <div id="google-divider-login" style="display:none;align-items:center;gap:12px;margin:24px 0;">
+      <div style="flex:1;height:1px;background:rgba(255,255,255,0.1)"></div>
+      <span style="color:rgba(255,255,255,0.4);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">or sign in via google</span>
+      <div style="flex:1;height:1px;background:rgba(255,255,255,0.1)"></div>
     </div>
     
-
-    <button onclick="handleLogin()">Login</button>
+    <div id="google-login-wrapper" style="display:none;margin-top:10px;">
+      <div id="google-signin-login" style="display:flex;justify-content:center;"></div>
+    </div>
 
     <!-- ─── Biometric Login ──────────────────────────────────── -->
     <div id="biometricSection" style="display:none; margin-top:16px;">
@@ -1144,15 +1155,32 @@ async function handleSignup() {
 }
 
 async function handleLogin() {
-  const email = document.getElementById('loginEmail').value.trim();
-  const password = document.getElementById('loginPassword').value;
+  console.log('[Auth] handleLogin triggered');
+  
+  const emailEl = document.getElementById('loginEmail');
+  const passwordEl = document.getElementById('loginPassword');
+  
+  if (!emailEl || !passwordEl) {
+    console.error('[Auth] Login inputs not found in DOM');
+    return;
+  }
+
+  const email = emailEl.value.trim();
+  const password = passwordEl.value;
 
   if (!email || !password) {
     showStatus('Email and password required', 'error');
     return;
   }
 
+  const loginBtn = document.getElementById('loginBtnMain');
+  if (loginBtn) {
+    loginBtn.disabled = true;
+    loginBtn.innerHTML = '<span class="loading"></span> Logging in...';
+  }
+
   try {
+    console.log('[Auth] Sending login request to /api/auth/login');
     const response = await fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1161,25 +1189,29 @@ async function handleLogin() {
     });
 
     const data = await response.json();
+    console.log('[Auth] Login response received:', data);
 
-    if (data.status === 'success') {
+    if (data.success === true || data.status === 'success') {
       showStatus('Login successful! Redirecting...', 'success');
       
-      localStorage.setItem('session_token', data.sessionId);
-      localStorage.setItem('__cached_session_id__', data.sessionId);
+      const sessionId = data.sessionId || data.session_id;
+      const userId = data.userId || data.user_id;
+      
+      localStorage.setItem('session_token', sessionId);
+      localStorage.setItem('__cached_session_id__', sessionId);
       localStorage.setItem('session_active', 'true');
       if (data.user) {
         localStorage.setItem('user_data', JSON.stringify(data.user));
       }
 
-      if (window._NativeBio) window._NativeBio.saveSession(data.sessionId, data.user);
+      if (window._NativeBio) window._NativeBio.saveSession(sessionId, data.user);
       
       if (window.AuthCore && typeof window.AuthCore._setState === 'function') {
         window.AuthCore._setState({
           authenticated: true,
           status: 'active',
-          userId: data.userId,
-          sessionId: data.sessionId,
+          userId: userId,
+          sessionId: sessionId,
           user: data.user
         });
       }
@@ -1190,27 +1222,36 @@ async function handleLogin() {
         window.AssetsManager.sync();
       }
       window.dispatchEvent(new CustomEvent('auth:login', { 
-        detail: { user: data.user, sessionId: data.sessionId } 
+        detail: { user: data.user, sessionId: sessionId } 
       }));
 
       if (window._NativeBio && window._NativeBio.isNative()) {
         window._NativeBio.isAvailable().then(bioOk => {
           if (bioOk) {
             document.getElementById('registerBiometricSection').style.display = 'block';
-            setTimeout(() => { window.location.href = '/yt-new-clear.html'; }, 3000);
+            setTimeout(() => { window.location.href = '/codebank/indexCB.html'; }, 3000);
             return;
           }
-          window.location.href = '/yt-new-clear.html';
+          window.location.href = '/codebank/indexCB.html';
         });
       } else {
         updateAuthUI();
-        setTimeout(() => { window.location.href = '/yt-new-clear.html'; }, 1500);
+        setTimeout(() => { window.location.href = '/codebank/indexCB.html'; }, 1500);
       }
     } else {
-      showStatus(data.error || 'Login failed', 'error');
+      showStatus(data.error || data.message || 'Login failed', 'error');
+      if (loginBtn) {
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Login';
+      }
     }
   } catch (error) {
+    console.error('[Auth] Login error:', error);
     showStatus('Network error. Please try again.', 'error');
+    if (loginBtn) {
+      loginBtn.disabled = false;
+      loginBtn.textContent = 'Login';
+    }
   }
 }
 
@@ -1353,24 +1394,14 @@ async function initGoogleSignIn() {
     
     console.log('[Google] Server response:', data);
     
-    const isValidClientId = data.clientId &&
-      data.clientId !== 'your_google_client_id.apps.googleusercontent.com' &&
-      /^\d+(-\w+)?\.apps\.googleusercontent\.com$/.test(data.clientId);
+    const clientId = data.clientId || '';
+    const isConfigured = clientId && 
+                         clientId !== 'your_google_client_id.apps.googleusercontent.com' &&
+                         clientId.includes('.apps.googleusercontent.com');
 
-    if (!isValidClientId) {
-      console.warn('[Google Auth Setup]');
-      console.warn('  ❌ GOOGLE_CLIENT_ID is NOT configured on the server');
-      console.warn('  📋 Instructions:');
-      console.warn('     1. Go to https://console.cloud.google.com/');
-      console.warn('     2. Create a new project');
-      console.warn('     3. Enable Google+ API');
-      console.warn('     4. Create OAuth 2.0 credentials (Web application)');
-      console.warn('     5. Add authorized origins: https://dr-d-h51l.onrender.com');
-      console.warn('     6. Copy the Client ID and update the .env file');
-      console.warn('     7. Restart the server');
-      console.warn('  For now, Google Sign-In buttons are disabled.');
-      
-      document.querySelectorAll('.google-login-wrapper, #google-login-wrapper, #google-signup-wrapper, #google-divider-login, #google-divider-signup').forEach(el => {
+    if (!isConfigured) {
+      console.warn('[Google] Client ID not properly configured, hiding buttons');
+      document.querySelectorAll('#google-login-wrapper, #google-signup-wrapper, #google-divider-login, #google-divider-signup').forEach(el => {
         if (el) el.style.display = 'none';
       });
       return;
@@ -1379,44 +1410,50 @@ async function initGoogleSignIn() {
     console.log('[Google] Client ID is valid, initializing Google Sign-In...');
     
     google.accounts.id.initialize({
-      client_id: data.clientId,
+      client_id: clientId,
       callback: handleGoogleCredential,
       auto_select: false,
       context: 'signin'
     });
 
-    const loginBtn = document.getElementById('google-signin-login');
-    if (loginBtn) {
-      google.accounts.id.renderButton(loginBtn, {
+    // Determine width based on container
+    const btnWidth = Math.min(window.innerWidth - 60, 400);
+
+    // Render in login form
+    const loginBtnContainer = document.getElementById('google-signin-login');
+    if (loginBtnContainer) {
+      google.accounts.id.renderButton(loginBtnContainer, {
         theme: 'filled_blue',
         size: 'large',
-        width: 440,
+        width: btnWidth,
         text: 'signin_with',
-        shape: 'pill',
-        logo_alignment: 'left'
+        shape: 'pill'
       });
-      document.getElementById('google-login-wrapper').style.display = 'block';
-      document.getElementById('google-divider-login').style.display = 'flex';
+      const wrapper = document.getElementById('google-login-wrapper');
+      const divider = document.getElementById('google-divider-login');
+      if (wrapper) wrapper.style.display = 'block';
+      if (divider) divider.style.display = 'flex';
     }
 
-    const signupBtn = document.getElementById('google-signin-signup');
-    if (signupBtn) {
-      google.accounts.id.renderButton(signupBtn, {
+    // Render in signup form
+    const signupBtnContainer = document.getElementById('google-signin-signup');
+    if (signupBtnContainer) {
+      google.accounts.id.renderButton(signupBtnContainer, {
         theme: 'filled_blue',
         size: 'large',
-        width: 440,
+        width: btnWidth,
         text: 'continue_with',
-        shape: 'pill',
-        logo_alignment: 'left'
+        shape: 'pill'
       });
-      document.getElementById('google-signup-wrapper').style.display = 'block';
-      document.getElementById('google-divider-signup').style.display = 'flex';
+      const wrapper = document.getElementById('google-signup-wrapper');
+      const divider = document.getElementById('google-divider-signup');
+      if (wrapper) wrapper.style.display = 'block';
+      if (divider) divider.style.display = 'flex';
     }
 
-    console.log('[Google] ✅ Sign-In buttons rendered successfully');
+    console.log('[Google] ✅ Sign-In buttons initialized');
   } catch (e) {
-    console.error('[Google Auth Error]', e);
-    console.error('Failed to initialize Google Sign-In. Check console for details.');
+    console.error('[Google] Init error:', e);
   }
 }
 
