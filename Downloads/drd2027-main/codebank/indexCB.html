@@ -701,10 +701,11 @@
            MODERN DARK TILE SKIN — visual only, no logic
         ══════════════════════════════════════════════════ */
 
-        /* 1. Dark purple page background */
+        /* 1. Dark purple page background - FIXED: Added padding-top to accommodate navbar */
         body {
             background: #12082e !important;
             background-image: none !important;
+            padding-top: 70px !important; /* Space for the 60px navbar */
         }
 
         /* 2. Compact section headers */
@@ -1173,121 +1174,148 @@
         </div>
 
         <style>
-            /* Navbar Modern Styles */
+            /* Navbar Modern Styles - Stylish & Unified */
             .nav-btn {
-                width: 140px; /* Fixed width for uniform size */
-                height: 38px;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 10px;
+                width: 150px; /* Slightly wider for better text fit */
+                height: 40px;
+                border-radius: 12px;
                 font-size: 13px;
+                font-weight: 700;
                 cursor: pointer;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                gap: 8px;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                font-weight: 600;
+                gap: 10px;
+                transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
                 white-space: nowrap;
-                background: rgba(255, 255, 255, 0.05);
-                color: rgba(255, 255, 255, 0.9);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                position: relative;
+                overflow: hidden;
+                letter-spacing: 0.3px;
             }
-            
+
+            /* Premium Primary Button (Login) */
             .nav-btn-primary {
-                background: linear-gradient(135deg, #00d4ff, #7b2cbf);
+                background: linear-gradient(135deg, #00d4ff 0%, #7b2cbf 100%);
                 color: #fff;
+                box-shadow: 0 4px 15px rgba(0, 212, 255, 0.25);
                 border: none;
-                box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2);
             }
-            
+
+            .nav-btn-primary::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+                transition: 0.5s;
+            }
+
             .nav-btn-primary:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 20px rgba(0, 212, 255, 0.4);
+                transform: translateY(-3px) scale(1.02);
+                box-shadow: 0 8px 25px rgba(0, 212, 255, 0.4);
                 filter: brightness(1.1);
             }
-            
-            .nav-btn-google {
-                background: #ffffff;
-                color: #1a1a2e;
-                border: none;
+
+            .nav-btn-primary:hover::before {
+                left: 100%;
             }
-            
+
+            /* Premium Secondary Button (Google) */
+            .nav-btn-google {
+                background: rgba(255, 255, 255, 0.95);
+                color: #0f172a;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                border: 1px solid rgba(255, 255, 255, 1);
+            }
+
             .nav-btn-google:hover {
-                background: #f8f9fa;
-                transform: translateY(-2px);
-                box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
+                background: #ffffff;
+                transform: translateY(-3px) scale(1.02);
+                box-shadow: 0 8px 20px rgba(255, 255, 255, 0.25);
+            }
+
+            .btn-icon {
+                font-size: 16px;
+                filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
             }
             
             .nav-mail-btn {
                 position: relative;
-                width: 44px;
-                height: 44px;
-                border-radius: 12px;
-                background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
-                border: 1px solid rgba(255,255,255,0.1);
+                width: 46px;
+                height: 46px;
+                border-radius: 14px;
+                background: rgba(255, 255, 255, 0.03);
+                border: 1px solid rgba(255, 255, 255, 0.1);
                 color: #00d4ff;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 cursor: pointer;
-                transition: all 0.3s ease;
-                box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                box-shadow: inset 0 0 10px rgba(0, 212, 255, 0.05);
             }
             
             .nav-mail-btn i {
-                font-size: 20px;
-                filter: drop-shadow(0 0 5px rgba(0, 212, 255, 0.5));
+                font-size: 22px;
+                filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.6));
             }
             
             .nav-mail-btn:hover {
-                transform: translateY(-2px) scale(1.05);
-                background: rgba(0, 212, 255, 0.15);
+                transform: translateY(-3px) rotate(5deg) scale(1.1);
+                background: rgba(0, 212, 255, 0.12);
                 border-color: #00d4ff;
-                box-shadow: 0 6px 15px rgba(0, 212, 255, 0.3);
+                box-shadow: 0 8px 20px rgba(0, 212, 255, 0.3);
             }
             
             .mail-badge {
                 position: absolute;
-                top: -5px;
-                right: -5px;
+                top: -6px;
+                right: -6px;
                 background: #ff4757;
                 color: #fff;
                 border-radius: 50%;
-                width: 18px;
-                height: 18px;
+                width: 20px;
+                height: 20px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 font-size: 10px;
                 font-weight: 800;
                 border: 2px solid #0a061e;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.5);
             }
             
             .lang-select {
-                height: 38px;
-                padding: 0 12px;
+                height: 40px;
+                padding: 0 14px;
                 border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 10px;
+                border-radius: 12px;
                 background: rgba(255, 255, 255, 0.05);
-                color: rgba(255, 255, 255, 0.8);
+                color: rgba(255, 255, 255, 0.9);
                 font-size: 13px;
                 font-weight: 600;
                 cursor: pointer;
                 outline: none;
                 transition: all 0.3s;
-                min-width: 100px;
+                min-width: 110px;
+                backdrop-filter: blur(5px);
             }
             
             .lang-select:hover {
                 background: rgba(255, 255, 255, 0.1);
                 border-color: rgba(255, 255, 255, 0.3);
+                transform: translateY(-1px);
             }
             
             @media (max-width: 768px) {
                 .bankode-header {
                     height: auto;
-                    padding: 15px 16px;
+                    padding: 18px 16px;
                     flex-direction: column;
-                    gap: 15px;
+                    gap: 18px;
                 }
                 .main-navbar {
                     width: 100%;
@@ -1296,11 +1324,10 @@
                     gap: 15px;
                     flex-wrap: wrap;
                 }
-                .navbar-separator {
-                    display: none;
-                }
                 .nav-btn {
-                    width: 120px;
+                    width: 130px;
+                    height: 36px;
+                    font-size: 12px;
                 }
             }
         </style>
