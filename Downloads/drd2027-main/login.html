@@ -500,50 +500,11 @@ window._NativeBio = {
   <!-- SIGNUP FORM -->
     <div id="signupForm">
 
-    <!-- Google Sign-In (signup) -->
-    <div id="google-signup-wrapper" style="display:none;margin-bottom:10px;">
-      <div id="google-signin-signup" style="display:flex;justify-content:center;"></div>
-    </div>
-    <div id="google-divider-signup" style="display:none;align-items:center;gap:10px;margin:16px 0 20px;">
-      <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
-      <span style="color:#666;font-size:12px;white-space:nowrap;">or sign up with email</span>
-      <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
-    </div>
-
     <div class="form-group">
       <label>Email Address</label>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <input type="email" id="signupEmail" placeholder="your@email.com" required style="flex:1;">
-        <button type="button" id="sendOtpEmailBtn" onclick="sendEmailOTPCode()" 
-          style="white-space:nowrap;padding:10px 14px;font-size:13px;background:linear-gradient(135deg,#0066cc,#00d4ff);color:#fff;border:none;border-radius:8px;cursor:pointer;transition:opacity .2s;width:auto;">
-          Send Code
-        </button>
-      </div>
+      <input type="email" id="signupEmail" placeholder="your@email.com" required>
     </div>
 
-    <!-- OTP Verification Panel (hidden until code sent) -->
-    <div id="emailOtpPanel" style="display:none;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.3);border-radius:10px;padding:14px 16px;margin-bottom:12px;">
-      <p style="margin:0 0 10px;font-size:13px;color:#aaa;">✉️ A 6-digit code was sent to your email. Enter it below:</p>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <input type="text" id="emailOtpInput" maxlength="6" placeholder="_ _ _ _ _ _"
-          style="flex:1;letter-spacing:6px;font-size:20px;text-align:center;padding:10px;background:#111;color:#00d4ff;border:1px solid #333;border-radius:8px;"
-          oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-        <button type="button" onclick="verifyEmailOTPCode()"
-          style="padding:10px 16px;background:#00c853;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">
-          Verify ✓
-        </button>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:#666;">
-        <span id="emailOtpStatus"></span>
-        <button type="button" onclick="resendEmailOTPCode()" style="background:none;border:none;color:#00d4ff;cursor:pointer;font-size:12px;padding:0;">Resend code</button>
-      </div>
-    </div>
-
-    <!-- Email verified badge (hidden until verified) -->
-    <div id="emailVerifiedBadge" style="display:none;background:rgba(0,200,83,0.12);border:1px solid #00c853;border-radius:8px;padding:8px 14px;margin-bottom:12px;font-size:13px;color:#00c853;">
-      ✅ Email verified — you're good to go!
-    </div>
-    
     <div class="form-group">
       <label>Username</label>
       <input type="text" id="signupUsername" placeholder="Choose a username" required>
@@ -580,7 +541,7 @@ window._NativeBio = {
     
     <div id="statusMessage" class="status-message"></div>
     
-    <button type="button" onclick="handleSignup()" id="signupBtn">🔒 Verify Email First</button>
+    <button type="button" onclick="handleSignup()" id="signupBtn">Complete Sign Up</button>
 
     <!-- Google Sign-In Integration (Modern Layout) -->
     <div id="google-divider-signup" style="display:none;align-items:center;gap:12px;margin:24px 0;">
@@ -1051,6 +1012,7 @@ async function resendEmailOTPCode() {
 }
 
 async function handleSignup() {
+  console.log('[Auth] handleSignup triggered');
   const email = document.getElementById('signupEmail').value.trim();
   const username = document.getElementById('signupUsername').value.trim();
   const password = document.getElementById('signupPassword').value;
@@ -1064,18 +1026,8 @@ async function handleSignup() {
     return;
   }
   
-  if (!verificationStatus.email) {
-    showStatus('Please verify your email address first — click "Send Code"', 'error');
-    document.getElementById('signupEmail').focus();
-    return;
-  }
-  
   if (password.length < 8) {
     showStatus('Password must be at least 8 characters long', 'error');
-    return;
-  }
-  if (!/[0-9!@#$%^&*()_\-+=]/.test(password)) {
-    showStatus('Password must include at least one number or special character', 'error');
     return;
   }
   
@@ -1089,65 +1041,33 @@ async function handleSignup() {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({
-        email,
-        username,
-        password,
-        religion,
-        country,
-        phone,
-        countryCode
+        email, username, password, religion, country, phone, countryCode
       })
     });
     
     const data = await response.json();
     
-    if (data.status === 'success') {
-      showStatus('Account created successfully! Redirecting...', 'success');
+    if (data.success === true || data.status === 'success') {
+      showStatus('✅ Account created successfully! Redirecting...', 'success');
       
-      const session = {
-        userId: data.userId,
-        sessionId: data.sessionId,
-        user: data.user
-      };
-      localStorage.setItem('session_token', data.sessionId);
-      localStorage.setItem('__cached_session_id__', data.sessionId);
+      const sid = data.sessionId || data.session_id;
+      localStorage.setItem('session_token', sid);
+      localStorage.setItem('__cached_session_id__', sid);
       localStorage.setItem('session_active', 'true');
       localStorage.setItem('user_data', JSON.stringify(data.user));
       
-      if (window._NativeBio) window._NativeBio.saveSession(data.sessionId, data.user);
+      if (window._NativeBio) window._NativeBio.saveSession(sid, data.user);
       
-      if (window.AuthCore && typeof window.AuthCore._setState === 'function') {
-        window.AuthCore._setState({
-          authenticated: true,
-          status: 'active',
-          userId: data.userId,
-          sessionId: data.sessionId,
-          user: data.user
-        });
-      }
-
-      if (window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
-        console.log('[Signup] Syncing assets after account creation...');
-        window.AssetsManager.sync();
-      }
-      window.dispatchEvent(new CustomEvent('auth:signup', { 
-        detail: { user: data.user, sessionId: data.sessionId } 
-      }));
-
-      updateAuthUI();
       setTimeout(() => {
-        window.location.href = '/yt-new-clear.html';
+        window.location.href = '/codebank/indexCB.html';
       }, 1500);
     } else {
-      if (data.error === 'USER_EXISTS') {
-        showStatus('Account already exists. Please sign in.', 'error');
-        return;
-      }
-      showStatus(data.error || 'Signup failed', 'error');
+      showStatus(data.error || data.message || 'Signup failed', 'error');
       signupBtn.disabled = false;
       signupBtn.textContent = 'Complete Sign Up';
     }
   } catch (error) {
+    console.error('[Auth] Signup error:', error);
     showStatus('Network error. Please try again.', 'error');
     signupBtn.disabled = false;
     signupBtn.textContent = 'Complete Sign Up';
@@ -1161,7 +1081,7 @@ async function handleLogin() {
   const passwordEl = document.getElementById('loginPassword');
   
   if (!emailEl || !passwordEl) {
-    console.error('[Auth] Login inputs not found in DOM');
+    console.error('[Auth] Login inputs not found');
     return;
   }
 
@@ -1180,7 +1100,6 @@ async function handleLogin() {
   }
 
   try {
-    console.log('[Auth] Sending login request to /api/auth/login');
     const response = await fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1189,55 +1108,22 @@ async function handleLogin() {
     });
 
     const data = await response.json();
-    console.log('[Auth] Login response received:', data);
+    console.log('[Auth] Login response:', data);
 
     if (data.success === true || data.status === 'success') {
-      showStatus('Login successful! Redirecting...', 'success');
+      showStatus('✅ Login successful! Redirecting...', 'success');
       
-      const sessionId = data.sessionId || data.session_id;
-      const userId = data.userId || data.user_id;
-      
-      localStorage.setItem('session_token', sessionId);
-      localStorage.setItem('__cached_session_id__', sessionId);
+      const sid = data.sessionId || data.session_id;
+      localStorage.setItem('session_token', sid);
+      localStorage.setItem('__cached_session_id__', sid);
       localStorage.setItem('session_active', 'true');
-      if (data.user) {
-        localStorage.setItem('user_data', JSON.stringify(data.user));
-      }
+      if (data.user) localStorage.setItem('user_data', JSON.stringify(data.user));
 
-      if (window._NativeBio) window._NativeBio.saveSession(sessionId, data.user);
+      if (window._NativeBio) window._NativeBio.saveSession(sid, data.user);
       
-      if (window.AuthCore && typeof window.AuthCore._setState === 'function') {
-        window.AuthCore._setState({
-          authenticated: true,
-          status: 'active',
-          userId: userId,
-          sessionId: sessionId,
-          user: data.user
-        });
-      }
-      
-      localStorage.setItem('last_login_email', email);
-      if (window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
-        console.log('[Login] Syncing assets after login...');
-        window.AssetsManager.sync();
-      }
-      window.dispatchEvent(new CustomEvent('auth:login', { 
-        detail: { user: data.user, sessionId: sessionId } 
-      }));
-
-      if (window._NativeBio && window._NativeBio.isNative()) {
-        window._NativeBio.isAvailable().then(bioOk => {
-          if (bioOk) {
-            document.getElementById('registerBiometricSection').style.display = 'block';
-            setTimeout(() => { window.location.href = '/codebank/indexCB.html'; }, 3000);
-            return;
-          }
-          window.location.href = '/codebank/indexCB.html';
-        });
-      } else {
-        updateAuthUI();
-        setTimeout(() => { window.location.href = '/codebank/indexCB.html'; }, 1500);
-      }
+      setTimeout(() => {
+        window.location.href = '/codebank/indexCB.html';
+      }, 1000);
     } else {
       showStatus(data.error || data.message || 'Login failed', 'error');
       if (loginBtn) {
@@ -1255,203 +1141,42 @@ async function handleLogin() {
   }
 }
 
-// BIOMETRIC functions
-document.addEventListener('DOMContentLoaded', async () => {
-  if (!window._NativeBio || !window._NativeBio.isNative()) return;
-  try {
-    const bioAvailable = await window._NativeBio.isAvailable();
-    const prefs = window._NativeBio.prefs();
-    if (bioAvailable && prefs) {
-      const t = await prefs.get({ key: 'session_token' });
-      if (t.value) {
-        const emailResult = await prefs.get({ key: 'user_data' });
-        if (emailResult.value) {
-          try {
-            const u = JSON.parse(emailResult.value);
-            const emailInput = document.getElementById('loginEmail');
-            if (emailInput && u.email) emailInput.value = u.email;
-          } catch(_) {}
-        }
-        document.getElementById('biometricSection').style.display = 'block';
-      }
-    }
-  } catch(e) { console.warn('[Biometric] init error:', e); }
-});
-
-async function handleBiometricLogin() {
-  const btn = document.getElementById('bioAuthBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="loading"></span> Verifying biometric...';
-
-  try {
-    if (!window._NativeBio || !window._NativeBio.isNative()) {
-      throw new Error('Biometric login is only available on the mobile app');
-    }
-
-    const NativeBiometric = window.Capacitor.Plugins.NativeBiometric;
-    await NativeBiometric.verifyIdentity({
-      reason: 'Sign in to CodeBank',
-      title: 'Biometric Login',
-      subtitle: 'Use fingerprint or face to sign in',
-      negativeButtonText: 'Use Password Instead'
-    });
-
-    const prefs = window._NativeBio.prefs();
-    if (!prefs) throw new Error('Storage unavailable');
-
-    const tokenResult = await prefs.get({ key: 'session_token' });
-    if (!tokenResult.value) {
-      throw new Error('No saved session. Please log in with your password first.');
-    }
-
-    localStorage.setItem('session_token', tokenResult.value);
-    const userData = await prefs.get({ key: 'user_data' });
-    if (userData.value) localStorage.setItem('user_data', userData.value);
-    localStorage.setItem('session_active', 'true');
-
-    showStatus('Verifying session...', 'info');
-    const resp = await fetch('/api/auth/me', { credentials: 'include' });
-    const data = await resp.json();
-
-    if (data.success || data.authenticated || data.ok) {
-      showStatus('✅ Welcome back!', 'success');
-      updateAuthUI();
-      setTimeout(() => { window.location.href = '/yt-new-clear.html'; }, 800);
-    } else {
-      localStorage.removeItem('session_active');
-      localStorage.removeItem('session_token');
-      await prefs.remove({ key: 'session_active' });
-      await prefs.remove({ key: 'session_token' });
-      throw new Error('Session expired. Please log in with your password.');
-    }
-  } catch (err) {
-    console.error('[BIOMETRIC]', err);
-    const msg = err.message || '';
-    if (msg.includes('cancel') || msg.includes('Cancel') || err.code === 10 || err.code === 'BIOMETRIC_DISMISSED') {
-      showStatus('Biometric cancelled — use your password below', 'error');
-    } else {
-      showStatus(msg || 'Biometric failed', 'error');
-    }
-    btn.disabled = false;
-    btn.innerHTML = '<span style="font-size:22px">🪪</span> Sign in with Fingerprint / Face ID';
-  }
-}
-
-async function registerBiometric() {
-  const section = document.getElementById('registerBiometricSection');
-  if (!window._NativeBio || !window._NativeBio.isNative()) {
-    section.innerHTML = '<div style="text-align:center;padding:10px;color:#aaa">Biometric login is only available on the mobile app.</div>';
-    return;
-  }
-
-  try {
-    section.innerHTML = '<div style="text-align:center;padding:10px"><span class="loading"></span> Checking biometric...</div>';
-
-    const available = await window._NativeBio.isAvailable();
-    if (!available) throw new Error('No biometric hardware found on this device');
-
-    const NativeBiometric = window.Capacitor.Plugins.NativeBiometric;
-    await NativeBiometric.verifyIdentity({
-      reason: 'Enable biometric login for CodeBank',
-      title: 'Enable Biometric',
-      subtitle: 'Confirm your identity to enable fast login',
-      negativeButtonText: 'Cancel'
-    });
-
-    localStorage.setItem('biometric_registered', '1');
-    const prefs = window._NativeBio.prefs();
-    if (prefs) await prefs.set({ key: 'biometric_registered', value: '1' });
-
-    section.innerHTML = `
-      <div style="text-align:center;padding:10px;color:#00ff88">
-        🎉 Fingerprint / Face ID enabled!<br>
-        <small style="color:#aaa">Next login, just tap the fingerprint button.</small>
-      </div>`;
-  } catch (err) {
-    console.error('[BIOMETRIC REG]', err);
-    const msg = err.message || '';
-    if (msg.includes('cancel') || msg.includes('Cancel')) {
-      section.innerHTML = '<div style="text-align:center;padding:10px;color:#aaa">Setup cancelled.</div>';
-      return;
-    }
-    section.innerHTML = `
-      <div style="text-align:center;padding:10px;color:#ff6b6b">
-        ❌ ${err.message || 'Biometric setup failed'}<br>
-        <small style="color:#aaa">You can try again from your profile settings.</small>
-      </div>`;
-  }
-}
-
-</script>
-
-<script>
 // ── Google Sign-In Integration ──────────────────────────────────────────────
 async function initGoogleSignIn() {
   try {
-    console.log('[Google] Fetching client ID from server...');
+    console.log('[Google] Initializing...');
     const res = await fetch('/api/auth/google-client-id');
     const data = await res.json();
-    
-    console.log('[Google] Server response:', data);
-    
-    const clientId = data.clientId || '';
-    const isConfigured = clientId && 
-                         clientId !== 'your_google_client_id.apps.googleusercontent.com' &&
-                         clientId.includes('.apps.googleusercontent.com');
+    const clientId = data.clientId;
 
-    if (!isConfigured) {
-      console.warn('[Google] Client ID not properly configured, hiding buttons');
-      document.querySelectorAll('#google-login-wrapper, #google-signup-wrapper, #google-divider-login, #google-divider-signup').forEach(el => {
-        if (el) el.style.display = 'none';
-      });
+    if (!clientId || clientId.includes('your_google')) {
+      console.warn('[Google] Client ID not configured');
       return;
     }
 
-    console.log('[Google] Client ID is valid, initializing Google Sign-In...');
-    
     google.accounts.id.initialize({
       client_id: clientId,
-      callback: handleGoogleCredential,
-      auto_select: false,
-      context: 'signin'
+      callback: handleGoogleCredential
     });
 
-    // Determine width based on container
     const btnWidth = Math.min(window.innerWidth - 60, 400);
 
-    // Render in login form
-    const loginBtnContainer = document.getElementById('google-signin-login');
-    if (loginBtnContainer) {
-      google.accounts.id.renderButton(loginBtnContainer, {
-        theme: 'filled_blue',
-        size: 'large',
-        width: btnWidth,
-        text: 'signin_with',
-        shape: 'pill'
-      });
-      const wrapper = document.getElementById('google-login-wrapper');
-      const divider = document.getElementById('google-divider-login');
-      if (wrapper) wrapper.style.display = 'block';
-      if (divider) divider.style.display = 'flex';
+    // Render Login Google Button
+    const loginG = document.getElementById('google-signin-login');
+    if (loginG) {
+      google.accounts.id.renderButton(loginG, { theme: 'filled_blue', size: 'large', width: btnWidth, shape: 'pill' });
+      document.getElementById('google-login-wrapper').style.display = 'block';
+      document.getElementById('google-divider-login').style.display = 'flex';
     }
 
-    // Render in signup form
-    const signupBtnContainer = document.getElementById('google-signin-signup');
-    if (signupBtnContainer) {
-      google.accounts.id.renderButton(signupBtnContainer, {
-        theme: 'filled_blue',
-        size: 'large',
-        width: btnWidth,
-        text: 'continue_with',
-        shape: 'pill'
-      });
-      const wrapper = document.getElementById('google-signup-wrapper');
-      const divider = document.getElementById('google-divider-signup');
-      if (wrapper) wrapper.style.display = 'block';
-      if (divider) divider.style.display = 'flex';
+    // Render Signup Google Button
+    const signupG = document.getElementById('google-signin-signup');
+    if (signupG) {
+      google.accounts.id.renderButton(signupG, { theme: 'filled_blue', size: 'large', width: btnWidth, shape: 'pill' });
+      document.getElementById('google-signup-wrapper').style.display = 'block';
+      document.getElementById('google-divider-signup').style.display = 'flex';
     }
-
-    console.log('[Google] ✅ Sign-In buttons initialized');
+    console.log('[Google] Buttons rendered');
   } catch (e) {
     console.error('[Google] Init error:', e);
   }
@@ -1461,7 +1186,6 @@ async function handleGoogleCredential(response) {
   const statusEl = document.getElementById('statusMessage');
   try {
     console.log('[Google] Credential received, sending to server...');
-    
     if (statusEl) {
       statusEl.textContent = 'Signing in with Google...';
       statusEl.className = 'status-message success';
@@ -1480,23 +1204,13 @@ async function handleGoogleCredential(response) {
 
     if (data.status === 'success' || data.success === true) {
       console.log('[Google] ✅ Authentication successful!');
-      localStorage.setItem('session_token', data.sessionId);
-      localStorage.setItem('__cached_session_id__', data.sessionId);
+      const sid = data.sessionId || data.session_id;
+      localStorage.setItem('session_token', sid);
+      localStorage.setItem('__cached_session_id__', sid);
       localStorage.setItem('session_active', 'true');
       if (data.user) localStorage.setItem('user_data', JSON.stringify(data.user));
-      if (data.user && data.user.email) localStorage.setItem('last_login_email', data.user.email);
       
-      if (window._NativeBio) window._NativeBio.saveSession(data.sessionId, data.user);
-
-      if (window.AuthCore && typeof window.AuthCore._setState === 'function') {
-        window.AuthCore._setState({
-          authenticated: true,
-          status: 'active',
-          userId: data.userId,
-          sessionId: data.sessionId,
-          user: data.user
-        });
-      }
+      if (window._NativeBio) window._NativeBio.saveSession(sid, data.user);
 
       if (statusEl) {
         statusEl.textContent = '✅ Signed in with Google! Redirecting...';
@@ -1504,20 +1218,18 @@ async function handleGoogleCredential(response) {
       }
 
       updateAuthUI();
-      setTimeout(function() { window.location.href = '/yt-new-clear.html'; }, 1000);
+      setTimeout(function() { window.location.href = '/codebank/indexCB.html'; }, 1000);
     } else {
-      console.error('[Google] Server error response:', data);
-      const errorMsg = data.error || data.message || 'Google sign-in failed';
+      console.error('[Google] Server error:', data);
       if (statusEl) {
-        statusEl.textContent = '❌ ' + errorMsg;
+        statusEl.textContent = '❌ ' + (data.error || 'Google sign-in failed');
         statusEl.className = 'status-message error';
       }
     }
   } catch (e) {
     console.error('[Google Auth Error]', e);
-    const errorMsg = 'Network error: ' + e.message;
     if (statusEl) {
-      statusEl.textContent = '❌ ' + errorMsg;
+      statusEl.textContent = '❌ Network error: ' + e.message;
       statusEl.className = 'status-message error';
     }
   }
@@ -1527,198 +1239,13 @@ function _tryInitGoogle() {
   if (window.google && window.google.accounts) {
     initGoogleSignIn();
   } else {
-    setTimeout(_tryInitGoogle, 300);
+    setTimeout(_tryInitGoogle, 500);
   }
 }
+
 document.addEventListener('DOMContentLoaded', function() {
-  setTimeout(_tryInitGoogle, 200);
+  setTimeout(_tryInitGoogle, 500);
 });
 </script>
-
-<!-- ═══════════════════════════════════════════════════════════ -->
-<!-- NEW AUTH SYSTEM: Config, Google Auth, UI Controller -->
-<!-- ═══════════════════════════════════════════════════════════ -->
-<!-- Load Enhanced SessionManager -->
-<script src="/js/session-manager.js"></script>
-<script src="/js/init-session.js"></script>
-<script src="/js/config-loader.js"></script>
-<script src="/js/google-auth.js"></script>
-<script src="/js/auth-ui.js"></script>
-
-
-<script>
-// ═══ UNIFIED AUTH BROADCAST SYSTEM ═══
-// This allows all iframed codebank services to listen to main login.html Google OAuth
-
-window.broadcastAuthStateToIframes = function(authData) {
-  // Get all iframes on the page
-  const iframes = document.querySelectorAll('iframe');
-  
-  if (!iframes.length) {
-    console.log('[Auth Broadcast] No iframes found');
-    return;
-  }
-  
-  // Broadcast auth state to each iframe
-  iframes.forEach((iframe, index) => {
-    try {
-      iframe.contentWindow.postMessage({
-        type: 'AUTH_STATE_UPDATE',
-        authData: authData,
-        timestamp: Date.now()
-      }, '*');
-      console.log(`[Auth Broadcast] Sent to iframe ${index}:`, authData);
-    } catch (error) {
-      console.warn(`[Auth Broadcast] Could not reach iframe ${index}:`, error.message);
-    }
-  });
-};
-
-// Listen for Google sign-in responses and broadcast
-window.handleGoogleSignInResponse = function(response) {
-  console.log('[Auth] Google sign-in response received');
-  
-  // Decode JWT token to get user info
-  const credential = response.credential;
-  const userData = jwt_decode(credential);
-  
-  // Store in localStorage
-  localStorage.setItem('authToken', credential);
-  localStorage.setItem('authUser', JSON.stringify(userData));
-  localStorage.setItem('authTimestamp', Date.now().toString());
-  
-  const authData = {
-    isLoggedIn: true,
-    token: credential,
-    user: userData,
-    method: 'google'
-  };
-  
-  // Broadcast to all iframes
-  window.broadcastAuthStateToIframes(authData);
-  
-  // Redirect to dashboard
-  setTimeout(() => {
-    window.location.href = '/';
-  }, 500);
-};
-
-// Listen for auth logout from iframes
-window.addEventListener('message', (event) => {
-  if (event.data.type === 'AUTH_LOGOUT_REQUEST') {
-    console.log('[Auth] Logout request from iframe');
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('authUser');
-    localStorage.removeItem('authTimestamp');
-    
-    const authData = { isLoggedIn: false };
-    window.broadcastAuthStateToIframes(authData);
-  }
-});
-
-// On page load, check if already authenticated and broadcast
-window.addEventListener('load', () => {
-  const token = localStorage.getItem('authToken');
-  const user = localStorage.getItem('authUser');
-  
-  if (token && user) {
-    const authData = {
-      isLoggedIn: true,
-      token: token,
-      user: JSON.parse(user),
-      method: 'stored'
-    };
-    
-    // Broadcast current auth state to iframes
-    window.broadcastAuthStateToIframes(authData);
-    console.log('[Auth] Broadcasting stored auth state to iframes');
-  }
-});
-
-console.log('[Auth] Unified auth broadcast system initialized');
-</script>
-
 </body>
 </html>
-
-<!-- SessionManager Integration -->
-<script>
-// Initialize SessionManager on page load
-let sessionManager = null;
-document.addEventListener('DOMContentLoaded', () => {
-  if (window.SessionManager) {
-    sessionManager = new SessionManager();
-    console.log('✅ SessionManager initialized');
-    
-    // Subscribe to session changes
-    sessionManager.subscribe((session) => {
-      console.log('📢 Session changed:', session);
-      updateAuthUI();
-    });
-    
-    // Log initial state
-    console.log('🔍 Initial session:', sessionManager.getDebugInfo());
-  } else {
-    console.warn('⚠️ SessionManager not found - falling back to legacy auth');
-  }
-});
-
-// Enhanced login handler using SessionManager
-const originalHandleLogin = window.handleLogin;
-window.handleLogin = async function() {
-  const email = document.getElementById('loginEmail').value.trim();
-  const password = document.getElementById('loginPassword').value;
-
-  if (!email || !password) {
-    showStatus('Email and password required', 'error');
-    return;
-  }
-
-  try {
-    // Use SessionManager if available
-    if (sessionManager) {
-      const result = await sessionManager.login(email, password);
-      if (result.success) {
-        showStatus('✅ Login successful! Redirecting...', 'success');
-        localStorage.setItem('session_token', sessionManager.getToken());
-        localStorage.setItem('session_active', 'true');
-        localStorage.setItem('user_data', JSON.stringify(result.user));
-        updateAuthUI();
-        setTimeout(() => { window.location.href = '/yt-new-clear.html'; }, 1500);
-      } else {
-        showStatus('❌ ' + (result.error || 'Login failed'), 'error');
-      }
-    } else {
-      // Fall back to original login
-      await originalHandleLogin();
-    }
-  } catch (error) {
-    console.error('Login error:', error);
-    showStatus('❌ ' + error.message, 'error');
-  }
-};
-
-// Enhanced logout handler using SessionManager
-const originalHandleLogout = window.handleLogout;
-window.handleLogout = async function() {
-  try {
-    if (sessionManager) {
-      await sessionManager.logout();
-      console.log('✅ Logged out via SessionManager');
-      localStorage.removeItem('session_active');
-      localStorage.removeItem('session_token');
-      localStorage.removeItem('user_data');
-      updateAuthUI();
-      showStatus('✅ Signed out successfully', 'success');
-      setTimeout(() => { switchTab('signup', null); }, 1000);
-    } else {
-      await originalHandleLogout();
-    }
-  } catch (error) {
-    console.error('Logout error:', error);
-    showStatus('Error during logout', 'error');
-  }
-};
-
-console.log('🔐 Enhanced auth handlers registered with SessionManager');
-</script>
