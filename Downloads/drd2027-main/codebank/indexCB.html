@@ -1341,12 +1341,12 @@
             
             <!-- STATE 1: NOT LOGGED IN -->
             <div id="auth-not-logged" class="auth-state">
-                <button id="btn-show-login" class="btn-primary" style="padding:10px 24px;background:linear-gradient(135deg,#00d4ff,#7b2cbf);border:none;color:white;border-radius:8px;cursor:pointer;font-weight:600;">
+                <button id="btn-show-login" onclick="window.location.href='/login.html'" class="btn-primary" style="padding:10px 24px;background:linear-gradient(135deg,#00d4ff,#7b2cbf);border:none;color:white;border-radius:8px;cursor:pointer;font-weight:600;">
                     Sign In
                 </button>
             </div>
             
-            <!-- STATE 2: LOGIN MODAL -->
+            <!-- STATE 2: LOGIN MODAL (DEPRECATED - Kept for backward compatibility, using login.html instead) -->
             <div id="login-modal" class="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;align-items:center;justify-content:center;">
                 <div style="background:rgba(30,27,75,0.95);border:1px solid rgba(167,139,250,0.3);border-radius:16px;padding:32px;width:90%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.6);">
                     <button id="login-close" style="position:absolute;top:12px;right:12px;background:none;border:none;color:#999;font-size:24px;cursor:pointer;">&times;</button>
@@ -1386,7 +1386,7 @@
                 </div>
             </div>
             
-            <!-- STATE 3: SIGNUP MODAL -->
+            <!-- STATE 3: SIGNUP MODAL (DEPRECATED - Kept for backward compatibility, using login.html instead) -->
             <div id="signup-modal" class="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;align-items:center;justify-content:center;">
                 <div style="background:rgba(30,27,75,0.95);border:1px solid rgba(167,139,250,0.3);border-radius:16px;padding:32px;width:90%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.6);">
                     <button id="signup-close" style="position:absolute;top:12px;right:12px;background:none;border:none;color:#999;font-size:24px;cursor:pointer;">&times;</button>
@@ -2794,11 +2794,14 @@ class AuthController {
     }
 
     bindUIEvents() {
+        // Direct to login.html instead of showing modal
         const btnShowLogin = document.getElementById('btn-show-login');
         if (btnShowLogin) {
-            btnShowLogin.addEventListener('click', () => this.showLoginModal());
+            btnShowLogin.addEventListener('click', () => window.location.href = '/login.html');
         }
 
+        // These modals no longer appear as we're using login.html
+        // but we'll keep the code in case they're shown for some reason
         const loginClose = document.getElementById('login-close');
         if (loginClose) {
             loginClose.addEventListener('click', () => this.closeModals());
@@ -2824,7 +2827,7 @@ class AuthController {
             btnLogout.addEventListener('click', () => this.logout());
         }
 
-        console.log('[AuthController] UI events bound');
+        console.log('[AuthController] UI events bound with login.html redirects');
     }
 
     setState(newState) {
