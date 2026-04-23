@@ -684,10 +684,7 @@ function showGoogleButton() {
   const fallback = document.getElementById('google-fallback-btn');
   const errorMsg = document.getElementById('google-error-msg');
 
-  if (container) {
-    container.style.display = 'flex';
-    container.innerHTML = ''; // Clear any previous
-  }
+  if (container) container.style.display = 'flex';
   if (fallback) fallback.style.display = 'none';
   if (errorMsg) errorMsg.style.display = 'none';
 }
