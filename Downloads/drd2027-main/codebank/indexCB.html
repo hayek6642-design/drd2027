@@ -544,6 +544,14 @@
         #auth-not-logged {
             display: none !important;
         }
+
+        /* Force login modal to stay hidden - prevent auto-opening */
+        #login-modal, #signup-modal {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
         .auth-buttons {
             display: flex;
             flex-direction: column;
@@ -3060,10 +3068,28 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         window.authController = new AuthController();
         window.authController.init();
+
+        // Force modals to stay hidden after initialization
+        setTimeout(() => {
+            const loginModal = document.getElementById('login-modal');
+            const signupModal = document.getElementById('signup-modal');
+            if (loginModal) loginModal.style.display = 'none';
+            if (signupModal) signupModal.style.display = 'none';
+            console.log('[Auth] Forced modals to stay hidden');
+        }, 500);
     });
 } else {
     window.authController = new AuthController();
     window.authController.init();
+
+    // Force modals to stay hidden after initialization
+    setTimeout(() => {
+        const loginModal = document.getElementById('login-modal');
+        const signupModal = document.getElementById('signup-modal');
+        if (loginModal) loginModal.style.display = 'none';
+        if (signupModal) signupModal.style.display = 'none';
+        console.log('[Auth] Forced modals to stay hidden');
+    }, 500);
 }
 
 // Make functions global
@@ -3072,6 +3098,50 @@ window.showSignupModal = () => window.location.href = '/login.html?mode=signup';
 window.handleSignIn = (e) => window.authController?.handleSignIn(e);
 window.handleSignUp = (e) => window.authController?.handleSignUp(e);
 window.closeModals = () => window.authController?.closeModals();
+
+// Force modals to stay hidden - watch for any attempts to show them
+(function preventModalAutoShow() {
+    const loginModal = document.getElementById('login-modal');
+    const signupModal = document.getElementById('signup-modal');
+
+    if (loginModal && signupModal) {
+        // Create mutation observer to prevent modal from being shown
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                    const target = mutation.target;
+                    const style = target.style.display;
+                    if ((target.id === 'login-modal' || target.id === 'signup-modal') &&
+                        (style === 'flex' || style === 'block')) {
+                        console.log(`[Auth] Preventing ${target.id} from showing automatically`);
+                        target.style.display = 'none';
+                        target.style.visibility = 'hidden';
+                        target.style.opacity = '0';
+                    }
+                }
+            });
+        });
+
+        observer.observe(loginModal, { attributes: true, attributeFilter: ['style'] });
+        observer.observe(signupModal, { attributes: true, attributeFilter: ['style'] });
+
+        // Also check periodically
+        setInterval(() => {
+            if (loginModal.style.display !== 'none') {
+                console.log('[Auth] Hiding login modal that was shown');
+                loginModal.style.display = 'none';
+                loginModal.style.visibility = 'hidden';
+                loginModal.style.opacity = '0';
+            }
+            if (signupModal.style.display !== 'none') {
+                console.log('[Auth] Hiding signup modal that was shown');
+                signupModal.style.display = 'none';
+                signupModal.style.visibility = 'hidden';
+                signupModal.style.opacity = '0';
+            }
+        }, 1000);
+    }
+})();
     </script>
 
 
