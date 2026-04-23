@@ -695,11 +695,11 @@
            MODERN DARK TILE SKIN — visual only, no logic
         ══════════════════════════════════════════════════ */
 
-        /* 1. Dark purple page background - FIXED: Added padding-top to accommodate navbar */
+        /* 1. Dark purple page background - FIXED: Increased padding-top to ensure services aren't hidden */
         body {
             background: #12082e !important;
             background-image: none !important;
-            padding-top: 70px !important; /* Space for the 60px navbar */
+            padding-top: 100px !important; /* Increased space for the 60px navbar + margin */
         }
 
         /* 2. Compact section headers */
@@ -1025,7 +1025,7 @@
 
 
         <!-- Main Launcher Grid -->
-        <main class="container mx-auto py-8">
+        <main class="container mx-auto py-8" style="margin-top: 20px;">
 
             <!-- Flat App Grid — phone launcher style -->
             <div id="all-apps" class="app-launcher-grid"></div>
