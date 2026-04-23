@@ -1,0 +1,3 @@
+import { createSign } from 'node:crypto'
+function b64u(s){ return Buffer.from(s).toString('base64').replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_') }
+export function sign(payload, privatePem){ const header={ alg:'ES512', typ:'JWT' }; const h=b64u(JSON.stringify(header)); const p=b64u(JSON.stringify(payload)); const msg=`${h}.${p}`; const sig=createSign('SHA512').update(msg).sign(privatePem); const s=b64u(sig); return `${msg}.${s}` }

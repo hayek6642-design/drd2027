@@ -1,0 +1,129 @@
+import { StorageLord } from './storage-lord.js';
+
+const subscribers = new Set();
+let initialized = false;
+
+function defaultUI() {
+  return {
+    theme: 'dark',
+    language: 'en',
+    isCodeBankOpen: false,
+    isSidebarOpen: false,
+    activeTab: 'home',
+    isSafeDoorLocked: true,
+    ytGate: {
+        wentToYouTube: false,
+        returnedFromYouTube: false,
+        isGateActive: true,
+        gateMode: 'initial', // 'initial', 'confirm', 'unlocked'
+        hasTemporaryAccess: false,
+        accessExpireTime: 0
+    },
+    ytPlayer: {
+            isTheatreMode: false,
+            isMuted: true,
+            isSoundPopupVisible: false,
+            isPlaying: true,
+        },
+        activeSection: 'home',
+    appState: 'loading', // loading, ready, error
+    azanClock: {
+        currentTime: new Date(),
+        alarm: {
+            hours: null,
+            minutes: null,
+            period: 'AM',
+            isActive: false,
+            isRinging: false
+        },
+        prayerTimes: {
+            fajr: '--:--',
+            dhuhr: '--:--',
+            asr: '--:--',
+            maghrib: '--:--',
+            isha: '--:--'
+        },
+        autoPrayerAlerts: false
+    },
+    // Legacy, to be removed
+    panels: { codebankOpen: false, sidebarOpen: false },
+    lastTab: null
+  };
+}
+
+function installRuntimeGuards(){
+  try {
+    const ls = window.localStorage;
+    if (ls) {
+      window.__ORIG_LOCAL_STORAGE__ = window.__ORIG_LOCAL_STORAGE__ || {
+        getItem: ls.getItem && ls.getItem.bind(ls),
+        setItem: ls.setItem && ls.setItem.bind(ls),
+        removeItem: ls.removeItem && ls.removeItem.bind(ls)
+      };
+      ls.getItem = function(){ if (window.__ALLOW_STORAGE__===true) { return window.__ORIG_LOCAL_STORAGE__.getItem.apply(ls, arguments) } throw new Error('Direct localStorage access forbidden. Use Storage Lord UI Adapter'); };
+      ls.setItem = function(){ if (window.__ALLOW_STORAGE__===true) { return window.__ORIG_LOCAL_STORAGE__.setItem.apply(ls, arguments) } throw new Error('Direct localStorage access forbidden. Use Storage Lord UI Adapter'); };
+      ls.removeItem = function(){ if (window.__ALLOW_STORAGE__===true) { return window.__ORIG_LOCAL_STORAGE__.removeItem.apply(ls, arguments) } throw new Error('Direct localStorage access forbidden. Use Storage Lord UI Adapter'); };
+    }
+  } catch(_){}
+
+  try {
+    const origSetTimeout = window.__ORIG_SET_TIMEOUT__ || window.setTimeout?.bind(window);
+    const origSetInterval = window.__ORIG_SET_INTERVAL__ || window.setInterval?.bind(window);
+    if (origSetTimeout) window.__ORIG_SET_TIMEOUT__ = origSetTimeout;
+    if (origSetInterval) window.__ORIG_SET_INTERVAL__ = origSetInterval;
+    if (origSetTimeout) {
+      window.setTimeout = function(){ if (window.__ALLOW_INTERVAL__===true) { return origSetTimeout.apply(window, arguments) } throw new Error('Timeouts forbidden in UI. Use event-driven updates'); };
+    }
+    if (origSetInterval) {
+      window.setInterval = function(){ if (window.__ALLOW_INTERVAL__===true) { return origSetInterval.apply(window, arguments) } throw new Error('Intervals forbidden in UI. Use event-driven updates'); };
+    }
+  } catch(_){}
+}
+
+function getUI() { const s = StorageLord.read(); return s.__ui__ || defaultUI(); }
+
+function notifyAll() { const ui = getUI(); subscribers.forEach(fn => { try { fn(ui) } catch (_) { } }); }
+
+// New generic methods
+function get(key) {
+  const ui = getUI();
+  return ui[key];
+}
+
+function set(key, value) {
+  if (typeof key !== 'string') throw new Error('Invalid key');
+  StorageLord._unsafeUpdateUI({ [key]: value });
+}
+
+function toggle(key) {
+  const currentValue = get(key);
+  if (typeof currentValue !== 'boolean') {
+    throw new Error(`Toggle can only be used on boolean values. Key: ${key}, current value: ${currentValue}`);
+  }
+  set(key, !currentValue);
+}
+
+export const StorageLordUIAdapter = {
+  init() {
+    if (initialized) return;
+    installRuntimeGuards();
+    try { StorageLord._unsafeInitUI(defaultUI()) } catch (_) { }
+    StorageLord.subscribe(() => notifyAll());
+    window.__STORAGE_LORD_UI_ADAPTER_ACTIVE__ = true;
+    initialized = true;
+    notifyAll();
+  },
+  read() { return getUI() },
+  subscribe(fn) { subscribers.add(fn); try { fn(getUI()) } catch (_) { } return () => subscribers.delete(fn) },
+  
+  // Generic API
+  get,
+  set,
+  toggle,
+
+  // Legacy methods - will be deprecated
+  setTheme(theme) { if (theme !== 'dark' && theme !== 'light') throw new Error('Invalid theme'); set('theme', theme); },
+  setLanguage(lang) { if (lang !== 'en' && lang !== 'ar') throw new Error('Invalid language'); set('language', lang); },
+  setLastTab(tabId) { if (!(tabId === null || typeof tabId === 'string')) throw new Error('Invalid tab id'); set('activeTab', tabId); }
+};
+

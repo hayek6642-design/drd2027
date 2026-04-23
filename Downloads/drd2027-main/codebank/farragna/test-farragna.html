@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farragna Test Page</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .test-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        
+        .test-button:hover {
+            background-color: #0056b3;
+        }
+        
+        .test-button.secondary {
+            background-color: #6c757d;
+        }
+        
+        .test-button.secondary:hover {
+            background-color: #545b62;
+        }
+        
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+        
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        
+        .video-preview {
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔧 Farragna Video System Test</h1>
+        
+        <div class="test-section">
+            <h3>1. Test Upload Request Endpoint</h3>
+            <button class="test-button" onclick="testUploadRequest()">Test Upload Request</button>
+            <div id="upload-request-status" class="status">Click button to test...</div>
+        </div>
+        
+        <div class="test-section">
+            <h3>2. Test Seed Video Import</h3>
+            <button class="test-button" onclick="testSeedImport()">Import Sample Videos</button>
+            <button class="test-button secondary" onclick="testCheckFeed()">Check Feed Status</button>
+            <div id="seed-status" class="status">Click button to test...</div>
+        </div>
+        
+        <div class="test-section">
+            <h3>3. Test Video Feed</h3>
+            <button class="test-button" onclick="testLoadFeed()">Load Feed</button>
+            <div id="feed-status" class="status">Click button to test...</div>
+            <div id="feed-videos"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>4. Test File Upload</h3>
+            <input type="file" id="test-file-input" accept="video/*" style="display: block; margin: 10px 0;">
+            <button class="test-button" onclick="document.getElementById('test-file-input').click()">Select Video</button>
+            <button class="test-button secondary" onclick="testFileUpload()">Upload Selected Video</button>
+            <div id="upload-status" class="status">Select a video file to test upload...</div>
+        </div>
+        
+        <div class="test-section">
+            <h3>5. Console Logs</h3>
+            <div id="console-log" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        // Capture console logs
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        const originalError = console.error;
+        const logContainer = document.getElementById('console-log');
+        
+        function addToLog(message, type = 'info') {
+            const div = document.createElement('div');
+            div.style.color = type === 'error' ? '#721c24' : type === 'warn' ? '#856404' : '#0c5460';
+            div.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            logContainer.appendChild(div);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToLog(args.join(' '), 'info');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addToLog(args.join(' '), 'warn');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToLog(args.join(' '), 'error');
+        };
+
+        // Test functions
+        async function testUploadRequest() {
+            const status = document.getElementById('upload-request-status');
+            status.className = 'status info';
+            status.textContent = 'Testing upload request endpoint...';
+            
+            try {
+                const response = await fetch('/api/farragna/upload/request', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    status.className = 'status success';
+                    status.innerHTML = `✅ Upload request successful!<br>Upload URL: ${result.upload_url}`;
+                } else {
+                    status.className = 'status error';
+                    status.innerHTML = `❌ Upload request failed:<br>${result.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                status.className = 'status error';
+                status.innerHTML = `❌ Network error: ${error.message}`;
+            }
+        }
+        
+        async function testSeedImport() {
+            const status = document.getElementById('seed-status');
+            status.className = 'status info';
+            status.textContent = 'Importing sample videos...';
+            
+            try {
+                const sampleUrls = [
+                    'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
+                    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
+                ];
+                
+                const response = await fetch('/api/videos/import-samples', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        urls: sampleUrls,
+                        category: 'entertainment'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    status.className = 'status success';
+                    status.innerHTML = `✅ Successfully imported ${result.count} sample videos!`;
+                } else {
+                    status.className = 'status error';
+                    status.innerHTML = `❌ Import failed: ${result.error}`;
+                }
+            } catch (error) {
+                status.className = 'status error';
+                status.innerHTML = `❌ Network error: ${error.message}`;
+            }
+        }
+        
+        async function testCheckFeed() {
+            const status = document.getElementById('seed-status');
+            status.className = 'status info';
+            status.textContent = 'Checking feed status...';
+            
+            try {
+                // Try feed API
+                const feedResponse = await fetch('/api/farragna/feed');
+                const feedData = await feedResponse.json().catch(() => ({ videos: [] }));
+                const feedVideos = feedData.videos || [];
+                
+                // Try trending API
+                const trendingResponse = await fetch('/api/farragna/trending');
+                const trendingData = await trendingResponse.json().catch(() => ({ videos: [] }));
+                const trendingVideos = trendingData.videos || [];
+                
+                const totalVideos = feedVideos.length + trendingVideos.length;
+                
+                if (totalVideos > 0) {
+                    status.className = 'status success';
+                    status.innerHTML = `✅ Feed has ${totalVideos} videos (${feedVideos.length} in feed, ${trendingVideos.length} in trending)`;
+                } else {
+                    status.className = 'status error';
+                    status.textContent = '❌ Feed is empty';
+                }
+            } catch (error) {
+                status.className = 'status error';
+                status.innerHTML = `❌ Network error: ${error.message}`;
+            }
+        }
+        
+        async function testLoadFeed() {
+            const status = document.getElementById('feed-status');
+            const videosContainer = document.getElementById('feed-videos');
+            status.className = 'status info';
+            status.textContent = 'Loading feed...';
+            videosContainer.innerHTML = '';
+            
+            try {
+                // Try feed API
+                const feedResponse = await fetch('/api/farragna/feed');
+                const feedData = await feedResponse.json().catch(() => ({ videos: [] }));
+                const feedVideos = feedData.videos || [];
+                
+                // Try trending API
+                const trendingResponse = await fetch('/api/farragna/trending');
+                const trendingData = await trendingResponse.json().catch(() => ({ videos: [] }));
+                const trendingVideos = trendingData.videos || [];
+                
+                const allVideos = [...feedVideos, ...trendingVideos];
+                
+                if (allVideos.length > 0) {
+                    status.className = 'status success';
+                    status.textContent = `✅ Loaded ${allVideos.length} videos`;
+                    
+                    allVideos.forEach((video, index) => {
+                        const videoDiv = document.createElement('div');
+                        videoDiv.style.marginBottom = '20px';
+                        videoDiv.innerHTML = `
+                            <h4>Video ${index + 1}: ${video.caption || 'Untitled'}</h4>
+                            <video class="video-preview" controls>
+                                <source src="${video.videoUrl || video.playback_url || ''}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                            <p><strong>ID:</strong> ${video.id}</p>
+                            <p><strong>Status:</strong> ${video.status}</p>
+                            <p><strong>URL:</strong> ${video.videoUrl || video.playback_url || 'No URL'}</p>
+                        `;
+                        videosContainer.appendChild(videoDiv);
+                    });
+                } else {
+                    status.className = 'status error';
+                    status.textContent = '❌ No videos found in feed';
+                }
+            } catch (error) {
+                status.className = 'status error';
+                status.innerHTML = `❌ Network error: ${error.message}`;
+            }
+        }
+        
+        async function testFileUpload() {
+            const fileInput = document.getElementById('test-file-input');
+            const file = fileInput.files[0];
+            const status = document.getElementById('upload-status');
+            
+            if (!file) {
+                status.className = 'status error';
+                status.textContent = 'Please select a video file first';
+                return;
+            }
+            
+            status.className = 'status info';
+            status.textContent = 'Uploading video...';
+            
+            try {
+                const formData = new FormData();
+                formData.append('video', file);
+                formData.append('caption', 'Test Upload');
+                formData.append('category', 'entertainment');
+                
+                const response = await fetch('/api/videos/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    status.className = 'status success';
+                    status.innerHTML = `✅ Upload successful!<br>Video ID: ${result.video.id}<br>URL: ${result.video.videoUrl}`;
+                } else {
+                    status.className = 'status error';
+                    status.innerHTML = `❌ Upload failed: ${result.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                status.className = 'status error';
+                status.innerHTML = `❌ Network error: ${error.message}`;
+            }
+        }
+        
+        // Initialize
+        console.log('Farragna test page loaded');
+    </script>
+</body>
+</html>

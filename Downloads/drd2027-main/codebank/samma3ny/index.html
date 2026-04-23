@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Auth bridge: MUST be first script — receives auth from parent shell via postMessage and sets up window.Auth -->
+    <script src="/shared/iframe-auth-client.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Samma3ny Player</title>
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Color extraction libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.0/color-thief.umd.js"></script>
+    
+    <!-- 🔧 FIX: Auth client for iframe integration — sets up window.Auth via postMessage from parent -->
+    <script src="/shared/iframe-auth-client.js"></script>
+    </head>
+<body>
+
+
+    <div class="player-container">
+        <!-- Loading indicator -->
+        <div id="loading-indicator" class="loading-indicator">
+            <div class="spinner"></div>
+            <p>Loading tracks...</p>
+        </div>
+
+        <!-- Error message -->
+        <div id="error-message" class="error-message"></div>
+
+        <div class="media-player">
+            <!-- Left Panel - Active Song View -->
+            <div class="left-panel">
+                <div class="cd-player">
+                    <!-- CD/Vinyl Disc with Progress Ring -->
+                    <div class="cd-container">
+                        <div id="cd-disc" class="cd-disc">
+                            <div class="cd-cover" id="cd-cover">
+                                <img id="cd-cover-image" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="cd-cover-img">
+                                <div class="cd-overlay">
+                                    <div class="cd-hole"></div>
+                                    <div class="cd-text">SAMMA3NY</div>
+                                </div>
+                            </div>
+                            <div class="cd-reflection"></div>
+                        </div>
+                        <!-- Circular Progress Ring -->
+                        <svg class="progress-ring" width="320" height="320">
+                            <circle cx="160" cy="160" r="155" stroke="rgba(255,255,255,0.1)" stroke-width="3" fill="none"/>
+                            <circle id="progress-circle" cx="160" cy="160" r="155" stroke="url(#gradient)" stroke-width="3" fill="none"
+                                    stroke-dasharray="974" stroke-dashoffset="974" transform="rotate(-90 160 160)" stroke-linecap="round"/>
+                            <defs>
+                                <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color:#B043FF;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#FF77E9;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+
+                    <!-- Track Information -->
+                    <div class="track-info">
+                        <h2 id="current-track-title" class="track-title">Select a track to play</h2>
+                        <p id="current-track-artist" class="track-artist">Unknown Artist</p>
+                        <p id="current-track-description" class="track-description"></p>
+                    </div>
+
+                    <!-- Playback Controls -->
+                    <div class="player-controls">
+                        <button id="prev-btn" class="control-btn prev-btn" title="Previous">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+                            </svg>
+                        </button>
+                        <button id="play-btn" class="control-btn play-btn main-play-btn" title="Play">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                        </button>
+                        <button id="pause-btn" class="control-btn pause-btn main-play-btn" style="display: none;" title="Pause">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                            </svg>
+                        </button>
+                        <button id="next-btn" class="control-btn next-btn" title="Next">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="progress-container">
+                        <div id="progress-bar" class="progress-bar">
+                            <div id="progress" class="progress"></div>
+                            <div id="progress-handle" class="progress-handle"></div>
+                        </div>
+                        <div class="time-display">
+                            <span id="current-time">0:00</span>
+                            <span id="duration">0:00</span>
+                        </div>
+                    </div>
+
+                    <!-- Sound Control -->
+                    <div class="sound-container">
+                        <button id="sound-btn" class="sound-btn" title="Mute">
+                            🔊
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Playlist -->
+            <div class="right-panel">
+                <div class="playlist-header-main">
+                    <h2 class="playlist-title">Music Library</h2>
+                    <button id="refresh-btn" class="refresh-btn" title="Refresh Library">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- All Songs Section -->
+                <div class="playlist-section">
+                    <div class="section-header">
+                        <h3 class="section-title">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                            </svg>
+                            All Songs
+                        </h3>
+                    </div>
+                    <div id="playlist-container" class="playlist">
+                        <!-- Playlist items will be added dynamically -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Navigation Arrows -->
+    <div class="nav-arrows">
+        <button class="nav-arrow nav-arrow-left" data-hint="codebank" title="codebank">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+            </svg>
+        </button>
+        <button class="nav-arrow nav-arrow-right" data-hint="Home" title="Home">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- News Ticker -->
+    <div class="news-ticker">
+        <div class="ticker-content">
+            <span class="ticker-text">🎵 You can listen to all of these songs and more via the Main App (Dr. D App) to get the benefit of winning Codes & Rewards! 🎵</span>
+            <span class="ticker-text">🎵 You can listen to all of these songs and more via the Main App (Dr. D App) to get the benefit of winning Codes & Rewards! 🎵</span>
+        </div>
+    </div>
+
+    <!-- Audio element -->
+    <audio id="audio-player" preload="metadata"></audio>
+
+    <script src="storage-manager.js"></script>
+    <script src="player.js"></script>
+    <script src="fixes.js"></script>
+
+    <!-- Auto-Mode: listener reward system — standalone, does not modify player.js -->
+    <script src="automode.js"></script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+{
+  "sessionCycle": {
+    "guestToLogin": true,
+    "reloadStable": true,
+    "multiTabStable": true,
+    "noPPInAuth": true
+  },
+  "neonMirroring": {
+    "balancesFetched": true,
+    "balancesAssetsUpdated": true,
+    "neonCodesStatus": 200
+  },
+  "countersStability": {
+    "noZeroResetsLogin": true,
+    "noZeroResetsReload": true,
+    "atomicStressLikes": true
+  },
+  "codesToBalanceLink": {
+    "neonCount": 1,
+    "snapshotCodes": 1,
+    "transactions": 3
+  },
+  "proofsAndPolicy": {
+    "hasProofOnEvents": true
+  },
+  "performance": {
+    "fetchTimes": [
+      {
+        "url": "/api/balances",
+        "ms": 259,
+        "status": 200
+      },
+      {
+        "url": "http://localhost:3001/api/neon/codes",
+        "ms": 233,
+        "status": 200
+      }
+    ]
+  },
+  "consoleErrors": {
+    "tab1": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://www.youtube.com') does not match the recipient window's origin ('http://localhost:3001').",
+      "Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://www.youtube.com') does not match the recipient window's origin ('http://localhost:3001').",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://www.youtube.com') does not match the recipient window's origin ('http://localhost:3001').",
+      "Failed to load resource: the server responded with a status of 400 (Bad Request)",
+      "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+    ],
+    "tab2": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://www.youtube.com') does not match the recipient window's origin ('http://localhost:3001').",
+      "Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://www.youtube.com') does not match the recipient window's origin ('http://localhost:3001').",
+      "Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://www.youtube.com') does not match the recipient window's origin ('http://localhost:3001').",
+      "Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://www.youtube.com') does not match the recipient window's origin ('http://localhost:3001').",
+      "Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://www.youtube.com') does not match the recipient window's origin ('http://localhost:3001').",
+      "Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://www.youtube.com') does not match the recipient window's origin ('http://localhost:3001').",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ]
+  }
+}

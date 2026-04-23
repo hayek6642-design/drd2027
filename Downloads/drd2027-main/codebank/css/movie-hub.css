@@ -1,0 +1,364 @@
+/* ═══════════════════════════════════════════════════════════
+   CINEMA HUB — Movie Platforms Styling
+   ═══════════════════════════════════════════════════════════ */
+
+.movie-hub {
+    background: #0a0a0f;
+    min-height: 100%;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Header ── */
+.movie-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 20px;
+    background: linear-gradient(90deg, #1a0a1e 0%, #1e0a16 50%, #16213e 100%);
+    border-bottom: 2px solid #e50914;
+}
+
+.mh-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mh-icon {
+    font-size: 30px;
+}
+
+.mh-title {
+    font-size: 22px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #e50914, #ff6b6b, #ff8c00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.mh-search-box {
+    display: flex;
+    gap: 8px;
+}
+
+.mh-search-box input {
+    padding: 10px 18px;
+    border-radius: 25px;
+    border: 1px solid #333;
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    width: 220px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color .3s;
+}
+
+.mh-search-box input:focus {
+    border-color: #e50914;
+}
+
+.mh-search-box button {
+    padding: 10px 18px;
+    background: #e50914;
+    border: none;
+    border-radius: 25px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background .3s;
+}
+
+.mh-search-box button:hover {
+    background: #ff2d2d;
+}
+
+/* ── Category Tabs ── */
+.mh-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 14px 20px;
+    overflow-x: auto;
+    background: rgba(0,0,0,0.4);
+    -webkit-overflow-scrolling: touch;
+}
+
+.mh-tab {
+    padding: 9px 18px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid transparent;
+    border-radius: 25px;
+    color: #ccc;
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all .3s;
+}
+
+.mh-tab:hover {
+    background: rgba(229,9,20,0.15);
+    color: #fff;
+}
+
+.mh-tab.active {
+    background: #e50914;
+    border-color: #e50914;
+    color: #fff;
+}
+
+/* ── Platforms Grid ── */
+.mh-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 16px;
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.mh-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: #666;
+    font-size: 16px;
+}
+
+/* ── Platform Card ── */
+.mh-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 14px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all .3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.mh-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--pc, #e50914);
+    opacity: 0;
+    transition: opacity .3s;
+}
+
+.mh-card:hover {
+    background: rgba(255,255,255,0.09);
+    transform: translateY(-4px);
+    border-color: var(--pc, #e50914);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+}
+
+.mh-card:hover::before {
+    opacity: 1;
+}
+
+.mh-card-icon {
+    font-size: 36px;
+    width: 54px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.35);
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+.mh-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.mh-card-info h4 {
+    margin: 0 0 6px 0;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mh-badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.1);
+    color: #999;
+    margin-right: 4px;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.mh-badge-type {
+    background: rgba(229,9,20,0.15);
+    color: #ff6b6b;
+}
+
+.mh-card-play {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--pc, #e50914);
+    border-radius: 50%;
+    color: #000;
+    font-weight: bold;
+    font-size: 16px;
+    flex-shrink: 0;
+    transition: transform .2s;
+}
+
+.mh-card:hover .mh-card-play {
+    transform: scale(1.15);
+}
+
+/* ── Embedded Player ── */
+.mh-player {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.97);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+}
+
+.mh-player-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    background: #1a1a2e;
+    border-bottom: 1px solid #333;
+}
+
+.mh-player-header h3 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.mh-player-ctrls {
+    display: flex;
+    gap: 8px;
+}
+
+.mh-player-ctrls button {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background .2s;
+}
+
+.mh-player-ctrls button:hover {
+    background: #e50914;
+}
+
+.mh-player-body {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+.mh-player-body iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* ── Loading / Error states ── */
+.mh-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #888;
+    gap: 16px;
+}
+
+.mh-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #333;
+    border-top-color: #e50914;
+    border-radius: 50%;
+    animation: mh-spin 1s linear infinite;
+}
+
+@keyframes mh-spin {
+    to { transform: rotate(360deg); }
+}
+
+.mh-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #888;
+    gap: 16px;
+}
+
+.mh-error button {
+    padding: 14px 28px;
+    background: #e50914;
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+    .movie-header {
+        flex-direction: column;
+        gap: 12px;
+    }
+    .mh-search-box input {
+        width: 180px;
+    }
+    .mh-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        padding: 12px;
+    }
+    .mh-card {
+        padding: 12px;
+        gap: 10px;
+    }
+    .mh-card-icon {
+        font-size: 28px;
+        width: 44px;
+        height: 44px;
+    }
+    .mh-card-play {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .mh-grid {
+        grid-template-columns: 1fr;
+    }
+}

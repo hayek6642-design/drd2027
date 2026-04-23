@@ -1,0 +1,48 @@
+{
+  "name": "codemind-v2",
+  "version": "2.0.0",
+  "description": "CodeMind v2.0 - Intelligent AI brain for Dr.D platform",
+  "main": "core/codemind-server-v2.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node -e \"const {CodeMindV2} = require('./core/codemind-server-v2.js'); const cm = new CodeMindV2(); console.log('CodeMind v2.0 running');\"",
+    "test": "node tests/basic-test.js",
+    "dev": "nodemon -e js,md core/codemind-server-v2.js",
+    "server": "node server.js",
+    "lint": "eslint core/*.js",
+    "docs": "echo 'See README.md and ARCHITECTURE.md'"
+  },
+  "keywords": [
+    "ai",
+    "codemind",
+    "development",
+    "automation",
+    "drd",
+    "intelligent-assistant"
+  ],
+  "author": "dia201244@gmail.com",
+  "license": "PROPRIETARY",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.0",
+    "crypto": "builtin"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "optionalDependencies": {
+    "ollama": "^0.5.0",
+    "axios": "^1.6.0"
+  },
+  "files": [
+    "core/",
+    "README.md",
+    "ARCHITECTURE.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.com/dia201244/drd2027.git"
+  }
+}

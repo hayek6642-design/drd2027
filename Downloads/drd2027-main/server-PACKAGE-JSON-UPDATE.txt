@@ -1,0 +1,51 @@
+FILE: codebank/e7ki/server/package.json
+
+ADD these dependencies to your package.json:
+
+"bcryptjs": "^2.4.3",
+"jsonwebtoken": "^9.1.2"
+
+EXAMPLE - Your complete package.json should look like:
+
+{
+  "name": "e7ki-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.14.2",
+    "better-sqlite3": "^9.0.0",
+    "uuid": "^9.0.0",
+    "multer": "^1.4.5",
+    "dotenv": "^16.3.1",
+    "cors": "^2.8.5",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.1.2"
+  },
+  "devDependencies": {}
+}
+
+INSTALLATION COMMAND:
+
+cd codebank/e7ki/server
+npm install bcryptjs jsonwebtoken
+
+Or install all dependencies fresh:
+
+npm install
+
+ENVIRONMENT VARIABLES (Add to .env):
+
+JWT_SECRET=your-super-secret-key-min-32-chars-change-this
+PORT=5000
+NODE_ENV=production
+
+IMPORTANT: In production, use a strong random secret for JWT_SECRET!
+
+Example strong secret generation:
+- Linux/Mac: openssl rand -base64 32
+- NodeJS: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"

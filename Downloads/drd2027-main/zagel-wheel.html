@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zagel Command Wheel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%);
+            color: #e0e0e0;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            perspective: 1000px;
+        }
+
+        /* Wheel container */
+        .wheel-container {
+            position: relative;
+            width: 400px;
+            height: 400px;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        /* Center circle */
+        .wheel-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle at 30% 30%, #4a9eff, #0066cc);
+            border-radius: 50%;
+            box-shadow: 0 0 30px rgba(74, 158, 255, 0.6), inset -2px -2px 10px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .wheel-center:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+            box-shadow: 0 0 40px rgba(74, 158, 255, 0.8), inset -2px -2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .wheel-center-icon {
+            font-size: 48px;
+            animation: spin 3s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Wheel segments */
+        .wheel {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            animation: rotate 20s linear infinite reverse;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .segment {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 80px;
+            height: 80px;
+            margin-top: -40px;
+            margin-left: -40px;
+            transform-origin: 0 40px;
+        }
+
+        .segment:nth-child(1) { transform: rotate(0deg) translateY(-160px); }
+        .segment:nth-child(2) { transform: rotate(45deg) translateY(-160px); }
+        .segment:nth-child(3) { transform: rotate(90deg) translateY(-160px); }
+        .segment:nth-child(4) { transform: rotate(135deg) translateY(-160px); }
+        .segment:nth-child(5) { transform: rotate(180deg) translateY(-160px); }
+        .segment:nth-child(6) { transform: rotate(225deg) translateY(-160px); }
+        .segment:nth-child(7) { transform: rotate(270deg) translateY(-160px); }
+        .segment:nth-child(8) { transform: rotate(315deg) translateY(-160px); }
+
+        .segment-button {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 24px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #2a4a6a 0%, #1a2a4a 100%);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .segment-button:hover {
+            transform: scale(1.2);
+            background: linear-gradient(135deg, #3a6aaa 0%, #2a4a7a 100%);
+            box-shadow: 0 6px 20px rgba(74, 158, 255, 0.4);
+            border-color: rgba(74, 158, 255, 0.5);
+        }
+
+        .segment-button.active {
+            background: linear-gradient(135deg, #4a9eff 0%, #0066cc 100%);
+            box-shadow: 0 0 20px rgba(74, 158, 255, 0.8);
+            border-color: rgba(74, 158, 255, 0.8);
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: #4a9eff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 200;
+        }
+
+        .segment-button:hover ~ .tooltip {
+            opacity: 1;
+        }
+
+        /* Control panel */
+        .control-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30, 30, 46, 0.95);
+            border: 1px solid rgba(74, 158, 255, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-title {
+            font-size: 14px;
+            color: #4a9eff;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .panel-input {
+            display: flex;
+            gap: 8px;
+        }
+
+        .input-field {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(74, 158, 255, 0.3);
+            color: #e0e0e0;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #4a9eff;
+            background: rgba(74, 158, 255, 0.1);
+            box-shadow: 0 0 10px rgba(74, 158, 255, 0.2);
+        }
+
+        .btn-execute {
+            background: linear-gradient(135deg, #4a9eff 0%, #0066cc 100%);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-execute:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(74, 158, 255, 0.4);
+        }
+
+        .btn-execute:active {
+            transform: translateY(0);
+        }
+
+        /* Status display */
+        .status-bar {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(30, 30, 46, 0.95);
+            border: 1px solid rgba(74, 158, 255, 0.2);
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 12px;
+            color: #4a9eff;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+            margin-right: 8px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .status-indicator.error {
+            background: #ef4444;
+            animation: pulse-error 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse-error {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Activity log */
+        .activity-log {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(30, 30, 46, 0.95);
+            border: 1px solid rgba(74, 158, 255, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            width: 250px;
+            font-size: 11px;
+            color: #a0a0b0;
+        }
+
+        .log-entry {
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(74, 158, 255, 0.1);
+            line-height: 1.4;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-time {
+            color: #4a9eff;
+            margin-right: 6px;
+        }
+
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(30, 30, 46, 0.95);
+            border-left: 3px solid #4a9eff;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 8px 0;
+            animation: slideIn 0.3s ease-out;
+            max-width: 300px;
+            z-index: 1000;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .notification.error {
+            border-left-color: #ef4444;
+        }
+
+        .notification.success {
+            border-left-color: #4ade80;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(74, 158, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(74, 158, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(74, 158, 255, 0.5);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .wheel-container {
+                width: 300px;
+                height: 300px;
+            }
+
+            .segment {
+                width: 60px;
+                height: 60px;
+                margin-top: -30px;
+                margin-left: -30px;
+            }
+
+            .segment:nth-child(n) { transform: rotate(var(--angle)) translateY(-120px); }
+
+            .wheel-center {
+                width: 70px;
+                height: 70px;
+            }
+
+            .wheel-center-icon {
+                font-size: 32px;
+            }
+
+            .segment-button {
+                font-size: 18px;
+            }
+
+            .control-panel {
+                width: 95%;
+                bottom: 10px;
+            }
+
+            .activity-log {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="activity-log" id="activityLog"></div>
+    <div class="status-bar">
+        <span class="status-indicator" id="statusIndicator"></span>
+        <span id="statusText">Connected</span>
+    </div>
+
+    <div class="container">
+        <div class="wheel-container">
+            <div class="wheel">
+                <div class="segment" style="--angle: 0deg;">
+                    <button class="segment-button" data-command="play_music" title="Play Music">🎵</button>
+                </div>
+                <div class="segment" style="--angle: 45deg;">
+                    <button class="segment-button" data-command="stop" title="Stop">⏹️</button>
+                </div>
+                <div class="segment" style="--angle: 90deg;">
+                    <button class="segment-button" data-command="volume_up" title="Volume Up">🔊</button>
+                </div>
+                <div class="segment" style="--angle: 135deg;">
+                    <button class="segment-button" data-command="volume_down" title="Volume Down">🔉</button>
+                </div>
+                <div class="segment" style="--angle: 180deg;">
+                    <button class="segment-button" data-command="next_track" title="Next">⏭️</button>
+                </div>
+                <div class="segment" style="--angle: 225deg;">
+                    <button class="segment-button" data-command="prev_track" title="Previous">⏮️</button>
+                </div>
+                <div class="segment" style="--angle: 270deg;">
+                    <button class="segment-button" data-command="shuffle" title="Shuffle">🔀</button>
+                </div>
+                <div class="segment" style="--angle: 315deg;">
+                    <button class="segment-button" data-command="settings" title="Settings">⚙️</button>
+                </div>
+            </div>
+
+            <div class="wheel-center" id="wheelCenter">
+                <div class="wheel-center-icon">Z</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="control-panel">
+        <div class="panel-title">Command Input</div>
+        <div class="panel-input">
+            <input type="text" class="input-field" id="commandInput" placeholder="Enter custom command...">
+            <button class="btn-execute" id="executeBtn">Execute</button>
+        </div>
+    </div>
+
+    <script>
+        class ZagelWheel {
+            constructor() {
+                this.sessionToken = localStorage.getItem('sessionToken') || 'demo-token';
+                this.userId = localStorage.getItem('userId') || 'user@example.com';
+                this.apiBase = window.location.origin + '/api';
+                this.sseUrl = window.location.origin + '/api/sse';
+                this.eventSource = null;
+                this.commandLog = [];
+                this.maxLogEntries = 10;
+                this.init();
+            }
+
+            init() {
+                console.log('[Zagel] Initializing command wheel');
+                this.setupEventListeners();
+                this.connectSSE();
+                this.logActivity('Zagel wheel initialized');
+            }
+
+            setupEventListeners() {
+                // Segment buttons
+                document.querySelectorAll('.segment-button').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.executeCommand(btn.dataset.command));
+                });
+
+                // Center button
+                document.getElementById('wheelCenter').addEventListener('click', () => {
+                    this.showNotification('Zagel Command Wheel Active!', 'success');
+                });
+
+                // Execute button
+                document.getElementById('executeBtn').addEventListener('click', () => {
+                    const command = document.getElementById('commandInput').value;
+                    if (command) {
+                        this.executeCommand(command);
+                        document.getElementById('commandInput').value = '';
+                    }
+                });
+
+                // Enter key in input
+                document.getElementById('commandInput').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        document.getElementById('executeBtn').click();
+                    }
+                });
+            }
+
+            connectSSE() {
+                const channel = 'commands';
+                const url = `${this.sseUrl}/${channel}?token=${this.sessionToken}`;
+
+                console.log('[SSE] Connecting to', url);
+
+                this.eventSource = new EventSource(url, {
+                    headers: {
+                        'Authorization': `Bearer ${this.sessionToken}`,
+                        'X-User-ID': this.userId
+                    }
+                });
+
+                this.eventSource.onopen = () => {
+                    console.log('[SSE] Connected');
+                    this.updateStatus('Connected', false);
+                    this.logActivity('SSE connection established');
+                };
+
+                this.eventSource.onmessage = (e) => {
+                    try {
+                        const data = JSON.parse(e.data);
+                        console.log('[SSE] Event:', data);
+
+                        if (data.type === 'heartbeat') {
+                            console.log('[SSE] Heartbeat received');
+                        } else if (data.type === 'event') {
+                            this.handleSSEEvent(data);
+                        }
+                    } catch (err) {
+                        console.error('[SSE] Parse error:', err);
+                    }
+                };
+
+                this.eventSource.onerror = (e) => {
+                    console.error('[SSE] Error:', e);
+                    this.updateStatus('Connection Error', true);
+                    this.logActivity('SSE connection error');
+                    setTimeout(() => this.connectSSE(), 5000);
+                };
+            }
+
+            handleSSEEvent(data) {
+                const { event, data: payload } = data;
+                console.log('[SSE Event]', event, payload);
+
+                if (event === 'command_executed') {
+                    this.showNotification(`Command: ${payload.command}`, 'success');
+                    this.logActivity(`Executed: ${payload.command}`);
+                }
+            }
+
+            async executeCommand(command) {
+                console.log('[Command] Executing:', command);
+                this.logActivity(`Executing: ${command}`);
+
+                try {
+                    const response = await fetch(`${this.apiBase}/commands`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${this.sessionToken}`,
+                            'Content-Type': 'application/json',
+                            'X-User-ID': this.userId
+                        },
+                        body: JSON.stringify({
+                            command,
+                            parameters: {}
+                        })
+                    });
+
+                    const result = await response.json();
+                    console.log('[Command Result]', result);
+
+                    if (result.success) {
+                        this.showNotification(`✓ ${command}`, 'success');
+                    } else {
+                        this.showNotification(`✗ ${result.error || 'Command failed'}`, 'error');
+                    }
+                } catch (err) {
+                    console.error('[Command Error]', err);
+                    this.showNotification('Command failed', 'error');
+                }
+            }
+
+            logActivity(message) {
+                const time = new Date().toLocaleTimeString();
+                this.commandLog.unshift({ time, message });
+                if (this.commandLog.length > this.maxLogEntries) {
+                    this.commandLog.pop();
+                }
+                this.updateActivityLog();
+            }
+
+            updateActivityLog() {
+                const log = document.getElementById('activityLog');
+                log.innerHTML = this.commandLog.map(entry =>
+                    `<div class="log-entry"><span class="log-time">${entry.time}</span>${entry.message}</div>`
+                ).join('');
+            }
+
+            updateStatus(text, error = false) {
+                document.getElementById('statusText').textContent = text;
+                const indicator = document.getElementById('statusIndicator');
+                if (error) {
+                    indicator.classList.add('error');
+                } else {
+                    indicator.classList.remove('error');
+                }
+            }
+
+            showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.textContent = message;
+                document.body.appendChild(notification);
+
+                setTimeout(() => {
+                    notification.style.animation = 'slideOut 0.3s ease-in forwards';
+                    setTimeout(() => notification.remove(), 300);
+                }, 3000);
+            }
+
+            destroy() {
+                if (this.eventSource) {
+                    this.eventSource.close();
+                }
+            }
+        }
+
+        // Initialize Zagel wheel
+        let zagelWheel;
+        document.addEventListener('DOMContentLoaded', () => {
+            zagelWheel = new ZagelWheel();
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (zagelWheel) zagelWheel.destroy();
+        });
+    </script>
+</body>
+</html>

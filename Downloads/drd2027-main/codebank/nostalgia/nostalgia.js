@@ -1,0 +1,106 @@
+(() => {
+  const authHeaders = () => ({ });
+  const feedEl = document.getElementById('nostalgia-feed');
+  const refreshBtn = document.getElementById('nostalgia-refresh');
+  let sse;
+  async function fetchFeed() {
+    const res = await fetch('/api/nostalgia/feed', { credentials: 'include' });
+    if (!res.ok) return;
+    const list = await res.json();
+    renderFeed(list);
+  }
+  function formatDate(d) { try { return new Date(d).toLocaleDateString(); } catch(e){ return d; } }
+  function renderFeed(items) {
+    feedEl.innerHTML = '';
+    items.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'nostalgia-card';
+      const video = document.createElement('video');
+      video.className = 'nostalgia-media';
+      video.src = item.url;
+      video.autoplay = true; video.muted = true; video.loop = true; video.playsInline = true;
+      const meta = document.createElement('div');
+      meta.className = 'nostalgia-meta';
+      const left = document.createElement('div');
+      left.innerHTML = `<div class="nostalgia-title">${item.title || ''}</div><div class="nostalgia-user">@${item.user_id || ''}</div>`;
+      const date = document.createElement('div');
+      date.className = 'nostalgia-date';
+      date.textContent = formatDate(item.admin_date);
+      meta.appendChild(left); meta.appendChild(date);
+      const timeline = document.createElement('div');
+      timeline.className = 'nostalgia-timeline';
+      const marker = document.createElement('div');
+      marker.className = 'nostalgia-marker';
+      marker.style.left = '50%';
+      timeline.appendChild(marker);
+      const actions = document.createElement('div');
+      actions.className = 'nostalgia-actions';
+      const mkBtn = (emoji, type) => {
+        const btn = document.createElement('button');
+        btn.className = 'nostalgia-btn';
+        const countEl = document.createElement('span');
+        countEl.textContent = '0';
+        btn.innerHTML = `${emoji}`;
+        btn.appendChild(countEl);
+        let pressTimer;
+        btn.addEventListener('mousedown', () => { pressTimer = setTimeout(async () => { await react(item.id, type, true); }, 600); });
+        btn.addEventListener('mouseup', async () => { if (pressTimer) { clearTimeout(pressTimer); await react(item.id, type, false).then(r=>{ countEl.textContent = String(r?.reaction?.[type]||0); }); }});
+        btn.addEventListener('mouseleave', () => { if (pressTimer) clearTimeout(pressTimer); });
+        return { btn, countEl };
+      };
+      const like = mkBtn('❤️','like');
+      const superLike = mkBtn('💙','super');
+      const megaLike = mkBtn('💜','mega');
+      actions.appendChild(like.btn); actions.appendChild(superLike.btn); actions.appendChild(megaLike.btn);
+      const comments = document.createElement('div');
+      comments.className = 'nostalgia-comments';
+      const input = document.createElement('input');
+      input.className = 'nostalgia-input'; input.placeholder = 'Write a memory...';
+      input.addEventListener('keydown', async (e) => { if (e.key==='Enter' && input.value.trim()) { await addComment(item.id, input.value.trim()); input.value=''; } });
+      comments.appendChild(input);
+      const shareBtn = document.createElement('button');
+      shareBtn.className = 'nostalgia-btn'; shareBtn.textContent = 'Share';
+      shareBtn.addEventListener('click', async () => { const r = await share(item.id); navigator.clipboard?.writeText(r.url); });
+      actions.appendChild(shareBtn);
+      card.appendChild(video); card.appendChild(meta); card.appendChild(timeline); card.appendChild(actions); card.appendChild(comments);
+      feedEl.appendChild(card);
+    });
+  }
+  async function react(upload_id, type, cancel) {
+    // Spend an asset for the reaction (like=1, super=5, mega=20) unless cancelling
+    if (!cancel && typeof window.useAsset === 'function') {
+      const costMap = { like: 1, super: 10, mega: 100 };
+      const cost = costMap[type] || 1;
+      try {
+        await window.useAsset(type, cost, 'nostalgia', type + ' on ' + upload_id);
+      } catch (_) { /* proceed even if asset spend fails */ }
+    }
+    const res = await fetch('/api/nostalgia/react', { method:'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ upload_id, type, cancel }) });
+    if (!res.ok) return {};
+    const data = await res.json();
+    return data;
+  }
+  async function addComment(upload_id, text) {
+    const res = await fetch('/api/nostalgia/comments', { method:'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ upload_id, text }) });
+    if (!res.ok) return;
+  }
+  async function share(upload_id) {
+    const res = await fetch('/api/nostalgia/share', { method:'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ upload_id }) });
+    if (!res.ok) return {};
+    return res.json();
+  }
+  function connectSSE() {
+    sse = new EventSource('/api/nostalgia/events', { withCredentials: true });
+    sse.addEventListener('reaction_added', () => {});
+    sse.addEventListener('reaction_removed', () => {});
+    sse.addEventListener('balance_change', () => {});
+    sse.addEventListener('comment_added', () => {});
+    sse.addEventListener('feed_publish', () => { fetchFeed(); });
+    sse.addEventListener('winner', () => {});
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.querySelector('button.tab-btn[data-tab="nostalgia"]');
+    btn?.addEventListener('click', () => { fetchFeed(); if (!sse) connectSSE(); });
+    refreshBtn?.addEventListener('click', fetchFeed);
+  });
+})();

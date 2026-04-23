@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeBank Admin - Central Dashboard</title>
+    <meta name="description" content="Centralized Admin System for CodeBank">
+    
+    <!-- CSP -->
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval';">
+    
+    <!-- Styles -->
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --surface: #ffffff;
+            --surface-dark: #f8fafc;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--surface-dark);
+            color: var(--text);
+            min-height: 100vh;
+            padding-bottom: 80px; /* Bottom nav space */
+        }
+        
+        /* Header */
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .logo { font-size: 1.25rem; font-weight: 700; }
+        
+        .header-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .header-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+        
+        /* Main Content */
+        .main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: var(--surface);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+        
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .stat-change {
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+        }
+        
+        .stat-change.positive { color: var(--secondary); }
+        .stat-change.negative { color: var(--danger); }
+        
+        /* Services Grid */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .service-card {
+            background: var(--surface);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 2px solid transparent;
+        }
+        
+        .service-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+        
+        .service-card.active { border-color: var(--secondary); }
+        
+        .service-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        .service-name { font-weight: 600; }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+        }
+        
+        .tab {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: 0.875rem;
+        }
+        
+        .tab.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        /* Tables */
+        .table-container {
+            background: var(--surface);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        th {
+            background: var(--surface-dark);
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+        
+        tr:hover { background: var(--surface-dark); }
+        
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .status-active { background: #dcfce7; color: #166534; }
+        .status-inactive { background: #f1f5f9; color: #64748b; }
+        
+        /* Action Buttons */
+        .action-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: background 0.2s;
+        }
+        
+        .action-btn.primary { background: var(--primary); color: white; }
+        .action-btn.danger { background: var(--danger); color: white; }
+        .action-btn.secondary { background: var(--surface-dark); color: var(--text); }
+        
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            padding: 1rem;
+        }
+        
+        .modal-overlay.open { display: flex; }
+        
+        .modal {
+            background: var(--surface);
+            border-radius: 16px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-body { padding: 1.5rem; }
+        .modal-footer { padding: 1.5rem; border-top: 1px solid var(--border); display: flex; gap: 1rem; justify-content: flex-end; }
+        
+        /* Forms */
+        .form-group { margin-bottom: 1rem; }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        
+        /* Activity Feed */
+        .activity-feed {
+            background: var(--surface);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+        
+        .activity-item {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+        
+        .activity-item:last-child { border-bottom: none; }
+        
+        .activity-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--surface-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .activity-content { flex: 1; }
+        .activity-time { font-size: 0.75rem; color: var(--text-muted); }
+        
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-around;
+            padding: 0.75rem;
+            z-index: 100;
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        
+        .nav-item.active { color: var(--primary); }
+        .nav-icon { font-size: 1.5rem; }
+        
+        /* Responsive */
+        @media (max-width: 640px) {
+            .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
+            .services-grid { grid-template-columns: repeat(2, 1fr); }
+            .header { padding: 0.75rem; }
+            .logo { font-size: 1rem; }
+        }
+        
+        /* Loading */
+        .loading {
+            display: flex;
+            justify-content: center;
+            padding: 2rem;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Hidden by role */
+        .role-hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">🏦 CodeBank Admin</div>
+            <div class="header-actions">
+                <button class="header-btn" onclick="refreshData()">🔄</button>
+                <button class="header-btn" onclick="showSettings()">⚙️</button>
+                <button class="header-btn" onclick="logout()">🚪</button>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="main" id="main-content">
+        <!-- Dashboard Stats -->
+        <div class="dashboard-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Users</div>
+                <div class="stat-value" id="total-users">-</div>
+                <div class="stat-change positive">↑ 12% this week</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Active Sessions</div>
+                <div class="stat-value" id="active-sessions">-</div>
+                <div class="stat-change">Now</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Services Active</div>
+                <div class="stat-value" id="services-active">7</div>
+                <div class="stat-change positive">All operational</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Today's Actions</div>
+                <div class="stat-value" id="today-actions">-</div>
+                <div class="stat-change">Admin actions</div>
+            </div>
+        </div>
+        
+        <!-- Services -->
+        <h2 style="margin-bottom: 1rem;">Services</h2>
+        <div class="services-grid" id="services-grid">
+            <div class="service-card" data-service="safecode" onclick="selectService('safecode')">
+                <div class="service-icon">🔐</div>
+                <div class="service-name">Safecode</div>
+            </div>
+            <div class="service-card" data-service="cottery" onclick="selectService('cottery')">
+                <div class="service-icon">🎯</div>
+                <div class="service-name">Cottery</div>
+            </div>
+            <div class="service-card" data-service="farragna" onclick="selectService('farragna')">
+                <div class="service-icon">🎬</div>
+                <div class="service-name">Farragna</div>
+            </div>
+            <div class="service-card" data-service="pebalaash" onclick="selectService('pebalaash')">
+                <div class="service-icon">🎨</div>
+                <div class="service-name">Pebalaash</div>
+            </div>
+            <div class="service-card" data-service="samma3ny" onclick="selectService('samma3ny')">
+                <div class="service-icon">📺</div>
+                <div class="service-name">Samma3ny</div>
+            </div>
+            <div class="service-card" data-service="e7ki" onclick="selectService('e7ki')">
+                <div class="service-icon">💬</div>
+                <div class="service-name">E7ki</div>
+            </div>
+            <div class="service-card" data-service="battalooda" onclick="selectService('battalooda')">
+                <div class="service-icon">🔥</div>
+                <div class="service-name">Battalooda</div>
+            </div>
+        </div>
+        
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" data-tab="users" onclick="switchTab('users')">👥 Users</button>
+            <button class="tab" data-tab="activity" onclick="switchTab('activity')">📊 Activity</button>
+            <button class="tab" data-tab="sessions" onclick="switchTab('sessions')">🔑 Sessions</button>
+            <button class="tab" data-tab="audit" onclick="switchTab('audit')">📝 Audit Log</button>
+        </div>
+        
+        <!-- Tab Content: Users -->
+        <div class="tab-content" id="tab-users">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Service</th>
+                            <th>Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table">
+                        <tr><td colspan="5" class="loading"><div class="spinner"></div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Tab Content: Activity -->
+        <div class="tab-content" id="tab-activity" style="display: none;">
+            <div class="activity-feed" id="activity-feed">
+                <div class="loading"><div class="spinner"></div></div>
+            </div>
+        </div>
+        
+        <!-- Tab Content: Sessions -->
+        <div class="tab-content" id="tab-sessions" style="display: none;">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Admin</th>
+                            <th>IP Address</th>
+                            <th>Login Time</th>
+                            <th>Expires</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sessions-table">
+                        <tr><td colspan="5" class="loading"><div class="spinner"></div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Tab Content: Audit -->
+        <div class="tab-content" id="tab-audit" style="display: none;">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Admin</th>
+                            <th>Action</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="audit-table">
+                        <tr><td colspan="4" class="loading"><div class="spinner"></div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" data-page="dashboard" onclick="switchPage('dashboard')">
+            <span class="nav-icon">📊</span>
+            <span>Dashboard</span>
+        </div>
+        <div class="nav-item" data-page="users" onclick="switchPage('users')">
+            <span class="nav-icon">👥</span>
+            <span>Users</span>
+        </div>
+        <div class="nav-item" data-page="activity" onclick="switchPage('activity')">
+            <span class="nav-icon">📈</span>
+            <span>Activity</span>
+        </div>
+        <div class="nav-item" data-page="settings" onclick="switchPage('settings')">
+            <span class="nav-icon">⚙️</span>
+            <span>Settings</span>
+        </div>
+    </nav>
+    
+    <!-- Send Assets Modal -->
+    <div class="modal-overlay" id="asset-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Send Assets to User</h3>
+                <button onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>User ID</label>
+                    <input type="text" id="asset-user-id" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Asset Type</label>
+                    <select id="asset-type">
+                        <option value="silver">Silver Codes</option>
+                        <option value="gold">Gold Codes</option>
+                        <option value="points">Points</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Amount</label>
+                    <input type="number" id="asset-amount" min="1" value="10">
+                </div>
+                <div class="form-group">
+                    <label>Reason (optional)</label>
+                    <textarea id="asset-reason" rows="2" placeholder="Reason for sending assets..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="action-btn secondary" onclick="closeModal()">Cancel</button>
+                <button class="action-btn primary" onclick="sendAssets()">Send Assets</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="admin-core.js"></script>
+    <script>
+        // Check authentication
+        const token = localStorage.getItem('admin_token');
+        if (!token) {
+            window.location.href = '/codebank/bankode/admin-login.html';
+        }
+        
+        // Load initial data
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDashboard();
+        });
+    </script>
+</body>
+</html>

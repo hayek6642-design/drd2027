@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dr.D - Platform</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0d1117;
+            color: #c9d1d9;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+        }
+        
+        #app {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Auth Modal */
+        .auth-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 17, 23, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+        
+        .auth-container {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .auth-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .auth-header h1 {
+            font-size: 32px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #238636, #3fb950);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .auth-header p {
+            color: #8b949e;
+            font-size: 14px;
+        }
+        
+        .auth-tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid #30363d;
+        }
+        
+        .auth-tab {
+            flex: 1;
+            padding: 12px;
+            background: none;
+            border: none;
+            color: #8b949e;
+            cursor: pointer;
+            font-size: 14px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .auth-tab.active {
+            color: #58a6ff;
+            border-bottom-color: #58a6ff;
+        }
+        
+        .auth-form {
+            display: none;
+        }
+        
+        .auth-form.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 13px;
+            color: #c9d1d9;
+            font-weight: 500;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 8px 12px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #c9d1d9;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+        }
+        
+        .auth-button {
+            width: 100%;
+            padding: 10px;
+            background: #238636;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 12px;
+        }
+        
+        .auth-button:hover {
+            background: #2ea043;
+        }
+        
+        .auth-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            margin: 16px 0;
+        }
+        
+        .auth-divider:before,
+        .auth-divider:after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #30363d;
+        }
+        
+        .auth-divider span {
+            padding: 0 8px;
+            color: #8b949e;
+            font-size: 12px;
+        }
+        
+        .google-button {
+            width: 100%;
+            padding: 10px;
+            background: #fff;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #000;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .google-button:hover {
+            background: #f0f0f0;
+        }
+        
+        .error-message {
+            background: rgba(248, 81, 73, 0.1);
+            border: 1px solid #f85449;
+            color: #f85449;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 12px;
+            display: none;
+        }
+        
+        .error-message.show {
+            display: block;
+        }
+        
+        .guest-button {
+            width: 100%;
+            padding: 10px;
+            background: transparent;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #58a6ff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .guest-button:hover {
+            border-color: #58a6ff;
+            background: rgba(88, 166, 255, 0.05);
+        }
+        
+        #main-content {
+            display: none;
+            flex: 1;
+            overflow: auto;
+        }
+        
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #30363d;
+            border-top-color: #58a6ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="auth-modal" id="authModal">
+            <div class="auth-container">
+                <div class="auth-header">
+                    <h1>Dr.D</h1>
+                    <p>Platform Access</p>
+                </div>
+                
+                <div id="errorMessage" class="error-message"></div>
+                
+                <div class="auth-tabs">
+                    <button class="auth-tab active" data-tab="signin">Sign In</button>
+                    <button class="auth-tab" data-tab="signup">Sign Up</button>
+                </div>
+                
+                <!-- Sign In Form -->
+                <form class="auth-form active" id="signinForm" data-tab="signin">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="signinEmail" placeholder="your@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="signinPassword" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="auth-button">Sign In</button>
+                    
+                    <div class="auth-divider"><span>or</span></div>
+                    
+                    <button type="button" id="googleSignin" class="google-button">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="1"/><path d="M12 1v6m0 6v6"/>
+                        </svg>
+                        Continue with Google
+                    </button>
+                    
+                    <button type="button" id="guestSignin" class="guest-button">Continue as Guest</button>
+                </form>
+                
+                <!-- Sign Up Form -->
+                <form class="auth-form" id="signupForm" data-tab="signup">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="signupName" placeholder="John Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="signupEmail" placeholder="your@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="signupPassword" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="auth-button">Create Account</button>
+                    
+                    <div class="auth-divider"><span>or</span></div>
+                    
+                    <button type="button" id="googleSignup" class="google-button">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="1"/><path d="M12 1v6m0 6v6"/>
+                        </svg>
+                        Sign Up with Google
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <div id="mainContent">
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================
+        // Auth Manager
+        // ============================
+        const Auth = {
+            async initialize() {
+                console.log('[Auth] Initializing...');
+                
+                // Check if already authenticated
+                const sessionId = localStorage.getItem('sessionId') || localStorage.getItem('session_token');
+                if (sessionId) {
+                    console.log('[Auth] Session found, checking validity...');
+                    const valid = await this.validateSession(sessionId);
+                    if (valid) {
+                        this.showMainContent();
+                        return;
+                    }
+                    localStorage.removeItem('sessionId');
+                    localStorage.removeItem('session_token');
+                }
+                
+                this.showAuthModal();
+            },
+            
+            async validateSession(sessionId) {
+                try {
+                    const res = await fetch('/api/auth/session', {
+                        headers: { 'x-session-token': sessionId }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        return data.authenticated === true;
+                    }
+                } catch (e) {
+                    console.error('[Auth] Validation error:', e.message);
+                }
+                return false;
+            },
+            
+            showAuthModal() {
+                document.getElementById('authModal').style.display = 'flex';
+                document.getElementById('mainContent').style.display = 'none';
+            },
+            
+            showMainContent() {
+                document.getElementById('authModal').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'flex';
+                this.loadApp();
+            },
+            
+            async handleSignIn(email, password) {
+                try {
+                    const res = await fetch('/api/auth/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password, verificationMethod: 'email-password' })
+                    });
+                    
+                    if (!res.ok) {
+                        const data = await res.json();
+                        throw new Error(data.error || 'Sign in failed');
+                    }
+                    
+                    const data = await res.json();
+                    if (data.sessionId) {
+                        localStorage.setItem('sessionId', data.sessionId);
+                        if (data.token) localStorage.setItem('session_token', data.token);
+                        this.showMainContent();
+                    }
+                } catch (e) {
+                    this.showError(e.message);
+                }
+            },
+            
+            async handleSignUp(name, email, password) {
+                try {
+                    const res = await fetch('/api/auth/signup', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, email, password })
+                    });
+                    
+                    if (!res.ok) {
+                        const data = await res.json();
+                        throw new Error(data.error || 'Sign up failed');
+                    }
+                    
+                    const data = await res.json();
+                    if (data.sessionId) {
+                        localStorage.setItem('sessionId', data.sessionId);
+                        if (data.token) localStorage.setItem('session_token', data.token);
+                        this.showMainContent();
+                    }
+                } catch (e) {
+                    this.showError(e.message);
+                }
+            },
+            
+            async handleGoogleSignIn(credential) {
+                try {
+                    const res = await fetch('/api/auth/google', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ credential })
+                    });
+                    
+                    if (!res.ok) {
+                        const data = await res.json();
+                        throw new Error(data.message || 'Google sign-in failed');
+                    }
+                    
+                    const data = await res.json();
+                    if (data.sessionId) {
+                        localStorage.setItem('sessionId', data.sessionId);
+                        if (data.token) localStorage.setItem('session_token', data.token);
+                        this.showMainContent();
+                    }
+                } catch (e) {
+                    this.showError(e.message);
+                }
+            },
+            
+            handleGuestMode() {
+                const guestId = 'guest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('guestId', guestId);
+                localStorage.setItem('isGuest', 'true');
+                console.log('[Auth] Guest mode enabled:', guestId);
+                this.showMainContent();
+            },
+            
+            showError(msg) {
+                const err = document.getElementById('errorMessage');
+                if (err) {
+                    err.textContent = msg || 'An error occurred';
+                    err.classList.add('show');
+                    setTimeout(() => err.classList.remove('show'), 5000);
+                }
+            },
+            
+            loadApp() {
+                // Load the main app content
+                const mainContent = document.getElementById('mainContent');
+                mainContent.innerHTML = '<div style="padding: 20px; color: #c9d1d9;"><h2>Welcome to Dr.D</h2><p>Platform is loading...</p></div>';
+                console.log('[Auth] App loaded');
+            }
+        };
+        
+        // ============================
+        // UI Event Listeners
+        // ============================
+        document.addEventListener('DOMContentLoaded', () => {
+            // Tab switching
+            document.querySelectorAll('.auth-tab').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const tab = e.target.dataset.tab;
+                    document.querySelectorAll('.auth-tab').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+                    e.target.classList.add('active');
+                    document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+                    document.getElementById(`${tab}Form`).classList.add('active');
+                });
+            });
+            
+            // Sign In
+            document.getElementById('signinForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const email = document.getElementById('signinEmail').value;
+                const password = document.getElementById('signinPassword').value;
+                Auth.handleSignIn(email, password);
+            });
+            
+            // Sign Up
+            document.getElementById('signupForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const name = document.getElementById('signupName').value;
+                const email = document.getElementById('signupEmail').value;
+                const password = document.getElementById('signupPassword').value;
+                Auth.handleSignUp(name, email, password);
+            });
+            
+            // Guest Mode
+            document.getElementById('guestSignin').addEventListener('click', (e) => {
+                e.preventDefault();
+                Auth.handleGuestMode();
+            });
+            
+            document.getElementById('googleSignin').addEventListener('click', (e) => {
+                e.preventDefault();
+                alert('Google Sign-In requires Google Client ID configuration');
+            });
+            
+            document.getElementById('googleSignup').addEventListener('click', (e) => {
+                e.preventDefault();
+                alert('Google Sign-In requires Google Client ID configuration');
+            });
+            
+            // Initialize auth
+            Auth.initialize();
+        });
+    </script>
+</body>
+</html>

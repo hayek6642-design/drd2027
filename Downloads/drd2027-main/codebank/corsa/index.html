@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoRsA Stock Market Dashboard</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --corsa-primary: #ffd700;
+            --corsa-secondary: #1e293b;
+            --corsa-accent: #0f172a;
+            --corsa-success: #10b981;
+            --corsa-danger: #ef4444;
+            --corsa-warning: #f59e0b;
+            --corsa-info: #3b82f6;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--corsa-accent) 0%, var(--corsa-secondary) 100%);
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 215, 0, 0.1);
+        }
+
+        .sidebar {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 215, 0, 0.1);
+            min-height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 56px;
+            width: 250px;
+            z-index: 1000;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.show {
+            transform: translateX(0);
+        }
+
+        .main-content {
+            margin-left: 0;
+            margin-top: 56px;
+            padding: 20px;
+            transition: margin-left 0.3s ease;
+        }
+
+        .card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 215, 0, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            background: rgba(15, 23, 42, 0.8);
+            border-bottom: 1px solid rgba(255, 215, 0, 0.1);
+            color: var(--corsa-primary);
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--corsa-primary), #ffed4e);
+            border: none;
+            color: #000;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+        }
+
+        .badge-corsa {
+            background: linear-gradient(135deg, var(--corsa-primary), #ffed4e);
+            color: #000;
+            font-weight: 600;
+        }
+
+        .badge-fund {
+            background: var(--corsa-info);
+            color: white;
+        }
+
+        .price-positive {
+            color: var(--corsa-success);
+        }
+
+        .price-negative {
+            color: var(--corsa-danger);
+        }
+
+        .market-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .status-open {
+            background: var(--corsa-success);
+            box-shadow: 0 0 8px var(--corsa-success);
+        }
+
+        .status-closed {
+            background: var(--corsa-danger);
+            box-shadow: 0 0 8px var(--corsa-danger);
+        }
+
+        .watch-item {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .watch-item:hover {
+            background: rgba(255, 215, 0, 0.1);
+        }
+
+        .position-card {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(255, 215, 0, 0.1);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .position-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .position-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+        }
+
+        .position-metric {
+            text-align: center;
+        }
+
+        .position-metric span:first-child {
+            display: block;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-bottom: 4px;
+        }
+
+        .portfolio-grid {
+            display: grid;
+            gap: 16px;
+        }
+
+        .modal-content {
+            background: var(--corsa-secondary);
+            color: #e2e8f0;
+            border-radius: 12px;
+        }
+
+        .form-control, .form-select {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            color: #e2e8f0;
+        }
+
+        .form-control:focus, .form-select:focus {
+            background: rgba(15, 23, 42, 0.9);
+            border-color: var(--corsa-primary);
+            color: #e2e8f0;
+            box-shadow: 0 0 0 0.2rem rgba(255, 215, 0, 0.25);
+        }
+
+        .table {
+            color: #e2e8f0;
+        }
+
+        .table-dark {
+            background: rgba(30, 41, 59, 0.8);
+        }
+
+        .table-dark th, .table-dark td {
+            border-color: rgba(255, 215, 0, 0.1);
+        }
+
+        .alert {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            color: #e2e8f0;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, var(--corsa-primary), #ffed4e);
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .position-details {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--corsa-primary);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #ffed4e;
+        }
+
+        /* Section management */
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        /* Console styling */
+        #console-output {
+            background: linear-gradient(145deg, #1e1e1e 0%, #2d2d2d 100%);
+            border: 1px solid #ffd700;
+            border-radius: 8px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        #console-output::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #console-output::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        #console-output::-webkit-scrollbar-thumb {
+            background: #ffd700;
+            border-radius: 4px;
+        }
+
+        #console-output::-webkit-scrollbar-thumb:hover {
+            background: #ffed4e;
+        }
+
+        /* Quick trade buttons */
+        .quick-trade-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border: none;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .quick-trade-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border: none;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .quick-trade-success:hover,
+        .quick-trade-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Chart container */
+        #realistic-chart {
+            background: rgba(30, 41, 59, 0.3);
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        /* Technical indicators styling */
+        .technical-indicator {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(255, 215, 0, 0.1);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="#">
+                <i class="fas fa-chart-line me-2" style="color: var(--corsa-primary);"></i>
+                <span style="color: var(--corsa-primary); font-weight: 700;">CoRsA</span>
+                <span class="ms-1">Trading Platform</span>
+            </a>
+
+            <div class="d-flex align-items-center">
+                <div class="market-status me-3" id="market-status">
+                    <div class="status-indicator status-closed"></div>
+                    <span>Disconnected</span>
+                </div>
+
+                <div class="d-flex align-items-center me-3">
+                    <span class="me-2">Codes:</span>
+                    <span id="codes-balance" class="fw-bold">0</span>
+                    <span class="mx-2">|</span>
+                    <span class="me-2">Silver:</span>
+                    <span id="silver-balance" class="fw-bold">0</span>
+                    <span class="mx-2">|</span>
+                    <span class="me-2">Gold:</span>
+                    <span id="gold-balance" class="fw-bold">0</span>
+                </div>
+
+                <button class="btn btn-outline-light d-lg-none" id="mobile-menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="p-3">
+            <h6 class="text-warning mb-3">Navigation</h6>
+            <ul class="nav flex-column">
+                <li class="nav-item mb-2">
+                    <a class="nav-link text-light" href="#dashboard" onclick="showSection('dashboard')">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                </li>
+                <li class="nav-item mb-2">
+                    <a class="nav-link text-light" href="#portfolio" onclick="showSection('portfolio')">
+                        <i class="fas fa-briefcase me-2"></i>Portfolio
+                    </a>
+                </li>
+                <li class="nav-item mb-2">
+                    <a class="nav-link text-light" href="#trading" onclick="showSection('trading')">
+                        <i class="fas fa-exchange-alt me-2"></i>Trading
+                    </a>
+                </li>
+                <li class="nav-item mb-2">
+                    <a class="nav-link text-light" href="#corsa" onclick="showSection('corsa')">
+                        <i class="fas fa-coins me-2" style="color: var(--corsa-primary);"></i>CoRsA Assets
+                    </a>
+                </li>
+                <li class="nav-item mb-2">
+                    <a class="nav-link text-light" href="#funds" onclick="showSection('funds')">
+                        <i class="fas fa-university me-2"></i>Real-World Funds
+                    </a>
+                </li>
+                <li class="nav-item mb-2">
+                    <a class="nav-link text-light" href="#orders" onclick="showSection('orders')">
+                        <i class="fas fa-list me-2"></i>Orders
+                    </a>
+                </li>
+                <li class="nav-item mb-2">
+                    <a class="nav-link text-light" href="#charts" onclick="showSection('charts')">
+                        <i class="fas fa-chart-area me-2"></i>Realistic Charts
+                    </a>
+                </li>
+                <li class="nav-item mb-2">
+                    <a class="nav-link text-light" href="#console" onclick="showSection('console')">
+                        <i class="fas fa-terminal me-2"></i>Console
+                    </a>
+                </li>
+                <li class="nav-item mb-2 d-none" id="admin-nav">
+                    <a class="nav-link text-warning" href="#admin" onclick="showSection('admin')">
+                        <i class="fas fa-crown me-2"></i>Admin Panel
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="main-content">
+        <!-- Dashboard Section -->
+        <div id="dashboard-section" class="section active">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 class="text-warning mb-4">
+                        <i class="fas fa-chart-line me-2"></i>Market Dashboard
+                    </h2>
+                </div>
+            </div>
+
+            <!-- Market Summary -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Market Summary</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="market-summary" class="row text-center">
+                                <div class="col-4">
+                                    <div class="h4 text-primary">0</div>
+                                    <div class="small text-secondary">Total Instruments</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="h4 text-success">0</div>
+                                    <div class="small text-secondary">Gainers</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="h4 text-danger">0</div>
+                                    <div class="small text-secondary">Decliners</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Market Watch -->
+            <div class="row mb-4">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-eye me-2"></i>Market Watch</h5>
+                            <select class="form-select form-select-sm w-auto" id="market-selector">
+                                <option value="stocks">Stocks</option>
+                                <option value="crypto">Crypto</option>
+                                <option value="corsa">CoRsA</option>
+                            </select>
+                        </div>
+                        <div class="card-body">
+                            <div id="market-watch" class="market-watch-list">
+                                <!-- Market data will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-chart-area me-2"></i>Price Chart</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="main-chart" style="max-height: 300px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Portfolio Section -->
+        <div id="portfolio-section" class="section">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 class="text-warning mb-4">
+                        <i class="fas fa-briefcase me-2"></i>Portfolio
+                    </h2>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3 class="text-primary" id="total-portfolio-value">$0.00</h3>
+                            <p class="text-secondary mb-0">Total Portfolio Value</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3 class="text-success">0.00%</h3>
+                            <p class="text-secondary mb-0">Total Return</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <button class="btn btn-primary w-100" onclick="refreshPortfolio()">
+                                <i class="fas fa-sync-alt me-2"></i>Refresh
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-list me-2"></i>Positions</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="portfolio-positions">
+                                <!-- Portfolio positions will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trading Section -->
+        <div id="trading-section" class="section">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 class="text-warning mb-4">
+                        <i class="fas fa-exchange-alt me-2"></i>Trading
+                    </h2>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Place Order</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="orderForm">
+                                <div class="mb-3">
+                                    <label class="form-label">Asset Type</label>
+                                    <select class="form-select" id="order-asset-type" required>
+                                        <option value="stocks">Stocks</option>
+                                        <option value="crypto">Crypto</option>
+                                        <option value="corsa">CoRsA</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Instrument</label>
+                                    <select class="form-select" id="order-instrument" required>
+                                        <option value="">Select instrument...</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Order Type</label>
+                                    <select class="form-select" id="order-type" required>
+                                        <option value="market">Market</option>
+                                        <option value="limit">Limit</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3" id="price-field" style="display: none;">
+                                    <label class="form-label">Price</label>
+                                    <input type="number" class="form-control" id="order-price" step="0.01">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Side</label>
+                                    <select class="form-select" id="order-side" required>
+                                        <option value="buy">Buy</option>
+                                        <option value="sell">Sell</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Quantity</label>
+                                    <input type="number" class="form-control" id="order-quantity" required min="1">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Asset to Use</label>
+                                    <select class="form-select" id="order-asset" required>
+                                        <option value="codes">Codes</option>
+                                        <option value="silver">Silver</option>
+                                        <option value="gold">Gold</option>
+                                    </select>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-paper-plane me-2"></i>Place Order
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Orders</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="orders-table">
+                                <!-- Orders will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CoRsA Assets Section -->
+        <div id="corsa-section" class="section">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 class="text-warning mb-4">
+                        <i class="fas fa-coins me-2" style="color: var(--corsa-primary);"></i>CoRsA Assets
+                    </h2>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Available CoRsA Instruments</h5>
+                            <button class="btn btn-sm btn-outline-warning" onclick="refreshCorsaData()">
+                                <i class="fas fa-sync-alt me-1"></i>Refresh
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="corsa-instruments" class="row">
+                                <!-- CoRsA instruments will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-World Funds Section -->
+        <div id="funds-section" class="section">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 class="text-warning mb-4">
+                        <i class="fas fa-university me-2"></i>Real-World Funds
+                    </h2>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Available Investment Funds</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="funds-list" class="row">
+                                <!-- Funds will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Orders Section -->
+        <div id="orders-section" class="section">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 class="text-warning mb-4">
+                        <i class="fas fa-list me-2"></i>Order History
+                    </h2>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">All Orders</h5>
+                            <button class="btn btn-sm btn-outline-primary" onclick="refreshOrders()">
+                                <i class="fas fa-sync-alt me-1"></i>Refresh
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="orders-table-full">
+                                <!-- Full orders table will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transfer Section -->
+        <div id="transfer-section" class="section">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 class="text-warning mb-4">
+                        <i class="fas fa-paper-plane me-2"></i>Transfer Assets
+                    </h2>
+                </div>
+            </div>
+
+            <div class="row justify-content-center">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Transfer Between Users</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="transferForm">
+                                <div class="mb-3">
+                                    <label class="form-label">Recipient</label>
+                                    <input type="text" class="form-control" id="transfer-to" required placeholder="Enter recipient ID or email">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Asset Type</label>
+                                    <select class="form-select" id="transfer-asset" required>
+                                        <option value="codes">Codes</option>
+                                        <option value="silver">Silver</option>
+                                        <option value="gold">Gold</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Amount</label>
+                                    <input type="number" class="form-control" id="transfer-amount" required min="1">
+                                </div>
+
+                                <button type="submit" class="btn btn-success w-100">
+                                    <i class="fas fa-paper-plane me-2"></i>Transfer
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Section -->
+        <div id="admin-section" class="section d-none">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 class="text-warning mb-4">
+                        <i class="fas fa-crown me-2"></i>Admin Panel
+                    </h2>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Price Management</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="priceForm">
+                                <div class="mb-3">
+                                    <label class="form-label">CoRsA Instrument</label>
+                                    <select class="form-select" id="admin-instrument" required>
+                                        <option value="">Select instrument...</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">New Price (EGP)</label>
+                                    <input type="number" class="form-control" id="admin-new-price" required step="0.01">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Reason</label>
+                                    <input type="text" class="form-control" id="admin-reason" required placeholder="Price update reason">
+                                </div>
+
+                                <button type="submit" class="btn btn-warning w-100">
+                                    <i class="fas fa-edit me-2"></i>Update Price
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Audit Trail</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="audit-trail" style="max-height: 300px; overflow-y: auto;">
+                                <!-- Audit trail will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Realistic Charts Section -->
+    <div id="charts-section" class="section">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="text-warning mb-4">
+                    <i class="fas fa-chart-area me-2"></i>Realistic Stock Market Charts
+                </h2>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Market Charts</h5>
+                        <div class="d-flex gap-2">
+                            <select class="form-select form-select-sm w-auto" id="chart-timeframe">
+                                <option value="1D">1D</option>
+                                <option value="1W">1W</option>
+                                <option value="1M">1M</option>
+                                <option value="3M">3M</option>
+                                <option value="1Y">1Y</option>
+                            </select>
+                            <select class="form-select form-select-sm w-auto" id="chart-symbol">
+                                <option value="AAPL">AAPL</option>
+                                <option value="GOOGL">GOOGL</option>
+                                <option value="MSFT">MSFT</option>
+                                <option value="TSLA">TSLA</option>
+                                <option value="BTC">Bitcoin</option>
+                                <option value="ETH">Ethereum</option>
+                                <option value="CORS-GOLD">CORS-GOLD</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="realistic-chart" style="height: 400px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Technical Analysis</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="technical-indicators">
+                            <!-- Technical indicators will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Chart Controls</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Chart Type</label>
+                            <select class="form-select" id="chart-type">
+                                <option value="candlestick">Candlestick</option>
+                                <option value="line">Line Chart</option>
+                                <option value="bar">Bar Chart</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Indicators</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="show-ma">
+                                <label class="form-check-label" for="show-ma">Moving Average</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="show-rsi">
+                                <label class="form-check-label" for="show-rsi">RSI</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="show-macd">
+                                <label class="form-check-label" for="show-macd">MACD</label>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary w-100" onclick="updateRealisticChart()">
+                            <i class="fas fa-sync-alt me-2"></i>Update Chart
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Console Section -->
+    <div id="console-section" class="section">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="text-warning mb-4">
+                    <i class="fas fa-terminal me-2"></i>Trading Console
+                </h2>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Current State</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Your Codes</label>
+                            <div class="input-group">
+                                <span class="input-group-text">🏷️</span>
+                                <input type="number" class="form-control" id="current-codes" readonly>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Silver Bars</label>
+                            <div class="input-group">
+                                <span class="input-group-text">🥈</span>
+                                <input type="number" class="form-control" id="current-silver" readonly>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Gold Bars</label>
+                            <div class="input-group">
+                                <span class="input-group-text">🥇</span>
+                                <input type="number" class="form-control" id="current-gold" readonly>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Portfolio Value</label>
+                            <div class="input-group">
+                                <span class="input-group-text">💰</span>
+                                <input type="text" class="form-control" id="current-portfolio-value" readonly>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Quick Trade</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Asset</label>
+                            <select class="form-select" id="quick-trade-asset">
+                                <option value="AAPL">Apple (AAPL)</option>
+                                <option value="GOOGL">Google (GOOGL)</option>
+                                <option value="CORS-GOLD">CoRsA Gold</option>
+                                <option value="CORS-SILVER">CoRsA Silver</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Action</label>
+                            <select class="form-select" id="quick-trade-action">
+                                <option value="buy">Buy</option>
+                                <option value="sell">Sell</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Amount</label>
+                            <input type="number" class="form-control" id="quick-trade-amount" placeholder="Enter amount">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Current Price</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="text" class="form-control" id="quick-trade-price" readonly>
+                            </div>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-success" onclick="executeQuickTrade('buy')" id="quick-buy-btn">
+                                <i class="fas fa-shopping-cart me-2"></i>Quick Buy
+                            </button>
+                            <button class="btn btn-danger" onclick="executeQuickTrade('sell')" id="quick-sell-btn">
+                                <i class="fas fa-hand-holding-usd me-2"></i>Quick Sell
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Market Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span>Market Status:</span>
+                                <span class="badge bg-success">Open</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span>Session:</span>
+                                <span>Regular Hours</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span>Last Update:</span>
+                                <span id="last-update-time">--:--:--</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span>Volume:</span>
+                                <span id="daily-volume">1.2M</span>
+                            </div>
+                        </div>
+                        <div class="text-center mt-3">
+                            <button class="btn btn-outline-primary btn-sm" onclick="refreshConsoleData()">
+                                <i class="fas fa-sync-alt me-2"></i>Refresh
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Console Log</h5>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-warning" onclick="clearConsole()">
+                                <i class="fas fa-trash me-1"></i>Clear
+                            </button>
+                            <button class="btn btn-sm btn-outline-info" onclick="exportLogs()">
+                                <i class="fas fa-download me-1"></i>Export
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="console-output" style="height: 300px; overflow-y: auto; background: #1e1e1e; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 14px; color: #00ff00;">
+                            <!-- Console logs will appear here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal fade" id="orderModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Order Confirmation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Order placed successfully!</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="transferModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Transfer Confirmation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Transfer completed successfully!</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="adminModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Price Update Confirmation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Price updated successfully!</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Section navigation function
+        function showSection(sectionName) {
+            // Hide all sections
+            const sections = document.querySelectorAll('.section');
+            sections.forEach(section => {
+                section.classList.remove('active');
+                section.style.display = 'none';
+            });
+
+            // Show selected section
+            const selectedSection = document.getElementById(sectionName + '-section');
+            if (selectedSection) {
+                selectedSection.classList.add('active');
+                selectedSection.style.display = 'block';
+            }
+
+            // Update navigation active state
+            const navLinks = document.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + sectionName) {
+                    link.classList.add('active');
+                }
+            });
+
+            // Close mobile menu if open
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) {
+                sidebar.classList.remove('show');
+            }
+        }
+
+        // Initialize - show dashboard section by default
+        document.addEventListener('DOMContentLoaded', function() {
+            showSection('dashboard');
+        });
+    </script>
+
+    <!-- Dashboard JavaScript -->
+    <script src="../../yt-coder/js/dashboard.js"></script>
+</body>
+</html>

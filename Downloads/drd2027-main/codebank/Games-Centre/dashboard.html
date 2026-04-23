@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Games Centre - Dashboard</title>
+    <link rel="stylesheet" href="./dashboard.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Header with branding -->
+    <header class="dashboard-header">
+        <h1 class="dashboard-title">🎮 Games Centre</h1>
+        <button id="ytSoundToggle" class="sound-toggle" aria-label="Toggle sound">🔊</button>
+    </header>
+
+    <!-- Main dashboard view -->
+    <main id="dashboardView" class="dashboard-view">
+        <!-- Search & filters -->
+        <div class="search-filters">
+            <input id="searchGames" type="text" placeholder="🔍 Search games..." aria-label="Search games">
+            <div class="filters">
+                <button data-category="all" class="filter-btn active">All</button>
+                <button data-category="arcade" class="filter-btn">Arcade</button>
+                <button data-category="board" class="filter-btn">Board</button>
+                <button data-category="action" class="filter-btn">Action</button>
+                <button data-category="casino" class="filter-btn">Casino</button>
+                <button data-category="classic" class="filter-btn">Classic</button>
+            </div>
+        </div>
+
+        <!-- Loading state -->
+        <div id="loadingState" class="loading-state hidden">
+            <div class="spinner"></div>
+            <p>Loading games...</p>
+        </div>
+
+        <!-- Games grid populated by dashboard.js -->
+        <div id="gamesGrid" class="games-grid"></div>
+
+        <!-- Empty state -->
+        <div id="emptyState" class="empty-state hidden">
+            <div class="empty-icon">🎯</div>
+            <h2>No games found</h2>
+            <p>Try adjusting your search or filters</p>
+        </div>
+    </main>
+
+    <!-- Template for game cards -->
+    <template id="gameCardTemplate">
+        <div class="game-card">
+            <div class="game-card-image">
+                <img src="" alt="" loading="lazy">
+                <div class="game-card-overlay">
+                    <button class="play-btn" aria-label="Play game">
+                        <span class="play-icon">▶</span>
+                        <span class="play-text">Play Now</span>
+                    </button>
+                </div>
+            </div>
+            <div class="game-card-content">
+                <div class="game-category"></div>
+                <h3 class="game-title"></h3>
+                <p class="game-description"></p>
+            </div>
+        </div>
+    </template>
+
+    <!-- Fullscreen game container -->
+    <div id="gameContainer" class="game-container hidden">
+        <!-- Game controls bar -->
+        <div class="game-controls-bar">
+            <button id="backToGames" class="back-btn" aria-label="Back to games">
+                <span>←</span> Back to Games
+            </button>
+            <div class="game-title-display" id="currentGameTitle"></div>
+            <div class="game-actions">
+                <button id="toggleChatBtn" class="control-btn" aria-label="Toggle chat">💬</button>
+                <button id="toggleLeaderboardBtn" class="control-btn" aria-label="Toggle leaderboard">🏆</button>
+                <button id="fullscreenBtn" class="control-btn" aria-label="Toggle fullscreen">⛶</button>
+            </div>
+        </div>
+
+        <!-- Game iframe -->
+        <div class="game-frame-wrapper">
+            <iframe id="gameFrame" class="game-frame" frameborder="0" allowfullscreen></iframe>
+
+            <!-- Loading overlay -->
+            <div id="gameLoading" class="game-loading">
+                <div class="spinner"></div>
+                <p>Loading game...</p>
+            </div>
+
+            <!-- Error overlay -->
+            <div id="gameError" class="game-error hidden">
+                <div class="error-icon">⚠️</div>
+                <h3>Failed to Load Game</h3>
+                <p id="errorMessage">Please try again later.</p>
+                <button id="retryGame" class="retry-btn">Retry</button>
+            </div>
+        </div>
+
+        <!-- Chat Overlay -->
+        <div id="chatOverlay" class="chat-overlay hidden">
+            <div class="overlay-header">
+                <h3>💬 Chat</h3>
+                <button id="closeChat" class="close-btn" aria-label="Close chat">×</button>
+            </div>
+            <div id="chatMessages" class="chat-messages"></div>
+            <div class="chat-input-area">
+                <input type="text" id="chatInput" placeholder="Type a message..." aria-label="Chat message">
+                <button id="sendMessage" class="send-btn" aria-label="Send message">Send</button>
+            </div>
+        </div>
+
+        <!-- Video Overlay -->
+        <div id="videoOverlay" class="video-overlay hidden">
+            <div class="video-grid">
+                <div id="localVideoContainer" class="video-container local">
+                    <div class="video-label">You</div>
+                </div>
+                <div id="remoteVideoContainer" class="video-container remote">
+                    <!-- Remote videos will be injected here -->
+                </div>
+            </div>
+            <div class="video-controls">
+                <button id="toggleMute" class="video-btn" aria-label="Toggle microphone">🎤</button>
+                <button id="toggleVideo" class="video-btn" aria-label="Toggle camera">📷</button>
+                <button id="closeVideo" class="video-btn" aria-label="Close video">✕</button>
+            </div>
+        </div>
+
+        <!-- Leaderboard Overlay -->
+        <div id="leaderboardOverlay" class="leaderboard-overlay hidden">
+            <div class="overlay-header">
+                <h3>🏆 Leaderboard</h3>
+                <button id="closeLeaderboard" class="close-btn" aria-label="Close leaderboard">×</button>
+            </div>
+            <div class="leaderboard-tabs">
+                <button class="tab-btn active" data-period="all">All Time</button>
+                <button class="tab-btn" data-period="weekly">Weekly</button>
+                <button class="tab-btn" data-period="daily">Daily</button>
+            </div>
+            <div id="leaderboardList" class="leaderboard-list">
+                <div class="leaderboard-empty">No scores yet. Be the first!</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- 🎰 Gamble System: load BEFORE dashboard.js -->
+    <script src="./core/gamble-system-core.js"></script>
+    <script src="./core/gamble-ui.js"></script>
+    <script type="module" src="./dashboard.js"></script>
+</body>
+
+</html>

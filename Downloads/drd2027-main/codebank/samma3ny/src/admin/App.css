@@ -1,0 +1,34 @@
+.admin-dashboard {
+  font-family: Arial, sans-serif;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 10px;
+}
+
+.login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+.login-container input {
+  margin: 10px;
+  padding: 10px;
+  font-size: 16px;
+}
+
+.login-container button {
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+}

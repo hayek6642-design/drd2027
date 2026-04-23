@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Platform Manager — Service Navigation</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    :root {
+      --bg: #0a0a16;
+      --surface: #12122a;
+      --surface2: #1c1c38;
+      --border: rgba(255,255,255,0.07);
+      --accent: #7c3aed;
+      --accent2: #06b6d4;
+      --text: #f0f0ff;
+      --muted: #8888aa;
+      --radius: 14px;
+    }
+    
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    
+    .header h1 {
+      font-size: 28px;
+      font-weight: 900;
+      margin-bottom: 8px;
+      background: linear-gradient(90deg, #7c3aed, #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .header p {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    
+    /* Search and Filter */
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+    
+    .search-box {
+      flex: 1;
+      min-width: 200px;
+      position: relative;
+    }
+    
+    .search-box input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      color: var(--text);
+      padding: 12px 16px 12px 40px;
+      font-size: 14px;
+      outline: none;
+    }
+    
+    .search-box input:focus {
+      border-color: var(--accent);
+    }
+    
+    .search-box i {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+    }
+    
+    .filter-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 20px;
+      border-radius: 30px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    
+    .filter-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    
+    .filter-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    
+    /* Platform Grid */
+    .platforms-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+    
+    .platform-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      text-align: center;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .platform-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at top, var(--accent2, transparent) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    
+    .platform-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    
+    .platform-card:hover::before {
+      opacity: 0.08;
+    }
+    
+    .platform-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+    }
+    
+    .platform-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    
+    .platform-desc {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    
+    .platform-status {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #22c55e;
+    }
+    
+    .platform-status.offline {
+      background: #ef4444;
+    }
+    
+    /* Stats */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+    
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .stat-number {
+      font-size: 32px;
+      font-weight: 900;
+      background: linear-gradient(90deg, #7c3aed, #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+    
+    .stat-label {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    /* Favorites */
+    .favorites-section {
+      margin-bottom: 40px;
+    }
+    
+    .section-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .favorites-pills {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .favorite-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    
+    .favorite-pill:hover {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+    }
+    
+    .favorite-icon {
+      font-size: 18px;
+    }
+    
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    
+    .empty-state-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+      opacity: 0.5;
+    }
+    
+    .empty-state p {
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    
+    /* Responsive */
+    @media (max-width: 600px) {
+      .platforms-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 12px;
+      }
+      
+      .header h1 {
+        font-size: 22px;
+      }
+      
+      .controls {
+        flex-direction: column;
+      }
+      
+      .search-box {
+        min-width: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  
+  <!-- Header -->
+  <div class="header">
+    <h1>🤖 Platform Manager</h1>
+    <p>Your personal AI assistant for service navigation & management</p>
+  </div>
+  
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-number" id="totalServices">0</div>
+      <div class="stat-label">Services</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" id="onlineServices">0</div>
+      <div class="stat-label">Online</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" id="favoriteCount">0</div>
+      <div class="stat-label">Favorites</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" id="categoryCount">0</div>
+      <div class="stat-label">Categories</div>
+    </div>
+  </div>
+  
+  <!-- Search & Filter -->
+  <div class="controls">
+    <div class="search-box">
+      <i class="fa fa-search"></i>
+      <input type="text" id="searchInput" placeholder="Search services..." oninput="filterPlatforms()">
+    </div>
+    <button class="filter-btn active" onclick="setCategory('all')">All</button>
+    <button class="filter-btn" onclick="setCategory('ai')">AI Tools</button>
+    <button class="filter-btn" onclick="setCategory('media')">Media</button>
+    <button class="filter-btn" onclick="setCategory('productivity')">Productivity</button>
+  </div>
+  
+  <!-- Favorites -->
+  <div class="favorites-section" id="favoritesSection" style="display: none;">
+    <div class="section-title">⭐ Quick Access</div>
+    <div class="favorites-pills" id="favoritesList"></div>
+  </div>
+  
+  <!-- Platforms Grid -->
+  <div id="platformsContainer">
+    <div class="platforms-grid" id="platformsGrid"></div>
+  </div>
+  
+  <!-- Empty State -->
+  <div class="empty-state" id="emptyState" style="display: none;">
+    <div class="empty-state-icon">🔍</div>
+    <p>No services match your search. Try different keywords or filters.</p>
+  </div>
+  
+</div>
+
+<script>
+// Sample platforms (in production, fetch from your backend)
+const PLATFORMS = [
+  // AI Tools
+  { id: 'chatgpt', name: 'ChatGPT', icon: '🤖', desc: 'AI Chat', category: 'ai', online: true, url: '/aihub.html' },
+  { id: 'claude', name: 'Claude', icon: '🧠', desc: 'Anthropic AI', category: 'ai', online: true, url: '/aihub.html' },
+  { id: 'gemini', name: 'Gemini', icon: '✨', desc: 'Google AI', category: 'ai', online: true, url: '/aihub.html' },
+  { id: 'perplexity', name: 'Perplexity', icon: '🔍', desc: 'AI Search', category: 'ai', online: true, url: '/aihub.html' },
+  
+  // Media
+  { id: 'yacine', name: 'Yacine Live', icon: '⚽', desc: 'Live Sports', category: 'media', online: true, url: '/aihub.html' },
+  { id: 'netflix', name: 'Netflix', icon: '🎬', desc: 'Movies & TV', category: 'media', online: true, url: '/aihub.html' },
+  { id: 'youtube', name: 'YouTube', icon: '▶️', desc: 'Video Platform', category: 'media', online: true, url: '/aihub.html' },
+  { id: 'spotify', name: 'Spotify', icon: '🎵', desc: 'Music Streaming', category: 'media', online: true, url: '/aihub.html' },
+  
+  // Productivity
+  { id: 'notion', name: 'Notion AI', icon: '📋', desc: 'Workspace', category: 'productivity', online: true, url: '/aihub.html' },
+  { id: 'gamma', name: 'Gamma', icon: '🎯', desc: 'Presentations', category: 'productivity', online: true, url: '/aihub.html' },
+  { id: 'otter', name: 'Otter.ai', icon: '🦦', desc: 'Transcription', category: 'productivity', online: true, url: '/aihub.html' },
+  { id: 'jasper', name: 'Jasper', icon: '✍️', desc: 'AI Writing', category: 'productivity', online: true, url: '/aihub.html' },
+];
+
+let favorites = JSON.parse(localStorage.getItem('platform_favorites') || '[]');
+let currentCategory = 'all';
+let filteredPlatforms = [...PLATFORMS];
+
+function initManager() {
+  renderStats();
+  renderPlatforms();
+  renderFavorites();
+}
+
+function renderStats() {
+  document.getElementById('totalServices').textContent = PLATFORMS.length;
+  document.getElementById('onlineServices').textContent = PLATFORMS.filter(p => p.online).length;
+  document.getElementById('favoriteCount').textContent = favorites.length;
+  document.getElementById('categoryCount').textContent = new Set(PLATFORMS.map(p => p.category)).size;
+}
+
+function renderPlatforms() {
+  const grid = document.getElementById('platformsGrid');
+  const emptyState = document.getElementById('emptyState');
+  
+  if (filteredPlatforms.length === 0) {
+    grid.style.display = 'none';
+    emptyState.style.display = 'block';
+    return;
+  }
+  
+  grid.style.display = 'grid';
+  emptyState.style.display = 'none';
+  grid.innerHTML = filteredPlatforms.map(p => `
+    <div class="platform-card" onclick="openPlatform('${p.id}')">
+      <div class="platform-status ${p.online ? '' : 'offline'}"></div>
+      <div class="platform-icon">${p.icon}</div>
+      <div class="platform-name">${p.name}</div>
+      <div class="platform-desc">${p.desc}</div>
+      <button onclick="event.stopPropagation(); toggleFavorite('${p.id}')" 
+        style="background: ${favorites.includes(p.id) ? '#f59e0b' : 'var(--surface2)'};
+               border: none; color: #fff; padding: 6px 12px; border-radius: 6px;
+               cursor: pointer; font-size: 12px; margin-top: 8px; font-weight: 600;">
+        ${favorites.includes(p.id) ? '⭐ Favorited' : '☆ Favorite'}
+      </button>
+    </div>
+  `).join('');
+}
+
+function renderFavorites() {
+  const section = document.getElementById('favoritesSection');
+  const list = document.getElementById('favoritesList');
+  
+  if (favorites.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  
+  section.style.display = 'block';
+  list.innerHTML = favorites.map(id => {
+    const p = PLATFORMS.find(x => x.id === id);
+    return p ? `
+      <div class="favorite-pill" onclick="openPlatform('${p.id}')">
+        <span class="favorite-icon">${p.icon}</span>
+        ${p.name}
+      </div>
+    ` : '';
+  }).join('');
+}
+
+function setCategory(cat) {
+  currentCategory = cat;
+  filterPlatforms();
+  
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  event.target.classList.add('active');
+}
+
+function filterPlatforms() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  
+  filteredPlatforms = PLATFORMS.filter(p => {
+    const matchCat = currentCategory === 'all' || p.category === currentCategory;
+    const matchSearch = !search || p.name.toLowerCase().includes(search) || p.desc.toLowerCase().includes(search);
+    return matchCat && matchSearch;
+  });
+  
+  renderPlatforms();
+}
+
+function toggleFavorite(id) {
+  if (favorites.includes(id)) {
+    favorites = favorites.filter(f => f !== id);
+  } else {
+    favorites.push(id);
+  }
+  localStorage.setItem('platform_favorites', JSON.stringify(favorites));
+  renderPlatforms();
+  renderFavorites();
+}
+
+function openPlatform(id) {
+  const platform = PLATFORMS.find(p => p.id === id);
+  if (platform) {
+    // In app context, trigger service opening
+    if (window.parent && window.parent.openService) {
+      window.parent.openService(id);
+    } else {
+      window.open(platform.url, '_blank');
+    }
+  }
+}
+
+// Initialize on load
+window.addEventListener('load', initManager);
+</script>
+
+</body>
+</html>

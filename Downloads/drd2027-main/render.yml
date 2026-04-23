@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: drd-2027-web
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+    autoDeploy: true
+    branch: main
+    routes:
+      - path: /
+        destination: /
+      - path: /api
+        destination: /api
+      - path: /ai-hub
+        destination: /ai-hub
+    healthCheckPath: /
+    healthCheckInterval: 30
+    timeoutSeconds: 30

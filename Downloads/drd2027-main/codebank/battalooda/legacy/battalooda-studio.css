@@ -1,0 +1,261 @@
+/* battalooda-studio.css */
+/* Studio interface styles */
+
+.battalooda-studio {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+  z-index: 100000;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.studio-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.studio-header h2 {
+  color: #fff;
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.close-btn {
+  background: rgba(255, 107, 107, 0.2);
+  border: none;
+  color: #ff6b6b;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: rgba(255, 107, 107, 0.4);
+  transform: scale(1.1);
+}
+
+.studio-waveform {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  margin: 20px 0;
+  padding: 20px;
+  position: relative;
+  min-height: 200px;
+}
+
+.studio-controls {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  padding: 20px 0;
+  flex-wrap: wrap;
+}
+
+.studio-controls button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.studio-record-btn {
+  background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+  color: #fff;
+}
+
+.studio-play-btn {
+  background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+  color: #000;
+}
+
+.studio-pause-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.studio-stop-btn {
+  background: rgba(255, 107, 107, 0.2);
+  color: #ff6b6b;
+}
+
+.studio-save-btn {
+  background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+  color: #000;
+}
+
+.studio-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.studio-controls button:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.studio-effects {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 10px 0;
+}
+
+.studio-effects select {
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 1rem;
+}
+
+/* Normal recorder styles */
+#normal-recorder {
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+#normal-recorder h2 {
+  color: #fff;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+#record-btn {
+  padding: 15px 30px;
+  border: none;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+  color: #fff;
+  display: block;
+  margin: 15px auto;
+  min-width: 150px;
+}
+
+#record-btn.recording {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.4); }
+  50% { box-shadow: 0 0 0 20px rgba(255, 107, 107, 0); }
+}
+
+#upload-btn {
+  margin-top: 15px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+  border: none;
+  border-radius: 8px;
+  color: #000;
+  font-weight: 600;
+  cursor: pointer;
+  display: block;
+  margin: 15px auto;
+  min-width: 150px;
+}
+
+#upload-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#studio-btn {
+  margin-top: 10px;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: block;
+  margin: 10px auto;
+}
+
+#studio-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.recording-status {
+  margin-top: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.recording-timer {
+  font-size: 2.5rem;
+  color: #00d4ff;
+  font-family: 'Courier New', monospace;
+  margin: 15px 0;
+  text-align: center;
+  font-weight: bold;
+}
+
+#playback-audio {
+  width: 100%;
+  margin-top: 15px;
+  border-radius: 8px;
+}
+
+.error-message, .success-message {
+  padding: 12px 15px;
+  border-radius: 8px;
+  margin-top: 15px;
+  display: none;
+  text-align: center;
+}
+
+.error-message {
+  background: rgba(255, 107, 107, 0.2);
+  color: #ff6b6b;
+}
+
+.success-message {
+  background: rgba(0, 184, 148, 0.2);
+  color: #00b894;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .battalooda-studio {
+    padding: 10px;
+  }
+  
+  .studio-controls button {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+  
+  .recording-timer {
+    font-size: 2rem;
+  }
+}

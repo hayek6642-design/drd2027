@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Player</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            background: #0f0f0f;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+        }
+        
+        .yt-container {
+            display: flex;
+            height: 100%;
+        }
+        
+        .yt-video-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #0f0f0f;
+        }
+        
+        .yt-pull-indicator {
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            font-size: 12px;
+            background: #1a1a1a;
+            transition: transform 0.2s;
+            user-select: none;
+        }
+        
+        .yt-pull-indicator.active {
+            background: #272727;
+            color: #00a8e1;
+        }
+        
+        .yt-player {
+            flex: 1;
+            position: relative;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+        }
+        
+        .yt-player::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .yt-player::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+        
+        .yt-player::-webkit-scrollbar-thumb {
+            background: #404040;
+            border-radius: 4px;
+        }
+        
+        .yt-player::-webkit-scrollbar-thumb:hover {
+            background: #606060;
+        }
+        
+        .yt-video-container {
+            width: 100%;
+            max-width: 800px;
+            padding: 20px;
+        }
+        
+        .yt-video-card {
+            background: #1a1a1a;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            transition: all 0.2s;
+        }
+        
+        .yt-video-card:hover {
+            background: #272727;
+        }
+        
+        .yt-video-thumbnail {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .yt-video-thumbnail:hover .yt-play-icon {
+            transform: scale(1.1);
+        }
+        
+        .yt-play-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(255,0,0,0.8);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+            color: #fff;
+            font-size: 24px;
+        }
+        
+        .yt-video-info {
+            padding: 12px;
+        }
+        
+        .yt-video-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+        
+        .yt-video-meta {
+            font-size: 12px;
+            color: #888;
+        }
+        
+        .yt-sidebar {
+            width: 320px;
+            border-left: 1px solid #272727;
+            display: flex;
+            flex-direction: column;
+            background: #1a1a1a;
+        }
+        
+        .yt-todo-header {
+            padding: 16px;
+            border-bottom: 1px solid #272727;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .yt-todo-input {
+            padding: 12px;
+            border-bottom: 1px solid #272727;
+            display: flex;
+            gap: 8px;
+        }
+        
+        .yt-todo-input input {
+            flex: 1;
+            background: #272727;
+            border: 1px solid #404040;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            outline: none;
+        }
+        
+        .yt-todo-input input:focus {
+            border-color: #00a8e1;
+        }
+        
+        .yt-todo-input button {
+            background: #00a8e1;
+            color: #000;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+        
+        .yt-todo-input button:hover {
+            background: #0091b3;
+        }
+        
+        .yt-todo-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+        
+        .yt-todo-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .yt-todo-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .yt-todo-list::-webkit-scrollbar-thumb {
+            background: #404040;
+            border-radius: 3px;
+        }
+        
+        .yt-todo-item {
+            background: #272727;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .yt-todo-item:hover {
+            background: #333;
+        }
+        
+        .yt-todo-item.completed {
+            opacity: 0.6;
+        }
+        
+        .yt-todo-item.completed .yt-todo-text {
+            text-decoration: line-through;
+            color: #666;
+        }
+        
+        .yt-todo-checkbox {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #00a8e1;
+            border-radius: 4px;
+            flex-shrink: 0;
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        
+        .yt-todo-item.completed .yt-todo-checkbox {
+            background: #00a8e1;
+            color: #000;
+        }
+        
+        .yt-todo-text {
+            flex: 1;
+            font-size: 13px;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+        
+        .yt-todo-delete {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #888;
+            flex-shrink: 0;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        
+        .yt-todo-delete:hover {
+            background: #ff4444;
+            color: #fff;
+        }
+        
+        .yt-empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            font-size: 13px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        @media (max-width: 1024px) {
+            .yt-sidebar {
+                width: 280px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .yt-container {
+                flex-direction: column;
+            }
+            
+            .yt-sidebar {
+                width: 100%;
+                border-left: none;
+                border-top: 1px solid #272727;
+                max-height: 200px;
+            }
+            
+            .yt-video-container {
+                max-width: 100%;
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="yt-container">
+        <div class="yt-video-section">
+            <div class="yt-pull-indicator" id="pullIndicator">
+                ↓ Pull to refresh videos
+            </div>
+            
+            <div class="yt-player" id="ytPlayer">
+                <div class="yt-video-container" id="videoContainer">
+                    <!-- Videos loaded here -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="yt-sidebar">
+            <div class="yt-todo-header">📝 Todo List</div>
+            <div class="yt-todo-input">
+                <input type="text" id="todoInput" placeholder="Add a task...">
+                <button onclick="addTodo()">Add</button>
+            </div>
+            <div class="yt-todo-list" id="todoList"></div>
+        </div>
+    </div>
+
+    <script>
+    // ═══════════════════════════════════════════════════════════════
+    // 📺 YOUTUBE PAGE - Clean Video Player + Todo System
+    // ═══════════════════════════════════════════════════════════════
+    
+    const ytState = {
+        todos: [],
+        videos: [],
+        touchStartY: 0,
+        isRefreshing: false
+    };
+    
+    // ✅ Load todos from localStorage
+    function loadTodos() {
+        const saved = localStorage.getItem('yt_todos');
+        if (saved) {
+            ytState.todos = JSON.parse(saved);
+            renderTodos();
+        }
+    }
+    
+    // ✅ Save todos to localStorage
+    function saveTodos() {
+        localStorage.setItem('yt_todos', JSON.stringify(ytState.todos));
+    }
+    
+    // ✅ Render todos
+    function renderTodos() {
+        const list = document.getElementById('todoList');
+        
+        if (ytState.todos.length === 0) {
+            list.innerHTML = '<div class="yt-empty-state">No tasks yet. Add one to get started!</div>';
+            return;
+        }
+        
+        list.innerHTML = ytState.todos.map((todo, idx) => `
+            <div class="yt-todo-item ${todo.completed ? 'completed' : ''}">
+                <div class="yt-todo-checkbox" onclick="toggleTodo(${idx})">
+                    ${todo.completed ? '✓' : ''}
+                </div>
+                <div class="yt-todo-text">${escapeHtml(todo.text)}</div>
+                <div class="yt-todo-delete" onclick="deleteTodo(${idx})">✕</div>
+            </div>
+        `).join('');
+    }
+    
+    // ✅ Add todo
+    function addTodo() {
+        const input = document.getElementById('todoInput');
+        const text = input.value.trim();
+        
+        if (!text) return;
+        
+        ytState.todos.push({
+            id: Date.now(),
+            text,
+            completed: false
+        });
+        
+        saveTodos();
+        renderTodos();
+        input.value = '';
+        input.focus();
+    }
+    
+    // ✅ Toggle todo
+    function toggleTodo(idx) {
+        ytState.todos[idx].completed = !ytState.todos[idx].completed;
+        saveTodos();
+        renderTodos();
+    }
+    
+    // ✅ Delete todo
+    function deleteTodo(idx) {
+        ytState.todos.splice(idx, 1);
+        saveTodos();
+        renderTodos();
+    }
+    
+    // ✅ Sample videos
+    function loadSampleVideos() {
+        ytState.videos = [
+            { id: 1, title: 'How to Build Modern Web Apps', channel: 'Web Dev Pro', views: '2.4M' },
+            { id: 2, title: 'JavaScript Mastery Course', channel: 'Code Masters', views: '1.8M' },
+            { id: 3, title: 'React Tips and Tricks', channel: 'React Academy', views: '945K' },
+            { id: 4, title: 'CSS Animation Techniques', channel: 'Design Lab', views: '567K' },
+        ];
+        renderVideos();
+    }
+    
+    // ✅ Render videos
+    function renderVideos() {
+        const container = document.getElementById('videoContainer');
+        
+        container.innerHTML = ytState.videos.map(video => `
+            <div class="yt-video-card">
+                <div class="yt-video-thumbnail">
+                    <div class="yt-play-icon">▶</div>
+                </div>
+                <div class="yt-video-info">
+                    <div class="yt-video-title">${escapeHtml(video.title)}</div>
+                    <div class="yt-video-meta">${escapeHtml(video.channel)} • ${video.views} views</div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // ✅ Pull to refresh
+    function setupPullToRefresh() {
+        const player = document.getElementById('ytPlayer');
+        const indicator = document.getElementById('pullIndicator');
+        
+        player.addEventListener('touchstart', (e) => {
+            ytState.touchStartY = e.touches[0].clientY;
+        });
+        
+        player.addEventListener('touchmove', (e) => {
+            const currentY = e.touches[0].clientY;
+            const diff = currentY - ytState.touchStartY;
+            
+            if (player.scrollTop === 0 && diff > 0) {
+                indicator.style.transform = `translateY(${Math.min(diff, 50)}px)`;
+                indicator.classList.toggle('active', diff > 50);
+            }
+        });
+        
+        player.addEventListener('touchend', (e) => {
+            const currentY = e.changedTouches[0].clientY;
+            const diff = currentY - ytState.touchStartY;
+            
+            indicator.style.transform = '';
+            
+            if (diff > 50 && !ytState.isRefreshing) {
+                refreshVideos();
+            }
+        });
+    }
+    
+    // ✅ Refresh videos
+    async function refreshVideos() {
+        ytState.isRefreshing = true;
+        const indicator = document.getElementById('pullIndicator');
+        
+        indicator.textContent = '⟳ Refreshing...';
+        
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Shuffle videos
+        ytState.videos.sort(() => Math.random() - 0.5);
+        renderVideos();
+        
+        indicator.textContent = '✓ Refreshed';
+        setTimeout(() => {
+            indicator.textContent = '↓ Pull to refresh videos';
+            ytState.isRefreshing = false;
+        }, 800);
+    }
+    
+    // ✅ Utility
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // ✅ Enter key for todo
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('todoInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addTodo();
+        });
+        
+        loadTodos();
+        loadSampleVideos();
+        setupPullToRefresh();
+    });
+    </script>
+</body>
+</html>

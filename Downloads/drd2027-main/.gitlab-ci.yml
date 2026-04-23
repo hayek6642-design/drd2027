@@ -1,0 +1,83 @@
+# ═══════════════════════════════════════════════════════════
+# CodeBank APK Build Pipeline
+# Builds Android debug + release APK via Capacitor + Gradle
+# ═══════════════════════════════════════════════════════════
+
+image: thyrlian/android-sdk:latest
+
+variables:
+  ANDROID_COMPILE_SDK: "34"
+  ANDROID_BUILD_TOOLS: "34.0.0"
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx2048m"
+
+stages:
+  - prepare
+  - build
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - android/.gradle/
+    - .gradle/
+    - node_modules/
+
+# ─── Stage: Prepare ────────────────────────────────────────
+prepare_android:
+  stage: prepare
+  script:
+    - apt-get update -qq && apt-get install -y nodejs npm
+    - npm install --legacy-peer-deps --ignore-scripts
+    # Create www shell for OTA
+    - mkdir -p www
+    - |
+      cat > www/index.html << 'HTML'
+      <!DOCTYPE html><html><head><meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+      <meta name="theme-color" content="#0d1117">
+      <style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0d1117;color:#fff;font-family:system-ui;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}.loader{text-align:center}.spinner{width:48px;height:48px;border:3px solid #30363d;border-top-color:#00d4ff;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}@keyframes spin{to{transform:rotate(360deg)}}</style>
+      </head><body><div class="loader"><div class="spinner"></div><p style="color:#8b949e">Connecting to CodeBank...</p></div>
+      <script>
+      const S='https://drd2027.onrender.com';let r=0;
+      async function t(){try{const p=await fetch(S+'/api/health',{signal:AbortSignal.timeout(15000)});if(p.ok)window.location.replace(S);else throw 0}catch(e){if(++r<3)setTimeout(t,2000*r);else document.body.innerHTML='<div style="text-align:center;padding:40px"><h2 style="color:#f85149">Connection Failed</h2><p style="color:#8b949e;margin:16px 0">Check your internet connection</p><button onclick="r=0;t()" style="padding:10px 24px;background:#00d4ff;color:#0d1117;border:none;border-radius:8px;font-weight:bold">Retry</button></div>'}}
+      t();</script></body></html>
+      HTML
+    # Sync Capacitor
+    - npx cap sync android
+  artifacts:
+    paths:
+      - android/
+      - www/
+    expire_in: 1 hour
+
+# ─── Stage: Build Debug APK ───────────────────────────────
+build_debug_apk:
+  stage: build
+  needs: ["prepare_android"]
+  script:
+    - sdkmanager "platforms;android-${ANDROID_COMPILE_SDK}" "build-tools;${ANDROID_BUILD_TOOLS}"
+    - cd android
+    - chmod +x gradlew
+    - ./gradlew assembleDebug
+    - mv app/build/outputs/apk/debug/app-debug.apk ../CodeBank-debug.apk
+  artifacts:
+    paths:
+      - CodeBank-debug.apk
+    expire_in: 30 days
+    name: "CodeBank-v${CI_COMMIT_SHORT_SHA}-debug"
+
+# ─── Stage: Build Release APK (manual trigger) ────────────
+build_release_apk:
+  stage: build
+  needs: ["prepare_android"]
+  when: manual
+  script:
+    - sdkmanager "platforms;android-${ANDROID_COMPILE_SDK}" "build-tools;${ANDROID_BUILD_TOOLS}"
+    - cd android
+    - chmod +x gradlew
+    - ./gradlew assembleRelease
+    - mv app/build/outputs/apk/release/app-release-unsigned.apk ../CodeBank-release.apk
+  artifacts:
+    paths:
+      - CodeBank-release.apk
+    expire_in: 90 days
+    name: "CodeBank-v${CI_COMMIT_SHORT_SHA}-release"

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRD-Mail - CodeBank</title>
+    <link rel="stylesheet" href="drd-mail.css">
+
+  <script src="../auth-bridge.js"></script>
+  <script>
+    // Listen for auth changes from main app
+    authBridge.onAuthChange((user, token) => {
+      if (!user || !token) {
+        console.warn('[Service Auth] Not authenticated. Redirecting to login...');
+        // Show auth required message
+        if (document.body) {
+          document.body.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:linear-gradient(135deg,#0f0f1a,#1a1a2e);font-family:sans-serif;color:#fff;">
+              <div style="text-align:center;padding:40px;">
+                <div style="font-size:64px;margin-bottom:20px;">🔐</div>
+                <h1 style="margin:0;color:#00d4ff;">Authentication Required</h1>
+                <p style="color:#aaa;margin:10px 0 20px;">Please log in first to access this service.</p>
+                <a href="/login.html" style="background:linear-gradient(135deg,#00d4ff,#0099cc);color:#000;padding:12px 30px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">Go to Login</a>
+              </div>
+            </div>
+          `;
+        }
+        return;
+      }
+      console.log('[Service Auth] User authenticated:', user.email);
+      // Initialize service with authenticated user
+      if (window.serviceInit && typeof window.serviceInit === 'function') {
+        window.serviceInit(user, token);
+      }
+    });
+  </script>
+  </head>
+<body>
+    <div class="mail-container">
+        <!-- Header -->
+        <div class="mail-header">
+            <div class="header-left">
+                <h1>📧 DRD-Mail</h1>
+                <p>Secure Messaging & Email Service</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn-icon" id="settingsBtn" title="Settings">⚙️</button>
+                <button class="btn-icon" id="refreshBtn" title="Refresh">🔄</button>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="mail-sidebar">
+            <button class="btn-primary" id="composeBtn">✏️ Compose</button>
+            
+            <div class="folders-section">
+                <h3>Folders</h3>
+                <button class="folder-item active" data-folder="inbox">
+                    📥 Inbox <span class="badge">5</span>
+                </button>
+                <button class="folder-item" data-folder="sent">
+                    📤 Sent <span class="badge">12</span>
+                </button>
+                <button class="folder-item" data-folder="drafts">
+                    📝 Drafts <span class="badge">2</span>
+                </button>
+                <button class="folder-item" data-folder="starred">
+                    ⭐ Starred <span class="badge">3</span>
+                </button>
+                <button class="folder-item" data-folder="trash">
+                    🗑️ Trash <span class="badge">1</span>
+                </button>
+            </div>
+
+            <div class="contacts-section">
+                <h3>Frequent Contacts</h3>
+                <div class="contact-item">👤 John Doe</div>
+                <div class="contact-item">👤 Jane Smith</div>
+                <div class="contact-item">👤 Tech Support</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="mail-main">
+            <!-- List View -->
+            <div class="mail-list" id="mailList">
+                <div class="mail-list-header">
+                    <input type="checkbox" id="selectAll" title="Select all">
+                    <div class="list-col-from">From</div>
+                    <div class="list-col-subject">Subject</div>
+                    <div class="list-col-date">Date</div>
+                </div>
+
+                <div class="mail-item" data-id="1">
+                    <input type="checkbox">
+                    <div class="list-col-from">👤 John Doe</div>
+                    <div class="list-col-subject">Re: Project Updates</div>
+                    <div class="list-col-date">Today</div>
+                </div>
+
+                <div class="mail-item" data-id="2">
+                    <input type="checkbox">
+                    <div class="list-col-from">👤 Jane Smith</div>
+                    <div class="list-col-subject">Meeting Scheduled for Tomorrow</div>
+                    <div class="list-col-date">Yesterday</div>
+                </div>
+
+                <div class="mail-item" data-id="3">
+                    <input type="checkbox">
+                    <div class="list-col-from">👤 Tech Support</div>
+                    <div class="list-col-subject">Password Reset Confirmation</div>
+                    <div class="list-col-date">2 days ago</div>
+                </div>
+
+                <div class="mail-item" data-id="4">
+                    <input type="checkbox">
+                    <div class="list-col-from">📧 System Alert</div>
+                    <div class="list-col-subject">Security Update Available</div>
+                    <div class="list-col-date">3 days ago</div>
+                </div>
+
+                <div class="mail-item" data-id="5">
+                    <input type="checkbox">
+                    <div class="list-col-from">👤 Client Name</div>
+                    <div class="list-col-subject">Invoice #2024-001</div>
+                    <div class="list-col-date">5 days ago</div>
+                </div>
+            </div>
+
+            <!-- Detail View -->
+            <div class="mail-detail" id="mailDetail">
+                <div class="detail-header">
+                    <button class="btn-back" id="backBtn">← Back</button>
+                    <div class="detail-actions">
+                        <button class="btn-action">📌 Flag</button>
+                        <button class="btn-action">↩️ Reply</button>
+                        <button class="btn-action">↪️ Forward</button>
+                        <button class="btn-action delete">🗑️ Delete</button>
+                    </div>
+                </div>
+
+                <div class="detail-content" id="detailContent">
+                    <div class="email-meta">
+                        <div class="meta-row">
+                            <span class="meta-label">From:</span>
+                            <span class="meta-value">John Doe &lt;john@example.com&gt;</span>
+                        </div>
+                        <div class="meta-row">
+                            <span class="meta-label">To:</span>
+                            <span class="meta-value">you@example.com</span>
+                        </div>
+                        <div class="meta-row">
+                            <span class="meta-label">Subject:</span>
+                            <span class="meta-value">Re: Project Updates</span>
+                        </div>
+                        <div class="meta-row">
+                            <span class="meta-label">Date:</span>
+                            <span class="meta-value">Today at 2:30 PM</span>
+                        </div>
+                    </div>
+
+                    <div class="email-body">
+                        <p>Hi,</p>
+                        <p>The project updates look great! I've reviewed all the changes and everything looks good. Please proceed with the implementation.</p>
+                        <p>Looking forward to seeing the final results.</p>
+                        <p>Best regards,<br>John Doe</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compose Modal -->
+        <div class="modal" id="composeModal">
+            <div class="modal-content compose-form">
+                <div class="modal-header">
+                    <h2>✏️ Compose New Message</h2>
+                    <button class="btn-close" id="closeCompose">✕</button>
+                </div>
+
+                <form id="composeForm">
+                    <div class="form-group">
+                        <label>To:</label>
+                        <input type="email" placeholder="recipient@example.com" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>CC:</label>
+                        <input type="text" placeholder="Optional">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Subject:</label>
+                        <input type="text" placeholder="Message subject" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Message:</label>
+                        <textarea placeholder="Write your message here..." rows="8" required></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">📤 Send</button>
+                        <button type="button" class="btn-secondary" id="saveDraft">📝 Save Draft</button>
+                        <button type="button" class="btn-secondary" id="discardCompose">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="drd-mail.js"></script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>استشارة - استشارة consultants</title>
+    <meta name="description" content="استشارة - استشر أفضل Consultants في الطب, القانون, والاقتصاد">
+    
+    <!-- CSP for security -->
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src * data: blob:;">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
+    
+    <!-- Design System -->
+    <link rel="stylesheet" href="styles/design-system.css">
+    
+    <!-- Component Styles -->
+    <link rel="stylesheet" href="styles/components.css">
+    
+    <style>
+        /* Critical CSS - above fold */
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --surface: #ffffff;
+            --surface-dark: #f8fafc;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+            --radius: 12px;
+            --radius-lg: 16px;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Arabic', sans-serif;
+            background: var(--surface-dark);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        /* Loading State */
+        #app { min-height: 100vh; }
+        
+        .loading-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            gap: 16px;
+        }
+        
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .loading-text {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+        
+        /* Hide loading when ready */
+        #app:not(.loading) .loading-screen { display: none; }
+    </style>
+</head>
+<body>
+    <div id="app" class="loading">
+        <!-- Loading State -->
+        <div class="loading-screen">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">جاري التحميل...</p>
+        </div>
+        
+        <!-- Main Content (hidden until loaded) -->
+        <main id="main-content" style="display: none;">
+            <!-- Header -->
+            <header class="estshara-header">
+                <div class="header-content">
+                    <h1 class="logo">استشارة</h1>
+                    <p class="tagline">استشر أفضل Consultants</p>
+                </div>
+                <button id="user-menu" class="user-menu-btn">
+                    <span class="avatar">👤</span>
+                </button>
+            </header>
+            
+            <!-- Category Grid -->
+            <section id="category-grid" class="category-grid">
+                <!-- Dynamic categories will be loaded here -->
+            </section>
+            
+            <!-- Consultant Results -->
+            <section id="consultant-results" class="consultant-results" style="display: none;">
+                <div class="results-header">
+                    <button id="back-to-categories" class="back-btn">
+                        <span>←</span>رجوع
+                    </button>
+                    <h2 id="results-title">الم Consultants المتاحين</h2>
+                </div>
+                <div id="consultant-list" class="consultant-list">
+                    <!-- Dynamic consultant cards -->
+                </div>
+            </section>
+            
+            <!-- Booking Modal -->
+            <div id="booking-modal" class="modal" style="display: none;">
+                <div class="modal-backdrop"></div>
+                <div class="modal-content">
+                    <button class="modal-close">✕</button>
+                    <div id="booking-form">
+                        <!-- Dynamic booking form -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chat Interface -->
+            <div id="chat-interface" class="chat-interface" style="display: none;">
+                <div class="chat-header">
+                    <button class="chat-back">←</button>
+                    <div class="consultant-info">
+                        <span class="consultant-avatar"></span>
+                        <div>
+                            <h3 class="consultant-name"></h3>
+                            <span class="consultant-status"></span>
+                        </div>
+                    </div>
+                </div>
+                <div id="chat-messages" class="chat-messages">
+                    <!-- Messages -->
+                </div>
+                <div class="chat-input">
+                    <input type="text" placeholder="اكتب رسالتك..." />
+                    <button class="send-btn">إرسال</button>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Event Bus -->
+    <script src="/shared/event-bus.js"></script>
+    
+    <!-- Core Scripts -->
+    <script src="main.js" type="module"></script>
+</body>
+</html>

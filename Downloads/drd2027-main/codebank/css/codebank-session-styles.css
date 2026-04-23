@@ -1,0 +1,276 @@
+/* CodeBank Session Management Styles */
+
+/* Dimming Overlay */
+.codebank-dimming-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0);
+    pointer-events: none;
+    z-index: 999999;
+    transition: background 1s ease-in-out;
+    display: none;
+}
+
+/* E7ki Exception Styles */
+.codebank-dimming-overlay.e7ki-exception {
+    pointer-events: auto !important;
+}
+
+.codebank-dimming-overlay.e7ki-exception ~ * {
+    pointer-events: auto !important;
+}
+
+.e7ki-night-mode {
+    background: #1a1a1a !important;
+    color: #ffffff !important;
+}
+
+.e7ki-night-mode * {
+    background: transparent !important;
+    color: #ffffff !important;
+    animation: none !important;
+    transition: none !important;
+}
+
+/* Lock Message */
+.codebank-lock-message {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 20px 40px;
+    border-radius: 10px;
+    text-align: center;
+    z-index: 1000000;
+    font-size: 18px;
+    pointer-events: none;
+    display: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.codebank-lock-message .message-title {
+    font-weight: bold;
+    margin-bottom: 10px;
+    font-size: 20px;
+}
+
+.codebank-lock-message .message-body {
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.codebank-lock-message .message-hint {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #ccc;
+    opacity: 0.8;
+}
+
+/* Enhanced App Container Styles */
+.app-container {
+    position: relative;
+    min-height: 100vh;
+}
+
+/* Header Styles */
+.header {
+    position: relative;
+    z-index: 100;
+}
+
+.header-inner {
+    position: relative;
+    z-index: 100;
+}
+
+/* Navigation Styles */
+.nav {
+    position: relative;
+    z-index: 100;
+}
+
+.nav-inner {
+    position: relative;
+    z-index: 100;
+}
+
+/* Main Content Styles */
+.main-content {
+    position: relative;
+    z-index: 10;
+    transition: filter 0.5s ease-in-out;
+}
+
+/* Tab Button Styles */
+.tab-button {
+    position: relative;
+    z-index: 100;
+    transition: all 0.3s ease;
+}
+
+.tab-button.active {
+    position: relative;
+    z-index: 100;
+}
+
+/* E7ki Tab Specific Styles */
+#e7ki-container {
+    position: relative;
+    z-index: 10;
+}
+
+/* Progressive Dimming Effects */
+@keyframes dimming-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+    100% { box-shadow: 0 0 20px 10px rgba(0, 0, 0, 0.5); }
+}
+
+.dimming-active {
+    animation: dimming-pulse 2s infinite;
+}
+
+/* Full Blackout State */
+.blackout-active {
+    filter: brightness(0) contrast(1);
+    pointer-events: none;
+}
+
+/* E7ki Exception During Blackout */
+.e7ki-exception-active {
+    filter: none !important;
+    pointer-events: auto !important;
+    background: #1a1a1a !important;
+    color: #ffffff !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .codebank-lock-message {
+        width: 90%;
+        padding: 15px 25px;
+        font-size: 16px;
+    }
+    
+    .codebank-lock-message .message-title {
+        font-size: 18px;
+    }
+    
+    .codebank-lock-message .message-body {
+        font-size: 14px;
+    }
+}
+
+/* Accessibility Styles */
+@media (prefers-reduced-motion: reduce) {
+    .codebank-dimming-overlay {
+        transition: none;
+    }
+    
+    .dimming-active {
+        animation: none;
+    }
+    
+    .main-content {
+        transition: none;
+    }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    .codebank-lock-message {
+        border: 2px solid white;
+        background: black;
+        color: white;
+    }
+    
+    .codebank-lock-message .message-title {
+        color: white;
+    }
+    
+    .e7ki-night-mode {
+        background: black !important;
+        color: white !important;
+        border: 2px solid white !important;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .codebank-dimming-overlay,
+    .codebank-lock-message {
+        display: none !important;
+    }
+    
+    .main-content {
+        filter: none !important;
+    }
+}
+
+/* Focus Management for Accessibility */
+.codebank-dimming-overlay[aria-hidden="true"] {
+    display: none;
+}
+
+.codebank-dimming-overlay[aria-hidden="false"] {
+    display: block;
+}
+
+/* Smooth Transitions */
+* {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Performance Optimizations */
+.codebank-dimming-overlay {
+    will-change: background;
+    transform: translateZ(0);
+}
+
+.main-content {
+    will-change: filter;
+}
+
+/* Debug Styles (can be enabled for development) */
+.debug-codebank-session .codebank-dimming-overlay {
+    outline: 2px dashed red;
+    outline-offset: -2px;
+}
+
+.debug-codebank-session .codebank-lock-message {
+    outline: 2px dashed blue;
+    outline-offset: -2px;
+}
+
+/* Custom Properties for Theming */
+:root {
+    --codebank-overlay-bg: rgba(0, 0, 0, 0);
+    --codebank-lock-bg: rgba(0, 0, 0, 0.9);
+    --codebank-lock-border: rgba(255, 255, 255, 0.1);
+    --e7ki-night-bg: #1a1a1a;
+    --e7ki-night-text: #ffffff;
+}
+
+/* Dark Theme Support */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --codebank-lock-bg: rgba(0, 0, 0, 0.95);
+        --codebank-lock-border: rgba(255, 255, 255, 0.2);
+    }
+}
+
+/* Light Theme Support */
+@media (prefers-color-scheme: light) {
+    :root {
+        --codebank-lock-bg: rgba(255, 255, 255, 0.95);
+        --codebank-lock-border: rgba(0, 0, 0, 0.1);
+        --e7ki-night-bg: #ffffff;
+        --e7ki-night-text: #000000;
+    }
+}

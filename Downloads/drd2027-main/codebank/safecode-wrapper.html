@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <!-- CRITICAL: CSP must allow data: fonts -->
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; font-src * data: 'self'; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src * data: blob:; media-src *; frame-src *;">
+    <title>Safe Assets</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #0f0f0f; 
+            color: #fff;
+            font-family: system-ui, -apple-system, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #asset-container {
+            width: 100%;
+            height: 100vh;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #333;
+            border-top-color: #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Loading Safe Assets...</p>
+    </div>
+    <div id="codebank-assets-tab">
+        <div class="safe-container"></div>
+    </div>
+
+    <!-- ✅ FIXED: Use ./ for flat structure (not ../) -->
+    <script src="./bankode-assetbus-bridge.js"></script>
+    
+    <!-- ✅ FIXED: Asset list loads AFTER bridge -->
+    <script src="./js/safe-asset-list.js"></script>
+    
+    <script>
+        // Signal parent that wrapper is ready
+        if (window.parent !== window) {
+            window.parent.postMessage({
+                type: 'service-ready',
+                service: 'safecode',
+                source: 'safecode-wrapper',
+                status: 'safecode-ready'
+            }, '*');
+        }
+        
+        // Hide loading when assets are rendered
+        document.addEventListener('safe-assets-rendered', () => {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('asset-container').style.display = 'block';
+        });
+        
+        // Timeout fallback
+        setTimeout(() => {
+            const loading = document.getElementById('loading');
+            if (loading && loading.style.display !== 'none') {
+                loading.innerHTML = `
+                    <p style="color: #ff6b6b;">⚠️ Failed to load assets</p>
+                    <p style="font-size: 12px; color: #666;">Check console for errors</p>
+                    <button onclick="location.reload()" style="
+                        padding: 10px 20px;
+                        background: #00d4ff;
+                        border: none;
+                        border-radius: 8px;
+                        color: #000;
+                        cursor: pointer;
+                        margin-top: 10px;
+                    ">Retry</button>
+                `;
+            }
+        }, 10000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Hub 🤖 — Gateway to the AI World</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0a0a16;
+      --surface:   #12122a;
+      --surface2:  #1c1c38;
+      --border:    rgba(255,255,255,0.07);
+      --accent:    #7c3aed;
+      --accent2:   #06b6d4;
+      --gold:      #f59e0b;
+      --text:      #f0f0ff;
+      --muted:     #8888aa;
+      --green:     #22c55e;
+      --red:       #ef4444;
+      --radius:    14px;
+      --card-w:    160px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ───────────────────────────────────────────── */
+    .header {
+      background: linear-gradient(135deg, #0d0d22 0%, #130d2e 100%);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-bottom: 1px solid rgba(124,58,237,0.3);
+      position: sticky; top: 0; z-index: 200;
+      backdrop-filter: blur(12px);
+    }
+    .header-logo { font-size: 30px; line-height: 1; }
+    .header-text h1 { font-size: 20px; font-weight: 900; background: linear-gradient(90deg,#7c3aed,#06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .header-text p  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .header-right   { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+    /* search */
+    .search-wrap {
+      position: relative; display: flex; align-items: center;
+    }
+    .search-wrap i { position: absolute; left: 12px; color: var(--muted); font-size: 13px; }
+    #searchInput {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 30px; color: var(--text);
+      padding: 8px 14px 8px 34px; font-size: 13px; outline: none;
+      width: 220px; transition: border-color 0.2s, width 0.3s;
+    }
+    #searchInput:focus { border-color: var(--accent); width: 280px; }
+    #searchInput::placeholder { color: var(--muted); }
+
+    /* ── Filter tabs ──────────────────────────────────────── */
+    .tabs-bar {
+      display: flex; gap: 8px; padding: 14px 20px 0;
+      overflow-x: auto; scrollbar-width: none;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      position: sticky; top: 65px; z-index: 100;
+    }
+    .tabs-bar::-webkit-scrollbar { display: none; }
+    .tab {
+      padding: 7px 16px; border-radius: 30px; font-size: 12px; font-weight: 700;
+      cursor: pointer; white-space: nowrap; border: 1px solid var(--border);
+      background: var(--surface); color: var(--muted);
+      transition: all 0.2s; user-select: none; flex-shrink: 0;
+      margin-bottom: 10px;
+    }
+    .tab:hover { border-color: var(--accent); color: var(--text); }
+    .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* ── Category sections ───────────────────────────────── */
+    .content { padding: 20px; flex: 1; }
+
+    .cat-section { margin-bottom: 32px; }
+    .cat-title {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13px; font-weight: 800; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 1.5px;
+      margin-bottom: 14px; padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .cat-title .cat-icon { font-size: 16px; }
+    .cat-count { font-size: 11px; background: var(--surface2); padding: 2px 8px; border-radius: 20px; font-weight: 600; }
+
+    /* ── Service grid ────────────────────────────────────── */
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(var(--card-w), 1fr));
+      gap: 12px;
+    }
+
+    .service-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 12px 14px;
+      cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      text-align: center;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .service-card::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at top, var(--c, transparent) 0%, transparent 70%);
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .service-card:hover::before { opacity: 0.12; }
+    .service-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .service-card .svc-logo {
+      width: 54px; height: 54px; border-radius: 12px;
+      object-fit: contain; background: var(--surface2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; flex-shrink: 0;
+      border: 1px solid var(--border);
+    }
+    .service-card .svc-logo img {
+      width: 100%; height: 100%; object-fit: contain; border-radius: 11px;
+    }
+    .service-card .svc-name {
+      font-size: 12px; font-weight: 700; color: var(--text);
+      line-height: 1.3; word-break: break-word;
+    }
+    .service-card .svc-desc {
+      font-size: 10px; color: var(--muted); line-height: 1.4;
+    }
+    .service-card .svc-badge {
+      position: absolute; top: 7px; right: 7px;
+      font-size: 9px; font-weight: 800; padding: 2px 6px;
+      border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .badge-new   { background: rgba(34,197,94,0.2);  color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+    .badge-hot   { background: rgba(239,68,68,0.2);  color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+    .badge-free  { background: rgba(6,182,212,0.2);  color: #06b6d4; border: 1px solid rgba(6,182,212,0.3); }
+    .badge-ai    { background: rgba(124,58,237,0.2); color: #a78bfa; border: 1px solid rgba(124,58,237,0.3); }
+    .badge-open  { background: rgba(245,158,11,0.2); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+
+    /* ── Viewer overlay ──────────────────────────────────── */
+    .viewer-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+      z-index: 900; flex-direction: column;
+    }
+    .viewer-overlay.open { display: flex; }
+
+    .viewer-bar {
+      background: #0d0d22;
+      border-bottom: 1px solid rgba(124,58,237,0.3);
+      padding: 10px 16px;
+      display: flex; align-items: center; gap: 10px;
+      flex-shrink: 0;
+    }
+    .viewer-logo { width: 28px; height: 28px; border-radius: 6px; object-fit: contain; background: var(--surface2); flex-shrink:0; display:flex;align-items:center;justify-content:center; font-size:16px; }
+    .viewer-logo img { width:100%;height:100%;border-radius:6px;object-fit:contain; }
+    .viewer-title { font-size: 14px; font-weight: 700; color: var(--text); }
+    .viewer-url-bar {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 5px 12px; font-size: 12px; color: var(--muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .viewer-btn {
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      border-radius: 8px; padding: 7px 12px; font-size: 12px; font-weight: 700;
+      cursor: pointer; transition: all 0.2s; white-space: nowrap;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .viewer-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .viewer-btn.close-btn:hover { border-color: var(--red); color: var(--red); }
+
+    .viewer-frame-wrap {
+      flex: 1; position: relative; overflow: hidden;
+    }
+    #viewerFrame {
+      width: 100%; height: 100%; border: none;
+      background: #fff;
+    }
+
+    /* Loading spinner */
+    .frame-loader {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px; background: var(--bg);
+      transition: opacity 0.3s;
+    }
+    .frame-loader.hidden { opacity: 0; pointer-events: none; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 3px solid var(--surface2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader-name { font-size: 16px; font-weight: 700; color: var(--text); }
+    .loader-url  { font-size: 12px; color: var(--muted); }
+
+    /* Blocked/fallback state */
+    .frame-blocked {
+      position: absolute; inset: 0;
+      display: none; flex-direction: column; align-items: center; justify-content: center;
+      gap: 20px; background: var(--bg); text-align: center; padding: 40px;
+    }
+    .frame-blocked.show { display: flex; }
+    .blocked-icon { font-size: 64px; }
+    .blocked-title { font-size: 22px; font-weight: 900; color: var(--text); }
+    .blocked-desc  { font-size: 14px; color: var(--muted); max-width: 400px; line-height: 1.7; }
+    .blocked-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+    .open-btn {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff; border: none; border-radius: 12px;
+      padding: 14px 28px; font-size: 15px; font-weight: 800;
+      cursor: pointer; transition: transform 0.2s, opacity 0.2s;
+      display: flex; align-items: center; gap: 10px;
+      text-decoration: none;
+    }
+    .open-btn.alt { background: var(--surface2); border: 1px solid var(--border); }
+    .open-btn:hover { transform: scale(1.04); opacity: 0.92; }
+
+    /* ── Favorites strip ─────────────────────────────────── */
+    .fav-bar {
+      display: none; flex-direction: column;
+      padding: 14px 20px 0;
+    }
+    .fav-bar.has-favs { display: flex; }
+    .fav-bar-title { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; }
+    .fav-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+    .fav-pill {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 30px; padding: 5px 12px 5px 8px;
+      cursor: pointer; font-size: 12px; font-weight: 700; color: var(--text);
+      transition: all 0.2s;
+    }
+    .fav-pill:hover { border-color: var(--accent); }
+    .fav-pill .fav-logo { width: 20px; height: 20px; border-radius: 5px; font-size:12px; display:flex;align-items:center;justify-content:center; }
+    .fav-pill .fav-logo img { width:100%;height:100%;border-radius:4px;object-fit:contain; }
+    .fav-pill .fav-remove { color: var(--muted); font-size: 10px; margin-left: 4px; transition: color 0.2s; }
+    .fav-pill .fav-remove:hover { color: var(--red); }
+
+    /* empty search */
+    .no-results {
+      display: none; text-align: center; padding: 60px 20px;
+      color: var(--muted);
+    }
+    .no-results .nr-icon { font-size: 48px; margin-bottom: 12px; }
+    .no-results p { font-size: 15px; }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 10px; }
+
+    /* responsive */
+    @media (max-width: 600px) {
+      :root { --card-w: 130px; }
+      .search-wrap { display: none; }
+      #searchInput { width: 180px; }
+      .viewer-url-bar { display: none; }
+    }
+
+    /* ── Creator's Channel Banner ──────────────────────────── */
+    .creator-banner {
+      margin: 16px 20px 0;
+      background: linear-gradient(135deg, #1a0a0a 0%, #2a0d0d 60%, #1a0a16 100%);
+      border: 1.5px solid rgba(255,0,0,0.35);
+      border-radius: 18px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .creator-banner:hover {
+      border-color: rgba(255,0,0,0.7);
+      box-shadow: 0 0 30px rgba(255,0,0,0.15);
+    }
+    .creator-banner::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 80% 50%, rgba(255,0,0,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .creator-avatar {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ff0000, #cc0000);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 900; color: #fff;
+      flex-shrink: 0;
+      border: 2.5px solid rgba(255,255,255,0.15);
+      box-shadow: 0 0 20px rgba(255,0,0,0.3);
+      letter-spacing: -1px;
+    }
+    .creator-info { flex: 1; min-width: 0; }
+    .creator-label {
+      font-size: 10px; font-weight: 800; color: #ff4444;
+      text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .creator-label::before { content: '▶'; font-size: 9px; }
+    .creator-name {
+      font-size: 18px; font-weight: 900; color: #fff;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .creator-desc {
+      font-size: 12px; color: var(--muted); margin-top: 4px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .creator-actions { display: flex; gap: 10px; flex-shrink: 0; }
+    .creator-btn {
+      padding: 9px 18px; border-radius: 30px;
+      font-size: 12px; font-weight: 800; cursor: pointer;
+      border: none; transition: all 0.2s; text-decoration: none;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .creator-btn.sub {
+      background: #ff0000; color: #fff;
+    }
+    .creator-btn.sub:hover { background: #cc0000; transform: scale(1.04); }
+    .creator-btn.visit {
+      background: var(--surface2); color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .creator-btn.visit:hover { border-color: rgba(255,0,0,0.5); color: #ff6666; }
+    .creator-dismiss {
+      position: absolute; top: 10px; right: 12px;
+      background: none; border: none; color: var(--muted);
+      font-size: 16px; cursor: pointer; padding: 4px;
+      line-height: 1; transition: color 0.2s;
+    }
+    .creator-dismiss:hover { color: var(--text); }
+
+    /* ── Creator badge on service cards ────────────────────── */
+    .badge-creator {
+      background: linear-gradient(90deg,#ff0000,#cc2200) !important;
+      color: #fff !important;
+    }
+    .service-card.is-creator {
+      border-color: rgba(255,0,0,0.35) !important;
+      background: linear-gradient(160deg, #1a0a0a, #12122a) !important;
+    }
+    .service-card.is-creator:hover {
+      border-color: rgba(255,0,0,0.7) !important;
+      box-shadow: 0 8px 30px rgba(255,0,0,0.15) !important;
+    }
+
+    /* ── Phone Actions Section ─────────────────────────────── */
+    .phone-action-card {
+      position: relative;
+    }
+    .phone-action-card .svc-logo {
+      border: none !important;
+    }
+    .phone-action-card .native-tag {
+      position: absolute;
+      top: 7px;
+      right: 7px;
+      font-size: 8px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: rgba(0,212,255,0.15);
+      color: #00d4ff;
+      border: 1px solid rgba(0,212,255,0.3);
+    }
+    .phone-action-card:active {
+      transform: scale(0.95) !important;
+    }
+
+    /* In-app dialer overlay (from PhoneActions) */
+    .phone-actions-dialer,
+    .phone-actions-contacts,
+    .phone-actions-preview {
+      animation: fadeInOverlay 0.2s ease;
+    }
+    @keyframes fadeInOverlay {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+  </style>
+  <link rel="stylesheet" href="css/yacine-hub.css">
+  <link rel="stylesheet" href="css/movie-hub.css">
+  <script src="/services/yacine-service.js" defer></script>
+  <script src="/codebank/components/yacine-hub.js" defer></script>
+  <script src="/services/movie-platforms-service.js" defer></script>
+  <script src="/codebank/components/movie-hub.js" defer></script>
+  <script src="/src/native-phone-actions.js" defer></script>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<div class="header">
+  <div class="header-logo">🤖</div>
+  <div class="header-text">
+    <h1>AI Hub</h1>
+    <p>Gateway to the AI World</p>
+  </div>
+  <div class="header-right">
+    <div class="search-wrap">
+      <i class="fa fa-search"></i>
+      <input type="text" id="searchInput" placeholder="Search AI services…" oninput="onSearch()">
+    </div>
+  </div>
+</div>
+
+<!-- ── Filter tabs ── -->
+
+<!-- ── Creator's Channel Banner ───────────────────────────── -->
+<div class="creator-banner" id="creatorBanner" onclick="openCreatorChannel()">
+  <div class="creator-avatar">Dr</div>
+  <div class="creator-info">
+    <div class="creator-label">Creator's Channel</div>
+    <div class="creator-name">Dr.D</div>
+    <div class="creator-desc">Official YouTube channel — AI, tech & more. Click to visit →</div>
+  </div>
+  <div class="creator-actions" onclick="event.stopPropagation()">
+    <a class="creator-btn sub"
+       href="https://www.youtube.com/channel/UCZ5heNyv3s5dIw9mtjsAGsg?sub_confirmation=1"
+       target="_blank" rel="noopener">
+      <i class="fab fa-youtube"></i> Subscribe
+    </a>
+    <a class="creator-btn visit"
+       href="https://www.youtube.com/channel/UCZ5heNyv3s5dIw9mtjsAGsg"
+       target="_blank" rel="noopener">
+      <i class="fa fa-arrow-up-right-from-square"></i> Visit
+    </a>
+  </div>
+  <button class="creator-dismiss" onclick="event.stopPropagation(); document.getElementById('creatorBanner').style.display='none'" title="Dismiss">✕</button>
+</div>
+
+<div class="tabs-bar" id="tabsBar"></div>
+
+<!-- ── Favorites strip ── -->
+<div class="fav-bar" id="favBar">
+  <div class="fav-bar-title">⭐ Favorites</div>
+  <div class="fav-pills" id="favPills"></div>
+</div>
+
+<!-- ── Main content ── -->
+<div class="content" id="mainContent"></div>
+
+<!-- ── No results ── -->
+<div class="no-results" id="noResults">
+  <div class="nr-icon">🔍</div>
+  <p>No AI services match your search.</p>
+</div>
+
+<!-- ── Viewer overlay ── -->
+<div class="viewer-overlay" id="viewerOverlay">
+  <div class="viewer-bar">
+    <div class="viewer-logo" id="viewerLogo"></div>
+    <span class="viewer-title" id="viewerTitle"></span>
+    <div class="viewer-url-bar" id="viewerUrlBar"></div>
+    <button class="viewer-btn" id="refreshBtn" onclick="reloadFrame()"><i class="fa fa-rotate-right"></i> Reload</button>
+    <button class="viewer-btn" id="navigateBtn" onclick="navigateInApp()"><i class="fa fa-compass"></i> Navigate</button>
+    <button class="viewer-btn" id="openExtBtn" onclick="openExternal()"><i class="fa fa-arrow-up-right-from-square"></i> External</button>
+    <button class="viewer-btn close-btn" onclick="closeViewer()"><i class="fa fa-xmark"></i> Close</button>
+  </div>
+  <div class="viewer-frame-wrap">
+    <div class="frame-loader" id="frameLoader">
+      <div class="spinner"></div>
+      <div class="loader-name" id="loaderName"></div>
+      <div class="loader-url" id="loaderUrl"></div>
+    </div>
+    <div class="frame-blocked" id="frameBlocked">
+      <div class="blocked-icon" id="blockedIcon"></div>
+      <div class="blocked-title" id="blockedTitle">Embedded View Unavailable</div>
+      <div class="blocked-desc" id="blockedDesc">This service has security restrictions that prevent embedding. Use the Navigate button to browse within the app.</div>
+      <div class="blocked-actions">
+        <button class="open-btn" id="navigateBtn2" onclick="navigateInApp()">
+          <i class="fa fa-compass"></i> Navigate In-App
+        </button>
+        <button class="open-btn alt" id="blockedOpenBtn" onclick="openExternal()">
+          <i class="fa fa-arrow-up-right-from-square"></i> Open External
+        </button>
+      </div>
+    </div>
+    <iframe id="viewerFrame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-modals allow-downloads" allow="camera; microphone; clipboard-read; clipboard-write; payment; fullscreen"></iframe>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   AI SERVICES DATABASE
+   ═══════════════════════════════════════════════════════════ */
+const SERVICES = [
+
+  /* ── Chat / LLM ────────────────────────────────────────── */
+  { id:'chatgpt',    name:'ChatGPT',        cat:'chat', emoji:'🤖', logo:'https://cdn.oaistatic.com/assets/favicon-o20kmmos.ico',                   url:'https://chatgpt.com',              desc:'OpenAI GPT-4o', badge:'hot'  },
+  { id:'gemini',     name:'Gemini',         cat:'chat', emoji:'✨', logo:'https://www.gstatic.com/lamda/images/gemini_favicon_f069958c85030456e93de685481c559f160ea06.png', url:'https://gemini.google.com',        desc:'Google Gemini AI', badge:'hot' },
+  { id:'claude',     name:'Claude',         cat:'chat', emoji:'🧠', logo:'https://claude.ai/favicon.ico',                                           url:'https://claude.ai',                desc:'Anthropic Claude 3', badge:'hot' },
+  { id:'copilot',    name:'Copilot',        cat:'chat', emoji:'💜', logo:'https://www.bing.com/favicon.ico',                                        url:'https://copilot.microsoft.com',    desc:'Microsoft Copilot' },
+  { id:'grok',       name:'Grok',           cat:'chat', emoji:'🦅', logo:'https://x.ai/favicon.ico',                                               url:'https://grok.com',                 desc:'xAI Grok 3', badge:'new'  },
+  { id:'deepseek',   name:'DeepSeek',       cat:'chat', emoji:'🔮', logo:'https://www.deepseek.com/favicon.ico',                                    url:'https://chat.deepseek.com',        desc:'DeepSeek R2', badge:'hot'  },
+  { id:'kimi',       name:'Kimi',           cat:'chat', emoji:'🌙', logo:'https://kimi.moonshot.cn/favicon.ico',                                    url:'https://kimi.moonshot.cn',         desc:'Moonshot Kimi AI', badge:'new' },
+  { id:'mistral',    name:'Le Chat',        cat:'chat', emoji:'🌬️', logo:'https://mistral.ai/favicon.ico',                                         url:'https://chat.mistral.ai',          desc:'Mistral AI Chat' },
+  { id:'perplexity', name:'Perplexity',     cat:'chat', emoji:'🔍', logo:'https://www.perplexity.ai/favicon.ico',                                   url:'https://www.perplexity.ai',        desc:'AI-powered search', badge:'hot' },
+  { id:'you',        name:'You.com',        cat:'chat', emoji:'🔵', logo:'https://you.com/favicon.ico',                                             url:'https://you.com',                  desc:'AI search engine' },
+  { id:'poe',        name:'Poe',            cat:'chat', emoji:'🐸', logo:'https://poe.com/favicon.ico',                                             url:'https://poe.com',                  desc:'Multi-model chat', badge:'free' },
+  { id:'metaai',     name:'Meta AI',        cat:'chat', emoji:'🦋', logo:'https://static.xx.fbcdn.net/rsrc.php/yv/r/B8XBdCnOF9E.ico',              url:'https://www.meta.ai',              desc:'Meta Llama 3', badge:'free' },
+  { id:'huggingchat',name:'HuggingChat',    cat:'chat', emoji:'🤗', logo:'https://huggingface.co/favicon.ico',                                      url:'https://huggingface.co/chat',      desc:'Open-source LLMs', badge:'free' },
+  { id:'groq',       name:'Groq',           cat:'chat', emoji:'⚡', logo:'https://groq.com/favicon.ico',                                            url:'https://groq.com',                 desc:'Ultra-fast LLM inference', badge:'free' },
+  { id:'pi',         name:'Pi AI',          cat:'chat', emoji:'🥧', logo:'https://pi.ai/favicon.ico',                                               url:'https://pi.ai',                    desc:'Personal AI by Inflection' },
+  { id:'cohere',     name:'Cohere',         cat:'chat', emoji:'🌊', logo:'https://cohere.com/favicon.ico',                                          url:'https://dashboard.cohere.com/playground/chat', desc:'Command R+' },
+  { id:'phind',      name:'Phind',          cat:'chat', emoji:'🧩', logo:'https://www.phind.com/favicon.ico',                                       url:'https://www.phind.com',            desc:'AI search for devs' },
+  { id:'together',   name:'Together AI',    cat:'chat', emoji:'🤝', logo:'https://www.together.ai/favicon.ico',                                     url:'https://api.together.xyz/playground', desc:'Open models playground', badge:'free' },
+  { id:'openrouter', name:'OpenRouter',     cat:'chat', emoji:'🔀', logo:'https://openrouter.ai/favicon.ico',                                       url:'https://openrouter.ai/chat',       desc:'100+ models in one place', badge:'free' },
+  { id:'lmarena',    name:'LM Arena',       cat:'chat', emoji:'🏆', logo:'https://lmarena.ai/favicon.ico',                                          url:'https://lmarena.ai',               desc:'Battle AI models side-by-side', badge:'free' },
+
+  /* ── Image AI ───────────────────────────────────────────── */
+  { id:'midjourney', name:'Midjourney',     cat:'image', emoji:'🎨', logo:'https://www.midjourney.com/favicon.ico',                                 url:'https://www.midjourney.com',       desc:'Top-tier image AI', badge:'hot' },
+  { id:'dalle',      name:'DALL·E 3',       cat:'image', emoji:'🖼️', logo:'https://cdn.oaistatic.com/assets/favicon-o20kmmos.ico',                 url:'https://chatgpt.com/?hints=dalle', desc:'OpenAI image gen' },
+  { id:'ideogram',   name:'Ideogram',       cat:'image', emoji:'🖋️', logo:'https://ideogram.ai/favicon.ico',                                       url:'https://ideogram.ai',              desc:'Best AI text-in-image', badge:'hot' },
+  { id:'leonardo',   name:'Leonardo AI',    cat:'image', emoji:'🦁', logo:'https://cdn.leonardo.ai/favicon.ico',                                    url:'https://app.leonardo.ai',          desc:'Game asset & art gen', badge:'free' },
+  { id:'playground', name:'Playground AI',  cat:'image', emoji:'🎡', logo:'https://playground.com/favicon.ico',                                     url:'https://playground.com',           desc:'Free HD image creation', badge:'free' },
+  { id:'adobefire',  name:'Adobe Firefly',  cat:'image', emoji:'🔥', logo:'https://firefly.adobe.com/favicon.ico',                                  url:'https://firefly.adobe.com',        desc:'Adobe generative AI', badge:'free' },
+  { id:'canvaai',    name:'Canva AI',       cat:'image', emoji:'📐', logo:'https://static.canva.com/web/images/8439b51bb7a19f6e65ce1064bc37c714.ico',url:'https://www.canva.com/ai-image-generator/',desc:'Design + AI gen' },
+  { id:'bingimage',  name:'Bing Image',     cat:'image', emoji:'🌐', logo:'https://www.bing.com/favicon.ico',                                       url:'https://www.bing.com/images/create',desc:'DALL·E 3 powered, free', badge:'free' },
+  { id:'freepikai',  name:'Freepik AI',     cat:'image', emoji:'🌟', logo:'https://www.freepik.com/favicon.ico',                                    url:'https://www.freepik.com/pikaso',   desc:'Pikaso real-time AI' },
+  { id:'clipdrop',   name:'Clipdrop',       cat:'image', emoji:'✂️', logo:'https://clipdrop.co/favicon.ico',                                        url:'https://clipdrop.co',              desc:'Stability AI tools' },
+  { id:'nightcafe',  name:'NightCafe',      cat:'image', emoji:'🌃', logo:'https://nightcafe.studio/favicon.ico',                                   url:'https://nightcafe.studio',         desc:'AI art generator', badge:'free' },
+  { id:'starryai',   name:'StarryAI',       cat:'image', emoji:'⭐', logo:'https://www.starryai.com/favicon.ico',                                   url:'https://www.starryai.com',         desc:'Free AI art credits' },
+  { id:'tensorart',  name:'Tensor.Art',     cat:'image', emoji:'🧲', logo:'https://tensor.art/favicon.ico',                                         url:'https://tensor.art',               desc:'SD models online', badge:'free' },
+  { id:'civitai',    name:'Civitai',        cat:'image', emoji:'🏛️', logo:'https://civitai.com/favicon.ico',                                        url:'https://civitai.com',              desc:'SD model hub & gen', badge:'open' },
+
+  /* ── Video AI ───────────────────────────────────────────── */
+  { id:'runway',     name:'Runway',         cat:'video', emoji:'🎬', logo:'https://runwayml.com/favicon.ico',                                       url:'https://app.runwayml.com',         desc:'Gen-3 video AI', badge:'hot' },
+  { id:'luma',       name:'Luma Dream',     cat:'video', emoji:'💫', logo:'https://lumalabs.ai/favicon.ico',                                        url:'https://lumalabs.ai/dream-machine',desc:'Photorealistic video', badge:'hot' },
+  { id:'sora',       name:'Sora',           cat:'video', emoji:'🌀', logo:'https://cdn.oaistatic.com/assets/favicon-o20kmmos.ico',                  url:'https://sora.com',                 desc:'OpenAI video gen', badge:'new' },
+  { id:'kling',      name:'Kling AI',       cat:'video', emoji:'🎥', logo:'https://klingai.com/favicon.ico',                                        url:'https://klingai.com',              desc:'Kuaishou video gen', badge:'hot' },
+  { id:'pika',       name:'Pika',           cat:'video', emoji:'🎞️', logo:'https://pika.art/favicon.ico',                                           url:'https://pika.art',                 desc:'AI video creation' },
+  { id:'heygenai',   name:'HeyGen',         cat:'video', emoji:'👤', logo:'https://app.heygen.com/favicon.ico',                                     url:'https://app.heygen.com',           desc:'AI avatar videos', badge:'hot' },
+  { id:'synthesia',  name:'Synthesia',      cat:'video', emoji:'🎙️', logo:'https://www.synthesia.io/favicon.ico',                                   url:'https://www.synthesia.io',         desc:'AI presenter videos' },
+  { id:'invideo',    name:'InVideo AI',     cat:'video', emoji:'🎞️', logo:'https://ai.invideo.io/favicon.ico',                                      url:'https://ai.invideo.io',            desc:'Script-to-video AI' },
+  { id:'fliki',      name:'Fliki',          cat:'video', emoji:'📽️', logo:'https://fliki.ai/favicon.ico',                                           url:'https://fliki.ai',                 desc:'Text to video + voice' },
+  { id:'capcut',     name:'CapCut AI',      cat:'video', emoji:'✂️', logo:'https://www.capcut.com/favicon.ico',                                     url:'https://www.capcut.com',           desc:'AI video editor', badge:'free' },
+  { id:'vidu',       name:'Vidu',           cat:'video', emoji:'🌊', logo:'https://www.vidu.io/favicon.ico',                                        url:'https://www.vidu.io',              desc:'High-quality video gen', badge:'new' },
+
+  /* ── Audio / Music AI ───────────────────────────────────── */
+  { id:'elevenlabs', name:'ElevenLabs',     cat:'audio', emoji:'🎤', logo:'https://elevenlabs.io/favicon.ico',                                      url:'https://elevenlabs.io',            desc:'Best AI voice cloning', badge:'hot' },
+  { id:'suno',       name:'Suno',           cat:'audio', emoji:'🎵', logo:'https://suno.com/favicon.ico',                                           url:'https://suno.com',                 desc:'AI music generation', badge:'hot' },
+  { id:'udio',       name:'Udio',           cat:'audio', emoji:'🎶', logo:'https://www.udio.com/favicon.ico',                                       url:'https://www.udio.com',             desc:'AI music studio', badge:'free' },
+  { id:'murf',       name:'Murf AI',        cat:'audio', emoji:'🔊', logo:'https://murf.ai/favicon.ico',                                            url:'https://murf.ai',                  desc:'AI voiceover studio' },
+  { id:'adobesp',    name:'Adobe Podcast',  cat:'audio', emoji:'🎙️', logo:'https://podcast.adobe.com/favicon.ico',                                  url:'https://podcast.adobe.com',        desc:'AI audio enhance + record', badge:'free' },
+  { id:'descript',   name:'Descript',       cat:'audio', emoji:'📝', logo:'https://www.descript.com/favicon.ico',                                   url:'https://www.descript.com',         desc:'Edit audio like text' },
+  { id:'lovo',       name:'Lovo AI',        cat:'audio', emoji:'🗣️', logo:'https://lovo.ai/favicon.ico',                                            url:'https://lovo.ai',                  desc:'AI voice & video gen' },
+  { id:'soundraw',   name:'Soundraw',       cat:'audio', emoji:'🎸', logo:'https://soundraw.io/favicon.ico',                                        url:'https://soundraw.io',              desc:'Royalty-free AI music' },
+  { id:'beatoven',   name:'Beatoven AI',    cat:'audio', emoji:'🥁', logo:'https://www.beatoven.ai/favicon.ico',                                    url:'https://www.beatoven.ai',          desc:'Mood-based music gen', badge:'free' },
+
+  /* ── Code AI ────────────────────────────────────────────── */
+  { id:'v0',         name:'v0 by Vercel',   cat:'code', emoji:'⬛', logo:'https://v0.dev/favicon.ico',                                              url:'https://v0.dev',                   desc:'Prompt → UI component', badge:'hot' },
+  { id:'bolt',       name:'Bolt.new',       cat:'code', emoji:'⚡', logo:'https://bolt.new/favicon.ico',                                            url:'https://bolt.new',                 desc:'Full-stack app from prompt', badge:'hot' },
+  { id:'lovable',    name:'Lovable',        cat:'code', emoji:'💖', logo:'https://lovable.dev/favicon.ico',                                         url:'https://lovable.dev',              desc:'AI-built web apps', badge:'hot' },
+  { id:'replit',     name:'Replit AI',      cat:'code', emoji:'🔄', logo:'https://replit.com/favicon.ico',                                          url:'https://replit.com',               desc:'Code + run in browser' },
+  { id:'cursor',     name:'Cursor',         cat:'code', emoji:'🖱️', logo:'https://www.cursor.com/favicon.ico',                                      url:'https://www.cursor.com',           desc:'AI-first code editor' },
+  { id:'windsurf',   name:'Windsurf',       cat:'code', emoji:'🏄', logo:'https://codeium.com/favicon.ico',                                         url:'https://codeium.com/windsurf',     desc:'AI code editor by Codeium', badge:'new' },
+  { id:'githubco',   name:'GitHub Copilot', cat:'code', emoji:'🐙', logo:'https://github.githubassets.com/favicons/favicon.ico',                    url:'https://github.com/features/copilot', desc:'AI pair programmer' },
+  { id:'codestral',  name:'Codestral',      cat:'code', emoji:'🌬️', logo:'https://mistral.ai/favicon.ico',                                         url:'https://chat.mistral.ai',          desc:'Mistral code model' },
+  { id:'codeium',    name:'Codeium',        cat:'code', emoji:'🔵', logo:'https://codeium.com/favicon.ico',                                         url:'https://codeium.com',              desc:'Free AI code completion', badge:'free' },
+  { id:'huggingface',name:'HuggingFace',    cat:'code', emoji:'🤗', logo:'https://huggingface.co/favicon.ico',                                      url:'https://huggingface.co',           desc:'Models, datasets, Spaces', badge:'open' },
+  { id:'replicate',  name:'Replicate',      cat:'code', emoji:'🔁', logo:'https://replicate.com/favicon.ico',                                       url:'https://replicate.com',            desc:'Run open-source AI models', badge:'open' },
+
+  /* ── Research / Academic AI ────────────────────────────── */
+  { id:'notebooklm',  name:'NotebookLM',    cat:'research', emoji:'📓', logo:'https://notebooklm.google.com/favicon.ico',                           url:'https://notebooklm.google.com',    desc:'Google AI research tool', badge:'free' },
+  { id:'elicit',      name:'Elicit',        cat:'research', emoji:'📚', logo:'https://elicit.com/favicon.ico',                                      url:'https://elicit.com',               desc:'AI research assistant' },
+  { id:'consensus',   name:'Consensus',     cat:'research', emoji:'🎯', logo:'https://consensus.app/favicon.ico',                                   url:'https://consensus.app',            desc:'AI science search' },
+  { id:'scite',       name:'Scite AI',      cat:'research', emoji:'🧪', logo:'https://scite.ai/favicon.ico',                                        url:'https://scite.ai',                 desc:'Smart citations' },
+  { id:'semantic',    name:'Semantic Scholar',cat:'research',emoji:'🏫', logo:'https://www.semanticscholar.org/favicon.ico',                        url:'https://www.semanticscholar.org',  desc:'Academic paper AI search', badge:'free' },
+  { id:'paperswithcode',name:'Papers w/Code',cat:'research',emoji:'📄', logo:'https://paperswithcode.com/favicon.ico',                              url:'https://paperswithcode.com',       desc:'ML research + code', badge:'open' },
+  { id:'arxiv',       name:'arXiv',         cat:'research', emoji:'📐', logo:'https://arxiv.org/favicon.ico',                                       url:'https://arxiv.org',                desc:'AI research preprints', badge:'free' },
+
+  /* ── AI Platforms & Studios ────────────────────────────── */
+  { id:'aistudio',    name:'AI Studio',     cat:'platform', emoji:'🔬', logo:'https://aistudio.google.com/favicon.ico',                             url:'https://aistudio.google.com',      desc:'Google Gemini API playground', badge:'free' },
+  { id:'vertex',      name:'Vertex AI',     cat:'platform', emoji:'🔷', logo:'https://cloud.google.com/favicon.ico',                                url:'https://console.cloud.google.com/vertex-ai', desc:'Google Cloud AI' },
+  { id:'azure_ai',    name:'Azure AI',      cat:'platform', emoji:'☁️', logo:'https://azure.microsoft.com/favicon.ico',                             url:'https://azure.microsoft.com/en-us/solutions/ai', desc:'Microsoft Azure AI' },
+  { id:'tasklet',     name:'Tasklet',       cat:'platform', emoji:'🤖', logo:'https://tasklet.ai/favicon.ico',                                      url:'https://tasklet.ai',               desc:'AI work automation agent', badge:'hot' },
+  { id:'nvidia_nim',  name:'NVIDIA NIM',    cat:'platform', emoji:'💚', logo:'https://www.nvidia.com/favicon.ico',                                  url:'https://build.nvidia.com',         desc:'GPU-accelerated AI models', badge:'free' },
+  { id:'fireworks',   name:'Fireworks AI',  cat:'platform', emoji:'🎆', logo:'https://fireworks.ai/favicon.ico',                                    url:'https://fireworks.ai',             desc:'Fast model serving' },
+  { id:'cerebras',    name:'Cerebras',      cat:'platform', emoji:'🧠', logo:'https://cerebras.ai/favicon.ico',                                     url:'https://inference.cerebras.ai',    desc:'World fastest inference', badge:'new' },
+
+  /* ── Productivity AI ───────────────────────────────────── */
+  { id:'notionai',    name:'Notion AI',     cat:'productivity', emoji:'📋', logo:'https://www.notion.so/favicon.ico',                               url:'https://www.notion.so',            desc:'AI-powered workspace' },
+  { id:'gamma',       name:'Gamma',         cat:'productivity', emoji:'🎯', logo:'https://gamma.app/favicon.ico',                                   url:'https://gamma.app',                desc:'AI presentations', badge:'free' },
+  { id:'tome',        name:'Tome',          cat:'productivity', emoji:'📖', logo:'https://tome.app/favicon.ico',                                    url:'https://tome.app',                 desc:'AI storytelling tool' },
+  { id:'napkin',      name:'Napkin AI',     cat:'productivity', emoji:'🗒️', logo:'https://www.napkin.ai/favicon.ico',                               url:'https://www.napkin.ai',            desc:'Text → visual diagrams', badge:'new' },
+  { id:'otter',       name:'Otter.ai',      cat:'productivity', emoji:'🦦', logo:'https://otter.ai/favicon.ico',                                    url:'https://otter.ai',                 desc:'AI meeting transcription' },
+  { id:'jasper',      name:'Jasper AI',     cat:'productivity', emoji:'✍️', logo:'https://www.jasper.ai/favicon.ico',                               url:'https://www.jasper.ai',            desc:'AI content writing' },
+  { id:'copy_ai',     name:'Copy.ai',       cat:'productivity', emoji:'📝', logo:'https://www.copy.ai/favicon.ico',                                 url:'https://www.copy.ai',              desc:'AI copywriting', badge:'free' },
+  { id:'writesonic',  name:'Writesonic',    cat:'productivity', emoji:'⚡', logo:'https://writesonic.com/favicon.ico',                              url:'https://writesonic.com',           desc:'AI writing assistant' },
+  { id:'beautiful',   name:'Beautiful.ai',  cat:'productivity', emoji:'🖼️', logo:'https://www.beautiful.ai/favicon.ico',                            url:'https://www.beautiful.ai',         desc:'Smart slide design' },
+
+  /* ── Search & Discovery ────────────────────────────────── */
+  { id:'andi',        name:'Andi',          cat:'search', emoji:'🔎', logo:'https://andisearch.com/favicon.ico',                                    url:'https://andisearch.com',           desc:'Conversational search', badge:'free' },
+  { id:'globe_ex',    name:'Globe Explorer',cat:'search', emoji:'🌍', logo:'https://globe.engineer/favicon.ico',                                    url:'https://globe.engineer',           desc:'Visual knowledge explorer', badge:'new' },
+  { id:'exa',         name:'Exa AI',        cat:'search', emoji:'🔬', logo:'https://exa.ai/favicon.ico',                                            url:'https://exa.ai',                   desc:'Neural web search' },
+  { id:'kagi',        name:'Kagi',          cat:'search', emoji:'🔱', logo:'https://kagi.com/favicon.ico',                                          url:'https://kagi.com',                 desc:'Premium AI search' },
+  { id:'you_search',  name:'You.com Search',cat:'search', emoji:'🟦', logo:'https://you.com/favicon.ico',                                           url:'https://you.com',                  desc:'AI-powered search' },
+
+  /* ── Multi-modal / Agent AI ────────────────────────────── */
+  { id:'hume',        name:'Hume AI',       cat:'agent', emoji:'💬', logo:'https://www.hume.ai/favicon.ico',                                        url:'https://www.hume.ai',              desc:'Emotional AI voice', badge:'new' },
+  { id:'adept',       name:'Adept AI',      cat:'agent', emoji:'🤝', logo:'https://www.adept.ai/favicon.ico',                                       url:'https://www.adept.ai',             desc:'AI agents for work' },
+  { id:'browseruse',  name:'Browser Use',   cat:'agent', emoji:'🌐', logo:'https://browser-use.com/favicon.ico',                                    url:'https://browser-use.com',          desc:'AI browser automation', badge:'open' },
+  { id:'langchain',   name:'LangChain',     cat:'agent', emoji:'⛓️', logo:'https://www.langchain.com/favicon.ico',                                  url:'https://www.langchain.com',        desc:'LLM app framework', badge:'open' },
+  { id:'crewai',      name:'CrewAI',        cat:'agent', emoji:'🚢', logo:'https://www.crewai.com/favicon.ico',                                     url:'https://www.crewai.com',           desc:'Multi-agent orchestration', badge:'open' },
+  { id:'n8n',         name:'n8n AI',        cat:'agent', emoji:'🔗', logo:'https://n8n.io/favicon.ico',                                             url:'https://n8n.io',                   desc:'AI workflow automation', badge:'open' },
+  { id:'flowise',     name:'Flowise',       cat:'agent', emoji:'🌊', logo:'https://flowiseai.com/favicon.ico',                                      url:'https://flowiseai.com',            desc:'No-code LLM builder', badge:'open' },
+
+  /* ── Local Tools ────────────────────────────── */
+  { id:'openhands',   name:'OpenHands',     cat:'local', emoji:'👐', logo:'', url:'https://docs.openhands.dev/overview/welcome',         desc:'AI Software Agent', badge:'new', target:'_self' },
+  { id:'calculator', name:'Calculator',    cat:'local', emoji:'🔢', logo:'', url:'./calculator.html', desc:'Scientific Calculator', badge:null, target:'_self' },
+  { id:'aichat',     name:'AI Chat',       cat:'local', emoji:'💬', logo:'', url:'./ai-chat.html',    desc:'Built-in AI Chat (Multi-Provider)', badge:'new', target:'_self' },
+  { id:'pmanager',   name:'Platform Manager', cat:'local', emoji:'🤖', logo:'', url:'./platform-manager.html', desc:'AI assistant for your assets & navigation', badge:'new', target:'_self' },
+
+  /* ── YouTube & Video Platforms ─────────────────────────── */
+  { id:'dr_d_channel', name:'Dr.D 📺',      cat:'media', emoji:'📺', logo:'', url:'https://www.youtube.com/channel/UCZ5heNyv3s5dIw9mtjsAGsg?sub_confirmation=1', desc:'🔔 Subscribe to Dr.D — AI, Tech & more!', badge:'creator', creator:true },
+  { id:'youtube',     name:'YouTube',       cat:'media', emoji:'▶️', logo:'https://www.youtube.com/favicon.ico',                                   url:'https://www.youtube.com',          desc:'AI video search & watch', badge:'free' },
+  { id:'youtube_ai',  name:'YouTube Studio',cat:'media', emoji:'🎬', logo:'https://studio.youtube.com/favicon.ico',                                url:'https://studio.youtube.com',       desc:'Create & manage videos' },
+  { id:'vimeo',       name:'Vimeo AI',      cat:'media', emoji:'🎞️', logo:'https://vimeo.com/favicon.ico',                                         url:'https://vimeo.com/create',         desc:'AI video creation' },
+
+
+  /* ── Sports Live ────────────────────────────────────────── */
+  { id:'yacine_live', name:'Yacine Live',    cat:'sports', emoji:'⚽', logo:'', url:'https://yacinelive.tv',  desc:'Live football matches', badge:'hot', isYacine:true, gradient:'linear-gradient(135deg,#00d4ff,#0099cc)' },
+  { id:'yacine_hub',  name:'Yacine Hub',     cat:'sports', emoji:'📺', logo:'', url:'yacine:hub',             desc:'Match schedule & streams', badge:'new', isYacineHub:true, gradient:'linear-gradient(135deg,#1a1a2e,#00d4ff)' },
+
+  /* ── Cinema Hub (Movies & TV) ──────────────────────────── */
+  { id:'cinema_hub',   name:'Cinema Hub',   cat:'movies', emoji:'🎬', logo:'', url:'cinema:hub',            desc:'All streaming in one place', badge:'new', isCinemaHub:true, gradient:'linear-gradient(135deg,#e50914,#ff6b6b)' },
+  { id:'netflix',      name:'Netflix',      cat:'movies', emoji:'🎬', logo:'', url:'https://www.netflix.com',     desc:'Premium movies & series', badge:'hot', isMovie:true, movieId:'netflix', gradient:'linear-gradient(135deg,#e50914,#b20710)' },
+  { id:'alostoora',    name:'Alostoora',    cat:'movies', emoji:'📺', logo:'', url:'https://alostoora.tv',        desc:'Arabic movies & series', badge:'hot', isMovie:true, movieId:'alostoora', gradient:'linear-gradient(135deg,#00d4ff,#0099cc)' },
+  { id:'mediaon',      name:'MediaOn',      cat:'movies', emoji:'📡', logo:'', url:'https://mediaon.tv',          desc:'Arabic live TV & movies', badge:'free', isMovie:true, movieId:'mediaon', gradient:'linear-gradient(135deg,#00d4ff,#006699)' },
+  { id:'shahid',       name:'Shahid',       cat:'movies', emoji:'🎭', logo:'', url:'https://shahid.mbc.net',      desc:'MBC Arabic content', badge:'hot', isMovie:true, movieId:'shahid', gradient:'linear-gradient(135deg,#ff8c00,#cc6600)' },
+  { id:'wetv',         name:'WeTV',         cat:'movies', emoji:'🎪', logo:'', url:'https://wetv.vip',            desc:'Tencent Asian dramas', badge:'free', isMovie:true, movieId:'wetv', gradient:'linear-gradient(135deg,#ff6b6b,#cc3333)' },
+  { id:'iqiyi',        name:'iQIYI',        cat:'movies', emoji:'🎋', logo:'', url:'https://iq.com',              desc:'Chinese movies & shows', badge:'free', isMovie:true, movieId:'iqiyi', gradient:'linear-gradient(135deg,#00c853,#009624)' },
+  { id:'tubi',         name:'Tubi',         cat:'movies', emoji:'🍿', logo:'', url:'https://tubitv.com',          desc:'Free movies with ads', badge:'free', isMovie:true, movieId:'tubi', gradient:'linear-gradient(135deg,#ff5722,#d84315)' },
+  { id:'plutotv',      name:'Pluto TV',     cat:'movies', emoji:'🪐', logo:'', url:'https://pluto.tv',            desc:'Free live TV channels', badge:'free', isMovie:true, movieId:'plutotv', gradient:'linear-gradient(135deg,#1565c0,#0d47a1)' },
+  { id:'crackle',      name:'Crackle',      cat:'movies', emoji:'💥', logo:'', url:'https://www.crackle.com',     desc:'Free Sony movies', badge:'free', isMovie:true, movieId:'crackle', gradient:'linear-gradient(135deg,#ffc107,#ff8f00)' },
+  { id:'popcornflix',  name:'Popcornflix',   cat:'movies', emoji:'🍿', logo:'', url:'https://www.popcornflix.com', desc:'Free indie movies', badge:'free', isMovie:true, movieId:'popcornflix', gradient:'linear-gradient(135deg,#e91e63,#c2185b)' },
+  { id:'vudu',         name:'Vudu',         cat:'movies', emoji:'💿', logo:'', url:'https://www.vudu.com',        desc:'Free + rental movies', badge:'free', isMovie:true, movieId:'vudu', gradient:'linear-gradient(135deg,#2196f3,#1565c0)' },
+  { id:'plex',         name:'Plex',         cat:'movies', emoji:'📼', logo:'', url:'https://app.plex.tv',         desc:'Free movies & your library', badge:'free', isMovie:true, movieId:'plex', gradient:'linear-gradient(135deg,#e5a00d,#cc8400)' },
+  { id:'imdbtv',       name:'IMDb TV',      cat:'movies', emoji:'⭐', logo:'', url:'https://www.imdb.com/tv',     desc:'Free Amazon movies', badge:'free', isMovie:true, movieId:'imdbtv', gradient:'linear-gradient(135deg,#f5c518,#dba800)' },
+  { id:'peacock',      name:'Peacock',      cat:'movies', emoji:'🦚', logo:'', url:'https://www.peacocktv.com',   desc:'NBC & Universal content', badge:'free', isMovie:true, movieId:'peacock', gradient:'linear-gradient(135deg,#000,#333)' },
+  { id:'crunchyroll',  name:'Crunchyroll',  cat:'movies', emoji:'🍥', logo:'', url:'https://www.crunchyroll.com', desc:'Anime streaming', badge:'hot', isMovie:true, movieId:'crunchyroll', gradient:'linear-gradient(135deg,#ff8c00,#f57c00)' },
+  { id:'funimation',   name:'Funimation',   cat:'movies', emoji:'⛩️', logo:'', url:'https://www.funimation.com',  desc:'Dubbed anime', badge:'free', isMovie:true, movieId:'funimation', gradient:'linear-gradient(135deg,#5c0099,#41006e)' },
+  { id:'xumo',         name:'Xumo',         cat:'movies', emoji:'📺', logo:'', url:'https://www.xumo.tv',         desc:'Free live TV & movies', badge:'free', isMovie:true, movieId:'xumo', gradient:'linear-gradient(135deg,#00bcd4,#0097a7)' },
+  { id:'rokuchannel',  name:'Roku Channel', cat:'movies', emoji:'🔴', logo:'', url:'https://therokuchannel.roku.com', desc:'Free Roku movies', badge:'free', isMovie:true, movieId:'rokuchannel', gradient:'linear-gradient(135deg,#6c3baa,#4a1f80)' },
+
+
+  /* ── Phone Native Actions ──────────────────────────────── */
+  { id:'native_call',     name:'Phone',       cat:'phone', emoji:'📞', logo:'', url:'native:call',     desc:'Make phone calls',      badge:'ai', nativeAction:'call',     gradient:'linear-gradient(135deg,#00d4ff,#0099cc)' },
+  { id:'native_sms',      name:'Messages',    cat:'phone', emoji:'💬', logo:'', url:'native:sms',      desc:'Send SMS messages',     badge:'ai', nativeAction:'sms',      gradient:'linear-gradient(135deg,#25d366,#128c7e)' },
+  { id:'native_email',    name:'Email',       cat:'phone', emoji:'📧', logo:'', url:'native:email',    desc:'Send email',            badge:'ai', nativeAction:'email',    gradient:'linear-gradient(135deg,#ea4335,#c5221f)' },
+  { id:'native_contacts', name:'Contacts',    cat:'phone', emoji:'👥', logo:'', url:'native:contacts', desc:'Device contacts',       badge:'ai', nativeAction:'contacts', gradient:'linear-gradient(135deg,#fbbc05,#f57f17)' },
+  { id:'native_whatsapp', name:'WhatsApp',    cat:'phone', emoji:'💚', logo:'', url:'native:whatsapp', desc:'Quick WhatsApp chat',   badge:'ai', nativeAction:'whatsapp', gradient:'linear-gradient(135deg,#25d366,#075e54)' },
+  { id:'native_camera',   name:'Camera',      cat:'phone', emoji:'📷', logo:'', url:'native:camera',   desc:'Take photo / gallery',  badge:'ai', nativeAction:'camera',   gradient:'linear-gradient(135deg,#9c27b0,#7b1fa2)' },
+
+  /* ── Religious & Spiritual ──────────────────────────────── */
+  { id:'quran',        name:'Quran',           cat:'religious', emoji:'📖', logo:'https://quran.com/favicon.ico',              url:'https://quran.com',          desc:'Read & listen to the Holy Quran', badge:'free' },
+  { id:'azkar',        name:'Azkar al Muslim',  cat:'religious', emoji:'🌙', logo:'https://azkar.me/favicon.ico',             url:'https://azkar.me/en',         desc:'Daily Azkar, Duas & Tasbeeh', badge:'free' },
+  { id:'bible',        name:'The Bible',        cat:'religious', emoji:'✝️', logo:'https://www.bible.com/favicon.ico',          url:'https://www.bible.com',      desc:'Read the Holy Bible online', badge:'free' },
+  { id:'islamway',     name:'Islam Way',         cat:'religious', emoji:'🕌', logo:'https://ar.islamway.net/favicon.ico',        url:'https://ar.islamway.net',    desc:'Islamic audio & video lectures', badge:'free' },
+
+  /* ── Communication Apps ──────────────────────────────────── */
+  { id:'botim',        name:'Botim',             cat:'communication', emoji:'📞', logo:'https://web.botim.me/favicon.ico',       url:'https://web.botim.me',       desc:'HD video & voice calls (UAE)', badge:'hot' },
+  { id:'telegram_web', name:'Telegram Web',      cat:'communication', emoji:'✈️', logo:'https://web.telegram.org/favicon.ico',  url:'https://web.telegram.org',   desc:'Fast & secure messaging', badge:'free' },
+  { id:'whatsapp_web', name:'WhatsApp Web',       cat:'communication', emoji:'💬', logo:'https://web.whatsapp.com/favicon.ico', url:'https://web.whatsapp.com',   desc:'WhatsApp on the web', badge:'free' },
+];
+
+/* ═══════════════════════════════════════════════════════════
+   CATEGORIES CONFIG
+   ═══════════════════════════════════════════════════════════ */
+const CATS = [
+  { id:'all',         label:'All',           icon:'🤖' },
+  { id:'local',       label:'Local',         icon:'💾' },
+  { id:'chat',        label:'Chat AI',       icon:'💬' },
+  { id:'image',       label:'Image AI',      icon:'🎨' },
+  { id:'video',       label:'Video AI',      icon:'🎬' },
+  { id:'audio',       label:'Audio AI',      icon:'🎵' },
+  { id:'code',        label:'Code AI',       icon:'💻' },
+  { id:'research',    label:'Research',      icon:'📚' },
+  { id:'platform',    label:'Platforms',     icon:'🔬' },
+  { id:'productivity',label:'Productivity',  icon:'✨' },
+  { id:'search',      label:'Search',        icon:'🔍' },
+  { id:'agent',       label:'Agents',        icon:'⛓️' },
+  { id:'media',       label:'Media',         icon:'▶️' },
+  { id:'sports',      label:'Sports Live', icon:'⚽' },
+  { id:'movies',      label:'Movies & TV', icon:'🎬' },
+  { id:'phone',       label:'Phone',       icon:'📱' },
+  { id:'religious',    label:'Religious',    icon:'🕌' },
+  { id:'communication',label:'Communication',icon:'📡' },
+];
+
+const CAT_LABELS = {};
+CATS.forEach(c => CAT_LABELS[c.id] = { label: c.label, icon: c.icon });
+
+/* ═══════════════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════════════ */
+let activeFilter = 'all';
+let searchQuery  = '';
+let favorites    = JSON.parse(localStorage.getItem('aihub_favs') || '[]');
+let currentSvc   = null;
+let frameTimer   = null;
+
+/* ── Creator Channel shortcut ─────────────────────────────── */
+function openCreatorChannel() {
+  window.open('https://www.youtube.com/channel/UCZ5heNyv3s5dIw9mtjsAGsg', '_blank', 'noopener');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════ */
+function init() {
+  buildTabs();
+  renderFavBar();
+  renderAll();
+}
+
+/* ── Tabs ── */
+function buildTabs() {
+  const bar = document.getElementById('tabsBar');
+  CATS.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'tab' + (c.id === 'all' ? ' active' : '');
+    btn.dataset.cat = c.id;
+    const count = c.id === 'all' ? SERVICES.length : SERVICES.filter(s => s.cat === c.id).length;
+    btn.innerHTML = `${c.icon} ${c.label} <span style="opacity:0.6;font-size:10px;margin-left:3px">${count}</span>`;
+    btn.onclick = () => setFilter(c.id);
+    bar.appendChild(btn);
+  });
+}
+
+function setFilter(cat) {
+  activeFilter = cat;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.cat === cat));
+  renderAll();
+}
+
+/* ── Render ── */
+function renderAll() {
+  const content = document.getElementById('mainContent');
+  const noRes   = document.getElementById('noResults');
+  content.innerHTML = '';
+
+  const q = searchQuery.trim().toLowerCase();
+  let filtered = SERVICES.filter(s => {
+    const matchCat  = activeFilter === 'all' || s.cat === activeFilter;
+    const matchQ    = !q || s.name.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q) || s.cat.toLowerCase().includes(q);
+    return matchCat && matchQ;
+  });
+
+  if (filtered.length === 0) {
+    noRes.style.display = 'block';
+    return;
+  }
+  noRes.style.display = 'none';
+
+  // Group by category
+  const grouped = {};
+  filtered.forEach(s => {
+    if (!grouped[s.cat]) grouped[s.cat] = [];
+    grouped[s.cat].push(s);
+  });
+
+  Object.entries(grouped).forEach(([cat, svcs]) => {
+    const info = CAT_LABELS[cat] || { label: cat, icon: '🔹' };
+    const section = document.createElement('div');
+    section.className = 'cat-section';
+    section.innerHTML = `
+      <div class="cat-title">
+        <span class="cat-icon">${info.icon}</span>
+        ${info.label}
+        <span class="cat-count">${svcs.length}</span>
+      </div>
+      <div class="services-grid" id="grid-${cat}"></div>
+    `;
+    content.appendChild(section);
+    const grid = section.querySelector('.services-grid');
+    svcs.forEach(s => grid.appendChild(buildCard(s)));
+  });
+}
+
+function buildCard(svc) {
+  const isFav = favorites.includes(svc.id);
+  const card  = document.createElement('div');
+  const isNativeAction = !!svc.nativeAction;
+  const isYacineSport  = !!svc.isYacine || !!svc.isYacineHub;
+  const isMovieCard    = !!svc.isMovie || !!svc.isCinemaHub;
+  card.className = 'service-card' + (svc.creator ? ' is-creator' : '') + (isNativeAction ? ' phone-action-card' : '');
+  card.style.setProperty('--c', svc.color || '#7c3aed');
+
+  let badgeHtml = '';
+  if (isNativeAction) {
+    badgeHtml = '<span class="native-tag">NATIVE</span>';
+  } else if (isYacineSport) {
+    badgeHtml = '<span class="svc-badge" style="background:rgba(0,212,255,0.2);color:#00d4ff;border:1px solid rgba(0,212,255,0.3);font-size:8px;padding:2px 6px;border-radius:10px;font-weight:800;text-transform:uppercase;">SPORTS</span>';
+  } else if (isMovieCard) {
+    badgeHtml = '<span class="svc-badge" style="background:rgba(229,9,20,0.2);color:#ff6b6b;border:1px solid rgba(229,9,20,0.3);font-size:8px;padding:2px 6px;border-radius:10px;font-weight:800;text-transform:uppercase;">CINEMA</span>';
+  } else if (svc.badge) {
+    const cls = {hot:'badge-hot', new:'badge-new', free:'badge-free', ai:'badge-ai', open:'badge-open', creator:'badge-creator'}[svc.badge] || 'badge-ai';
+    badgeHtml = `<span class="svc-badge ${cls}">${svc.badge}</span>`;
+  }
+
+  // For native actions, show emoji with gradient bg instead of logo img
+  let logoHtml;
+  if (isNativeAction || isYacineSport || isMovieCard) {
+    logoHtml = `<div class="svc-logo" style="background:${svc.gradient || 'var(--accent)'};border:none;"><span style="font-size:26px;">${svc.emoji}</span></div>`;
+  } else {
+    logoHtml = `<div class="svc-logo" id="logo-${svc.id}"><img src="${svc.logo}" alt="${svc.name}" onerror="this.parentElement.textContent='${svc.emoji}'" loading="lazy"></div>`;
+  }
+
+  card.innerHTML = `
+    ${badgeHtml}
+    ${logoHtml}
+    <div class="svc-name">${svc.name}</div>
+    <div class="svc-desc">${svc.desc}</div>
+  `;
+
+  card.onclick = (e) => {
+    if (e.target.classList.contains('fav-star')) { toggleFav(svc.id); return; }
+    if (svc.isCinemaHub) {
+      openCinemaHub();
+    } else if (svc.isMovie) {
+      openMoviePlatform(svc);
+    } else if (svc.isYacineHub) {
+      openYacineHub();
+    } else if (svc.isYacine) {
+      openYacineLive(svc);
+    } else if (isNativeAction) {
+      handleNativeAction(svc.nativeAction);
+    } else {
+      openViewer(svc);
+    }
+  };
+  card.ondblclick = () => toggleFav(svc.id);
+  card.title = isNativeAction ? 'Tap to use · Double-click to favorite' : 'Click to open · Double-click to favorite';
+
+  return card;
+}
+
+/* ── Favorites ── */
+function toggleFav(id) {
+  if (favorites.includes(id)) {
+    favorites = favorites.filter(f => f !== id);
+  } else {
+    favorites.push(id);
+  }
+  localStorage.setItem('aihub_favs', JSON.stringify(favorites));
+  renderFavBar();
+}
+
+function renderFavBar() {
+  const bar   = document.getElementById('favBar');
+  const pills = document.getElementById('favPills');
+  pills.innerHTML = '';
+  if (favorites.length === 0) { bar.classList.remove('has-favs'); return; }
+  bar.classList.add('has-favs');
+  favorites.forEach(id => {
+    const svc = SERVICES.find(s => s.id === id);
+    if (!svc) return;
+    const pill = document.createElement('div');
+    pill.className = 'fav-pill';
+    pill.innerHTML = `
+      <div class="fav-logo"><img src="${svc.logo}" alt="${svc.name}" onerror="this.parentElement.textContent='${svc.emoji}'" loading="lazy"></div>
+      ${svc.name}
+      <span class="fav-remove" title="Remove favorite" onclick="event.stopPropagation();toggleFav('${id}')">✕</span>
+    `;
+    pill.onclick = (e) => { if (!e.target.classList.contains('fav-remove')) openViewer(svc); };
+    pills.appendChild(pill);
+  });
+}
+
+/* ── Search ── */
+function onSearch() {
+  searchQuery = document.getElementById('searchInput').value;
+  renderAll();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   VIEWER
+   ═══════════════════════════════════════════════════════════ */
+function openViewer(svc) {
+  currentSvc = svc;
+  
+  // Handle target attribute for local tools - open in same tab or new tab
+  if (svc.target === '_self') {
+    // Navigate within current tab (like external link)
+    window.location.href = svc.url;
+    return;
+  } else if (svc.target === '_blank') {
+    // Open in new tab
+    window.open(svc.url, '_blank');
+    return;
+  }
+  
+  const overlay = document.getElementById('viewerOverlay');
+  const frame   = document.getElementById('viewerFrame');
+  const loader  = document.getElementById('frameLoader');
+  const blocked = document.getElementById('frameBlocked');
+
+  // Reset state
+  blocked.classList.remove('show');
+  loader.classList.remove('hidden');
+  frame.src = 'about:blank';
+
+  // Fill header
+  const logoEl = document.getElementById('viewerLogo');
+  logoEl.innerHTML = `<img src="${svc.logo}" alt="${svc.name}" onerror="this.parentElement.textContent='${svc.emoji}'">`;
+  document.getElementById('viewerTitle').textContent = svc.name;
+  document.getElementById('viewerUrlBar').textContent = svc.url;
+  document.getElementById('loaderName').textContent = svc.name;
+  document.getElementById('loaderUrl').textContent = svc.url;
+
+  // Blocked fallback elements
+  document.getElementById('blockedIcon').textContent = svc.emoji;
+  document.getElementById('blockedTitle').textContent = `${svc.name} — Embedded View Blocked`;
+  document.getElementById('blockedDesc').textContent = `${svc.name} has security restrictions that prevent embedding. Use "Navigate" to browse within the app or "External" to open in a new tab.`;
+  
+  // Hide the old single button references
+  const openBtn = document.getElementById('blockedOpenBtn');
+  if (openBtn) {
+    openBtn.style.display = 'none';
+  }
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Try load iframe
+  clearTimeout(frameTimer);
+
+  frame.onload = () => {
+    loader.classList.add('hidden');
+    clearTimeout(frameTimer);
+    // Smart blank-iframe detection:
+    // Blocked by X-Frame-Options → browser makes empty same-origin doc (accessible + empty)
+    // Embedding allowed         → cross-origin doc loads (SecurityError on access = content is OK)
+    try {
+      const doc = frame.contentDocument || frame.contentWindow?.document;
+      if (!doc?.body || !doc.body.innerHTML.trim()) {
+        blocked.classList.add('show');
+      }
+    } catch (_) {
+      // SecurityError = cross-origin content actually loaded = iframe is showing real content
+    }
+  };
+
+  frame.onerror = () => {
+    loader.classList.add('hidden');
+    blocked.classList.add('show');
+  };
+
+  // Start load
+  frame.src = svc.url;
+
+  // Timeout fallback — if loader not hidden after 10s assume blocked
+  frameTimer = setTimeout(() => {
+    if (!loader.classList.contains('hidden')) {
+      loader.classList.add('hidden');
+      blocked.classList.add('show');
+    }
+  }, 10000);
+}
+
+function closeViewer() {
+  clearTimeout(frameTimer);
+  const overlay = document.getElementById('viewerOverlay');
+  const frame   = document.getElementById('viewerFrame');
+  overlay.classList.remove('open');
+  document.body.style.overflow = '';
+  frame.src = 'about:blank';
+  currentSvc = null;
+}
+
+function reloadFrame() {
+  if (!currentSvc) return;
+  const frame   = document.getElementById('viewerFrame');
+  const loader  = document.getElementById('frameLoader');
+  const blocked = document.getElementById('frameBlocked');
+  blocked.classList.remove('show');
+  loader.classList.remove('hidden');
+  frame.src = 'about:blank';
+  frame.onload = null; // Reset onload before reload
+  setTimeout(() => {
+    frame.src = currentSvc.url;
+    frame.onload = () => {
+      loader.classList.add('hidden');
+      clearTimeout(frameTimer);
+      try {
+        const doc = frame.contentDocument || frame.contentWindow?.document;
+        if (!doc?.body || !doc.body.innerHTML.trim()) {
+          blocked.classList.add('show');
+        }
+      } catch (_) { /* cross-origin = content loaded fine */ }
+    };
+  }, 100);
+  clearTimeout(frameTimer);
+  frameTimer = setTimeout(() => {
+    if (!loader.classList.contains('hidden')) {
+      loader.classList.add('hidden');
+      blocked.classList.add('show');
+    }
+  }, 8000);
+}
+
+function openExternal() {
+  if (!currentSvc) return;
+  window.open(currentSvc.url, '_blank', 'noopener');
+}
+
+// Navigate in-app using a full-page overlay (keeps user in app)
+function navigateInApp() {
+  if (!currentSvc) return;
+  
+  // Open a full-screen overlay with address bar for navigation
+  const overlay = document.getElementById('viewerOverlay');
+  const frame = document.getElementById('viewerFrame');
+  const urlBar = document.getElementById('viewerUrlBar');
+  const title = document.getElementById('viewerTitle');
+  const loader = document.getElementById('frameLoader');
+  const blocked = document.getElementById('frameBlocked');
+  
+  // Create a simple address bar for input if not exists
+  let navInput = document.getElementById('navUrlInput');
+  if (!navInput) {
+    navInput = document.createElement('input');
+    navInput.id = 'navUrlInput';
+    navInput.type = 'text';
+    navInput.placeholder = 'Enter URL...';
+    navInput.className = 'nav-url-input';
+    navInput.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:20px;color:var(--text);padding:8px 16px;font-size:13px;outline:none;width:300px;';
+    navInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        let url = navInput.value.trim();
+        if (url && !url.startsWith('http')) url = 'https://' + url;
+        if (url) {
+          currentSvc = { url: url, name: new URL(url).hostname };
+          frame.src = url;
+          loader.classList.remove('hidden');
+          blocked.classList.remove('show');
+        }
+      }
+    });
+  }
+  
+  // Update UI for navigation mode
+  title.textContent = 'Navigate';
+  urlBar.innerHTML = '';
+  urlBar.appendChild(navInput);
+  navInput.value = currentSvc.url;
+  navInput.style.display = 'inline-block';
+  
+  // Show the frame with the URL
+  loader.classList.remove('hidden');
+  blocked.classList.remove('show');
+  frame.src = currentSvc.url;
+  
+  // Re-enable onload detection for navigation
+  frame.onload = () => {
+    loader.classList.add('hidden');
+    try {
+      const doc = frame.contentDocument || frame.contentWindow?.document;
+      if (!doc?.body || !doc.body.innerHTML.trim()) {
+        blocked.classList.add('show');
+      }
+    } catch (_) {}
+  };
+}
+
+// Close on ESC
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeViewer();
+});
+
+/* ═══════════════════════════════════════════════════════════
+   NATIVE PHONE ACTIONS HANDLER
+   ═══════════════════════════════════════════════════════════ */
+
+async function handleNativeAction(action) {
+  // Ensure PhoneActions is loaded
+  if (!window.PhoneActions) {
+    console.warn('[AIHub] PhoneActions not loaded — loading dynamically');
+    await loadScript('../src/native-phone-actions.js');
+  }
+
+  const PA = window.PhoneActions;
+  if (!PA) { alert('Phone actions module not available.'); return; }
+
+  switch (action) {
+    case 'call': {
+      if (PA.isNative()) {
+        const num = prompt('Enter phone number to call:');
+        if (!num) return;
+        if (!PA.isValidPhone(num)) { alert('Invalid phone number.'); return; }
+        await PA.call(num);
+      } else {
+        PA.showInAppDialer();
+      }
+      break;
+    }
+    case 'sms': {
+      const num = prompt('Enter phone number for SMS:');
+      if (!num) return;
+      if (!PA.isValidPhone(num)) { alert('Invalid phone number.'); return; }
+      const msg = prompt('Message (optional):') || '';
+      await PA.sms(num, msg);
+      break;
+    }
+    case 'email': {
+      const to = prompt('To (email):');
+      if (!to) return;
+      const subject = prompt('Subject:') || '';
+      const body = prompt('Body:') || '';
+      await PA.email({ to, subject, body });
+      break;
+    }
+    case 'contacts': {
+      if (PA.isNative()) {
+        await PA.showContactPicker((contact) => {
+          const name = contact.name?.display || 'Unknown';
+          const phone = contact.phones?.[0]?.number || '';
+          const choice = prompt(`${name}\n${phone}\n\n1) Call  2) SMS  3) WhatsApp`);
+          if (choice === '1' && phone) PA.call(phone);
+          else if (choice === '2' && phone) PA.sms(phone);
+          else if (choice === '3' && phone) PA.whatsapp(phone);
+        });
+      } else {
+        alert('Contacts require the mobile app.');
+      }
+      break;
+    }
+    case 'whatsapp': {
+      const num = prompt('Enter WhatsApp number:');
+      if (!num) return;
+      const text = prompt('Pre-filled message (optional):') || '';
+      await PA.whatsapp(num, text);
+      break;
+    }
+    case 'camera': {
+      try {
+        const result = await PA.camera({ source: 'PROMPT' });
+        if (result.success && result.image) {
+          PA.showImagePreview(result.image);
+        }
+      } catch (err) {
+        if (!PA.isNative()) alert('Camera works best in the mobile app.');
+      }
+      break;
+    }
+  }
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+
+
+/* ═══════════════════════════════════════════════════════════
+   YACINE LIVE — SMART DOMAIN ROTATION
+   ═══════════════════════════════════════════════════════════ */
+
+/**
+ * Open Yacine Live via domain rotator in the viewer overlay
+ */
+async function openYacineLive(svc) {
+  currentSvc = svc;
+  const overlay = document.getElementById('viewerOverlay');
+  const frame   = document.getElementById('viewerFrame');
+  const loader  = document.getElementById('frameLoader');
+  const blocked = document.getElementById('frameBlocked');
+
+  // Reset
+  blocked.classList.remove('show');
+  loader.classList.remove('hidden');
+  frame.src = 'about:blank';
+
+  // Header
+  const logoEl = document.getElementById('viewerLogo');
+  logoEl.innerHTML = '<span style="font-size:22px;">⚽</span>';
+  document.getElementById('viewerTitle').textContent = 'Yacine Live';
+  document.getElementById('viewerUrlBar').textContent = 'Finding best server…';
+  document.getElementById('loaderName').textContent = 'Yacine Live';
+  document.getElementById('loaderUrl').textContent = 'Checking mirrors…';
+
+  // Blocked fallback
+  document.getElementById('blockedIcon').textContent = '⚽';
+  document.getElementById('blockedTitle').textContent = 'Yacine Live — Opens in new tab';
+  document.getElementById('blockedDesc').textContent = 'Yacine Live may not allow embedding. Click below to open it externally.';
+  document.getElementById('blockedOpenName').textContent = 'Yacine Live';
+  document.getElementById('blockedOpenBtn').href = 'https://yacinelive.tv';
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Use domain rotator if available
+  try {
+    const url = window.yacineService
+      ? await window.yacineService.getWorkingUrl()
+      : 'https://yacinelive.tv';
+
+    currentSvc = { ...svc, url };
+    document.getElementById('viewerUrlBar').textContent = url;
+    document.getElementById('loaderUrl').textContent = url;
+    document.getElementById('blockedOpenBtn').href = url;
+
+    frame.onload = () => {
+      loader.classList.add('hidden');
+      clearTimeout(frameTimer);
+      try {
+        const doc = frame.contentDocument || frame.contentWindow?.document;
+        if (!doc?.body || !doc.body.innerHTML.trim()) { blocked.classList.add('show'); }
+      } catch (_) { /* cross-origin = loaded fine */ }
+    };
+    frame.onerror = () => { loader.classList.add('hidden'); blocked.classList.add('show'); };
+    frame.src = url;
+
+    clearTimeout(frameTimer);
+    frameTimer = setTimeout(() => {
+      if (!loader.classList.contains('hidden')) {
+        loader.classList.add('hidden');
+        blocked.classList.add('show');
+      }
+    }, 10000);
+
+  } catch (err) {
+    console.error('[YacineLive]', err);
+    loader.classList.add('hidden');
+    blocked.classList.add('show');
+  }
+}
+
+/**
+ * Open full Yacine Hub (match list + player)
+ */
+function openYacineHub() {
+  if (!window.yacineHub) {
+    alert('Yacine Hub module not loaded.');
+    return;
+  }
+
+  const overlay = document.getElementById('viewerOverlay');
+  const frame   = document.getElementById('viewerFrame');
+  const loader  = document.getElementById('frameLoader');
+  const blocked = document.getElementById('frameBlocked');
+
+  // Reset
+  blocked.classList.remove('show');
+  loader.classList.add('hidden');
+  frame.src = 'about:blank';
+  frame.style.display = 'none';
+
+  // Header
+  const logoEl = document.getElementById('viewerLogo');
+  logoEl.innerHTML = '<span style="font-size:22px;">📺</span>';
+  document.getElementById('viewerTitle').textContent = 'Yacine Hub — Live Matches';
+  document.getElementById('viewerUrlBar').textContent = 'Yacine Live Match Center';
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Create hub container inside the frame wrapper
+  const wrap = document.querySelector('.viewer-frame-wrap');
+  let hubDiv = document.getElementById('yacine-hub-overlay');
+  if (!hubDiv) {
+    hubDiv = document.createElement('div');
+    hubDiv.id = 'yacine-hub-overlay';
+    hubDiv.style.cssText = 'position:absolute;inset:0;overflow-y:auto;z-index:10;';
+    wrap.appendChild(hubDiv);
+  }
+  hubDiv.style.display = 'block';
+  window.yacineHub.render(hubDiv);
+
+  // Override close to clean up
+  const origClose = closeViewer;
+  closeViewer = function() {
+    if (hubDiv) { hubDiv.style.display = 'none'; hubDiv.innerHTML = ''; }
+    frame.style.display = '';
+    closeViewer = origClose;
+    origClose();
+  };
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   CINEMA HUB — MOVIE PLATFORMS INTEGRATION
+   ═══════════════════════════════════════════════════════════ */
+
+/**
+ * Open a movie platform via domain rotator in the viewer overlay
+ */
+async function openMoviePlatform(svc) {
+  currentSvc = svc;
+  const overlay = document.getElementById('viewerOverlay');
+  const frame   = document.getElementById('viewerFrame');
+  const loader  = document.getElementById('frameLoader');
+  const blocked = document.getElementById('frameBlocked');
+
+  blocked.classList.remove('show');
+  loader.classList.remove('hidden');
+  frame.src = 'about:blank';
+
+  const logoEl = document.getElementById('viewerLogo');
+  logoEl.innerHTML = '<span style="font-size:22px;">' + svc.emoji + '</span>';
+  document.getElementById('viewerTitle').textContent = svc.name;
+  document.getElementById('viewerUrlBar').textContent = 'Finding best server…';
+  document.getElementById('loaderName').textContent = svc.name;
+  document.getElementById('loaderUrl').textContent = 'Checking mirrors…';
+
+  document.getElementById('blockedIcon').textContent = svc.emoji;
+  document.getElementById('blockedTitle').textContent = svc.name + ' — Opens in new tab';
+  document.getElementById('blockedDesc').textContent = svc.name + ' may not allow embedding. Click below to open it externally.';
+  document.getElementById('blockedOpenName').textContent = svc.name;
+  document.getElementById('blockedOpenBtn').href = svc.url;
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  try {
+    let url = svc.url;
+    if (window.moviePlatforms && svc.movieId) {
+      url = await window.moviePlatforms.getWorkingUrl(svc.movieId) || svc.url;
+    }
+
+    currentSvc = { ...svc, url };
+    document.getElementById('viewerUrlBar').textContent = url;
+    document.getElementById('loaderUrl').textContent = url;
+    document.getElementById('blockedOpenBtn').href = url;
+
+    frame.onload = () => {
+      loader.classList.add('hidden');
+      clearTimeout(frameTimer);
+      try {
+        const doc = frame.contentDocument || frame.contentWindow?.document;
+        if (!doc?.body || !doc.body.innerHTML.trim()) { blocked.classList.add('show'); }
+      } catch (_) { /* cross-origin = loaded fine */ }
+    };
+    frame.onerror = () => { loader.classList.add('hidden'); blocked.classList.add('show'); };
+    frame.src = url;
+
+    clearTimeout(frameTimer);
+    frameTimer = setTimeout(() => {
+      if (!loader.classList.contains('hidden')) {
+        loader.classList.add('hidden');
+        blocked.classList.add('show');
+      }
+    }, 10000);
+
+  } catch (err) {
+    console.error('[MoviePlatform]', err);
+    loader.classList.add('hidden');
+    blocked.classList.add('show');
+  }
+}
+
+/**
+ * Open full Cinema Hub (all platforms browser)
+ */
+function openCinemaHub() {
+  if (!window.movieHub) {
+    alert('Cinema Hub module not loaded.');
+    return;
+  }
+
+  const overlay = document.getElementById('viewerOverlay');
+  const frame   = document.getElementById('viewerFrame');
+  const loader  = document.getElementById('frameLoader');
+  const blocked = document.getElementById('frameBlocked');
+
+  blocked.classList.remove('show');
+  loader.classList.add('hidden');
+  frame.src = 'about:blank';
+  frame.style.display = 'none';
+
+  const logoEl = document.getElementById('viewerLogo');
+  logoEl.innerHTML = '<span style="font-size:22px;">🎬</span>';
+  document.getElementById('viewerTitle').textContent = 'Cinema Hub — Movies & TV';
+  document.getElementById('viewerUrlBar').textContent = 'All streaming platforms in one place';
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  const wrap = document.querySelector('.viewer-frame-wrap');
+  let hubDiv = document.getElementById('cinema-hub-overlay');
+  if (!hubDiv) {
+    hubDiv = document.createElement('div');
+    hubDiv.id = 'cinema-hub-overlay';
+    hubDiv.style.cssText = 'position:absolute;inset:0;overflow-y:auto;z-index:10;background:#0a0a0f;';
+    wrap.appendChild(hubDiv);
+  }
+  hubDiv.style.display = 'block';
+  window.movieHub.render(hubDiv);
+
+  const origClose = closeViewer;
+  closeViewer = function() {
+    if (hubDiv) { hubDiv.style.display = 'none'; hubDiv.innerHTML = ''; }
+    frame.style.display = '';
+    closeViewer = origClose;
+    origClose();
+  };
+}
+
+init();
+</script>
+
+    <!-- File Analysis Section -->
+    <script src="../js/ai-hub-knowledge.js"></script>
+    <script>
+        // Add file analysis action to service grid
+        document.addEventListener('DOMContentLoaded', () => {
+            const content = document.getElementById('mainContent');
+            if(content && !document.querySelector('[data-service="file-analysis"]')) {
+                const fileSection = document.createElement('div');
+                fileSection.className = 'cat-section';
+                fileSection.innerHTML = `
+                    <div class="cat-title">
+                        <span class="cat-icon">📎</span>
+                        File Analysis
+                        <span class="cat-count">3</span>
+                    </div>
+                    <div class="services-grid">
+                        <div class="service-card" onclick="openAIChat('Upload Code')">
+                            <div class="svc-logo">📝</div>
+                            <div class="svc-name">Code Analysis</div>
+                            <div class="svc-desc">Upload code files for explanation & debugging</div>
+                        </div>
+                        <div class="service-card" onclick="openAIChat('Upload Document')">
+                            <div class="svc-logo">📄</div>
+                            <div class="svc-name">Document Summary</div>
+                            <div class="svc-desc">Upload docs for analysis & key points</div>
+                        </div>
+                        <div class="service-card" onclick="openAIChat('Upload Image')">
+                            <div class="svc-logo">🖼️</div>
+                            <div class="svc-name">Image Analysis</div>
+                            <div class="svc-desc">Upload images for OCR & description</div>
+                        </div>
+                    </div>
+                `;
+                content.insertBefore(fileSection, content.firstChild);
+            }
+        });
+        
+        function openAIChat(context) {
+            // Navigate to AI-Chat with context
+            window.location.href = './ai-chat.html?context=' + encodeURIComponent(context);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🦁 Qarsan — Asset Leaderboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0d0d14;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    /* ── Header ───────────────────────────────────────────────── */
+    .qar-header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border-bottom: 1px solid #2d3748;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .qar-header h1 { font-size: 1.5rem; font-weight: 700; color: #f6e05e; }
+    .qar-header p  { font-size: 0.85rem; color: #718096; margin-top: 2px; }
+
+    /* Header right controls */
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* ── Notification Bell ───────────────────────────────────── */
+    .notif-wrap {
+      position: relative;
+    }
+    .notif-btn {
+      background: transparent;
+      border: 1px solid #2d3748;
+      color: #a0aec0;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.1rem;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .notif-btn:hover { border-color: #4a5568; color: #e2e8f0; }
+    .notif-btn.has-unread { border-color: #744210; animation: bell-shake 2s infinite; }
+
+    @keyframes bell-shake {
+      0%, 100% { transform: rotate(0deg); }
+      10%, 30%  { transform: rotate(-8deg); }
+      20%, 40%  { transform: rotate(8deg); }
+      50%       { transform: rotate(0deg); }
+    }
+
+    .notif-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: #e53e3e;
+      color: #fff;
+      font-size: 0.6rem;
+      font-weight: 700;
+      border-radius: 999px;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      display: none;
+    }
+    .notif-badge.show { display: flex; }
+
+    /* Notification dropdown */
+    .notif-panel {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      width: 320px;
+      background: #1a1f38;
+      border: 1px solid #2d3748;
+      border-radius: 14px;
+      overflow: hidden;
+      z-index: 99;
+      display: none;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+    .notif-panel.open { display: block; }
+
+    .notif-panel-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid #2d3748;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .notif-panel-header span { font-size: 0.85rem; font-weight: 600; color: #e2e8f0; }
+    .notif-mark-read {
+      font-size: 0.7rem;
+      color: #63b3ed;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+    }
+    .notif-mark-read:hover { color: #90cdf4; }
+
+    .notif-list { max-height: 320px; overflow-y: auto; }
+
+    .notif-item {
+      padding: 12px 18px;
+      border-bottom: 1px solid #2d3748;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      transition: background 0.15s;
+    }
+    .notif-item:last-child { border-bottom: none; }
+    .notif-item.unread { background: rgba(246,224,94,0.04); }
+    .notif-item:hover { background: rgba(255,255,255,0.03); }
+    .notif-item .notif-msg { color: #e2e8f0; }
+    .notif-item .notif-time { font-size: 0.7rem; color: #4a5568; margin-top: 4px; }
+    .notif-empty { padding: 24px 18px; text-align: center; color: #4a5568; font-size: 0.8rem; }
+
+    /* ── My Status Card ──────────────────────────────────────── */
+    .my-status {
+      margin: 20px 20px 0;
+      background: linear-gradient(135deg, #1e2035 0%, #1a1f38 100%);
+      border: 1px solid #2d3748;
+      border-radius: 14px;
+      padding: 20px 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto;
+      gap: 16px;
+      align-items: center;
+    }
+    @media (max-width: 640px) { .my-status { grid-template-columns: 1fr 1fr; } }
+
+    .stat-block { text-align: center; }
+    .stat-block .label { font-size: 0.7rem; color: #718096; text-transform: uppercase; letter-spacing: 1px; }
+    .stat-block .value { font-size: 1.4rem; font-weight: 700; color: #fff; margin-top: 4px; }
+    .stat-block .value.codes  { color: #f6e05e; }
+    .stat-block .value.silver { color: #e2e8f0; }
+    .stat-block .value.gold   { color: #fbb040; }
+
+    .dog-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .dog-pill.active   { background: #1a4731; color: #68d391; border: 1px solid #276749; }
+    .dog-pill.sleeping { background: #3d2b00; color: #f6e05e; border: 1px solid #744210; }
+    .dog-pill.dead     { background: #3d0000; color: #fc8181; border: 1px solid #742424; animation: pulse-red 2s infinite; }
+
+    @keyframes pulse-red {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(252,129,129,0.4); }
+      50%       { box-shadow: 0 0 0 6px rgba(252,129,129,0); }
+    }
+
+    .btn-feed {
+      background: linear-gradient(135deg, #2d6a4f, #1b4332);
+      color: #d8f3dc;
+      border: 1px solid #40916c;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn-feed:hover { background: linear-gradient(135deg, #40916c, #2d6a4f); transform: translateY(-1px); }
+    .btn-feed:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* ── Leaderboard ─────────────────────────────────────────── */
+    .leaderboard-wrap { margin: 20px; }
+    .leaderboard-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .leaderboard-header h2 { font-size: 1rem; color: #a0aec0; text-transform: uppercase; letter-spacing: 1px; }
+
+    .btn-refresh {
+      background: transparent;
+      border: 1px solid #4a5568;
+      color: #a0aec0;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-refresh:hover { border-color: #718096; color: #e2e8f0; }
+
+    .filters { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .filter-btn {
+      background: transparent;
+      border: 1px solid #2d3748;
+      color: #718096;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .filter-btn.active-filter { background: #2d3748; color: #e2e8f0; border-color: #4a5568; }
+
+    .user-grid { display: grid; gap: 10px; }
+
+    .user-card {
+      background: #161b2e;
+      border: 1px solid #2d3748;
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      align-items: center;
+      gap: 16px;
+      transition: all 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+    .user-card.is-you    { border-color: #4a5568; background: #1a2040; }
+    .user-card.exposed   { border-color: #742424; cursor: pointer; background: #1a0d0d; }
+    .user-card.exposed::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(252,129,129,0.04), transparent);
+      pointer-events: none;
+    }
+    .user-card.exposed:hover {
+      border-color: #fc8181;
+      box-shadow: 0 0 20px rgba(252,129,129,0.2);
+      transform: translateY(-1px);
+    }
+    .user-card.protected { border-color: #276749; }
+
+    .rank {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; font-weight: 700;
+      background: #2d3748; color: #718096;
+      flex-shrink: 0;
+    }
+    .rank.r1 { background: #744210; color: #fbb040; }
+    .rank.r2 { background: #2d3748; color: #e2e8f0; }
+    .rank.r3 { background: #3d2612; color: #ed8936; }
+
+    .user-info { min-width: 0; }
+    .user-name {
+      font-size: 0.95rem; font-weight: 600; color: #e2e8f0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .user-name .you-tag {
+      font-size: 0.65rem; background: #2d3748; color: #a0aec0;
+      padding: 1px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle;
+    }
+    .user-meta { font-size: 0.75rem; color: #4a5568; margin-top: 2px; }
+
+    .balances { display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
+    .bal-item { text-align: center; }
+    .bal-item .b-label { font-size: 0.6rem; color: #4a5568; text-transform: uppercase; }
+    .bal-item .b-val   { font-size: 0.9rem; font-weight: 700; }
+    .bal-item .b-val.codes  { color: #f6e05e; }
+    .bal-item .b-val.silver { color: #e2e8f0; }
+    .bal-item .b-val.gold   { color: #fbb040; }
+
+    .dog-icon {
+      font-size: 1.6rem; flex-shrink: 0; position: relative;
+    }
+    .dog-icon .dog-tooltip {
+      position: absolute; bottom: calc(100% + 6px); right: 0;
+      background: #1a202c; border: 1px solid #2d3748;
+      padding: 4px 10px; border-radius: 6px;
+      font-size: 0.7rem; white-space: nowrap; color: #a0aec0;
+      pointer-events: none; opacity: 0; transition: opacity 0.2s;
+    }
+    .dog-icon:hover .dog-tooltip { opacity: 1; }
+
+    .steal-banner {
+      position: absolute; top: 0; right: 0;
+      background: #742424; color: #fc8181;
+      font-size: 0.6rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1px;
+      padding: 3px 8px; border-bottom-left-radius: 8px;
+    }
+
+    /* ── Action Modal ─────────────────────────────────────────── */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 100;
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px;
+      backdrop-filter: blur(4px);
+      opacity: 0; pointer-events: none; transition: opacity 0.25s;
+    }
+    .modal-backdrop.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: #1a1f38; border: 1px solid #2d3748; border-radius: 18px;
+      padding: 28px; max-width: 440px; width: 100%;
+      transform: scale(0.95); transition: transform 0.25s;
+    }
+    .modal-backdrop.open .modal { transform: scale(1); }
+    .modal-title    { font-size: 1.1rem; font-weight: 700; color: #fc8181; margin-bottom: 6px; }
+    .modal-subtitle { font-size: 0.85rem; color: #718096; margin-bottom: 20px; }
+
+    .modal-target-card {
+      background: #0d0d14; border: 1px solid #742424;
+      border-radius: 10px; padding: 14px 18px; margin-bottom: 22px;
+    }
+    .modal-target-name { font-size: 1rem; font-weight: 700; color: #e2e8f0; }
+    .modal-target-assets { display: flex; gap: 16px; margin-top: 10px; }
+    .modal-asset { text-align: center; }
+    .modal-asset .ma-label { font-size: 0.65rem; color: #4a5568; text-transform: uppercase; }
+    .modal-asset .ma-val   { font-size: 1.1rem; font-weight: 700; }
+    .modal-asset .ma-val.codes  { color: #f6e05e; }
+    .modal-asset .ma-val.silver { color: #e2e8f0; }
+    .modal-asset .ma-val.gold   { color: #fbb040; }
+
+    .modal-actions { display: flex; flex-direction: column; gap: 10px; }
+
+    .action-btn {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 18px; border-radius: 10px; border: 1px solid;
+      cursor: pointer; text-align: left; transition: all 0.2s;
+      background: transparent; width: 100%;
+    }
+    .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .action-btn .ab-icon  { font-size: 1.5rem; flex-shrink: 0; }
+    .action-btn .ab-text .ab-title { font-size: 0.9rem; font-weight: 600; }
+    .action-btn .ab-text .ab-desc  { font-size: 0.75rem; margin-top: 2px; opacity: 0.75; }
+
+    .action-btn.notify    { border-color: #4a5568; color: #a0aec0; }
+    .action-btn.notify:hover:not(:disabled)  { background: #2d3748; border-color: #718096; color: #e2e8f0; }
+    .action-btn.buy-dog   { border-color: #2d6a4f; color: #68d391; }
+    .action-btn.buy-dog:hover:not(:disabled) { background: #1a4731; border-color: #40916c; }
+    .action-btn.steal     { border-color: #742424; color: #fc8181; }
+    .action-btn.steal:hover:not(:disabled)   { background: #3d0000; border-color: #fc8181; box-shadow: 0 0 16px rgba(252,129,129,0.2); }
+
+    .modal-close {
+      margin-top: 16px; width: 100%;
+      background: transparent; border: 1px solid #2d3748;
+      color: #718096; padding: 10px; border-radius: 8px;
+      cursor: pointer; font-size: 0.85rem; transition: all 0.2s;
+    }
+    .modal-close:hover { border-color: #4a5568; color: #a0aec0; }
+
+    /* ── Toast ───────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: #1a202c; border: 1px solid #2d3748;
+      padding: 14px 18px; border-radius: 10px;
+      font-size: 0.875rem; color: #e2e8f0; max-width: 320px;
+      z-index: 200;
+      transform: translateY(20px); opacity: 0; transition: all 0.3s; pointer-events: none;
+    }
+    #toast.show    { transform: translateY(0); opacity: 1; }
+    #toast.success { border-color: #276749; color: #68d391; }
+    #toast.error   { border-color: #742424; color: #fc8181; }
+    #toast.info    { border-color: #2b4c7e; color: #63b3ed; }
+
+    /* ── Dead Dog Overlay ─────────────────────────────────────── */
+    #dead-dog-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.9); z-index: 50;
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 20px; text-align: center; padding: 24px;
+    }
+    #dead-dog-overlay.show { display: flex; }
+    #dead-dog-overlay h2 { font-size: 1.5rem; color: #fc8181; }
+    #dead-dog-overlay p  { color: #718096; max-width: 380px; }
+    .btn-buy-own-dog {
+      background: linear-gradient(135deg, #742424, #3d0000);
+      color: #fc8181; border: 1px solid #742424;
+      padding: 12px 28px; border-radius: 8px;
+      font-size: 0.95rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-buy-own-dog:hover { background: linear-gradient(135deg, #9b2c2c, #742424); }
+
+    /* Skeletons */
+    .skeleton {
+      background: linear-gradient(90deg, #1a1f38 25%, #232847 50%, #1a1f38 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 12px; height: 72px;
+    }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: #4a5568; }
+    .empty-state .e-icon { font-size: 3rem; margin-bottom: 12px; }
+
+    /* Real-time status dot */
+    .rt-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #4a5568; display: inline-block;
+      transition: background 0.3s;
+    }
+    .rt-dot.connected { background: #68d391; }
+    .rt-dot.polling   { background: #f6e05e; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────── -->
+<div class="qar-header">
+  <div>
+    <h1>🦁 Qarsan</h1>
+    <p>Asset Leaderboard · Feed your dog daily to protect your wealth</p>
+  </div>
+
+  <div class="header-controls">
+    <!-- Real-time status indicator -->
+    <span class="rt-dot" id="rt-dot" title="Connection status"></span>
+
+    <!-- Notification Bell -->
+    <div class="notif-wrap">
+      <button class="notif-btn" id="notif-btn" onclick="toggleNotifications()" title="Notifications">
+        🔔
+        <span class="notif-badge" id="notif-badge">0</span>
+      </button>
+
+      <div class="notif-panel" id="notif-panel">
+        <div class="notif-panel-header">
+          <span>🔔 Notifications</span>
+          <button class="notif-mark-read" onclick="markAllRead()">Mark all read</button>
+        </div>
+        <div class="notif-list" id="notif-list">
+          <div class="notif-empty">No notifications yet.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dog status pill -->
+    <span class="dog-pill sleeping" id="header-dog-pill">⏳ Loading...</span>
+  </div>
+</div>
+
+<!-- ── My Status ───────────────────────────────────────────────── -->
+<div class="my-status" id="my-status-card">
+  <div class="stat-block">
+    <div class="label">💛 Codes</div>
+    <div class="value codes" id="my-codes">—</div>
+  </div>
+  <div class="stat-block">
+    <div class="label">⚪ Silver</div>
+    <div class="value silver" id="my-silver">—</div>
+  </div>
+  <div class="stat-block">
+    <div class="label">🟡 Gold</div>
+    <div class="value gold" id="my-gold">—</div>
+  </div>
+  <div>
+    <button class="btn-feed" id="btn-feed-dog" onclick="feedDog()">
+      🦴 Feed Dog (10 codes)
+    </button>
+  </div>
+</div>
+
+<!-- ── Leaderboard ─────────────────────────────────────────────── -->
+<div class="leaderboard-wrap">
+  <div class="leaderboard-header">
+    <h2>👥 All Users</h2>
+    <button class="btn-refresh" id="btn-refresh" onclick="loadUsers()">↻ Refresh</button>
+  </div>
+
+  <div class="filters">
+    <button class="filter-btn active-filter" data-filter="all"       onclick="setFilter('all')">All</button>
+    <button class="filter-btn"               data-filter="exposed"   onclick="setFilter('exposed')">💀 Exposed</button>
+    <button class="filter-btn"               data-filter="protected" onclick="setFilter('protected')">🛡️ Protected</button>
+  </div>
+
+  <div class="user-grid" id="user-grid">
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+  </div>
+</div>
+
+<!-- ── Action Modal ────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="action-modal">
+  <div class="modal">
+    <div class="modal-title">💀 Exposed User Detected</div>
+    <div class="modal-subtitle">This user's guard dog has died. Choose your action:</div>
+
+    <div class="modal-target-card">
+      <div class="modal-target-name" id="modal-target-name">—</div>
+      <div class="modal-target-assets">
+        <div class="modal-asset">
+          <div class="ma-label">💛 Codes</div>
+          <div class="ma-val codes" id="modal-codes">0</div>
+        </div>
+        <div class="modal-asset">
+          <div class="ma-label">⚪ Silver</div>
+          <div class="ma-val silver" id="modal-silver">0</div>
+        </div>
+        <div class="modal-asset">
+          <div class="ma-label">🟡 Gold</div>
+          <div class="ma-val gold" id="modal-gold">0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="action-btn notify"  id="btn-modal-notify"  onclick="actionNotify()">
+        <span class="ab-icon">🔔</span>
+        <span class="ab-text">
+          <div class="ab-title">Notify This User</div>
+          <div class="ab-desc">Send them a warning to buy a new dog. Free action.</div>
+        </span>
+      </button>
+
+      <button class="action-btn buy-dog" id="btn-modal-buydog" onclick="actionBuyDog()">
+        <span class="ab-icon">🐕</span>
+        <span class="ab-text">
+          <div class="ab-title">Buy a Dog for This User</div>
+          <div class="ab-desc">Costs you 1000 codes. Their dog revives → ACTIVE. Benevolent move.</div>
+        </span>
+      </button>
+
+      <button class="action-btn steal"   id="btn-modal-steal"  onclick="actionSteal()">
+        <span class="ab-icon">💀</span>
+        <span class="ab-text">
+          <div class="ab-title">Qarsan — Steal Everything</div>
+          <div class="ab-desc">Take ALL their assets (codes + silver + gold). Rate-limited: 1 steal / 10 min.</div>
+        </span>
+      </button>
+    </div>
+
+    <button class="modal-close" onclick="closeModal()">✕ Cancel</button>
+  </div>
+</div>
+
+<!-- ── Dead Dog Overlay ────────────────────────────────────────── -->
+<div id="dead-dog-overlay">
+  <div style="font-size:5rem">💀</div>
+  <h2>Your Watch-Dog Has Died</h2>
+  <p>Your guardian perished from starvation (3 days without feeding). All your assets are now exposed to theft. Buy a new dog immediately!</p>
+  <button class="btn-buy-own-dog" onclick="buyOwnDog()">🛒 Buy New Dog (1000 codes)</button>
+  <p style="font-size:0.75rem;color:#4a5568;margin-top:8px">You can still use Qarsan to steal from others while exposed.</p>
+  <button class="modal-close" style="max-width:200px;margin:0 auto"
+    onclick="document.getElementById('dead-dog-overlay').classList.remove('show')">
+    Continue Anyway
+  </button>
+</div>
+
+<!-- ── Toast ──────────────────────────────────────────────────── -->
+<div id="toast"></div>
+
+<!-- Socket.IO client (same server, path: /ws) -->
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+  // ── State ─────────────────────────────────────────────────────
+  let allUsers = [];
+  let currentUser = null;
+  let selectedTarget = null;
+  let activeFilter = 'all';
+  let socket = null;
+  let notifPanelOpen = false;
+
+  // ── Init ──────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    loadUsers();
+    loadNotifications();
+    initSocket();
+    // Close notif panel on outside click
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.notif-wrap')) closeNotifications();
+    });
+  });
+
+  // ── Socket.IO Real-Time ───────────────────────────────────────
+  function initSocket() {
+    try {
+      if (typeof io === 'undefined') return; // socket.io not loaded
+
+      // Try to get JWT from common storage keys
+      const token = localStorage.getItem('jwt_token')
+                 || localStorage.getItem('token')
+                 || localStorage.getItem('auth_token')
+                 || sessionStorage.getItem('token')
+                 || null;
+
+      socket = io({
+        path: '/ws',
+        auth: token ? { token } : {},
+        reconnectionAttempts: 3,
+        timeout: 5000
+      });
+
+      socket.on('connect', () => {
+        document.getElementById('rt-dot').className = 'rt-dot connected';
+        if (currentUser) subscribeUserEvents(currentUser.id);
+      });
+
+      socket.on('connect_error', () => {
+        // Auth failed or server unavailable — degrade to polling silently
+        socket.close();
+        socket = null;
+        document.getElementById('rt-dot').className = 'rt-dot polling';
+      });
+
+      socket.on('disconnect', () => {
+        document.getElementById('rt-dot').className = 'rt-dot';
+      });
+
+      // Global leaderboard update (fires after any steal/buy-dog)
+      socket.on('qarsan:leaderboard-update', () => {
+        loadUsers();
+      });
+
+    } catch (_) {
+      // Socket.IO not available — polling-only mode
+    }
+  }
+
+  function subscribeUserEvents(userId) {
+    if (!socket) return;
+
+    // Someone stole from ME
+    socket.off(`qarsan:stolen:${userId}`);
+    socket.on(`qarsan:stolen:${userId}`, (data) => {
+      toast(`💀 You were Qarsan'd! ${data.stolenSummary} stolen!`, 'error', 10000);
+      loadUsers();
+      loadNotifications();
+      // Show dead-dog overlay since their dog must have been dead
+      document.getElementById('dead-dog-overlay').classList.add('show');
+    });
+
+    // MY balance went up (I stole or received a dog gift)
+    socket.off(`qarsan:balance-update:${userId}`);
+    socket.on(`qarsan:balance-update:${userId}`, () => {
+      loadUsers();
+    });
+
+    // New notification for ME
+    socket.off(`qarsan:notification:${userId}`);
+    socket.on(`qarsan:notification:${userId}`, (data) => {
+      toast(`🔔 ${data.message}`, data.type === 'WARNING' ? 'error' : 'success', 7000);
+      loadNotifications();
+    });
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────
+  function toast(msg, type = 'info', duration = 4000) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `show ${type}`;
+    clearTimeout(el._tid);
+    el._tid = setTimeout(() => { el.className = ''; }, duration);
+  }
+
+  function fmtNum(n) {
+    if (n == null || n === '') return '0';
+    const num = parseInt(n, 10);
+    if (isNaN(num)) return '0';
+    if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';
+    if (num >= 1_000)     return (num / 1_000).toFixed(1) + 'K';
+    return num.toLocaleString();
+  }
+
+  function timeAgo(dateStr) {
+    if (!dateStr) return '';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  }
+
+  function dogEmoji(state) {
+    if (state === 'ACTIVE')   return '🐕';
+    if (state === 'SLEEPING') return '😴';
+    if (state === 'DEAD')     return '💀';
+    return '❓';
+  }
+
+  function dogLabel(state, hours) {
+    if (state === 'ACTIVE')   return `Protected (fed ${hours}h ago)`;
+    if (state === 'SLEEPING') return `Sleeping — at risk (${hours}h ago)`;
+    if (state === 'DEAD')     return `Dead — fully exposed! (${hours}h without food)`;
+    return 'Unknown';
+  }
+
+  function setFilter(f) {
+    activeFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => {
+      b.classList.toggle('active-filter', b.dataset.filter === f);
+    });
+    renderUsers();
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Load users ────────────────────────────────────────────────
+  async function loadUsers() {
+    const btn = document.getElementById('btn-refresh');
+    btn.textContent = '↻';
+
+    try {
+      const res  = await fetch('/api/watchdog/users', { credentials: 'include' });
+      const data = await res.json();
+
+      if (!data.success) throw new Error(data.error || 'Failed to load users');
+
+      allUsers = data.users || [];
+      currentUser = allUsers.find(u => u.isCurrentUser) || null;
+
+      if (currentUser) {
+        document.getElementById('my-codes').textContent  = fmtNum(currentUser.balances.codes);
+        document.getElementById('my-silver').textContent = fmtNum(currentUser.balances.silver);
+        document.getElementById('my-gold').textContent   = fmtNum(currentUser.balances.gold);
+        updateDogPill(currentUser.dogState);
+
+        if (currentUser.dogState === 'DEAD') {
+          document.getElementById('dead-dog-overlay').classList.add('show');
+        }
+
+        const feedBtn = document.getElementById('btn-feed-dog');
+        if (currentUser.dogState === 'DEAD') {
+          feedBtn.disabled = true;
+          feedBtn.textContent = '💀 Dog Dead — Buy New Dog';
+          feedBtn.onclick = buyOwnDog;
+        } else {
+          feedBtn.disabled = false;
+          feedBtn.textContent = '🦴 Feed Dog (10 codes)';
+          feedBtn.onclick = feedDog;
+        }
+
+        // Subscribe to socket events now we know the user ID
+        if (socket?.connected) subscribeUserEvents(currentUser.id);
+      }
+
+      renderUsers();
+
+    } catch (err) {
+      toast('❌ ' + err.message, 'error');
+      document.getElementById('user-grid').innerHTML =
+        `<div class="empty-state"><div class="e-icon">⚠️</div><div>${err.message}</div></div>`;
+    } finally {
+      btn.textContent = '↻ Refresh';
+    }
+  }
+
+  // ── Render leaderboard ────────────────────────────────────────
+  function renderUsers() {
+    const grid = document.getElementById('user-grid');
+
+    let filtered = allUsers;
+    if (activeFilter === 'exposed')   filtered = allUsers.filter(u => u.isExposed);
+    if (activeFilter === 'protected') filtered = allUsers.filter(u => u.isProtected);
+
+    if (filtered.length === 0) {
+      grid.innerHTML = `<div class="empty-state"><div class="e-icon">🔍</div><div>No users match this filter.</div></div>`;
+      return;
+    }
+
+    grid.innerHTML = filtered.map((user, idx) => {
+      const rank    = idx + 1;
+      const rankCls = rank === 1 ? 'r1' : rank === 2 ? 'r2' : rank === 3 ? 'r3' : '';
+      const isExposed = user.isExposed;
+      const cardCls = [
+        'user-card',
+        user.isCurrentUser ? 'is-you' : '',
+        isExposed ? 'exposed' : '',
+        user.isProtected ? 'protected' : ''
+      ].filter(Boolean).join(' ');
+      const hours = user.hoursSinceLastFeed ? parseFloat(user.hoursSinceLastFeed).toFixed(0) : '?';
+
+      return `
+        <div class="${cardCls}" ${isExposed && !user.isCurrentUser ? `onclick="openModal('${user.id}')"` : ''}>
+          ${isExposed && !user.isCurrentUser ? '<div class="steal-banner">⚠️ Exposed</div>' : ''}
+          <div class="rank ${rankCls}">${rank}</div>
+          <div class="user-info">
+            <div class="user-name">
+              ${escHtml(user.displayName)}
+              ${user.isCurrentUser ? '<span class="you-tag">YOU</span>' : ''}
+            </div>
+            <div class="user-meta">${dogEmoji(user.dogState)} ${dogLabel(user.dogState, hours)}</div>
+          </div>
+          <div class="balances">
+            <div class="bal-item">
+              <div class="b-label">💛 Codes</div>
+              <div class="b-val codes">${fmtNum(user.balances.codes)}</div>
+            </div>
+            <div class="bal-item">
+              <div class="b-label">⚪ Silver</div>
+              <div class="b-val silver">${fmtNum(user.balances.silver)}</div>
+            </div>
+            <div class="bal-item">
+              <div class="b-label">🟡 Gold</div>
+              <div class="b-val gold">${fmtNum(user.balances.gold)}</div>
+            </div>
+          </div>
+          <div class="dog-icon">
+            ${dogEmoji(user.dogState)}
+            <div class="dog-tooltip">${escHtml(dogLabel(user.dogState, hours))}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ── Notifications ─────────────────────────────────────────────
+  async function loadNotifications() {
+    try {
+      const res  = await fetch('/api/watchdog/notifications', { credentials: 'include' });
+      const data = await res.json();
+      if (!data.success) return;
+
+      const unread = data.unreadCount || 0;
+      const badge  = document.getElementById('notif-badge');
+      const btn    = document.getElementById('notif-btn');
+
+      badge.textContent = unread > 9 ? '9+' : String(unread);
+      badge.classList.toggle('show', unread > 0);
+      btn.classList.toggle('has-unread', unread > 0);
+
+      renderNotifications(data.notifications || []);
+    } catch (_) {}
+  }
+
+  function renderNotifications(items) {
+    const list = document.getElementById('notif-list');
+    if (!items.length) {
+      list.innerHTML = '<div class="notif-empty">No notifications yet.</div>';
+      return;
+    }
+    list.innerHTML = items.map(n => `
+      <div class="notif-item ${n.seen ? '' : 'unread'}">
+        <div class="notif-msg">${escHtml(n.message)}</div>
+        <div class="notif-time">${timeAgo(n.created_at)}</div>
+      </div>
+    `).join('');
+  }
+
+  function toggleNotifications() {
+    notifPanelOpen = !notifPanelOpen;
+    document.getElementById('notif-panel').classList.toggle('open', notifPanelOpen);
+    if (notifPanelOpen) loadNotifications();
+  }
+
+  function closeNotifications() {
+    notifPanelOpen = false;
+    document.getElementById('notif-panel').classList.remove('open');
+  }
+
+  async function markAllRead() {
+    try {
+      await fetch('/api/watchdog/notifications/read-all', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      loadNotifications();
+    } catch (_) {}
+  }
+
+  // ── Modal ──────────────────────────────────────────────────────
+  function openModal(userId) {
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) return;
+    if (!user.isExposed) {
+      toast('🛡️ This user is protected — their dog is alive.', 'info');
+      return;
+    }
+
+    selectedTarget = user;
+    document.getElementById('modal-target-name').textContent = user.displayName;
+    document.getElementById('modal-codes').textContent  = fmtNum(user.balances.codes);
+    document.getElementById('modal-silver').textContent = fmtNum(user.balances.silver);
+    document.getElementById('modal-gold').textContent   = fmtNum(user.balances.gold);
+
+    ['btn-modal-notify','btn-modal-buydog','btn-modal-steal'].forEach(id => {
+      document.getElementById(id).disabled = false;
+    });
+    document.getElementById('btn-modal-notify').querySelector('.ab-title').textContent = 'Notify This User';
+    document.getElementById('btn-modal-buydog').querySelector('.ab-title').textContent = 'Buy a Dog for This User';
+    document.getElementById('btn-modal-steal').querySelector('.ab-title').textContent  = 'Qarsan — Steal Everything';
+
+    document.getElementById('action-modal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('action-modal').classList.remove('open');
+    selectedTarget = null;
+  }
+
+  document.getElementById('action-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  // ── Actions ───────────────────────────────────────────────────
+  async function actionNotify() {
+    if (!selectedTarget) return;
+    const btn = document.getElementById('btn-modal-notify');
+    btn.disabled = true;
+    btn.querySelector('.ab-title').textContent = '⏳ Sending...';
+
+    try {
+      const res  = await fetch(`/api/watchdog/notify/${selectedTarget.id}`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        toast('🔔 Notification sent to ' + selectedTarget.displayName + '!', 'success');
+        closeModal();
+      } else {
+        toast('❌ ' + (data.message || data.error), 'error');
+        btn.disabled = false;
+        btn.querySelector('.ab-title').textContent = 'Notify This User';
+      }
+    } catch (err) {
+      toast('❌ ' + err.message, 'error');
+      btn.disabled = false;
+      btn.querySelector('.ab-title').textContent = 'Notify This User';
+    }
+  }
+
+  async function actionBuyDog() {
+    if (!selectedTarget) return;
+    const btn = document.getElementById('btn-modal-buydog');
+    btn.disabled = true;
+    btn.querySelector('.ab-title').textContent = '⏳ Processing (1000 codes)...';
+
+    try {
+      const res  = await fetch(`/api/watchdog/buy-dog-for/${selectedTarget.id}`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        toast('🐕 You bought a new dog for ' + selectedTarget.displayName + '! 1000 codes deducted.', 'success', 5000);
+        closeModal();
+        loadUsers();
+      } else {
+        toast('❌ ' + (data.message || data.error), 'error');
+        btn.disabled = false;
+        btn.querySelector('.ab-title').textContent = 'Buy a Dog for This User';
+      }
+    } catch (err) {
+      toast('❌ ' + err.message, 'error');
+      btn.disabled = false;
+      btn.querySelector('.ab-title').textContent = 'Buy a Dog for This User';
+    }
+  }
+
+  async function actionSteal() {
+    if (!selectedTarget) return;
+
+    const confirmed = confirm(
+      `⚠️ QARSAN — You are about to steal ALL assets from "${selectedTarget.displayName}".\n\n` +
+      `This includes:\n` +
+      `• ${selectedTarget.balances.codes} codes\n` +
+      `• ${selectedTarget.balances.silver} silver bars\n` +
+      `• ${selectedTarget.balances.gold} gold bars\n\n` +
+      `Rate-limit: 1 steal per 10 minutes.\nThis action is IRREVERSIBLE. Proceed?`
+    );
+    if (!confirmed) return;
+
+    const btn = document.getElementById('btn-modal-steal');
+    btn.disabled = true;
+    btn.querySelector('.ab-title').textContent = '⏳ Executing Qarsan...';
+
+    try {
+      const res  = await fetch(`/api/watchdog/steal/${selectedTarget.id}`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        toast('💀 ' + data.message, 'success', 7000);
+        closeModal();
+        loadUsers();
+      } else {
+        toast('❌ ' + (data.message || data.error), 'error');
+        btn.disabled = false;
+        btn.querySelector('.ab-title').textContent = 'Qarsan — Steal Everything';
+      }
+    } catch (err) {
+      toast('❌ ' + err.message, 'error');
+      btn.disabled = false;
+      btn.querySelector('.ab-title').textContent = 'Qarsan — Steal Everything';
+    }
+  }
+
+  // ── Dog actions ───────────────────────────────────────────────
+  async function feedDog() {
+    const btn = document.getElementById('btn-feed-dog');
+    btn.disabled = true;
+    btn.textContent = '⏳ Feeding...';
+
+    try {
+      const res  = await fetch('/api/watchdog/feed', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idempotencyKey: `feed_${Date.now()}` })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        toast(`🦴 Dog fed! ${data.cost} codes deducted. Dog is now ACTIVE 🐕`, 'success', 4000);
+        loadUsers();
+      } else if (data.error === 'ALREADY_FED') {
+        toast(`✅ ${data.message}`, 'info');
+      } else if (data.error === 'DOG_DEAD') {
+        toast('💀 ' + data.message, 'error');
+        document.getElementById('dead-dog-overlay').classList.add('show');
+      } else {
+        toast('❌ ' + (data.message || data.error), 'error');
+      }
+    } catch (err) {
+      toast('❌ ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🦴 Feed Dog (10 codes)';
+    }
+  }
+
+  async function buyOwnDog() {
+    const confirmed = confirm('Buy a new dog for 1000 codes? This will protect your assets.');
+    if (!confirmed) return;
+
+    try {
+      const res  = await fetch('/api/watchdog/buy-dog', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        toast('🐕 New dog purchased! Your assets are now protected.', 'success', 5000);
+        document.getElementById('dead-dog-overlay').classList.remove('show');
+        loadUsers();
+      } else {
+        toast('❌ ' + (data.message || data.error), 'error');
+      }
+    } catch (err) {
+      toast('❌ ' + err.message, 'error');
+    }
+  }
+
+  // ── Dog pill ──────────────────────────────────────────────────
+  function updateDogPill(state) {
+    const pill = document.getElementById('header-dog-pill');
+    if (state === 'ACTIVE') {
+      pill.className = 'dog-pill active';
+      pill.textContent = '🐕 Dog Active — Protected';
+    } else if (state === 'SLEEPING') {
+      pill.className = 'dog-pill sleeping';
+      pill.textContent = '😴 Dog Sleeping — Vulnerable';
+    } else if (state === 'DEAD') {
+      pill.className = 'dog-pill dead';
+      pill.textContent = '💀 Dog Dead — EXPOSED!';
+    } else {
+      pill.className = 'dog-pill sleeping';
+      pill.textContent = '⏳ Loading...';
+    }
+  }
+
+  // Auto-refresh: leaderboard every 60s, notifications every 30s
+  setInterval(loadUsers, 60_000);
+  setInterval(loadNotifications, 30_000);
+</script>
+</body>
+</html>

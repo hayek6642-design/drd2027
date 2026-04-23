@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assets Central Core (ACC) - النظام المركزي للأصول</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .acc-header {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .acc-header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #00d4ff, #7b2cbf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .acc-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .acc-dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .acc-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .acc-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .acc-card h3 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .acc-asset-display {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+
+        .acc-asset-item {
+            text-align: center;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 15px;
+            min-width: 80px;
+        }
+
+        .acc-asset-icon {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .acc-asset-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            display: block;
+        }
+
+        .acc-asset-label {
+            font-size: 0.9em;
+            color: #888;
+        }
+
+        .acc-services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .acc-service-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .acc-service-card:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: #00d4ff;
+        }
+
+        .acc-service-card.active {
+            border-color: #4ade80;
+            background: rgba(74, 222, 128, 0.1);
+        }
+
+        .acc-service-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .acc-service-icon {
+            font-size: 2em;
+        }
+
+        .acc-service-name {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .acc-service-status {
+            font-size: 0.85em;
+            color: #888;
+        }
+
+        .acc-iframe-container {
+            width: 100%;
+            height: 600px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            margin-top: 30px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .acc-iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .acc-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .acc-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .acc-transaction-log {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .acc-log-item {
+            padding: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.9em;
+        }
+
+        .acc-log-item:last-child {
+            border-bottom: none;
+        }
+
+        .acc-log-time {
+            color: #888;
+            font-size: 0.8em;
+        }
+
+        .acc-log-success { color: #4ade80; }
+        .acc-log-error { color: #f87171; }
+        .acc-log-pending { color: #fbbf24; }
+
+        .acc-btn {
+            background: linear-gradient(135deg, #00d4ff, #7b2cbf);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .acc-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(0,212,255,0.4);
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            z-index: 10000;
+        }
+
+        .status-connected {
+            background: rgba(74, 222, 128, 0.2);
+            color: #4ade80;
+            border: 1px solid #4ade80;
+        }
+
+        .status-disconnected {
+            background: rgba(248, 113, 113, 0.2);
+            color: #f87171;
+            border: 1px solid #f87171;
+        }
+    </style>
+</head>
+<body>
+    <div id="connection-status" class="connection-status status-disconnected">
+        غير متصل
+    </div>
+
+    <header class="acc-header">
+        <h1>🏛️ Assets Central Core</h1>
+        <p>النظام المركزي لإدارة وتوزيع الأصول عبر جميع الخدمات</p>
+    </header>
+
+    <div class="acc-container">
+        <!-- Dashboard -->
+        <div class="acc-dashboard">
+            <div class="acc-card">
+                <h3>💰 الأصول الحالية</h3>
+                <div class="acc-asset-display" id="main-assets">
+                    <div class="acc-asset-item">
+                        <span class="acc-asset-icon">🔐</span>
+                        <span class="acc-asset-value" id="codes-count">0</span>
+                        <span class="acc-asset-label">رموز</span>
+                    </div>
+                    <div class="acc-asset-item">
+                        <span class="acc-asset-icon">🥈</span>
+                        <span class="acc-asset-value" id="silver-count">0</span>
+                        <span class="acc-asset-label">فضة</span>
+                    </div>
+                    <div class="acc-asset-item">
+                        <span class="acc-asset-icon">🥇</span>
+                        <span class="acc-asset-value" id="gold-count">0</span>
+                        <span class="acc-asset-label">ذهب</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="acc-card">
+                <h3>📊 إحصائيات سريعة</h3>
+                <div id="quick-stats">
+                    <p>الخدمات النشطة: <span id="active-services">0</span></p>
+                    <p>المعاملات اليوم: <span id="daily-transactions">0</span></p>
+                    <p>آخر مزامنة: <span id="last-sync">--</span></p>
+                </div>
+            </div>
+
+            <div class="acc-card">
+                <h3>📝 سجل المعاملات</h3>
+                <div class="acc-transaction-log" id="transaction-log">
+                    <div class="acc-log-item">لا توجد معاملات حديثة</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Services Grid -->
+        <h2 style="margin-bottom: 20px;">الخدمات المتصلة</h2>
+        <div class="acc-services-grid" id="services-grid">
+            <div class="acc-service-card" data-service="pebalaash" onclick="loadService('pebalaash')">
+                <div class="acc-service-header">
+                    <span class="acc-service-icon">🔄</span>
+                    <div>
+                        <div class="acc-service-name">ببلاش</div>
+                        <div class="acc-service-status">المقايضة بالأصول</div>
+                    </div>
+                </div>
+                <div class="acc-service-assets" id="pebalaash-assets">
+                    🥈 <span>0</span>
+                </div>
+            </div>
+
+            <div class="acc-service-card" data-service="farragna" onclick="loadService('farragna')">
+                <div class="acc-service-header">
+                    <span class="acc-service-icon">❤️</span>
+                    <div>
+                        <div class="acc-service-name">فرagna</div>
+                        <div class="acc-service-status">الإعجابات والتفاعل</div>
+                    </div>
+                </div>
+                <div class="acc-service-assets" id="farragna-assets">
+                    🥈 <span>0</span>
+                </div>
+            </div>
+
+            <div class="acc-service-card" data-service="battalooda" onclick="loadService('battalooda')">
+                <div class="acc-service-header">
+                    <span class="acc-service-icon">🎮</span>
+                    <div>
+                        <div class="acc-service-name">بتالودة</div>
+                        <div class="acc-service-status">الألعاب والمكاسب</div>
+                    </div>
+                </div>
+                <div class="acc-service-assets" id="battalooda-assets">
+                    🥈 <span>0</span>
+                </div>
+            </div>
+
+            <div class="acc-service-card" data-service="settaxtes3a" onclick="loadService('settaxtes3a')">
+                <div class="acc-service-header">
+                    <span class="acc-service-icon">⚡</span>
+                    <div>
+                        <div class="acc-service-name">ستةxتلاتة</div>
+                        <div class="acc-service-status">المزادات والمزايدات</div>
+                    </div>
+                </div>
+                <div class="acc-service-assets" id="settaxtes3a-assets">
+                    🥇 <span>0</span>
+                </div>
+            </div>
+
+            <div class="acc-service-card" data-service="safecode" onclick="loadService('safecode')">
+                <div class="acc-service-header">
+                    <span class="acc-service-icon">🔐</span>
+                    <div>
+                        <div class="acc-service-name">SafeCode</div>
+                        <div class="acc-service-status">إدارة الأصول الرئيسية</div>
+                    </div>
+                </div>
+                <div class="acc-service-assets" id="safecode-assets">
+                    🔐 <span>0</span> | 🥈 <span>0</span> | 🥇 <span>0</span>
+                </div>
+            </div>
+
+            <div class="acc-service-card" data-service="games" onclick="loadService('games')">
+                <div class="acc-service-header">
+                    <span class="acc-service-icon">🎯</span>
+                    <div>
+                        <div class="acc-service-name">Games Centre</div>
+                        <div class="acc-service-status">مركز الألعاب</div>
+                    </div>
+                </div>
+                <div class="acc-service-assets" id="games-assets">
+                    🥈 <span>0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Service Iframe Container -->
+        <div class="acc-iframe-container" id="service-container" style="display: none;">
+            <div class="acc-loading" id="service-loading">
+                <div class="acc-spinner"></div>
+                <p>جاري تحميل الخدمة...</p>
+            </div>
+            <iframe id="service-iframe" style="display: none;"></iframe>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="acc-client.js"></script>
+    <script src="asset-mirror.js"></script>
+    <script src="transaction-gateway.js"></script>
+    <script src="service-bridge-base.js"></script>
+    <script src="bridges/pebalaash-bridge.js"></script>
+    <script src="bridges/farragna-bridge.js"></script>
+    <script src="bridges/battalooda-bridge.js"></script>
+    <script src="bridges/safecode-bridge.js"></script>
+
+    <script>
+        // Initialize ACC
+        const userId = localStorage.getItem('user_id') || 'user_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('user_id', userId);
+
+        const acc = ACCClient.init({
+            userId: userId,
+            serverUrl: 'ws://localhost:3999',
+            httpUrl: 'http://localhost:3999/acc'
+        });
+
+        const mirror = new AssetMirror();
+        const gateway = new TransactionGateway(acc);
+
+        // Register bridges
+        const bridges = {
+            pebalaash: new PebalaashBridge(),
+            farragna: new FarragnaBridge(),
+            battalooda: new BattaloodaBridge(),
+            safecode: new SafeCodeBridge()
+        };
+
+        Object.entries(bridges).forEach(([name, bridge]) => {
+            acc.registerBridge(name, bridge);
+        });
+
+        // UI Updates
+        acc.on('connected', () => {
+            document.getElementById('connection-status').textContent = 'متصل';
+            document.getElementById('connection-status').className = 'connection-status status-connected';
+        });
+
+        acc.on('assetsUpdated', (assets) => {
+            updateDashboard(assets);
+            updateServiceCards(assets);
+        });
+
+        function updateDashboard(assets) {
+            document.getElementById('codes-count').textContent = assets.codes_count || 0;
+            document.getElementById('silver-count').textContent = assets.silver_balance || 0;
+            document.getElementById('gold-count').textContent = assets.gold_balance || 0;
+            document.getElementById('last-sync').textContent = new Date().toLocaleTimeString();
+        }
+
+        function updateServiceCards(assets) {
+            // Update each service card with current assets
+            const pebalaashAssets = document.querySelector('#pebalaash-assets span');
+            if (pebalaashAssets) pebalaashAssets.textContent = assets.silver_balance || 0;
+            
+            const farragnaAssets = document.querySelector('#farragna-assets span');
+            if (farragnaAssets) farragnaAssets.textContent = assets.silver_balance || 0;
+            
+            const battaloodaAssets = document.querySelector('#battalooda-assets span');
+            if (battaloodaAssets) battaloodaAssets.textContent = assets.silver_balance || 0;
+            
+            const settaAssets = document.querySelector('#settaxtes3a-assets span');
+            if (settaAssets) settaAssets.textContent = assets.gold_balance || 0;
+            
+            const gamesAssets = document.querySelector('#games-assets span');
+            if (gamesAssets) gamesAssets.textContent = assets.silver_balance || 0;
+            
+            const safeCodeAssets = document.querySelectorAll('#safecode-assets span');
+            if (safeCodeAssets.length >= 3) {
+                safeCodeAssets[0].textContent = assets.codes_count || 0;
+                safeCodeAssets[1].textContent = assets.silver_balance || 0;
+                safeCodeAssets[2].textContent = assets.gold_balance || 0;
+            }
+        }
+
+        function loadService(serviceName) {
+            const container = document.getElementById('service-container');
+            const iframe = document.getElementById('service-iframe');
+            const loading = document.getElementById('service-loading');
+            
+            // Update active state
+            document.querySelectorAll('.acc-service-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            document.querySelector(`[data-service="${serviceName}"]`).classList.add('active');
+
+            // Show container
+            container.style.display = 'block';
+            loading.style.display = 'block';
+            iframe.style.display = 'none';
+
+            // Map service names to URLs (Adjusted for absolute paths or relative to root)
+            const serviceUrls = {
+                pebalaash: '/pebalaash.html',
+                farragna: '/farragna.html',
+                battalooda: '/battalooda.html',
+                settaxtes3a: '/setta.html',
+                safecode: '/safecode.html',
+                games: '/Games-Centre.html'
+            };
+
+            iframe.src = serviceUrls[serviceName] || '/' + serviceName + '.html';
+            
+            iframe.onload = () => {
+                loading.style.display = 'none';
+                iframe.style.display = 'block';
+                
+                // Inject ACC bridge into iframe
+                injectBridgeToIframe(iframe, serviceName);
+            };
+
+            // Scroll to service
+            container.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function injectBridgeToIframe(iframe, serviceName) {
+            try {
+                const iframeWindow = iframe.contentWindow;
+                
+                // Send initial assets
+                if (acc.getAssets()) {
+                    iframeWindow.postMessage({
+                        type: 'assets_update',
+                        data: acc.getAssets(),
+                        source: 'acc'
+                    }, '*');
+                }
+
+                // Listen for messages from iframe
+                window.addEventListener('message', (event) => {
+                    if (event.source !== iframeWindow) return;
+                    
+                    // Handle transaction requests from iframe
+                    if (event.data?.type?.includes('request')) {
+                        handleIframeRequest(event.data, serviceName);
+                    }
+                });
+
+            } catch (error) {
+                console.error('Failed to inject bridge:', error);
+            }
+        }
+
+        async function handleIframeRequest(data, serviceName) {
+            const { type, payload } = data;
+            
+            try {
+                let result;
+                
+                switch (type) {
+                    case 'transaction_request':
+                        result = await gateway.execute({
+                            ...payload,
+                            service: serviceName
+                        });
+                        break;
+                        
+                    case 'balance_request':
+                        result = { success: true, balance: acc.getBalance(payload.assetType) };
+                        break;
+                        
+                    default:
+                        result = { success: false, error: 'Unknown request type' };
+                }
+                
+                // Send response back to iframe
+                const iframe = document.getElementById('service-iframe');
+                if (iframe && iframe.contentWindow) {
+                    iframe.contentWindow.postMessage({
+                        type: type.replace('request', 'response'),
+                        data: result,
+                        source: 'acc'
+                    }, '*');
+                }
+                
+                // Log transaction
+                logTransaction(type, payload, result);
+                
+            } catch (error) {
+                console.error('Request handling error:', error);
+            }
+        }
+
+        function logTransaction(type, payload, result) {
+            const log = document.getElementById('transaction-log');
+            const item = document.createElement('div');
+            item.className = 'acc-log-item';
+            
+            const status = result.success ? 'success' : 'error';
+            const icon = result.success ? '✓' : '✗';
+            
+            item.innerHTML = `
+                <span class="acc-log-${status}">${icon} ${type}</span>
+                <span class="acc-log-time">${new Date().toLocaleTimeString()}</span>
+                <div style="font-size: 0.8em; opacity: 0.7;">${JSON.stringify(payload)}</div>
+            `;
+            
+            log.insertBefore(item, log.firstChild);
+            
+            // Keep only last 20 items
+            while (log.children.length > 20) {
+                log.removeChild(log.lastChild);
+            }
+        }
+
+        // Initialize mirrors for each service
+        Object.keys(bridges).forEach(serviceName => {
+            mirror.createMirror(serviceName, `body`, { compact: true });
+        });
+
+        // Global access
+        window.ACC = {
+            client: acc,
+            gateway,
+            mirror,
+            bridges
+        };
+    </script>
+</body>
+</html>

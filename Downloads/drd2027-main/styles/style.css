@@ -1,0 +1,741 @@
+/* External font imports removed to avoid CSP violations - using system fonts instead */
+
+/* Toggle Button Styles (migrated from yt-new.html) */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #f0f0f0;
+}
+
+.counter-container {
+    position: fixed;
+    text-align: center;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 600px;
+}
+
+.video-container {
+    margin-bottom: 20px;
+}
+
+.token-bar {
+    background: rgba(247, 242, 242, 0.123);
+    padding: 9px;
+    text-align: center;
+    border-radius: 5px;
+    position: relative;
+    overflow: hidden;
+    transition: background-color 0.5s, box-shadow 0.5s;
+    word-break: break-all;
+    margin-top: 10px;
+    font-size: 0.8em;
+    color: whitesmoke;
+}
+
+.barcode-container {
+    margin: 10px auto;
+    max-width: 300px;
+    z-index: 1003;
+    position: relative;
+}
+
+.counter-container {
+    border: 2px solid #333;
+    padding: 20px;
+    text-align: center;
+    max-width: 400px;
+    margin: 0 auto;
+    font-size: 24px;
+}
+
+#token-value {
+    font-family: monospace;
+    margin-bottom: 10px;
+    word-break: break-all;
+}
+
+/* Copy and Toggle Button Styles */
+#extra-button, #toggle-button {
+    position: absolute;
+    background-color: rgba(247, 242, 242, 0.075);
+    color: white;
+    border: none;
+    padding: 5px 12px;
+    margin-top: 50px;
+    margin-bottom: 0px;
+    font-size: 16px;
+    font-family: 'Digital-7', 'Courier New', monospace;
+    cursor: pointer;
+    border-radius: 5px;
+    z-index: 1002;
+}
+
+/* Extra Switch Button Styles - Match toggle button size and position */
+#extra-switch-absolute-container {
+    position: absolute;
+    bottom: 2px;
+    left: 5px;
+    z-index: 1002;
+}
+
+#extra-switch-container {
+    width: 90px;
+    height: 24px;
+    background-color: rgba(247, 242, 242, 0.075);
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+#extra-switch-track {
+    width: 100%;
+    height: 100%;
+    background: #222;
+    border-radius: 5px;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+#extra-switch-knob {
+    position: absolute;
+    top: 2px;
+    left: calc(50% - 10px);
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(120deg, #fffbe6 0%, #e0e0e0 100%);
+    border-radius: 50%;
+    box-shadow: 0 2px 8px #b0b0b0, 0 1px 0 #fff inset;
+    transition: all 0.3s cubic-bezier(.4,2,.6,1);
+    z-index: 2;
+    border: 2px solid #fffbe6;
+    cursor: pointer;
+}
+
+/* Silver mode - knob moves to left */
+#extra-switch-container.silver-mode #extra-switch-knob {
+    left: 2px;
+    background: linear-gradient(120deg, #c0c0c0 0%, #e8e8e8 100%);
+    box-shadow: 0 2px 8px #a0a0a0, 0 1px 0 #f0f0f0 inset;
+    border: 2px solid #c0c0c0;
+}
+
+#extra-switch-container.gold-mode #extra-switch-knob {
+    left: calc(100% - 22px);
+    background: linear-gradient(120deg, #ffe066 0%, #fff6b7 100%);
+    box-shadow: 0 2px 8px #d4af37, 0 1px 0 #fffbe6 inset;
+    border: 2px solid #ffe066;
+}
+
+#extra-switch-container.silver-mode {
+    background: linear-gradient(135deg, #e8e8e8 0%, #c0c0c0 50%, #a0a0a0 100%);
+    box-shadow: 
+        0 0 20px rgba(192, 192, 192, 0.8),
+        0 0 40px rgba(192, 192, 192, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    border: 1px solid #d0d0d0;
+    transition: all 0.3s ease;
+}
+
+#extra-switch-container.gold-mode {
+    background: linear-gradient(135deg, #fff6b7 0%, #ffe066 50%, #ffd700 100%);
+    box-shadow: 
+        0 0 20px rgba(255, 215, 0, 0.8),
+        0 0 40px rgba(255, 215, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    border: 1px solid #ffd700;
+    transition: all 0.3s ease;
+}
+
+/* Default state (center) */
+#extra-switch-container {
+    transition: all 0.3s ease;
+}
+
+#extra-button {
+    bottom: 2px;
+    left: 5px;
+}
+
+#toggle-button {
+    bottom: 2px;
+    right: 5px;
+}
+
+#toggle-button:hover {
+    animation: a 0.5s 1 linear;
+}
+
+@keyframes a {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+body {
+    font-family: sans-serif;
+    background-color: #000; /* Set background color to black */
+    color: #fff; /* Set text color to white for better contrast */
+}
+
+#video-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #000; /* Set background color to black */
+    color: #fff; /* Set text color to white for better contrast */
+}
+
+#counter-container {
+    display: block !important;
+    align-items: center;
+    justify-content: center;
+    position: fixed !important;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1002;
+    background-color: rgba(0, 0, 0, 0.8);
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+#watch-time-form {
+    margin-top: 20px;
+  }
+  
+  #new-time {
+    padding: 5px;
+    margin-right: 10px;
+  }
+  
+  button[type="submit"] {
+    padding: 5px 15px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+/* Theatre view styles */
+.theatre-view .game-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    z-index: 1000; /* Ensure it is on top */
+    background-color: #000; /* Set background color to black */
+}
+
+.theatre-view .game-container iframe {
+    width: 100%;
+    height: 100%;
+}
+
+/* Extra Mode Styles */
+
+.reward-notification {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.9);
+    border: 2px solid #00bfff;
+    border-radius: 10px;
+    padding: 20px;
+    z-index: 10000;
+    min-width: 300px;
+    box-shadow: 0 0 20px rgba(0, 191, 255, 0.5);
+    animation: rewardPopup 0.5s ease-out;
+}
+
+.reward-notification.hidden {
+    display: none;
+}
+
+.reward-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.reward-icon {
+    font-size: 2em;
+    animation: rewardPulse 1s ease-in-out infinite;
+}
+
+.reward-icon.silver {
+    color: #c0c0c0;
+}
+
+.reward-icon.gold {
+    color: #ffd700;
+}
+
+.reward-text {
+    flex: 1;
+}
+
+.reward-title {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #fff;
+}
+
+.reward-description {
+    font-size: 0.9em;
+    color: #ccc;
+}
+
+@keyframes rewardPopup {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+    100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+@keyframes rewardPulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+#extra-button.glow-active {
+    background: linear-gradient(45deg, #00bfff, #0080ff);
+    box-shadow: 0 0 20px rgba(0, 191, 255, 0.8);
+    animation: buttonGlow 2s ease-in-out infinite;
+}
+
+@keyframes buttonGlow {
+    0%, 100% {
+        box-shadow: 0 0 20px rgba(0, 191, 255, 0.8);
+    }
+    50% {
+        box-shadow: 0 0 30px rgba(0, 191, 255, 1);
+    }
+}
+
+
+
+/* Enhanced code display with markdown-like code block appearance */
+#code-display {
+    font-family: monospace;
+    background-color: rgba(0, 0, 0, 0.9);
+    color: #00ff00;
+    padding: 15px;
+    border-radius: 8px;
+    border: 2px solid #333;
+    text-align: center;
+    word-break: break-all;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+    white-space: pre-wrap;
+    line-height: 1.4;
+}
+
+#code-display pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #555;
+}
+
+#code-display code {
+    background: none;
+    color: inherit;
+    padding: 0;
+    border: none;
+    font-size: inherit;
+    line-height: 1.4;
+}
+
+#code-display.challenge-active {
+    background-color: rgba(255, 0, 0, 0.2);
+    border-color: rgba(255, 0, 0, 0.5);
+    color: #ff0000;
+    cursor: pointer;
+    animation: challengePulse 1s ease-in-out infinite;
+}
+
+@keyframes challengePulse {
+    0%, 100% {
+        background-color: rgba(255, 0, 0, 0.2);
+        box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+    }
+    50% {
+        background-color: rgba(255, 0, 0, 0.4);
+        box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
+    }
+}
+
+.pulse {
+    animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+/* App Content Styles */
+#app-content {
+    display: none;
+    text-align: center;
+    padding: 20px;
+}
+
+#app-content h1 {
+    margin-bottom: 20px;
+}
+
+#app-content #watch-time {
+    margin-top: 20px;
+    font-weight: bold;
+}
+
+#subscribe-button {
+    padding: 10px 20px;
+    background-color: #e44211;
+    border: none;
+    color: white;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block; /* Essential for width/height control */
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+#subscribe-button {
+    box-shadow: 3px 3px 7px rgba(0, 0, 0, 0.3);
+}
+
+#subscribe-button.connected {
+    background: linear-gradient(to bottom, #ff6666, #ff3333);
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+#subscribe-button.connected {
+    box-shadow: 0 0 12px rgba(255, 0, 0, 0.4);
+}
+
+.game-container {
+    position: relative;
+    width: 100%; /* Full width */
+    height: 100vh; /* Full height of the viewport */
+    overflow: hidden; /* Hide overflow */
+}
+
+.game-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    border: none; /* Remove border */
+}
+
+
+.login-form, .register-form {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1003; /* Ensure it's above the video and other elements */
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.login-form input, .register-form input {
+    display: block;
+    width: 100%;
+    margin: 10px 0;
+    padding: 10px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid #444;
+    color: white;
+}
+
+.login-form button, .register-form button {
+    background: #4CAF50;
+    width: 100%;
+    padding: 10px;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.login-form button:hover, .register-form button:hover {
+    background: #45a049;
+}
+/* POPPINS FONT */
+/* External font import removed to avoid CSP violations - using system fonts instead */
+
+/* ====== BASE ===== */
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* style.css */
+.example {
+    display: flex; /* Autoprefixer will add vendor prefixes like -webkit- */
+}
+
+/* Silver and Gold bars animation */
+@keyframes barAnimation {
+    0% { transform: scaleY(0); opacity: 0; }
+    100% { transform: scaleY(1); opacity: 1; }
+}
+
+.code-displayer.silver-bars::before,
+.code-displayer.gold-bars::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: 10px 100%;
+    animation: barAnimation 0.5s ease-out forwards;
+    z-index: 1;
+}
+
+.code-displayer.silver-bars::before {
+    background-image: repeating-linear-gradient(
+        to right,
+        rgba(192, 192, 192, 0.3) 0px,
+        rgba(192, 192, 192, 0.3) 5px,
+        transparent 5px,
+        transparent 10px
+    );
+}
+
+.code-displayer.gold-bars::before {
+    background-image: repeating-linear-gradient(
+        to right,
+        rgba(255, 215, 0, 0.3) 0px,
+        rgba(255, 215, 0, 0.3) 5px,
+        transparent 5px,
+        transparent 10px
+    );
+}
+
+/* 3D Bar Animation for Rewards */
+.bar-3d-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100px;
+  margin-top: 10px;
+}
+
+.bar-3d {
+  width: 220px;
+  height: 32px;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px 0 rgba(0,0,0,0.25), 0 1.5px 0 #fff inset;
+  position: relative;
+  margin-bottom: 10px;
+  background: linear-gradient(120deg, #e0e0e0 0%, #f8f8f8 40%, #b0b0b0 100%);
+  overflow: hidden;
+  transform: perspective(300px) rotateX(10deg);
+}
+
+.bar-3d.silver {
+  background: linear-gradient(120deg, #e0e0e0 0%, #f8f8f8 40%, #b0b0b0 100%);
+  border: 2px solid #b0b0b0;
+}
+
+.bar-3d.gold {
+  background: linear-gradient(120deg, #ffe066 0%, #fff6b7 40%, #d4af37 100%);
+  border: 2px solid #d4af37;
+}
+
+.bar-3d::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(90deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.1) 100%);
+  border-radius: 16px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.bar-3d-animate .bar-3d {
+  animation: barPulse 1.2s infinite alternate, barShine 2.5s linear infinite;
+}
+
+@keyframes barPulse {
+  0% { box-shadow: 0 4px 24px 0 rgba(0,0,0,0.25), 0 1.5px 0 #fff inset; }
+  100% { box-shadow: 0 8px 32px 0 rgba(0,0,0,0.35), 0 2.5px 0 #fff inset; }
+}
+
+@keyframes barShine {
+  0% { background-position: -220px 0; }
+  100% { background-position: 220px 0; }
+}
+
+.bar-label {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #222;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 8px #fff, 0 1px 0 #ccc;
+  margin-top: 2px;
+  text-align: center;
+}
+
+.bar-3d.gold + .bar-label {
+  color: #bfa100;
+  text-shadow: 0 2px 8px #fffbe6, 0 1px 0 #d4af37;
+}
+
+.bar-3d.silver + .bar-label {
+  color: #888;
+  text-shadow: 0 2px 8px #fff, 0 1px 0 #b0b0b0;
+}
+
+/* Extra Switch Button Styles */
+.extra-switch {
+  width: 120px;
+  height: 40px;
+  background: #222;
+  border-radius: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  display: flex;
+  align-items: center;
+  position: relative;
+  user-select: none;
+  cursor: pointer;
+}
+.switch-side {
+  width: 50%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3em;
+  font-weight: bold;
+  z-index: 1;
+  transition: color 0.2s;
+}
+.silver-side {
+  color: #b0b0b0;
+  background: linear-gradient(120deg, #e0e0e0 0%, #f8f8f8 40%, #b0b0b0 100%);
+  border-top-left-radius: 24px;
+  border-bottom-left-radius: 24px;
+}
+.gold-side {
+  color: #d4af37;
+  background: linear-gradient(120deg, #ffe066 0%, #fff6b7 40%, #d4af37 100%);
+  border-top-right-radius: 24px;
+  border-bottom-right-radius: 24px;
+}
+.switch-toggle {
+  position: absolute;
+  top: 4px;
+  left: 8px;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(120deg, #fffbe6 0%, #e0e0e0 100%);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px #b0b0b0, 0 1px 0 #fff inset;
+  transition: left 0.25s cubic-bezier(.4,2,.6,1), background 0.25s;
+  z-index: 2;
+  border: 2px solid #fffbe6;
+}
+.extra-switch.gold-mode .switch-toggle {
+  left: 80px;
+  background: linear-gradient(120deg, #ffe066 0%, #fff6b7 100%);
+  box-shadow: 0 2px 8px #d4af37, 0 1px 0 #fffbe6 inset;
+  border: 2px solid #ffe066;
+}
+.extra-switch.silver-mode .switch-toggle {
+  left: 8px;
+  background: linear-gradient(120deg, #fffbe6 0%, #e0e0e0 100%);
+  box-shadow: 0 2px 8px #b0b0b0, 0 1px 0 #fff inset;
+  border: 2px solid #fffbe6;
+}
+.extra-switch .switch-side {
+  opacity: 0.7;
+}
+.extra-switch.gold-mode .gold-side {
+  opacity: 1;
+  color: #bfa100;
+  font-size: 1.5em;
+}
+.extra-switch.silver-mode .silver-side {
+  opacity: 1;
+  color: #888;
+  font-size: 1.5em;
+}
+
+#extra-switch {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 1002;
+}
+
+/* Watch-dog sound indicator */
+#sound-button.watch-dog-active {
+  background: linear-gradient(45deg, #ff4444, #ff6666) !important;
+  box-shadow: 0 0 20px rgba(255, 68, 68, 0.8) !important;
+  animation: watchDogPulse 1s ease-in-out infinite !important;
+  border: 2px solid #ff0000 !important;
+}
+
+@keyframes watchDogPulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(255, 68, 68, 0.8);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 68, 68, 1);
+    transform: scale(1.05);
+  }
+}

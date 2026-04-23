@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎰 Cottery Admin Panel</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+    }
+
+    .header h1 {
+      font-size: 2em;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      opacity: 0.9;
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .card-title {
+      font-size: 1.3em;
+      font-weight: 600;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .input-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    input, textarea {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-family: inherit;
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      width: 100%;
+      font-size: 1em;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-small {
+      padding: 8px 16px;
+      font-size: 0.9em;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.85em;
+      font-weight: 600;
+    }
+
+    .status-success { background: #d4edda; color: #155724; }
+    .status-failed { background: #f8d7da; color: #721c24; }
+    .status-pending { background: #e2e3e5; color: #383d41; }
+
+    .table-responsive {
+      overflow-x: auto;
+      margin-top: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95em;
+    }
+
+    th {
+      background: #f5f5f5;
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 2px solid #ddd;
+    }
+
+    td {
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    tr:hover {
+      background: #fafafa;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 0.9em;
+      opacity: 0.9;
+      margin-bottom: 10px;
+    }
+
+    .stat-value {
+      font-size: 2em;
+      font-weight: bold;
+    }
+
+    .warning {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+
+    .error {
+      background: #f8d7da;
+      border-left: 4px solid #dc3545;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .success {
+      background: #d4edda;
+      border-left: 4px solid #28a745;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .code-block {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 0.85em;
+      overflow-x: auto;
+      word-break: break-all;
+      margin-top: 15px;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #eee;
+    }
+
+    .tab-button {
+      padding: 12px 20px;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-weight: 600;
+      color: #999;
+      transition: all 0.3s;
+    }
+
+    .tab-button.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>🎰 Cottery Admin Panel</h1>
+      <p>Execute draws, view audit logs, and manage fairness</p>
+    </div>
+
+    <!-- Messages -->
+    <div class="error" id="errorMsg"></div>
+    <div class="success" id="successMsg"></div>
+
+    <!-- Stats Overview -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px;">
+      <div class="stat-card">
+        <div class="stat-label">System Status</div>
+        <div class="stat-value" id="systemStatus">--</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Completed Draws</div>
+        <div class="stat-value" id="completedDraws">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg Entries/Round</div>
+        <div class="stat-value" id="avgEntries">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">System Fairness</div>
+        <div class="stat-value" id="fairnessScore">--</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="card">
+      <div class="tabs">
+        <button class="tab-button active" onclick="switchTab('execute')">⚙️ Execute Draw</button>
+        <button class="tab-button" onclick="switchTab('audit')">📋 Audit Log</button>
+        <button class="tab-button" onclick="switchTab('fairness')">⚖️ Fairness</button>
+      </div>
+
+      <!-- Execute Draw Tab -->
+      <div id="execute" class="tab-content active">
+        <div class="warning">
+          ⚠️ <strong>Warning:</strong> Drawing without proper authorization is a violation of fairness. All draws are logged and auditable.
+        </div>
+
+        <div class="input-group">
+          <div>
+            <label>Round Date (YYYY-MM-DD)</label>
+            <input type="date" id="roundDate" />
+          </div>
+          <div>
+            <label>Admin Secret (Verification)</label>
+            <input type="password" id="adminSecret" placeholder="Enter admin secret" />
+          </div>
+        </div>
+
+        <div>
+          <label>Optional Seed Override (Testing Only)</label>
+          <input type="text" id="seedOverride" placeholder="Leave empty for automatic seed" />
+          <p style="font-size: 0.85em; color: #666; margin-top: 8px;">Use SHA-256 hash for reproducible draws</p>
+        </div>
+
+        <button class="btn-primary" onclick="executeDraw()" style="margin-top: 20px;">
+          Execute Draw Now
+        </button>
+
+        <div id="drawResult" style="margin-top: 20px; display: none;">
+          <div class="code-block" id="drawResultContent"></div>
+        </div>
+      </div>
+
+      <!-- Audit Log Tab -->
+      <div id="audit" class="tab-content">
+        <div style="margin-bottom: 20px;">
+          <label>Filter by Status</label>
+          <select id="statusFilter" onchange="loadAuditLog()" style="padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+            <option value="">All</option>
+            <option value="success">Success Only</option>
+            <option value="failed">Failed Only</option>
+          </select>
+        </div>
+
+        <div class="table-responsive">
+          <table id="auditTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Round</th>
+                <th>Executed By</th>
+                <th>Winner</th>
+                <th>Prize</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="auditBody">
+              <tr>
+                <td colspan="7" style="text-align: center; color: #999;">Loading...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Fairness Tab -->
+      <div id="fairness" class="tab-content">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Pity Activations (Used)</div>
+            <div class="stat-value" id="pityUsed">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Avg User Weight</div>
+            <div class="stat-value" id="avgWeight">1.0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Fairness Score</div>
+            <div class="stat-value" id="fairnessValue">--</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">System Health</div>
+            <div class="stat-value" id="healthStatus">--</div>
+          </div>
+        </div>
+
+        <div style="margin-top: 20px;">
+          <h3>📊 Fairness Metrics</h3>
+          <div id="fairnessMetrics" style="margin-top: 15px; padding: 15px; background: #f5f5f5; border-radius: 5px; line-height: 1.8;"></div>
+        </div>
+
+        <div style="margin-top: 20px;">
+          <h3>📈 Weight Distribution</h3>
+          <div id="weightChart" style="margin-top: 15px; padding: 15px; background: #f5f5f5; border-radius: 5px; height: 300px;">
+            <div style="text-align: center; color: #999;">Chart will display here</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Details Card -->
+    <div class="card" style="margin-top: 20px;">
+      <div class="card-title">🔧 System Details</div>
+      
+      <div style="display: grid; gap: 15px;">
+        <div>
+          <h4>Database Tables</h4>
+          <ul id="tablesList" style="list-style-position: inside; color: #666;">
+            <li>Loading...</li>
+          </ul>
+        </div>
+
+        <div>
+          <h4>Draw Configuration</h4>
+          <ul style="list-style-position: inside; color: #666;">
+            <li>Codes per Entry: <strong>10</strong></li>
+            <li>Draw Time: <strong>23:00 UTC</strong></li>
+            <li>Cooldown Period: <strong>72 hours</strong></li>
+            <li>Min Weight: <strong>0.1 (10%)</strong></li>
+            <li>Pity Thresholds: <strong>10, 20, 30 losses</strong></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '/api/cottery';
+    let currentRoundDate = new Date().toISOString().split('T')[0];
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('roundDate').valueAsDate = new Date();
+      loadInitialData();
+      setInterval(() => {
+        loadSystemStats();
+        loadAuditLog();
+      }, 10000); // Update every 10 seconds
+    });
+
+    // ========== TAB SWITCHING ==========
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => {
+        el.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-button').forEach(el => {
+        el.classList.remove('active');
+      });
+
+      document.getElementById(tabName).classList.add('active');
+      event.target.classList.add('active');
+
+      // Load specific data
+      if (tabName === 'audit') loadAuditLog();
+      else if (tabName === 'fairness') loadFairnessData();
+    }
+
+    // ========== LOAD INITIAL DATA ==========
+    async function loadInitialData() {
+      await loadSystemStats();
+      await loadAuditLog();
+    }
+
+    // ========== SYSTEM STATS ==========
+    async function loadSystemStats() {
+      try {
+        const response = await fetch(`${API_BASE}/health`);
+        const health = await response.json();
+
+        document.getElementById('systemStatus').textContent = 
+          health.allTablesExist ? '✅ Healthy' : '⚠️ Schema Missing';
+
+        const fairnessResponse = await fetch(`${API_BASE}/fairness`);
+        const fairness = await fairnessResponse.json();
+
+        document.getElementById('completedDraws').textContent = fairness.totalRoundsCompleted || 0;
+        document.getElementById('avgEntries').textContent = fairness.avgEntriesPerRound || 0;
+        document.getElementById('fairnessScore').textContent = fairness.fairnessScore + '%';
+      } catch (error) {
+        console.error('Stats error:', error);
+      }
+    }
+
+    // ========== EXECUTE DRAW ==========
+    async function executeDraw() {
+      const roundDate = document.getElementById('roundDate').value;
+      const seedOverride = document.getElementById('seedOverride').value || null;
+
+      if (!roundDate) {
+        showError('Please select a round date');
+        return;
+      }
+
+      const btn = event.target;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loading"></span> Drawing...';
+
+      try {
+        const response = await fetch(`${API_BASE}/admin/execute-draw`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roundDate, seedOverride })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          showSuccess(`Draw successful! Winner: ${result.winner}, Prize: ${result.prize}`);
+          
+          document.getElementById('drawResult').style.display = 'block';
+          document.getElementById('drawResultContent').innerHTML = `
+            <strong>Draw Proof</strong>\n${result.proof}
+          `;
+
+          // Reload audit log
+          loadAuditLog();
+        } else {
+          showError(result.error || 'Draw failed');
+        }
+      } catch (error) {
+        showError(error.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Execute Draw Now';
+      }
+    }
+
+    // ========== AUDIT LOG ==========
+    async function loadAuditLog() {
+      try {
+        const response = await fetch(`${API_BASE}/admin/audit-log?limit=100`);
+        const logs = await response.json();
+
+        const filter = document.getElementById('statusFilter').value;
+        const filtered = filter ? logs.filter(l => l.status === filter) : logs;
+
+        const tbody = document.getElementById('auditBody');
+        if (filtered.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999;">No records found</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = filtered.map(log => `
+          <tr>
+            <td>${new Date(log.created_at).toLocaleString()}</td>
+            <td>${log.roundId}</td>
+            <td>${log.executed_by.substring(0, 8)}...</td>
+            <td>${log.winner_id ? log.winner_id.substring(0, 8) + '...' : '-'}</td>
+            <td>${log.prize_amount || '-'}</td>
+            <td><span class="status status-${log.status}">${log.status.toUpperCase()}</span></td>
+            <td>
+              <button class="btn-small" onclick="viewProof('${log.draw_seed}')">Proof</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (error) {
+        console.error('Audit log error:', error);
+      }
+    }
+
+    // ========== FAIRNESS DATA ==========
+    async function loadFairnessData() {
+      try {
+        const response = await fetch(`${API_BASE}/fairness`);
+        const fairness = await response.json();
+
+        document.getElementById('pityUsed').textContent = fairness.pityActivationsUsed || 0;
+        document.getElementById('avgWeight').textContent = (fairness.avgUserWeight || 1).toFixed(2);
+        document.getElementById('fairnessValue').textContent = fairness.fairnessScore + '%';
+        document.getElementById('healthStatus').textContent = fairness.systemHealth.toUpperCase();
+
+        document.getElementById('fairnessMetrics').innerHTML = `
+          <div>📊 Total Rounds Completed: <strong>${fairness.totalRoundsCompleted}</strong></div>
+          <div>📈 Average Entries per Round: <strong>${fairness.avgEntriesPerRound}</strong></div>
+          <div>💰 Average Prize Pool: <strong>${fairness.avgPrizePool} codes</strong></div>
+          <div>🍀 Pity Activations (Total): <strong>${fairness.pityActivationsTotal}</strong></div>
+          <div>🍀 Pity Activations (Used): <strong>${fairness.pityActivationsUsed}</strong></div>
+          <div>⚖️ Average User Weight: <strong>${(fairness.avgUserWeight || 1).toFixed(4)}</strong></div>
+        `;
+      } catch (error) {
+        console.error('Fairness error:', error);
+      }
+    }
+
+    // ========== MESSAGES ==========
+    function showError(message) {
+      const el = document.getElementById('errorMsg');
+      el.textContent = message;
+      el.style.display = 'block';
+      setTimeout(() => el.style.display = 'none', 5000);
+    }
+
+    function showSuccess(message) {
+      const el = document.getElementById('successMsg');
+      el.textContent = message;
+      el.style.display = 'block';
+      setTimeout(() => el.style.display = 'none', 5000);
+    }
+
+    // ========== PROOF VIEWER ==========
+    function viewProof(seed) {
+      alert('Draw Seed: ' + seed + '\n\nUse this seed to verify the draw independently.');
+    }
+  </script>
+</body>
+</html>

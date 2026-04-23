@@ -1,0 +1,25 @@
+{
+  "name": "bankode-dashboard",
+  "version": "1.0.0",
+  "description": "Bankode Dashboard - CodeBank Core",
+  "main": "index.html",
+  "scripts": {
+    "start": "vite",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "python3 -m http.server 8000",
+    "test": "npm run verify",
+    "verify": "node verify-fix.js"
+  },
+  "author": "CodeBank Team",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.0.0",
+    "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "tailwindcss": "^2.2.19",
+    "vite": "^7.2.6"
+  }
+}

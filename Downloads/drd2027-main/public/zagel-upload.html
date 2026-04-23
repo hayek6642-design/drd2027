@@ -1,0 +1,352 @@
+<div id=\"zagel-upload-panel\" class=\"upload-panel\">
+    <div class=\"upload-header\">
+        <h3>🧠 Add Knowledge</h3>
+        <p>Upload files for Zagel to learn and remember</p>
+    </div>
+
+    <div class=\"upload-section\">
+        <!-- File Input -->
+        <div class=\"file-input-wrapper\">
+            <label for=\"zagel-file-input\" class=\"upload-btn\">
+                <svg class=\"upload-icon\" viewBox=\"0 0 24 24\">
+                    <path d=\"M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z\" fill=\"currentColor\"/>
+                </svg>
+                <span>Upload Knowledge</span>
+                <small>PDF, TXT, CSV, XLSX, JSON (max 10MB)</small>
+            </label>
+            <input 
+                type=\"file\" 
+                id=\"zagel-file-input\"
+                accept=\".pdf,.txt,.csv,.xlsx,.xls,.json,.docx\"
+                style=\"display: none;\"
+            />
+        </div>
+
+        <!-- Progress Bar -->
+        <div id=\"upload-progress-container\" class=\"progress-container\" style=\"display: none;\">
+            <div class=\"progress-info\">
+                <span id=\"upload-stage\" class=\"progress-stage\">Uploading...</span>
+                <span id=\"upload-percent\" class=\"progress-percent\">0%</span>
+            </div>
+            <div class=\"progress-bar\">
+                <div id=\"progress-fill\" class=\"progress-fill\" style=\"width: 0%\"></div>
+            </div>
+        </div>
+
+        <!-- Uploaded Files List -->
+        <div id=\"uploads-list\" class=\"uploads-list\"></div>
+
+        <!-- Stats -->
+        <div class=\"memory-stats\">
+            <div class=\"stat\">
+                <span class=\"stat-label\">Total Memories</span>
+                <span id=\"stat-memories\" class=\"stat-value\">0</span>
+            </div>
+            <div class=\"stat\">
+                <span class=\"stat-label\">Files Uploaded</span>
+                <span id=\"stat-uploads\" class=\"stat-value\">0</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.upload-panel {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    padding: 24px;
+    color: white;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.upload-header h3 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.upload-header p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 14px;
+}
+
+.upload-section {
+    margin-top: 20px;
+}
+
+.file-input-wrapper {
+    margin-bottom: 20px;
+}
+
+.upload-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    border: 2px dashed rgba(255,255,255,0.5);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: rgba(255,255,255,0.1);
+}
+
+.upload-btn:hover {
+    background: rgba(255,255,255,0.2);
+    border-color: rgba(255,255,255,0.8);
+}
+
+.upload-icon {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 12px;
+    opacity: 0.9;
+}
+
+.upload-btn span {
+    font-size: 16px;
+    font-weight: 500;
+    display: block;
+}
+
+.upload-btn small {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 4px;
+}
+
+.progress-container {
+    background: rgba(255,255,255,0.1);
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.progress-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+
+.progress-stage {
+    opacity: 0.9;
+}
+
+.progress-percent {
+    font-weight: 600;
+}
+
+.progress-bar {
+    background: rgba(255,255,255,0.2);
+    height: 6px;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    background: #fff;
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+    box-shadow: 0 0 10px rgba(255,255,255,0.5);
+}
+
+.uploads-list {
+    margin: 20px 0;
+}
+
+.upload-item {
+    background: rgba(255,255,255,0.1);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+}
+
+.upload-item-info {
+    flex: 1;
+}
+
+.upload-item-name {
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.upload-item-status {
+    opacity: 0.8;
+    font-size: 12px;
+}
+
+.upload-item-action {
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.upload-item-action:hover {
+    opacity: 1;
+}
+
+.memory-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 20px;
+    background: rgba(255,255,255,0.1);
+    padding: 16px;
+    border-radius: 8px;
+}
+
+.stat {
+    text-align: center;
+}
+
+.stat-label {
+    display: block;
+    font-size: 12px;
+    opacity: 0.8;
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    display: block;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+@media (max-width: 600px) {
+    .upload-btn {
+        padding: 30px 15px;
+    }
+    
+    .upload-icon {
+        width: 32px;
+        height: 32px;
+    }
+}
+</style>
+
+<script>
+class ZagelUploadUI {
+    constructor() {
+        this.userId = null;
+        this.uploads = [];
+        this.init();
+    }
+
+    init() {
+        this.fileInput = document.getElementById('zagel-file-input');
+        this.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
+        this.loadUserProfile();
+    }
+
+    async handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const progressContainer = document.getElementById('upload-progress-container');
+        progressContainer.style.display = 'block';
+
+        try {
+            const result = await this.uploadFile(file, (progress) => {
+                this.updateProgress(progress);
+            });
+
+            if (result.success) {
+                this.addUploadItem(result);
+                this.loadUserProfile();
+            } else {
+                alert('Upload failed: ' + result.error);
+            }
+        } catch (error) {
+            alert('Upload error: ' + error.message);
+        } finally {
+            this.fileInput.value = '';
+            setTimeout(() => {
+                progressContainer.style.display = 'none';
+            }, 1000);
+        }
+    }
+
+    async uploadFile(file, onProgress) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('userId', this.userId);
+
+        try {
+            const response = await fetch('/api/zagel/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error(`Upload failed: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+
+    updateProgress(progress) {
+        const fill = document.getElementById('progress-fill');
+        const percent = document.getElementById('upload-percent');
+        const stage = document.getElementById('upload-stage');
+
+        fill.style.width = progress.progress + '%';
+        percent.textContent = Math.round(progress.progress) + '%';
+        
+        const stages = {
+            uploading: '📤 Uploading...',
+            extracting: '📄 Extracting...',
+            processing: '⚙️ Processing...',
+            embedding: '🧮 Embedding...',
+            complete: '✅ Complete!'
+        };
+        stage.textContent = stages[progress.stage] || 'Processing...';
+    }
+
+    addUploadItem(result) {
+        const list = document.getElementById('uploads-list');
+        const item = document.createElement('div');
+        item.className = 'upload-item';
+        item.innerHTML = `
+            <div class=\"upload-item-info\">
+                <div class=\"upload-item-name\">📄 ${result.fileName}</div>
+                <div class=\"upload-item-status\">${result.memoriesCreated} memories created</div>
+            </div>
+            <div class=\"upload-item-action\">✓</div>
+        `;
+        list.insertBefore(item, list.firstChild);
+    }
+
+    async loadUserProfile() {
+        try {
+            const response = await fetch(`/api/zagel/user-profile/${this.userId}`);
+            const data = await response.json();
+
+            if (data.success && data.profile) {
+                document.getElementById('stat-memories').textContent = data.profile.total_memories || 0;
+                document.getElementById('stat-uploads').textContent = data.profile.total_uploads || 0;
+            }
+        } catch (error) {
+            console.error('Failed to load profile:', error);
+        }
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.zagelUploadUI = new ZagelUploadUI();
+    });
+} else {
+    window.zagelUploadUI = new ZagelUploadUI();
+}
+</script>

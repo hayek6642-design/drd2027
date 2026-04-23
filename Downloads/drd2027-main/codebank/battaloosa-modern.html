@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Auth Bridge - MUST be first script -->
+    <script src="/shared/iframe-auth-client.js?v=2"></script>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battaloosa - Voice Talent Discovery</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body { margin: 0; padding: 0; }
+        * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function BattaloosaApp() {
+            const [talents, setTalents] = useState([]);
+            const [search, setSearch] = useState('');
+            const [category, setCategory] = useState('all');
+            const [playing, setPlaying] = useState(null);
+            const [isLoading, setIsLoading] = useState(false);
+            const [auth, setAuth] = useState(null);
+
+            useEffect(() => {
+                if (window.Auth && window.Auth.isAuthenticated?.()) {
+                    setAuth(window.Auth);
+                    fetchTalents();
+                }
+            }, []);
+
+            const fetchTalents = async () => {
+                setIsLoading(true);
+                try {
+                    const token = auth?.getToken?.();
+                    const response = await fetch(`/api/battaloosa/talents?search=${search}&category=${category}`, {
+                        headers: token ? { Authorization: `Bearer ${token}` } : {}
+                    });
+                    const data = await response.json();
+                    setTalents(data.talents || []);
+                } catch (err) {
+                    console.error('Failed to fetch talents:', err);
+                }
+                setIsLoading(false);
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+                    {/* Header */}
+                    <div className="bg-black/40 border-b border-purple-500/20 backdrop-blur-xl sticky top-0 z-10">
+                        <div className="max-w-7xl mx-auto px-4 py-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <h1 className="text-4xl font-bold text-white mb-2">
+                                        🎤 Battaloosa
+                                    </h1>
+                                    <p className="text-purple-300">Discover & connect with voice talent</p>
+                                </div>
+                                {auth && <div className="text-sm text-green-400">✓ Connected</div>}
+                            </div>
+
+                            {/* Search & Filter */}
+                            <div className="flex gap-3 flex-wrap">
+                                <div className="flex-1 min-w-64 relative">
+                                    <input
+                                        type="text"
+                                        placeholder="Search talents..."
+                                        value={search}
+                                        onChange={(e) => setSearch(e.target.value)}
+                                        onKeyPress={(e) => e.key === 'Enter' && fetchTalents()}
+                                        className="w-full pl-4 pr-4 py-2 bg-purple-900/30 border border-purple-500/30 rounded-lg text-white placeholder-purple-300/50 focus:outline-none focus:border-purple-500"
+                                    />
+                                </div>
+                                <select
+                                    value={category}
+                                    onChange={(e) => setCategory(e.target.value)}
+                                    className="px-4 py-2 bg-purple-900/30 border border-purple-500/30 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                                >
+                                    <option value="all">All Categories</option>
+                                    <option value="voiceover">Voice Over</option>
+                                    <option value="singing">Singing</option>
+                                    <option value="narration">Narration</option>
+                                    <option value="podcast">Podcast</option>
+                                </select>
+                                <button
+                                    onClick={fetchTalents}
+                                    disabled={isLoading}
+                                    className="px-6 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-white font-medium transition disabled:opacity-50"
+                                >
+                                    {isLoading ? 'Searching...' : 'Search'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Talents Grid */}
+                    <div className="max-w-7xl mx-auto px-4 py-8">
+                        {talents.length === 0 ? (
+                            <div className="text-center py-20">
+                                <p className="text-purple-300 text-lg">
+                                    {isLoading ? 'Searching for talents...' : 'Search to discover talented voices'}
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {talents.map((talent) => (
+                                    <div
+                                        key={talent.id}
+                                        className="bg-gradient-to-br from-purple-900/50 to-slate-900/50 border border-purple-500/30 rounded-xl overflow-hidden hover:border-purple-500/60 transition group"
+                                    >
+                                        {/* Avatar */}
+                                        <div className="relative h-48 bg-gradient-to-b from-purple-600 to-slate-900 flex items-center justify-center text-4xl">
+                                            {talent.emoji || '🎤'}
+                                        </div>
+
+                                        {/* Info */}
+                                        <div className="p-4">
+                                            <h3 className="text-xl font-bold text-white mb-1">{talent.name}</h3>
+                                            <div className="flex items-center gap-1 mb-2">
+                                                {[...Array(5)].map((_, i) => (
+                                                    <span key={i} className={i < talent.rating ? 'text-yellow-400' : 'text-slate-600'}>★</span>
+                                                ))}
+                                                <span className="text-sm text-purple-300 ml-1">({talent.reviews})</span>
+                                            </div>
+                                            <p className="text-sm text-purple-300 mb-2">{talent.category}</p>
+                                            <p className="text-sm text-slate-400 mb-4">📍 {talent.location}</p>
+                                            <button className="w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 rounded-lg text-white font-medium transition">
+                                                View Profile
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<BattaloosaApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>

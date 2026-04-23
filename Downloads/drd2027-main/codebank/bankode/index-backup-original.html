@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bankode Dashboard - CodeBank Core</title>
+
+  <!-- Styles & icons -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="./dashboard.css">
+  <link rel="stylesheet" href="./safe/bankode-safe.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+
+  <script>
+    window.CODEBANK_TRUSTED_USER_ID = (window.opener && window.opener.CODEBANK_TRUSTED_USER_ID) || (window.parent && window.parent.CODEBANK_TRUSTED_USER_ID) || null;
+    window.CODEBANK_TRUSTED_USER_EMAIL = (window.opener && window.opener.CODEBANK_TRUSTED_USER_EMAIL) || (window.parent && window.parent.CODEBANK_TRUSTED_USER_EMAIL) || null;
+    
+    // Inherit AssetBus from parent if in iframe
+    if (window !== window.parent && window.parent.AssetBus) {
+        window.AssetBus = window.parent.AssetBus;
+    }
+
+    // 🔧 FIX: Update trusted user ID when auth state changes (re-login)
+    window.addEventListener('auth:ready', function(e) {
+        if (e.detail && e.detail.authenticated && e.detail.userId) {
+            window.CODEBANK_TRUSTED_USER_ID = e.detail.userId;
+            window.CODEBANK_TRUSTED_USER_EMAIL = e.detail.user?.email || null;
+            console.log('[Bankode] Updated CODEBANK_TRUSTED_USER_ID from auth:ready:', e.detail.userId);
+            if (window.BankodeDashboard && window.BankodeDashboard.init) {
+                window.BankodeDashboard.init();
+            }
+            // Also refresh RPC instance's supabase ref
+            if (window.BankodeRPC) {
+                window.BankodeRPC.supabase = window.supabase;
+            }
+        }
+    });
+    window.addEventListener('auth:changed', function(e) {
+        if (e.detail && e.detail.authenticated && e.detail.userId) {
+            window.CODEBANK_TRUSTED_USER_ID = e.detail.userId;
+            window.CODEBANK_TRUSTED_USER_EMAIL = e.detail.user?.email || null;
+            console.log('[Bankode] Updated CODEBANK_TRUSTED_USER_ID from auth:changed:', e.detail.userId);
+            if (window.BankodeDashboard && window.BankodeDashboard.init) {
+                window.BankodeDashboard.init();
+            }
+        }
+    });
+    // Listen for AUTH_SYNC postMessage from parent iframe
+    window.addEventListener('message', function(event) {
+        if (event.data && event.data.type === 'AUTH_SYNC' && event.data.authenticated && event.data.userId) {
+            window.CODEBANK_TRUSTED_USER_ID = event.data.userId;
+            window.CODEBANK_TRUSTED_USER_EMAIL = event.data.user?.email || null;
+            console.log('[Bankode] Updated CODEBANK_TRUSTED_USER_ID from AUTH_SYNC postMessage:', event.data.userId);
+            if (window.BankodeDashboard && window.BankodeDashboard.init) {
+                window.BankodeDashboard.init();
+            }
+        }
+    });
+
+    // 🛡️ Prevent auto-close
+    window.onbeforeunload = function(e) {
+        console.log('[SafeCode] Blocked unload attempt');
+        return false;
+    };
+
+    // 🛡️ Signal parent when ready
+    window.addEventListener('DOMContentLoaded', function() {
+        if (window.parent !== window) {
+            setTimeout(() => {
+                console.log('[SafeCode] Signaling ready to parent');
+                window.parent.postMessage({ type: 'safe-code-ready' }, '*');
+            }, 500);
+        }
+    });
+  </script>
+
+  <!-- bcrypt (used by safe) -->
+  <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans">
+  <div class="min-h-screen flex flex-col">
+    <!-- Header with BanKode Title -->
+    <header class="bg-gray-800 border-b border-gray-700 px-6 py-6">
+      <div class="max-w-7xl mx-auto">
+        <!-- Large BanKode Title -->
+        <h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-300 bg-clip-text text-transparent">
+          BanKode
+        </h1>
+        
+        <!-- Auth Navigation Bar -->
+        <div class="flex items-center justify-between bg-gray-900 rounded-lg px-4 py-3 border border-gray-700">
+          <div class="text-sm text-gray-400">Secure Banking Platform</div>
+          
+          <div class="flex items-center space-x-3">
+            <!-- Google Sign-In Button -->
+            <button id="googleSignInBtn" class="flex items-center space-x-2 px-4 py-2 bg-white text-gray-900 rounded-lg hover:bg-gray-100 transition font-medium text-sm">
+              <i class="fab fa-google"></i>
+              <span>Google</span>
+            </button>
+            
+            <!-- Sign In Button -->
+            <button id="signInBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm">
+              <i class="fas fa-sign-in-alt"></i>
+              <span>Sign In</span>
+            </button>
+            
+            <!-- Sign Up Button -->
+            <button id="signUpBtn" class="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition font-medium text-sm">
+              <i class="fas fa-user-plus"></i>
+              <span>Sign Up</span>
+            </button>
+            
+            <!-- DRD Mail Button -->
+            <button id="drdMailBtn" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium text-sm">
+              <i class="fas fa-envelope"></i>
+              <span>DRD Mail</span>
+            </button>
+            
+            <!-- Language Button -->
+            <button id="languageBtn" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition font-medium text-sm">
+              <i class="fas fa-globe"></i>
+              <span>EN</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content (no sidebar) -->
+    <main class="flex-1 flex flex-col">
+      <!-- Dashboard Content -->
+      <div class="flex-1 p-6 overflow-auto">
+        <!-- Balance Cards (IDs must match what dashboard.js expects in fallback) -->
+        <div id="balanceCards" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div class="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-lg shadow-lg">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold">Codes Balance</h3><i class="fas fa-code text-2xl"></i>
+            </div>
+            <!-- NOTE: dashboard.js fallback looks for 'codes-balance' id -->
+            <div class="text-3xl font-bold" id="codes-balance">0</div>
+            <div class="text-sm text-blue-100 mt-2">Available Codes</div>
+          </div>
+
+          <div class="bg-gradient-to-br from-gray-600 to-gray-800 p-6 rounded-lg shadow-lg">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold">Silver Balance</h3><i class="fas fa-coins text-2xl"></i>
+            </div>
+            <!-- NOTE: dashboard.js fallback looks for 'silver-balance' id -->
+            <div class="text-3xl font-bold" id="silver-balance">0</div>
+            <div class="text-sm text-gray-100 mt-2">Available Silver</div>
+          </div>
+
+          <div class="bg-gradient-to-br from-yellow-600 to-yellow-800 p-6 rounded-lg shadow-lg">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold">Gold Balance</h3><i class="fas fa-gem text-2xl"></i>
+            </div>
+            <!-- NOTE: dashboard.js fallback looks for 'gold-balance' id -->
+            <div class="text-3xl font-bold" id="gold-balance">0</div>
+            <div class="text-sm text-yellow-100 mt-2">Available Gold</div>
+          </div>
+        </div>
+
+        <!-- Transactions Table -->
+        <div class="bg-gray-800 rounded-lg shadow-lg p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold">Recent Transactions</h2>
+            <button id="refreshTransactions" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm">
+              <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="border-b border-gray-700">
+                  <th class="text-left p-2">Date</th>
+                  <th class="text-left p-2">Type</th>
+                  <th class="text-left p-2">Amount</th>
+                  <th class="text-left p-2">Currency</th>
+                  <th class="text-left p-2">Status</th>
+                  <th class="text-left p-2">Details</th>
+                </tr>
+              </thead>
+              <tbody id="transactionsTable">
+                <tr>
+                  <td colspan="6" class="text-center py-4 text-gray-400">Loading transactions...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  
+
+  <!-- Admin modal used by dashboard.js (IDs must match) -->
+  <div id="adminPanelModal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-lg p-6 w-full max-w-2xl relative">
+      <button id="closeAdminPanel" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+        <i class="fas fa-times text-xl"></i>
+      </button>
+      <h2 class="text-xl font-bold mb-4 text-center">Admin Panel</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label for="adminUserId" class="block text-sm font-medium mb-1">User ID</label>
+          <input type="text" id="adminUserId" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded" placeholder="User ID">
+        </div>
+
+        <div>
+          <label for="adminCurrency" class="block text-sm font-medium mb-1">Currency</label>
+          <select id="adminCurrency" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded">
+            <option value="codes">Codes</option>
+            <option value="silver">Silver</option>
+            <option value="gold">Gold</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="adminAmount" class="block text-sm font-medium mb-1">Amount</label>
+          <input type="number" id="adminAmount" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded" placeholder="Amount">
+        </div>
+
+        <div>
+          <label for="adminAction" class="block text-sm font-medium mb-1">Action</label>
+          <select id="adminAction" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded">
+            <option value="add">Add</option>
+            <option value="subtract">Subtract</option>
+            <option value="set">Set</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex space-x-2">
+        <button id="adminExecuteBtn" class="flex-1 bg-green-600 hover:bg-green-700 py-2 px-4 rounded">
+          <i class="fas fa-check"></i> Execute
+        </button>
+        <button id="adminCancelBtn" class="flex-1 bg-gray-600 hover:bg-gray-700 py-2 px-4 rounded">
+          <i class="fas fa-times"></i> Cancel
+        </button>
+      </div>
+
+      <div id="adminStatus" class="mt-4 text-center text-sm"></div>
+    </div>
+  </div>
+
+  <!-- Auth Modal -->
+  <style>
+    .auth-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .auth-modal.active {
+      display: flex;
+    }
+    
+    .auth-modal-content {
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 12px;
+      padding: 32px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    
+    .auth-modal-title {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 24px;
+      color: #fff;
+    }
+    
+    .auth-modal-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .auth-form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .auth-form-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+    
+    .auth-form-input {
+      padding: 10px 12px;
+      border: 1px solid #4b5563;
+      border-radius: 8px;
+      background: #111827;
+      color: #fff;
+      font-size: 14px;
+    }
+    
+    .auth-form-input:focus {
+      outline: none;
+      border-color: #00d4ff;
+      box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+    }
+    
+    .auth-form-button {
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: #00d4ff;
+      color: #111827;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 8px;
+    }
+    
+    .auth-form-button:hover {
+      background: #00b8d4;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(0, 212, 255, 0.2);
+    }
+    
+    .auth-modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: #9ca3af;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .auth-modal-close:hover {
+      color: #fff;
+    }
+    
+    .auth-error {
+      padding: 12px;
+      border-radius: 8px;
+      background: rgba(239, 68, 68, 0.1);
+      color: #fca5a5;
+      border: 1px solid #ef4444;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    
+    .auth-success {
+      padding: 12px;
+      border-radius: 8px;
+      background: rgba(34, 197, 94, 0.1);
+      color: #86efac;
+      border: 1px solid #22c55e;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+  </style>
+
+  <!-- Sign In Modal -->
+  <div id="signInModal" class="auth-modal">
+    <div class="auth-modal-content" style="position: relative;">
+      <button class="auth-modal-close" onclick="closeAuthModal('signInModal')">&times;</button>
+      <h2 class="auth-modal-title">Sign In</h2>
+      <div id="signInError" class="auth-error" style="display: none;"></div>
+      <form class="auth-modal-form" onsubmit="handleSignIn(event)">
+        <div class="auth-form-group">
+          <label class="auth-form-label">Email</label>
+          <input type="email" id="signInEmail" class="auth-form-input" required>
+        </div>
+        <div class="auth-form-group">
+          <label class="auth-form-label">Password</label>
+          <input type="password" id="signInPassword" class="auth-form-input" required>
+        </div>
+        <button type="submit" class="auth-form-button">Sign In</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Sign Up Modal -->
+  <div id="signUpModal" class="auth-modal">
+    <div class="auth-modal-content" style="position: relative;">
+      <button class="auth-modal-close" onclick="closeAuthModal('signUpModal')">&times;</button>
+      <h2 class="auth-modal-title">Create Account</h2>
+      <div id="signUpError" class="auth-error" style="display: none;"></div>
+      <div id="signUpSuccess" class="auth-success" style="display: none;"></div>
+      <form class="auth-modal-form" onsubmit="handleSignUp(event)">
+        <div class="auth-form-group">
+          <label class="auth-form-label">Full Name</label>
+          <input type="text" id="signUpName" class="auth-form-input" required>
+        </div>
+        <div class="auth-form-group">
+          <label class="auth-form-label">Email</label>
+          <input type="email" id="signUpEmail" class="auth-form-input" required>
+        </div>
+        <div class="auth-form-group">
+          <label class="auth-form-label">Password</label>
+          <input type="password" id="signUpPassword" class="auth-form-input" required>
+        </div>
+        <div class="auth-form-group">
+          <label class="auth-form-label">Confirm Password</label>
+          <input type="password" id="signUpPasswordConfirm" class="auth-form-input" required>
+        </div>
+        <button type="submit" class="auth-form-button">Create Account</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Authentication Script -->
+  <script>
+    // Open/Close modals
+    function openAuthModal(modalId) {
+      document.getElementById(modalId).classList.add('active');
+    }
+    
+    function closeAuthModal(modalId) {
+      document.getElementById(modalId).classList.remove('active');
+      // Clear errors
+      const errorEl = document.getElementById(modalId.replace('Modal', 'Error'));
+      if (errorEl) errorEl.style.display = 'none';
+    }
+    
+    // Close modal when clicking outside
+    document.querySelectorAll('.auth-modal').forEach(modal => {
+      modal.addEventListener('click', function(e) {
+        if (e.target === this) {
+          this.classList.remove('active');
+        }
+      });
+    });
+    
+    // Handle Sign In
+    async function handleSignIn(event) {
+      event.preventDefault();
+      const email = document.getElementById('signInEmail').value;
+      const password = document.getElementById('signInPassword').value;
+      const errorEl = document.getElementById('signInError');
+      
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Sign in failed');
+        }
+        
+        // Store session
+        localStorage.setItem('sessionId', data.sessionId);
+        localStorage.setItem('userId', data.userId);
+        localStorage.setItem('authToken', data.token);
+        
+        // Update UI
+        window.CODEBANK_TRUSTED_USER_ID = data.userId;
+        
+        // Close modal and reload
+        closeAuthModal('signInModal');
+        setTimeout(() => window.location.reload(), 500);
+      } catch (error) {
+        errorEl.textContent = error.message;
+        errorEl.style.display = 'block';
+      }
+    }
+    
+    // Handle Sign Up
+    async function handleSignUp(event) {
+      event.preventDefault();
+      const name = document.getElementById('signUpName').value;
+      const email = document.getElementById('signUpEmail').value;
+      const password = document.getElementById('signUpPassword').value;
+      const passwordConfirm = document.getElementById('signUpPasswordConfirm').value;
+      const errorEl = document.getElementById('signUpError');
+      const successEl = document.getElementById('signUpSuccess');
+      
+      // Clear previous messages
+      errorEl.style.display = 'none';
+      successEl.style.display = 'none';
+      
+      if (password !== passwordConfirm) {
+        errorEl.textContent = 'Passwords do not match';
+        errorEl.style.display = 'block';
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, name })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Sign up failed');
+        }
+        
+        // Store session
+        localStorage.setItem('sessionId', data.sessionId);
+        localStorage.setItem('userId', data.user.id);
+        localStorage.setItem('authToken', data.token);
+        
+        // Update UI
+        window.CODEBANK_TRUSTED_USER_ID = data.user.id;
+        
+        // Show success
+        successEl.textContent = 'Account created successfully! Redirecting...';
+        successEl.style.display = 'block';
+        
+        // Redirect
+        setTimeout(() => {
+          closeAuthModal('signUpModal');
+          window.location.reload();
+        }, 1500);
+      } catch (error) {
+        errorEl.textContent = error.message;
+        errorEl.style.display = 'block';
+      }
+    }
+    
+    // Setup button listeners
+    document.getElementById('signInBtn').addEventListener('click', () => openAuthModal('signInModal'));
+    document.getElementById('signUpBtn').addEventListener('click', () => openAuthModal('signUpModal'));
+    
+    document.getElementById('googleSignInBtn').addEventListener('click', () => {
+      alert('Google Sign-In will be configured with proper OAuth setup');
+    });
+    
+    document.getElementById('drdMailBtn').addEventListener('click', () => {
+      // Navigate to DRD Mail
+      window.location.href = '/codebank/drmail.html';
+    });
+    
+    document.getElementById('languageBtn').addEventListener('click', () => {
+      alert('Language selection coming soon');
+    });
+  </script>
+
+  <!-- Direct Asset Manager - loads before dashboard -->
+  <script src="/codebank/js/assets-direct.js"></script>
+
+  <!-- Listen for asset updates and update dashboard UI -->
+  <script>
+    document.addEventListener('assets:updated', function(e) {
+      const assets = e.detail || {};
+      console.log('[Bankode] Assets updated:', assets);
+      
+      // Update balance elements if they exist
+      const codesBalance = document.getElementById('codes-balance');
+      const silverBalance = document.getElementById('silver-balance');
+      const goldBalance = document.getElementById('gold-balance');
+      
+      if (codesBalance) {
+        codesBalance.textContent = (assets.codes?.length || assets.codes_count || 0);
+      }
+      if (silverBalance) {
+        silverBalance.textContent = (assets.silver?.length || assets.silver_count || 0);
+      }
+      if (goldBalance) {
+        goldBalance.textContent = (assets.gold?.length || assets.gold_count || 0);
+      }
+    });
+  </script>
+
+  <!-- Dependency Helper Functions (MUST load first) -->
+  <script src="utils/dependency-helpers.js"></script>
+
+  <!-- Core Scripts -->
+  <script src="bankodeConfig.js"></script>
+  <script src="rpc.js"></script>
+  <script src="utils/helpers.js"></script>
+  <script src="utils/validators.js"></script>
+  <script src="utils/formatters.js"></script>
+  <script src="unifiedStorage.js"></script>
+
+  <!-- Components -->
+  <script src="components/Card.js"></script>
+  <script src="components/Table.js"></script>
+  <script src="components/Button.js"></script>
+  <script src="components/Modal.js"></script>
+
+  
+
+  <!-- Dashboard -->
+  <script src="dashboard.js"></script>
+
+  <!-- Validation Test -->
+  <script src="bankode-validation-test.js"></script>
+
+  <script>
+    async function initApp() {
+      if (window.BankodeDashboard?.init) {
+        try { await window.BankodeDashboard.init(); } catch (err) { console.error('Dashboard initialization error:', err); }
+      }
+    }
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', initApp); } else { initApp(); }
+  </script>
+</body>
+</html>

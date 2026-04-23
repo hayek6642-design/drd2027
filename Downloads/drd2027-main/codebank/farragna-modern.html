@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Auth Bridge - MUST be first script -->
+    <script src="/shared/iframe-auth-client.js?v=2"></script>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farragna - Creative Gallery</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body { margin: 0; padding: 0; }
+        * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function FarragnaApp() {
+            const [posts, setPosts] = useState([]);
+            const [filter, setFilter] = useState('all');
+            const [loading, setLoading] = useState(false);
+            const [auth, setAuth] = useState(null);
+            const [showUpload, setShowUpload] = useState(false);
+            const [liked, setLiked] = useState(new Set());
+            const [uploadFile, setUploadFile] = useState(null);
+            const [uploadCaption, setUploadCaption] = useState('');
+
+            useEffect(() => {
+                if (window.Auth && window.Auth.isAuthenticated?.()) {
+                    setAuth(window.Auth);
+                    fetchPosts();
+                }
+            }, []);
+
+            const fetchPosts = async () => {
+                setLoading(true);
+                try {
+                    const token = auth?.getToken?.();
+                    const response = await fetch(`/api/farragna/posts?filter=${filter}`, {
+                        headers: token ? { Authorization: `Bearer ${token}` } : {}
+                    });
+                    const data = await response.json();
+                    setPosts(data.posts || []);
+                } catch (err) {
+                    console.error('Failed to fetch posts:', err);
+                }
+                setLoading(false);
+            };
+
+            const handleUpload = async (e) => {
+                e.preventDefault();
+                if (!uploadFile || !uploadCaption) return;
+
+                const formData = new FormData();
+                formData.append('file', uploadFile);
+                formData.append('caption', uploadCaption);
+
+                try {
+                    const token = auth?.getToken?.();
+                    const response = await fetch('/api/farragna/upload', {
+                        method: 'POST',
+                        body: formData,
+                        headers: token ? { Authorization: `Bearer ${token}` } : {}
+                    });
+                    
+                    if (response.ok) {
+                        setUploadFile(null);
+                        setUploadCaption('');
+                        setShowUpload(false);
+                        fetchPosts();
+                    }
+                } catch (err) {
+                    console.error('Upload failed:', err);
+                }
+            };
+
+            const toggleLike = (postId) => {
+                const newLiked = new Set(liked);
+                if (newLiked.has(postId)) {
+                    newLiked.delete(postId);
+                } else {
+                    newLiked.add(postId);
+                }
+                setLiked(newLiked);
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-slate-950 via-pink-900 to-slate-950">
+                    {/* Header */}
+                    <div className="bg-black/40 border-b border-pink-500/20 backdrop-blur-xl sticky top-0 z-20">
+                        <div className="max-w-6xl mx-auto px-4 py-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <h1 className="text-4xl font-bold text-white mb-2">
+                                        🎨 Farragna
+                                    </h1>
+                                    <p className="text-pink-300">Creative gallery & sharing platform</p>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    {auth && <span className="text-sm text-green-400">✓ Connected</span>}
+                                    <button
+                                        onClick={() => setShowUpload(!showUpload)}
+                                        className="px-4 py-2 bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-500 hover:to-pink-600 rounded-lg text-white font-medium transition"
+                                    >
+                                        + New Post
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Filters */}
+                            <div className="flex gap-2 overflow-x-auto pb-2">
+                                {['all', 'trending', 'following', 'saved'].map((f) => (
+                                    <button
+                                        key={f}
+                                        onClick={() => { setFilter(f); fetchPosts(); }}
+                                        className={`px-4 py-2 rounded-lg font-medium transition whitespace-nowrap ${
+                                            filter === f
+                                                ? 'bg-pink-600 text-white'
+                                                : 'bg-pink-900/30 text-pink-200 hover:bg-pink-900/50'
+                                        }`}
+                                    >
+                                        {f.charAt(0).toUpperCase() + f.slice(1)}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Upload Modal */}
+                    {showUpload && (
+                        <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
+                            <div className="bg-slate-900 rounded-xl border border-pink-500/30 p-8 max-w-md w-full">
+                                <h2 className="text-2xl font-bold text-white mb-6">
+                                    ⬆️ Create New Post
+                                </h2>
+
+                                <form onSubmit={handleUpload} className="space-y-4">
+                                    {/* File Upload */}
+                                    <div className="border-2 border-dashed border-pink-500/30 rounded-lg p-6 text-center hover:border-pink-500/60 transition cursor-pointer">
+                                        <input
+                                            type="file"
+                                            onChange={(e) => setUploadFile(e.target.files?.[0])}
+                                            className="hidden"
+                                            id="upload-file"
+                                            accept="image/*,video/*"
+                                        />
+                                        <label htmlFor="upload-file" className="cursor-pointer">
+                                            <p className="text-pink-200">{uploadFile ? uploadFile.name : 'Click to upload'}</p>
+                                            <p className="text-sm text-pink-300/50">or drag and drop</p>
+                                        </label>
+                                    </div>
+
+                                    {/* Caption */}
+                                    <textarea
+                                        value={uploadCaption}
+                                        onChange={(e) => setUploadCaption(e.target.value)}
+                                        placeholder="What's on your mind?"
+                                        className="w-full px-4 py-2 bg-slate-800 border border-pink-500/30 rounded-lg text-white placeholder-pink-300/50 focus:outline-none focus:border-pink-500 resize-none"
+                                        rows={3}
+                                    />
+
+                                    {/* Actions */}
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowUpload(false)}
+                                            className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white transition"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={!uploadFile || !uploadCaption}
+                                            className="flex-1 px-4 py-2 bg-pink-600 hover:bg-pink-700 rounded-lg text-white font-medium transition disabled:opacity-50"
+                                        >
+                                            Post
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Feed */}
+                    <div className="max-w-2xl mx-auto px-4 py-8">
+                        {posts.length === 0 ? (
+                            <div className="text-center py-20">
+                                <p className="text-pink-300 text-lg">
+                                    {loading ? 'Loading gallery...' : 'No posts yet. Be the first to create!'}
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                {posts.map((post) => (
+                                    <div
+                                        key={post.id}
+                                        className="bg-gradient-to-br from-pink-900/50 to-slate-900/50 border border-pink-500/30 rounded-xl overflow-hidden hover:border-pink-500/60 transition"
+                                    >
+                                        {/* Header */}
+                                        <div className="p-4 border-b border-pink-500/20 flex items-center gap-3">
+                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-600 to-purple-600 flex items-center justify-center text-white font-bold">
+                                                {post.author?.initial || '👤'}
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-white font-bold">{post.author?.name || 'User'}</p>
+                                                <p className="text-sm text-pink-300/60">{post.createdAt || 'Now'}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Content */}
+                                        {post.image && (
+                                            <img src={post.image} alt={post.caption} className="w-full aspect-video object-cover" />
+                                        )}
+
+                                        {/* Caption */}
+                                        <p className="p-4 text-white">{post.caption}</p>
+
+                                        {/* Stats */}
+                                        <div className="px-4 py-2 border-y border-pink-500/20 flex items-center justify-between text-sm text-pink-300/60">
+                                            <div className="flex items-center gap-1">
+                                                👁️ {post.views || 0} views
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <span>{post.likes || 0} likes</span>
+                                                <span>{post.comments || 0} comments</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className="p-4 flex gap-4">
+                                            <button
+                                                onClick={() => toggleLike(post.id)}
+                                                className="flex-1 px-4 py-2 bg-pink-900/30 hover:bg-pink-900/50 rounded-lg text-pink-300 transition"
+                                            >
+                                                {liked.has(post.id) ? '❤️' : '🤍'} Like
+                                            </button>
+                                            <button className="flex-1 px-4 py-2 bg-pink-900/30 hover:bg-pink-900/50 rounded-lg text-pink-300 transition">
+                                                💬 Comment
+                                            </button>
+                                            <button className="flex-1 px-4 py-2 bg-pink-900/30 hover:bg-pink-900/50 rounded-lg text-pink-300 transition">
+                                                📤 Share
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<FarragnaApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>

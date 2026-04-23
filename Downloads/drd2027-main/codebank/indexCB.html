@@ -504,30 +504,37 @@
         }
         
         /* Auth Container */
-/* Bankode Header with Title */
+/* Bankode Header with Title - FIXED: Now full width and above all services */
         .bankode-header {
             position: fixed;
-            top: 15px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
-            text-align: center;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 20000;
+            background: rgba(15, 8, 46, 0.98);
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
         }
         .bankode-title {
-            font-size: 26px;
+            font-size: 22px;
             font-weight: 800;
             background: linear-gradient(90deg, #00d4ff, #7b2cbf);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             margin: 0;
-            text-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
         }
         .bankode-subtitle {
             display: block;
-            font-size: 10px;
+            font-size: 9px;
             color: rgba(255, 255, 255, 0.6);
-            margin-top: 2px;
+            margin-top: 0;
             letter-spacing: 1px;
         }
         .auth-container {
@@ -1094,8 +1101,10 @@
 
         <!-- Bankode Header with Title -->
         <div class="bankode-header" id="bankodeHeader">
-            <h1 class="bankode-title">Bankode</h1>
-            <span class="bankode-subtitle">CodeBank Exchange</span>
+            <div class="bankode-title-group">
+                <h1 class="bankode-title">Bankode</h1>
+                <span class="bankode-subtitle">CodeBank Exchange</span>
+            </div>
 
         <!-- Main Navigation Navbar (below bankode title) -->
         <div class="main-navbar">
@@ -1133,18 +1142,18 @@
 
         <!-- Navbar CSS Styles (injected inline) -->
         <style>
-            .main-navbar {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 12px 20px;
-                background: linear-gradient(90deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1));
-                border-bottom: 1px solid rgba(255,255,255,0.1);
-                margin: 10px 0;
-                border-radius: 8px;
-                backdrop-filter: blur(10px);
-                gap: 20px;
-            }
+        .main-navbar {
+            display: flex;
+            flex: 1;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 0 0 40px;
+            background: transparent;
+            border: none;
+            margin: 0;
+            backdrop-filter: none;
+            gap: 20px;
+        }
             
             .navbar-left, .navbar-right {
                 display: flex;

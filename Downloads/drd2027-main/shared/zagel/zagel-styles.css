@@ -1,0 +1,133 @@
+/* ===============================
+   🎨 ZAGEL UI STYLES
+   =============================== */
+
+#zagel-widget {
+  position: fixed;
+  z-index: 9999;
+  bottom: 0;
+  right: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+#zagel-orb {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  z-index: 9999;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 28px;
+  user-select: none;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+#zagel-orb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.6);
+}
+
+#zagel-orb:active {
+  transform: scale(0.95);
+}
+
+#zagel-orb.listening {
+  animation: zagel-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+@keyframes zagel-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+    box-shadow: 0 8px 25px rgba(245, 87, 108, 0.6);
+  }
+}
+
+#zagel-tooltip {
+  position: fixed;
+  bottom: 90px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  display: none;
+  max-width: 220px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+#zagel-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  right: 25px;
+  width: 8px;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.9);
+  border-radius: 2px;
+  transform: rotate(45deg);
+}
+
+/* Door animation (knock-knock) */
+@keyframes zagel-knock {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}
+
+.zagel-knocking {
+  animation: zagel-knock 0.4s ease-in-out;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  #zagel-orb {
+    width: 50px;
+    height: 50px;
+    font-size: 24px;
+  }
+  
+  #zagel-tooltip {
+    font-size: 12px;
+    padding: 10px 14px;
+  }
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  #zagel-tooltip {
+    background: rgba(0, 0, 0, 0.95);
+  }
+}
+
+/* Light mode */
+@media (prefers-color-scheme: light) {
+  #zagel-tooltip {
+    background: rgba(30, 30, 30, 0.95);
+  }
+}

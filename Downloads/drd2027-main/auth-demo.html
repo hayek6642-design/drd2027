@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auth Implementation Demo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 400px;
+      width: 100%;
+      padding: 40px;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    /* Google Button Container */
+    #google-signin-btn {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 20px 0;
+      color: #999;
+      font-size: 12px;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #ddd;
+    }
+
+    .divider::before {
+      margin-right: 10px;
+    }
+
+    .divider::after {
+      margin-left: 10px;
+    }
+
+    /* Form Containers */
+    #signin-form-container,
+    #signup-form-container {
+      display: none;
+    }
+
+    #signin-form-container.active,
+    #signup-form-container.active {
+      display: block;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    input {
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    button {
+      padding: 12px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #5568d3;
+    }
+
+    button:active {
+      background: #4559c2;
+    }
+
+    .form-footer {
+      text-align: center;
+      margin-top: 12px;
+      font-size: 13px;
+      color: #666;
+    }
+
+    .form-footer a {
+      color: #667eea;
+      text-decoration: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .form-footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* User Display */
+    #user-display {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 15px;
+    }
+
+    #user-display.active {
+      display: flex;
+    }
+
+    .user-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .user-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: 3px solid #667eea;
+    }
+
+    .user-email {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .btn-signout {
+      width: 100%;
+      background: #dc3545;
+      margin-top: 10px;
+    }
+
+    .btn-signout:hover {
+      background: #c82333;
+    }
+
+    /* Status messages */
+    .status {
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 12px;
+      font-family: monospace;
+    }
+
+    .status.info {
+      background: #e7f3ff;
+      color: #0066cc;
+      border-left: 3px solid #0066cc;
+    }
+
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border-left: 3px solid #155724;
+    }
+
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border-left: 3px solid #721c24;
+    }
+
+    .debug-info {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #ddd;
+      font-size: 11px;
+      color: #999;
+      font-family: monospace;
+    }
+
+    .debug-item {
+      padding: 4px 0;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔐 Auth Demo</h1>
+    <p class="subtitle">Complete auth implementation with Google Sign-In</p>
+
+    <div id="status-message"></div>
+
+    <div id="auth-section">
+      <!-- GOOGLE SIGN-IN BUTTON -->
+      <div id="google-signin-btn"></div>
+
+      <!-- SIGN IN FORM -->
+      <div id="signin-form-container" class="active">
+        <div class="divider">OR</div>
+        <form id="signin-form">
+          <input type="email" id="signin-email" placeholder="Email" required>
+          <input type="password" id="signin-password" placeholder="Password" required>
+          <button type="submit">Sign In</button>
+        </form>
+        <div class="form-footer">
+          Don't have an account? <a id="show-signup">Sign Up</a>
+        </div>
+      </div>
+
+      <!-- SIGN UP FORM -->
+      <div id="signup-form-container">
+        <div class="divider">OR</div>
+        <form id="signup-form">
+          <input type="email" id="signup-email" placeholder="Email" required>
+          <input type="password" id="signup-password" placeholder="Password (min 6 chars)" minlength="6" required>
+          <input type="password" id="signup-confirm" placeholder="Confirm Password" required>
+          <button type="submit">Create Account</button>
+        </form>
+        <div class="form-footer">
+          Already have an account? <a id="show-signin">Sign In</a>
+        </div>
+      </div>
+
+      <!-- LOGGED IN DISPLAY -->
+      <div id="user-display"></div>
+    </div>
+
+    <div class="debug-info">
+      <strong>Status:</strong>
+      <div id="debug-status" class="debug-item">Loading...</div>
+      <div id="debug-config" class="debug-item">Config: Loading...</div>
+      <div id="debug-token" class="debug-item">Token: None</div>
+    </div>
+  </div>
+
+  <!-- Load scripts in correct order -->
+  <script src="js/config-loader.js"></script>
+  <script src="js/google-auth.js"></script>
+  <script src="js/auth-ui.js"></script>
+
+  <script>
+    // Update debug info
+    document.addEventListener('DOMContentLoaded', () => {
+      // Monitor config loading
+      const checkConfig = setInterval(() => {
+        if (window.AppConfig?.loaded) {
+          const config = window.AppConfig?.data;
+          document.getElementById('debug-config').textContent = 
+            'Config: ' + (config ? 'Loaded ✓' : 'Failed ✗');
+          clearInterval(checkConfig);
+        }
+      }, 100);
+
+      // Monitor auth state
+      const checkAuth = setInterval(() => {
+        const token = localStorage.getItem('session_token');
+        const email = localStorage.getItem('user_email');
+        document.getElementById('debug-status').textContent = 
+          'Auth: ' + (email ? `${email} ✓` : 'Not signed in');
+        document.getElementById('debug-token').textContent = 
+          'Token: ' + (token ? token.substring(0, 20) + '...' : 'None');
+      }, 500);
+
+      // Show status messages
+      const showStatus = (msg, type = 'info') => {
+        const el = document.getElementById('status-message');
+        el.className = `status ${type}`;
+        el.textContent = msg;
+        setTimeout(() => el.textContent = '', 5000);
+      };
+
+      // Listen for auth events
+      window.addEventListener('auth:success', (e) => {
+        showStatus(`✓ Logged in as ${e.detail.user.email}`, 'success');
+      });
+    });
+  </script>
+</body>
+</html>
