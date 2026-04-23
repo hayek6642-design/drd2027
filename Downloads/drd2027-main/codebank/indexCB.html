@@ -1151,7 +1151,7 @@
 
             <div class="navbar-section navbar-center">
                 <a href="#" class="nav-mail-btn" title="DRD-Mail" onclick="openService('/codebank/drd-mail.html', 'DRD-Mail')">
-                    <span class="mail-icon">✉️</span>
+                    <i class="fas fa-envelope-open-text"></i>
                     <span class="mail-badge" id="mail-count" style="display:none;">0</span>
                 </a>
             </div>
@@ -1172,21 +1172,23 @@
             </div>
         </div>
 
-        /* Navbar CSS Styles (injected inline) */
         <style>
+            /* Navbar Modern Styles */
             .nav-btn {
-                padding: 6px 14px;
+                width: 140px; /* Fixed width for uniform size */
+                height: 38px;
                 border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 8px;
+                border-radius: 10px;
                 font-size: 13px;
                 cursor: pointer;
                 display: flex;
                 align-items: center;
+                justify-content: center;
                 gap: 8px;
-                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                 font-weight: 600;
                 white-space: nowrap;
-                background: rgba(255, 255, 255, 0.03);
+                background: rgba(255, 255, 255, 0.05);
                 color: rgba(255, 255, 255, 0.9);
             }
             
@@ -1194,12 +1196,12 @@
                 background: linear-gradient(135deg, #00d4ff, #7b2cbf);
                 color: #fff;
                 border: none;
-                box-shadow: 0 4px 12px rgba(0, 212, 255, 0.2);
+                box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2);
             }
             
             .nav-btn-primary:hover {
-                transform: translateY(-1px);
-                box-shadow: 0 6px 16px rgba(0, 212, 255, 0.4);
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(0, 212, 255, 0.4);
                 filter: brightness(1.1);
             }
             
@@ -1210,69 +1212,95 @@
             }
             
             .nav-btn-google:hover {
-                background: #f0f0f0;
-                transform: translateY(-1px);
+                background: #f8f9fa;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
             }
             
             .nav-mail-btn {
                 position: relative;
-                font-size: 24px;
-                color: rgba(255, 255, 255, 0.7);
-                cursor: pointer;
-                text-decoration: none;
-                transition: all 0.2s ease;
+                width: 44px;
+                height: 44px;
+                border-radius: 12px;
+                background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+                border: 1px solid rgba(255,255,255,0.1);
+                color: #00d4ff;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                width: 44px;
-                height: 44px;
-                border-radius: 10px;
-                background: rgba(255, 255, 255, 0.05);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            }
+            
+            .nav-mail-btn i {
+                font-size: 20px;
+                filter: drop-shadow(0 0 5px rgba(0, 212, 255, 0.5));
             }
             
             .nav-mail-btn:hover {
-                color: #00d4ff;
-                background: rgba(0, 212, 255, 0.1);
-                transform: scale(1.05);
+                transform: translateY(-2px) scale(1.05);
+                background: rgba(0, 212, 255, 0.15);
+                border-color: #00d4ff;
+                box-shadow: 0 6px 15px rgba(0, 212, 255, 0.3);
+            }
+            
+            .mail-badge {
+                position: absolute;
+                top: -5px;
+                right: -5px;
+                background: #ff4757;
+                color: #fff;
+                border-radius: 50%;
+                width: 18px;
+                height: 18px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 10px;
+                font-weight: 800;
+                border: 2px solid #0a061e;
             }
             
             .lang-select {
-                padding: 6px 12px;
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                border-radius: 8px;
+                height: 38px;
+                padding: 0 12px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 10px;
                 background: rgba(255, 255, 255, 0.05);
                 color: rgba(255, 255, 255, 0.8);
                 font-size: 13px;
-                font-weight: 500;
+                font-weight: 600;
                 cursor: pointer;
                 outline: none;
-                transition: all 0.2s;
+                transition: all 0.3s;
+                min-width: 100px;
             }
             
             .lang-select:hover {
+                background: rgba(255, 255, 255, 0.1);
                 border-color: rgba(255, 255, 255, 0.3);
-                background: rgba(255, 255, 255, 0.08);
             }
             
             @media (max-width: 768px) {
                 .bankode-header {
                     height: auto;
-                    padding: 10px 16px;
+                    padding: 15px 16px;
                     flex-direction: column;
-                    gap: 12px;
+                    gap: 15px;
                 }
                 .main-navbar {
                     width: 100%;
                     margin-left: 0;
                     justify-content: center;
-                    gap: 10px;
+                    gap: 15px;
+                    flex-wrap: wrap;
                 }
                 .navbar-separator {
                     display: none;
                 }
-                .bankode-title-group {
-                    align-items: center;
-                    text-align: center;
+                .nav-btn {
+                    width: 120px;
                 }
             }
         </style>
