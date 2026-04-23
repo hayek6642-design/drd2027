@@ -3,39 +3,44 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YT-Clear - Hybrid Authentication</title>
+<title>CodeBank - Authentication</title>
 <style>
   * { box-sizing: border-box; }
   body { 
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
     margin: 0;
     padding: 0; 
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    background: #0f0826;
     min-height: 100vh;
     color: #fff;
+    display: flex;
+    flex-direction: column;
   }
 
-  /* ═══ HORIZONTAL NAVBAR (like File/Edit/etc tabs) ═══ */
+  /* Professional Taskbar Navbar */
   .navbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 20px;
-    padding: 12px 20px;
-    background: rgba(0,0,0,0.3);
-    border-bottom: 2px solid rgba(0,212,255,0.2);
-    flex-wrap: wrap;
+    padding: 0 24px;
+    height: 60px;
+    background: rgba(10, 6, 30, 0.95);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
   }
 
-  .navbar-title {
-    font-weight: 700;
-    color: #00d4ff;
-    font-size: 18px;
-    letter-spacing: 1px;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  .navbar-brand {
+    font-size: 20px;
+    font-weight: 800;
+    background: linear-gradient(90deg, #00d4ff, #7b2cbf);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
   }
 
   .navbar-controls {
@@ -44,97 +49,83 @@
     gap: 15px;
   }
 
-  .navbar-btn {
+  .nav-btn {
     padding: 8px 16px;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 6px;
-    color: #aaa;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.8);
     cursor: pointer;
     font-size: 13px;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-  }
-
-  .navbar-btn:hover {
-    background: rgba(0,212,255,0.1);
-    border-color: #00d4ff;
-    color: #00d4ff;
-  }
-
-  .navbar-btn.active {
-    background: rgba(0,212,255,0.15);
-    border-color: #00d4ff;
-    color: #00d4ff;
     font-weight: 600;
+    transition: all 0.2s;
   }
 
-  .navbar-separator {
-    width: 1px;
-    height: 24px;
-    background: rgba(255,255,255,0.1);
+  .nav-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
   }
 
-  /* Language selector */
-  .language-select {
-    padding: 8px 12px;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 6px;
-    color: #fff;
-    font-size: 13px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .language-select:hover {
-    background: rgba(0,212,255,0.1);
+  .nav-btn.active {
+    background: rgba(0, 212, 255, 0.1);
     border-color: #00d4ff;
-  }
-
-  .language-select option {
-    background: #1a1a2e;
-    color: #fff;
-  }
-
-  /* User email badge (shown when authenticated) */
-  .user-badge {
-    display: none;
-    padding: 8px 14px;
-    background: rgba(0,200,83,0.15);
-    border: 1px solid rgba(0,200,83,0.5);
-    border-radius: 6px;
-    color: #00c853;
-    font-size: 13px;
-    font-weight: 500;
-  }
-
-  .user-badge.active {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .user-badge::before {
-    content: "👤";
+    color: #00d4ff;
   }
 
   /* Main container */
-  .container {
-    max-width: 500px;
-    margin: 40px auto;
-    background: rgba(255,255,255,0.05);
-    backdrop-filter: blur(10px);
-    border-radius: 20px;
-    padding: 30px;
-    border: 1px solid rgba(255,255,255,0.1);
+  .main-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 100px 20px 40px;
+  }
+
+  .auth-container {
+    width: 100%;
+    max-width: 450px;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(15px);
+    border-radius: 24px;
+    padding: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    position: relative;
   }
 
   h2 { 
     text-align: center; 
+    margin: 0 0 30px;
+    font-size: 24px;
+    font-weight: 800;
+    color: #fff;
+  }
+
+  .tab-switcher {
+    display: flex;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 5px;
+    border-radius: 12px;
     margin-bottom: 30px;
-    color: #00d4ff;
-    font-size: 28px;
+  }
+
+  .tab-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+
+  .tab-btn.active {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   }
 
   .form-group {
@@ -144,67 +135,30 @@
   label {
     display: block;
     margin-bottom: 8px;
-    font-size: 14px;
-    color: #aaa;
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.4);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
   }
 
   input, select {
     width: 100%;
-    padding: 12px 15px;
-    border: 2px solid rgba(255,255,255,0.1);
-    border-radius: 10px;
-    background: rgba(0,0,0,0.3);
+    height: 48px;
+    padding: 0 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.2);
     color: #fff;
-    font-size: 16px;
-    transition: all 0.3s ease;
+    font-size: 15px;
+    transition: all 0.3s;
   }
 
   input:focus, select:focus {
     outline: none;
     border-color: #00d4ff;
-    background: rgba(0,0,0,0.5);
-  }
-
-  select option {
-    background: #1a1a2e;
-    color: #fff;
-  }
-
-  button {
-    width: 100%;
-    padding: 15px;
-    margin-top: 10px;
-    border: none;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
-    color: #fff;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
-  }
-
-  button:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(0,212,255,0.3);
-  }
-
-  button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  button.secondary {
-    background: rgba(255,255,255,0.1);
-    border: 1px solid rgba(255,255,255,0.2);
-  }
-
-  button.logout-btn {
-    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
-    margin-top: 0;
-    margin-left: 0;
+    background: rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 0 4px rgba(0, 212, 255, 0.1);
   }
 
   .phone-group {
@@ -213,1039 +167,478 @@
   }
 
   .phone-group select {
-    width: 140px;
+    width: 110px;
     flex-shrink: 0;
   }
 
-  .verification-section {
-    display: none;
-    margin-top: 20px;
-    padding: 20px;
-    background: rgba(0,212,255,0.1);
-    border-radius: 10px;
-    border: 1px solid rgba(0,212,255,0.3);
+  .submit-btn {
+    width: 100%;
+    height: 50px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #00d4ff 0%, #7b2cbf 100%);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 8px 20px rgba(0, 212, 255, 0.2);
   }
 
-  .verification-section.active {
-    display: block;
-    animation: slideDown 0.3s ease;
+  .submit-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 25px rgba(0, 212, 255, 0.4);
+    filter: brightness(1.1);
   }
 
-  @keyframes slideDown {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
+  .submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
   }
 
-  .channel-status {
+  /* Google Sign-In Styling */
+  .google-section {
+    margin-top: 25px;
+    text-align: center;
+  }
+
+  .divider {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 15px;
-    background: rgba(0,0,0,0.3);
-    border-radius: 8px;
-    margin-bottom: 15px;
+    gap: 15px;
+    margin-bottom: 20px;
   }
 
-  .channel-status.verified {
-    background: rgba(0,255,0,0.1);
-    border: 1px solid #00ff00;
+  .divider div {
+    flex: 1;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
   }
 
-  .channel-status.pending {
-    background: rgba(255,165,0,0.1);
-    border: 1px solid #ffa500;
+  .divider span {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
   }
 
-  .status-icon {
-    font-size: 24px;
-  }
-
-  .otp-input-group {
+  .google-btn-container {
     display: flex;
-    gap: 10px;
-    margin-top: 10px;
-  }
-
-  .otp-input-group input {
-    text-align: center;
-    letter-spacing: 5px;
-    font-size: 20px;
-  }
-
-  .timer {
-    text-align: center;
-    color: #ff6b6b;
-    font-size: 14px;
-    margin-top: 10px;
+    justify-content: center;
+    min-height: 44px;
+    width: 100%;
   }
 
   .status-message {
-    padding: 12px;
-    border-radius: 8px;
-    margin-top: 15px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    font-weight: 600;
     text-align: center;
-    font-size: 14px;
     display: none;
+    z-index: 10;
   }
 
   .status-message.success {
-    background: rgba(0,255,0,0.1);
-    border: 1px solid #00ff00;
-    color: #00ff00;
     display: block;
+    background: rgba(0, 200, 83, 0.1);
+    border: 1px solid rgba(0, 200, 83, 0.3);
+    color: #00c853;
   }
 
   .status-message.error {
-    background: rgba(255,0,0,0.1);
-    border: 1px solid #ff0000;
-    color: #ff0000;
     display: block;
+    background: rgba(255, 71, 87, 0.1);
+    border: 1px solid rgba(255, 71, 87, 0.3);
+    color: #ff4757;
   }
 
-  .tab-switcher {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 30px;
-  }
-
-  .tab-btn {
-    flex: 1;
-    padding: 12px;
-    background: rgba(255,255,255,0.05);
-    border: 2px solid transparent;
-    color: #aaa;
-    font-size: 14px;
-    cursor: pointer;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-  }
-
-  .tab-btn.active {
-    background: rgba(0,212,255,0.1);
-    border-color: #00d4ff;
-    color: #00d4ff;
-  }
-
-  pre { 
-    background: #0f0f1a; 
-    padding: 15px; 
-    border-radius: 10px;
-    border: 1px solid rgba(255,255,255,0.1);
-    max-height: 300px; 
-    overflow-y: auto;
-    font-size: 12px;
-    color: #00ff00;
-    margin-top: 20px;
-  }
-
-  .loading {
+  .loading-spinner {
     display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 3px solid rgba(255,255,255,.3);
-    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
     border-top-color: #fff;
-    animation: spin 1s ease-in-out infinite;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 10px;
+    vertical-align: middle;
   }
 
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-  .select-loading {
-    color: #aaa;
-    font-size: 12px;
-    margin-left: 10px;
-  }
-
-  .info-box {
-    background: rgba(0,212,255,0.1);
-    border-left: 4px solid #00d4ff;
-    padding: 15px;
-    margin-bottom: 20px;
-    border-radius: 0 8px 8px 0;
-    font-size: 14px;
-  }
+  /* Ensure hidden elements are actually hidden */
+  .hidden { display: none !important; }
 </style>
-<script>
-// ── NativeBiometric + NativeStorage helpers for Capacitor ──────────────
-window._NativeBio = {
-  isNative: () => !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()),
-  plugin: () => window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.NativeBiometric,
-  prefs: () => window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Preferences,
-
-  async isAvailable() {
-    const p = this.plugin();
-    if (!p) return false;
-    try { const r = await p.isAvailable(); return r.isAvailable === true; } catch(_) { return false; }
-  },
-
-  async saveSession(sessionId, userData) {
-    localStorage.setItem('session_active', 'true');
-    if (sessionId) localStorage.setItem('session_token', sessionId);
-    if (userData) localStorage.setItem('user_data', typeof userData === 'string' ? userData : JSON.stringify(userData));
-    const pr = this.prefs();
-    if (pr) {
-      try {
-        await pr.set({ key: 'session_active', value: 'true' });
-        if (sessionId) await pr.set({ key: 'session_token', value: sessionId });
-        if (userData) await pr.set({ key: 'user_data', value: typeof userData === 'string' ? userData : JSON.stringify(userData) });
-      } catch(e) { console.warn('[NativeBio] saveSession error:', e); }
-    }
-  },
-
-  async restoreSession() {
-    const pr = this.prefs();
-    if (!pr) return false;
-    try {
-      const r = await pr.get({ key: 'session_active' });
-      if (r.value !== 'true') return false;
-      const t = await pr.get({ key: 'session_token' });
-      const u = await pr.get({ key: 'user_data' });
-      if (t.value) localStorage.setItem('session_token', t.value);
-      if (u.value) localStorage.setItem('user_data', u.value);
-      localStorage.setItem('session_active', 'true');
-      return true;
-    } catch(e) { return false; }
-  }
-};
-</script>
+<!-- Google GSI Library -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════════════════════ -->
-<!-- HORIZONTAL NAVBAR (like File/Edit/etc tabs) -->
-<!-- ═══════════════════════════════════════════════════════════ -->
-<div class="navbar">
-  <div class="navbar-title">🏦 CodeBank</div>
-  
+<nav class="navbar">
+  <div class="navbar-brand">CodeBank</div>
   <div class="navbar-controls">
-    <!-- DRD-MAIL Button -->
-    <button class="navbar-btn" id="drdMailBtn" title="Open DRD-Mail" onclick="openDrdMail()">
-      📧 DRD-Mail
-    </button>
-
-    <!-- Language Selector -->
-    <select class="language-select" id="languageSelect" onchange="changeLanguage(this.value)">
-      <option value="en">🇺🇸 English</option>
-      <option value="ar">🇸🇦 العربية</option>
-      <option value="fr">🇫🇷 Français</option>
-      <option value="es">🇪🇸 Español</option>
-    </select>
-
-    <div class="navbar-separator"></div>
-
-    <!-- Sign Up Button (shown when NOT authenticated) -->
-    <button class="navbar-btn" id="signupNavBtn" onclick="switchTab('signup', event)">
-      📝 Sign Up
-    </button>
-
-    <!-- Log In Button (shown when NOT authenticated) -->
-    <button class="navbar-btn" id="loginNavBtn" onclick="switchTab('login', event)">
-      🔑 Log In
-    </button>
-
-    <!-- Sign Out Button (shown when authenticated) -->
-    <button class="navbar-btn logout-btn" id="signoutNavBtn" style="display: none;" onclick="handleLogout()">
-      🚪 Sign Out
-    </button>
-
-    <!-- User Email Badge (shown when authenticated) -->
-    <div class="user-badge" id="userBadge"></div>
+    <button class="nav-btn" id="nav-signup-btn" onclick="switchTab('signup')">Sign Up</button>
+    <button class="nav-btn" id="nav-login-btn" onclick="switchTab('login')">Login</button>
   </div>
-</div>
+</nav>
 
-<!-- Single-Session Kickout Banner -->
-<script>
-(function() {
-  var reason = new URLSearchParams(window.location.search).get('reason');
-  if (reason === 'kicked') {
-    var msg = sessionStorage.getItem('__kickout_reason__') ||
-      'Your account was opened on another device. Sign in here to continue.';
-    sessionStorage.removeItem('__kickout_reason__');
-    document.addEventListener('DOMContentLoaded', function() {
-      var banner = document.createElement('div');
-      banner.id = 'kickout-banner';
-      banner.style.cssText = [
-        'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:99999',
-        'background:linear-gradient(90deg,#c0392b,#e74c3c)',
-        'color:#fff', 'text-align:center', 'padding:12px 20px',
-        'font-size:14px', 'font-family:-apple-system,BlinkMacSystemFont,sans-serif',
-        'box-shadow:0 2px 12px rgba(0,0,0,0.4)', 'display:flex',
-        'align-items:center', 'justify-content:center', 'gap:10px', 'margin-top: 60px'
-      ].join(';');
-      banner.innerHTML = '<span>📱</span><span>' + msg + '</span>' +
-        '<button onclick="this.parentElement.remove()" ' +
-        'style="background:rgba(255,255,255,0.2);border:none;color:#fff;' +
-        'padding:4px 10px;border-radius:4px;cursor:pointer;font-size:13px;margin-left:8px">✕</button>';
-      document.body.insertBefore(banner, document.body.firstChild);
-      setTimeout(function() {
-        var b = document.getElementById('kickout-banner');
-        if (b) b.remove();
-      }, 8000);
-    });
-  }
-})();
-</script>
-
-<div class="container">
-  <h2>🔐 YT-Clear Hybrid Auth</h2>
-  
-  <div class="tab-switcher">
-    <button class="tab-btn active" onclick="switchTab('signup', event)">Sign Up</button>
-    <button class="tab-btn" onclick="switchTab('login', event)">Login</button>
-  </div>
-
-  <!-- SIGNUP FORM -->
-    <div id="signupForm">
-
-    <div class="form-group">
-      <label>Email Address</label>
-      <input type="email" id="signupEmail" placeholder="your@email.com" required>
-    </div>
-
-    <div class="form-group">
-      <label>Username</label>
-      <input type="text" id="signupUsername" placeholder="Choose a username" required>
-    </div>
-    
-    <div class="form-group">
-      <label>Password</label>
-      <input type="password" id="signupPassword" placeholder="Create a strong password" required>
-    </div>
-    
-    <div class="form-group">
-      <label>Religion <span id="religionLoading" class="select-loading"></span></label>
-      <select id="religion" required>
-        <option value="">-- Select Religion --</option>
-      </select>
-    </div>
-    
-    <div class="form-group">
-      <label>Country <span id="countryLoading" class="select-loading"></span></label>
-      <select id="country" required onchange="updateCountryCode()">
-        <option value="">-- Select Country --</option>
-      </select>
-    </div>
-    
-    <div class="form-group">
-      <label>Phone Number</label>
-      <div class="phone-group">
-        <select id="countryCode" required>
-          <option value="">Code</option>
-        </select>
-        <input type="tel" id="phoneNumber" placeholder="Phone number" required>
-      </div>
-    </div>
-    
+<main class="main-content">
+  <div class="auth-container">
+    <!-- SINGLE STATUS MESSAGE FOR BOTH FORMS -->
     <div id="statusMessage" class="status-message"></div>
-    
-    <button type="button" onclick="handleSignup()" id="signupBtn">Complete Sign Up</button>
 
-    <!-- Google Sign-In Integration (Modern Layout) -->
-    <div id="google-divider-signup" style="display:none;align-items:center;gap:12px;margin:24px 0;">
-      <div style="flex:1;height:1px;background:rgba(255,255,255,0.1)"></div>
-      <span style="color:rgba(255,255,255,0.4);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">or sign up via google</span>
-      <div style="flex:1;height:1px;background:rgba(255,255,255,0.1)"></div>
+    <div class="tab-switcher">
+      <button class="tab-btn active" id="tab-signup" onclick="switchTab('signup')">Create Account</button>
+      <button class="tab-btn" id="tab-login" onclick="switchTab('login')">Welcome Back</button>
     </div>
 
-    <div id="google-signup-wrapper" style="display:none;margin-top:10px;">
-      <div id="google-signin-signup" style="display:flex;justify-content:center;"></div>
+    <!-- LOGIN FORM -->
+    <div id="loginForm" class="hidden">
+      <h2>Login</h2>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="loginEmail" placeholder="your@email.com">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" onkeypress="if(event.key === 'Enter') handleLogin()">
+      </div>
+      <button class="submit-btn" id="loginBtnMain" onclick="handleLogin()">Login</button>
+
+      <!-- Google Sign-In (Login) -->
+      <div class="google-section" id="google-login-section">
+        <div class="divider">
+          <div></div><span>OR</span><div></div>
+        </div>
+        <div id="google-signin-login" class="google-btn-container"></div>
+      </div>
+    </div>
+
+    <!-- SIGNUP FORM -->
+    <div id="signupForm">
+      <h2>Sign Up</h2>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="signupEmail" placeholder="your@email.com">
+      </div>
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="signupUsername" placeholder="johndoe">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="signupPassword" placeholder="••••••••">
+      </div>
+      <div class="form-group">
+        <label>Religion</label>
+        <select id="religion">
+          <option value="">-- Select Religion --</option>
+          <option value="Islam">Islam</option>
+          <option value="Christianity">Christianity</option>
+          <option value="Judaism">Judaism</option>
+          <option value="Hinduism">Hinduism</option>
+          <option value="Buddhism">Buddhism</option>
+          <option value="Other">Other</option>
+          <option value="Prefer not to say">Prefer not to say</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Country</label>
+        <select id="country" onchange="updateCountryCode()"></select>
+      </div>
+      <div class="form-group">
+        <label>Phone Number</label>
+        <div class="phone-group">
+          <select id="countryCode"></select>
+          <input type="tel" id="phoneNumber" placeholder="12345678">
+        </div>
+      </div>
+      <button class="submit-btn" id="signupBtn" onclick="handleSignup()">Complete Sign Up</button>
+
+      <!-- Google Sign-In (Signup) -->
+      <div class="google-section" id="google-signup-section">
+        <div class="divider">
+          <div></div><span>OR</span><div></div>
+        </div>
+        <div id="google-signin-signup" class="google-btn-container"></div>
+      </div>
     </div>
   </div>
-
-  <!-- LOGIN FORM -->
-  <div id="loginForm" style="display: none;">
-    <div class="form-group">
-      <label>Email Address</label>
-      <input type="email" id="loginEmail" placeholder="your@email.com" required>
-    </div>
-    
-    <div class="form-group">
-      <label>Password</label>
-      <input type="password" id="loginPassword" placeholder="Enter your password" required 
-        onkeypress="if(event.key === 'Enter') handleLogin()">
-    </div>
-
-    <button type="button" onclick="handleLogin()" id="loginBtnMain">Login</button>
-
-    <!-- Google Sign-In Integration (Modern Layout) -->
-    <div id="google-divider-login" style="display:none;align-items:center;gap:12px;margin:24px 0;">
-      <div style="flex:1;height:1px;background:rgba(255,255,255,0.1)"></div>
-      <span style="color:rgba(255,255,255,0.4);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">or sign in via google</span>
-      <div style="flex:1;height:1px;background:rgba(255,255,255,0.1)"></div>
-    </div>
-    
-    <div id="google-login-wrapper" style="display:none;margin-top:10px;">
-      <div id="google-signin-login" style="display:flex;justify-content:center;"></div>
-    </div>
-
-    <!-- ─── Biometric Login ──────────────────────────────────── -->
-    <div id="biometricSection" style="display:none; margin-top:16px;">
-      <div style="display:flex;align-items:center;gap:10px;margin:12px 0;">
-        <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
-        <span style="color:#666;font-size:12px">or</span>
-        <div style="flex:1;height:1px;background:rgba(255,255,255,0.15)"></div>
-      </div>
-      <button id="bioAuthBtn" onclick="handleBiometricLogin()" style="
-        background:linear-gradient(135deg,#1a1a2e,#0f3460);
-        border:2px solid rgba(0,212,255,0.4);
-        display:flex;align-items:center;justify-content:center;gap:10px;
-        font-size:15px;letter-spacing:0.3px;">
-        <span style="font-size:22px">🪪</span> Sign in with Fingerprint / Face ID
-      </button>
-    </div>
-
-    <!-- ─── Register Biometric (shown after password login) ─── -->
-    <div id="registerBiometricSection" style="display:none;margin-top:20px;
-      background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.25);
-      border-radius:12px;padding:18px;text-align:center;">
-      <div style="font-size:28px;margin-bottom:8px">🪪</div>
-      <div style="font-weight:600;margin-bottom:6px">Enable Fingerprint Login?</div>
-      <div style="font-size:13px;color:#aaa;margin-bottom:14px">
-        Use your device fingerprint or face to sign in instantly next time — no password needed.
-      </div>
-      <div style="display:flex;gap:10px;">
-        <button onclick="registerBiometric()" style="
-          background:linear-gradient(135deg,#00d4ff,#0099cc);font-size:14px;padding:10px 0;">
-          ✅ Enable Now
-        </button>
-        <button onclick="document.getElementById('registerBiometricSection').style.display='none'" 
-          class="secondary" style="font-size:14px;padding:10px 0;margin-top:0">
-          Not Now
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <pre id="output"></pre>
-</div>
-
-<!-- Auto-switch to signup/login tab based on URL parameter -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  // Check for mode parameter in URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const mode = urlParams.get('mode');
-  
-  if (mode === 'signup') {
-    // Switch to signup tab
-    switchTab('signup');
-    // Update tab button UI
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.tab-btn')[0].classList.add('active');
-    // Update navbar buttons
-    document.getElementById('signupNavBtn').classList.add('active');
-    document.getElementById('loginNavBtn').classList.remove('active');
-  } else if (mode === 'login' || mode === 'signin') {
-    // Switch to login tab
-    switchTab('login');
-    // Update tab button UI
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.tab-btn')[1].classList.add('active');
-    // Update navbar buttons
-    document.getElementById('signupNavBtn').classList.remove('active');
-    document.getElementById('loginNavBtn').classList.add('active');
-  }
-});
-</script>
+</main>
 
 <script>
 const API_BASE = '';
 
-console.log('🔥 API_BASE:', API_BASE);
-console.log('🔥 Window origin:', window.location.origin);
-
-// ═══════════════════════════════════════════════════════════
-// AUTH STATE MANAGEMENT & UI SYNC
-// ═══════════════════════════════════════════════════════════
-
-function updateAuthUI() {
-  const isAuthenticated = localStorage.getItem('session_active') === 'true';
-  const userDataStr = localStorage.getItem('user_data');
-  let userEmail = null;
+// ── UI Logic ────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  const isLogin = tab === 'login';
   
-  if (userDataStr) {
-    try {
-      const userData = JSON.parse(userDataStr);
-      userEmail = userData.email || userData.user?.email;
-    } catch(e) {}
-  }
-
-  const signupNavBtn = document.getElementById('signupNavBtn');
-  const loginNavBtn = document.getElementById('loginNavBtn');
-  const signoutNavBtn = document.getElementById('signoutNavBtn');
-  const userBadge = document.getElementById('userBadge');
-
-  if (isAuthenticated && userEmail) {
-    // User is authenticated
-    if (signupNavBtn) signupNavBtn.style.display = 'none';
-    if (loginNavBtn) loginNavBtn.style.display = 'none';
-    if (signoutNavBtn) signoutNavBtn.style.display = 'block';
-    if (userBadge) {
-      userBadge.classList.add('active');
-      userBadge.textContent = userEmail;
-    }
+  // Update Forms
+  const loginForm = document.getElementById('loginForm');
+  const signupForm = document.getElementById('signupForm');
+  
+  if (isLogin) {
+    loginForm.classList.remove('hidden');
+    signupForm.classList.add('hidden');
   } else {
-    // User is NOT authenticated
-    if (signupNavBtn) signupNavBtn.style.display = 'block';
-    if (loginNavBtn) loginNavBtn.style.display = 'block';
-    if (signoutNavBtn) signoutNavBtn.style.display = 'none';
-    if (userBadge) {
-      userBadge.classList.remove('active');
-      userBadge.textContent = '';
-    }
+    loginForm.classList.add('hidden');
+    signupForm.classList.remove('hidden');
   }
-}
-
-function handleLogout() {
-  fetch(`${API_BASE}/api/auth/logout`, {
-    method: 'POST',
-    credentials: 'include'
-  }).then(() => {
-    // Clear all auth state
-    localStorage.removeItem('session_active');
-    localStorage.removeItem('session_token');
-    localStorage.removeItem('user_data');
-    localStorage.removeItem('__cached_user__');
-    localStorage.removeItem('__cached_session_id__');
-    document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    
-    console.log('✅ Logged out successfully');
-    updateAuthUI();
-    showStatus('✅ Signed out successfully', 'success');
-    
-    // Optionally redirect or show signup form
-    setTimeout(() => {
-      switchTab('signup', null);
-    }, 1000);
-  }).catch(err => {
-    console.error('Logout error:', err);
-    updateAuthUI();
-  });
-}
-
-// Call on page load
-document.addEventListener('DOMContentLoaded', updateAuthUI);
-
-// Also update UI when storage changes (from other tabs)
-window.addEventListener('storage', updateAuthUI);
-
-// Helper functions
-function openDrdMail() {
-  window.open('https://mail.drd.com', '_blank');
-}
-
-function changeLanguage(lang) {
-  localStorage.setItem('language', lang);
-  console.log('Language changed to:', lang);
-  // You can add actual translation logic here
-  alert('Language changed to: ' + lang);
-}
-
-// ═══════════════════════════════════════════════════════════
-// EXISTING AUTH FUNCTIONS (from original login.html)
-// ═══════════════════════════════════════════════════════════
-
-// 🧠 Auth Flow Control: Auto-redirect if session is ACTUALLY active
-(async function checkExistingSession() {
-  const localActive = localStorage.getItem("session_active") === "true";
-  if (!localActive && window._NativeBio && window._NativeBio.isNative()) {
-    await window._NativeBio.restoreSession();
-  }
-
-  if (localStorage.getItem("session_active") === "true") {
-    if (!document.cookie.includes('session_token=')) {
-      localStorage.removeItem("session_active");
-      localStorage.removeItem("session_token");
-      localStorage.removeItem("user_data");
-      localStorage.removeItem("__cached_user__");
-      localStorage.removeItem("__cached_session_id__");
-    } else {
-      fetch('/api/auth/me', { credentials: 'include' })
-        .then(function(r) { 
-          if (r.status === 200) return r.json();
-          throw new Error('not authenticated');
-        })
-        .then(function(data) {
-          console.log('[Session] /auth/me response:', data);
-          if (data.success && data.user) {
-            if (window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
-              console.log('[Session] Syncing restored session assets...');
-              window.AssetsManager.sync();
-            }
-            window.location.href = "/yt-new-clear.html";
-          } else {
-            console.log('[Session] No valid user, clearing state');
-            localStorage.removeItem("session_active");
-            localStorage.removeItem("session_token");
-            localStorage.removeItem("user_data");
-            localStorage.removeItem("__cached_user__");
-            localStorage.removeItem("__cached_session_id__");
-            document.cookie = "session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-            updateAuthUI();
-          }
-        })
-        .catch(function() {
-          localStorage.removeItem("session_active");
-          updateAuthUI();
-        });
-    }
-  } else {
-    if (window._NativeBio && window._NativeBio.isNative()) {
-      const bioAvailable = await window._NativeBio.isAvailable();
-      const prefs = window._NativeBio.prefs();
-      if (bioAvailable && prefs) {
-        try {
-          const t = await prefs.get({ key: 'session_token' });
-          if (t.value) {
-            document.getElementById('biometricSection').style.display = 'block';
-          }
-        } catch(_) {}
-      }
-    }
-  }
-})();
-
-let sessionId = null;
-let verificationStatus = { email: false, phone: false };
-let emailOtpSessionId = null;
-let countriesData = [];
-let religionsData = [];
-
-document.addEventListener('DOMContentLoaded', async () => {
-  await Promise.all([loadCountries(), loadReligions()]);
-  updateAuthUI();
-});
-
-async function loadCountries() {
-  const loadingEl = document.getElementById('countryLoading');
-  if (loadingEl) loadingEl.textContent = '(loading...)';
-  try {
-    const response = await fetch(`${API_BASE}/api/countries`);
-    const data = await response.json();
-    if (data.success) {
-      countriesData = data.countries;
-      populateCountrySelects();
-    }
-  } catch (error) {
-    console.error('Failed to load countries:', error);
-  } finally {
-    if (loadingEl) loadingEl.textContent = '';
-  }
-}
-
-async function loadReligions() {
-  const loadingEl = document.getElementById('religionLoading');
-  if (loadingEl) loadingEl.textContent = '(loading...)';
-  try {
-    const response = await fetch(`${API_BASE}/api/religions`);
-    const data = await response.json();
-    if (data.success) {
-      religionsData = data.religions;
-      populateReligionSelect();
-    }
-  } catch (error) {
-    religionsData = [
-      { value: 'Islam', label: 'Islam', icon: '☪️' },
-      { value: 'Christianity', label: 'Christianity', icon: '✝️' },
-      { value: 'Judaism', label: 'Judaism', icon: '✡️' },
-      { value: 'Hinduism', label: 'Hinduism', icon: '🕉️' },
-      { value: 'Buddhism', label: 'Buddhism', icon: '☸️' },
-      { value: 'Sikhism', label: 'Sikhism', icon: '🪯' },
-      { value: 'Atheist', label: 'Atheist', icon: '⚛️' },
-      { value: 'Agnostic', label: 'Agnostic', icon: '❓' },
-      { value: 'Other', label: 'Other', icon: '🌐' },
-      { value: 'Prefer not to say', label: 'Prefer not to say', icon: '🤫' }
-    ];
-    populateReligionSelect();
-  } finally {
-    if (loadingEl) loadingEl.textContent = '';
-  }
-}
-
-function populateCountrySelects() {
-  const countrySelect = document.getElementById('country');
-  const countryCodeSelect = document.getElementById('countryCode');
   
-  if (!countrySelect || !countryCodeSelect) return;
-
-  countrySelect.innerHTML = '<option value="">-- Select Country --</option>';
-  countryCodeSelect.innerHTML = '<option value="">Code</option>';
+  // Update Tabs
+  document.getElementById('tab-login').classList.toggle('active', isLogin);
+  document.getElementById('tab-signup').classList.toggle('active', !isLogin);
   
-  countriesData.forEach(country => {
-    const option = document.createElement('option');
-    option.value = country.code;
-    option.textContent = `${country.flag} ${country.name}`;
-    option.setAttribute('data-phone-code', country.phoneCode);
-    countrySelect.appendChild(option);
-    
-    const codeOption = document.createElement('option');
-    codeOption.value = country.phoneCode;
-    codeOption.textContent = `${country.flag} ${country.phoneCode}`;
-    codeOption.setAttribute('data-country', country.code);
-    countryCodeSelect.appendChild(codeOption);
-  });
+  // Update Nav
+  document.getElementById('nav-login-btn').classList.toggle('active', isLogin);
+  document.getElementById('nav-signup-btn').classList.toggle('active', !isLogin);
+  
+  // Clear status message
+  const statusEl = document.getElementById('statusMessage');
+  statusEl.style.display = 'none';
+  statusEl.className = 'status-message';
+
+  // Re-render Google button for the active tab (prevents rendering into hidden divs)
+  renderGoogleButtons();
 }
 
-function populateReligionSelect() {
-  const religionSelect = document.getElementById('religion');
-  if (!religionSelect) return;
+function showStatus(msg, type) {
+  const statusEl = document.getElementById('statusMessage');
+  statusEl.textContent = msg;
+  statusEl.className = `status-message ${type}`;
+  statusEl.style.display = 'block';
+  // Smooth scroll to top of auth container
+  document.querySelector('.auth-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
-  religionSelect.innerHTML = '<option value="">-- Select Religion --</option>';
-  religionsData.forEach(religion => {
-    const option = document.createElement('option');
-    option.value = religion.value;
-    option.textContent = `${religion.icon || ''} ${religion.label || religion.value}`;
-    religionSelect.appendChild(option);
-  });
+// ── Data Loading ────────────────────────────────────────────────────────────
+async function loadStaticData() {
+  try {
+    const res = await fetch(`${API_BASE}/api/countries`);
+    const data = await res.json();
+    if (data.success) {
+      const countrySelect = document.getElementById('country');
+      const codeSelect = document.getElementById('countryCode');
+      countrySelect.innerHTML = '<option value="">-- Select Country --</option>';
+      codeSelect.innerHTML = '<option value="">Code</option>';
+      
+      data.countries.forEach(c => {
+        countrySelect.innerHTML += `<option value="${c.code}" data-phone="${c.phoneCode}">${c.flag} ${c.name}</option>`;
+        codeSelect.innerHTML += `<option value="${c.phoneCode}">${c.flag} ${c.phoneCode}</option>`;
+      });
+    }
+  } catch (e) { console.error('[Data] Load error:', e); }
 }
 
 function updateCountryCode() {
-  const countrySelect = document.getElementById('country');
-  const countryCodeSelect = document.getElementById('countryCode');
-  if (!countrySelect || !countryCodeSelect) return;
-
-  const selectedOption = countrySelect.options[countrySelect.selectedIndex];
-  const phoneCode = selectedOption.getAttribute('data-phone-code');
-  
-  if (phoneCode) {
-    for (let i = 0; i < countryCodeSelect.options.length; i++) {
-      if (countryCodeSelect.options[i].value === phoneCode) {
-        countryCodeSelect.selectedIndex = i;
-        break;
-      }
-    }
-  }
+  const country = document.getElementById('country');
+  const code = document.getElementById('countryCode');
+  const phone = country.options[country.selectedIndex]?.getAttribute('data-phone');
+  if (phone) code.value = phone;
 }
 
-function switchTab(tab, evt) {
-  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-  if (evt && evt.target) evt.target.classList.add('active');
-  
-  if (tab === 'signup') {
-    document.getElementById('signupForm').style.display = 'block';
-    document.getElementById('loginForm').style.display = 'none';
-  } else {
-    document.getElementById('signupForm').style.display = 'none';
-    document.getElementById('loginForm').style.display = 'block';
-  }
-}
-
-function showStatus(message, type) {
-  const statusEl = document.getElementById('statusMessage');
-  if (!statusEl) return;
-  statusEl.textContent = message;
-  statusEl.className = 'status-message ' + type;
-  setTimeout(() => {
-    statusEl.className = 'status-message';
-  }, 5000);
-}
-
-// ── Email OTP functions ────────────────────────────────────────
-
-async function sendEmailOTPCode() {
-  const email = document.getElementById('signupEmail').value.trim();
-  if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-    showStatus('Please enter a valid email address first', 'error'); return;
-  }
-  const btn = document.getElementById('sendOtpEmailBtn');
-  btn.disabled = true; btn.textContent = 'Sending…';
-
-  try {
-    const res = await fetch(`${API_BASE}/api/auth/send-email-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    });
-    const data = await res.json();
-    if (data.success) {
-      emailOtpSessionId = data.sessionId;
-      document.getElementById('emailOtpPanel').style.display = 'block';
-      document.getElementById('emailVerifiedBadge').style.display = 'none';
-      document.getElementById('emailOtpStatus').textContent = '';
-      btn.textContent = 'Resend';
-      btn.disabled = false;
-      showStatus(data.message || 'Code sent! Check your inbox.', 'success');
-      if (data.mockOtp) console.warn('[DEV] Email OTP:', data.mockOtp);
-    } else {
-      showStatus(data.error || 'Failed to send code', 'error');
-      btn.textContent = 'Send Code'; btn.disabled = false;
-    }
-  } catch (e) {
-    showStatus('Network error. Please try again.', 'error');
-    btn.textContent = 'Send Code'; btn.disabled = false;
-  }
-}
-
-async function verifyEmailOTPCode() {
-  const otp = document.getElementById('emailOtpInput').value.trim();
-  const statusEl = document.getElementById('emailOtpStatus');
-  if (!otp || otp.length !== 6) { statusEl.textContent = 'Enter the 6-digit code'; return; }
-  if (!emailOtpSessionId) { statusEl.textContent = 'Please send a code first'; return; }
-  statusEl.textContent = 'Verifying…';
-  try {
-    const res = await fetch(`${API_BASE}/api/auth/verify-email-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId: emailOtpSessionId, otp })
-    });
-    const data = await res.json();
-    if (data.success && data.verified) {
-      verificationStatus.email = true;
-      document.getElementById('emailOtpPanel').style.display = 'none';
-      document.getElementById('emailVerifiedBadge').style.display = 'block';
-      const signupBtn = document.getElementById('signupBtn');
-      signupBtn.textContent = 'Complete Sign Up';
-      signupBtn.style.background = 'linear-gradient(135deg,#00c853,#00e676)';
-      showStatus('✅ Email verified!', 'success');
-    } else {
-      statusEl.textContent = data.error || 'Incorrect code. Try again.';
-    }
-  } catch (e) { statusEl.textContent = 'Network error. Try again.'; }
-}
-
-async function resendEmailOTPCode() {
-  emailOtpSessionId = null;
-  await sendEmailOTPCode();
-}
-
-async function handleSignup() {
-  console.log('[Auth] handleSignup triggered');
-  const email = document.getElementById('signupEmail').value.trim();
-  const username = document.getElementById('signupUsername').value.trim();
-  const password = document.getElementById('signupPassword').value;
-  const religion = document.getElementById('religion').value;
-  const country = document.getElementById('country').value;
-  const countryCode = document.getElementById('countryCode').value;
-  const phone = document.getElementById('phoneNumber').value.trim();
-  
-  if (!email || !username || !password || !religion || !country || !phone) {
-    showStatus('Please fill in all fields', 'error');
-    return;
-  }
-  
-  if (password.length < 8) {
-    showStatus('Password must be at least 8 characters long', 'error');
-    return;
-  }
-  
-  const signupBtn = document.getElementById('signupBtn');
-  signupBtn.disabled = true;
-  signupBtn.innerHTML = '<span class="loading"></span> Creating account...';
-  
-  try {
-    const response = await fetch(`${API_BASE}/api/auth/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        email, username, password, religion, country, phone, countryCode
-      })
-    });
-    
-    const data = await response.json();
-    
-    if (data.success === true || data.status === 'success') {
-      showStatus('✅ Account created successfully! Redirecting...', 'success');
-      
-      const sid = data.sessionId || data.session_id;
-      localStorage.setItem('session_token', sid);
-      localStorage.setItem('__cached_session_id__', sid);
-      localStorage.setItem('session_active', 'true');
-      localStorage.setItem('user_data', JSON.stringify(data.user));
-      
-      if (window._NativeBio) window._NativeBio.saveSession(sid, data.user);
-      
-      setTimeout(() => {
-        window.location.href = '/codebank/indexCB.html';
-      }, 1500);
-    } else {
-      showStatus(data.error || data.message || 'Signup failed', 'error');
-      signupBtn.disabled = false;
-      signupBtn.textContent = 'Complete Sign Up';
-    }
-  } catch (error) {
-    console.error('[Auth] Signup error:', error);
-    showStatus('Network error. Please try again.', 'error');
-    signupBtn.disabled = false;
-    signupBtn.textContent = 'Complete Sign Up';
-  }
-}
-
+// ── Authentication Handlers ──────────────────────────────────────────────────
 async function handleLogin() {
-  console.log('[Auth] handleLogin triggered');
-  
-  const emailEl = document.getElementById('loginEmail');
-  const passwordEl = document.getElementById('loginPassword');
-  
-  if (!emailEl || !passwordEl) {
-    console.error('[Auth] Login inputs not found');
-    return;
-  }
-
-  const email = emailEl.value.trim();
-  const password = passwordEl.value;
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
 
   if (!email || !password) {
     showStatus('Email and password required', 'error');
     return;
   }
 
-  const loginBtn = document.getElementById('loginBtnMain');
-  if (loginBtn) {
-    loginBtn.disabled = true;
-    loginBtn.innerHTML = '<span class="loading"></span> Logging in...';
-  }
+  const btn = document.getElementById('loginBtnMain');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading-spinner"></span> Logging in...';
 
   try {
-    const response = await fetch(`${API_BASE}/api/auth/login`, {
+    console.log('[Auth] Attempting login for:', email);
+    const res = await fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
       body: JSON.stringify({ email, password })
     });
+    const data = await res.json();
 
-    const data = await response.json();
-    console.log('[Auth] Login response:', data);
-
-    if (data.success === true || data.status === 'success') {
+    if (data.success || data.status === 'success') {
       showStatus('✅ Login successful! Redirecting...', 'success');
-      
-      const sid = data.sessionId || data.session_id;
-      localStorage.setItem('session_token', sid);
-      localStorage.setItem('__cached_session_id__', sid);
-      localStorage.setItem('session_active', 'true');
-      if (data.user) localStorage.setItem('user_data', JSON.stringify(data.user));
-
-      if (window._NativeBio) window._NativeBio.saveSession(sid, data.user);
-      
-      setTimeout(() => {
-        window.location.href = '/codebank/indexCB.html';
-      }, 1000);
+      saveSession(data);
+      setTimeout(() => window.location.href = '/codebank/indexCB.html', 1000);
     } else {
       showStatus(data.error || data.message || 'Login failed', 'error');
-      if (loginBtn) {
-        loginBtn.disabled = false;
-        loginBtn.textContent = 'Login';
-      }
+      btn.disabled = false;
+      btn.textContent = 'Login';
     }
-  } catch (error) {
-    console.error('[Auth] Login error:', error);
+  } catch (e) {
+    console.error('[Auth] Login error:', e);
     showStatus('Network error. Please try again.', 'error');
-    if (loginBtn) {
-      loginBtn.disabled = false;
-      loginBtn.textContent = 'Login';
-    }
+    btn.disabled = false;
+    btn.textContent = 'Login';
   }
 }
 
-// ── Google Sign-In Integration ──────────────────────────────────────────────
-async function initGoogleSignIn() {
+async function handleSignup() {
+  const fields = {
+    email: document.getElementById('signupEmail').value.trim(),
+    username: document.getElementById('signupUsername').value.trim(),
+    password: document.getElementById('signupPassword').value,
+    religion: document.getElementById('religion').value,
+    country: document.getElementById('country').value,
+    phone: document.getElementById('phoneNumber').value.trim(),
+    countryCode: document.getElementById('countryCode').value
+  };
+
+  if (Object.values(fields).some(v => !v)) {
+    showStatus('Please fill in all fields', 'error');
+    return;
+  }
+
+  if (fields.password.length < 8) {
+    showStatus('Password must be at least 8 characters long', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('signupBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading-spinner"></span> Creating account...';
+
   try {
-    console.log('[Google] Initializing...');
+    console.log('[Auth] Attempting signup for:', fields.email);
+    const res = await fetch(`${API_BASE}/api/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(fields)
+    });
+    const data = await res.json();
+
+    if (data.success || data.status === 'success') {
+      showStatus('✅ Account created! Redirecting...', 'success');
+      saveSession(data);
+      setTimeout(() => window.location.href = '/codebank/indexCB.html', 1500);
+    } else {
+      showStatus(data.error || data.message || 'Signup failed', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Complete Sign Up';
+    }
+  } catch (e) {
+    console.error('[Auth] Signup error:', e);
+    showStatus('Network error. Please try again.', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Complete Sign Up';
+  }
+}
+
+function saveSession(data) {
+  const sid = data.sessionId || data.session_id;
+  localStorage.setItem('session_token', sid);
+  localStorage.setItem('session_active', 'true');
+  if (data.user) localStorage.setItem('user_data', JSON.stringify(data.user));
+  console.log('[Auth] Session saved');
+}
+
+// ── Google Sign-In Implementation ───────────────────────────────────────────
+let googleClientId = null;
+
+async function fetchGoogleConfig() {
+  try {
     const res = await fetch('/api/auth/google-client-id');
     const data = await res.json();
-    const clientId = data.clientId;
-
-    if (!clientId || clientId.includes('your_google')) {
-      console.warn('[Google] Client ID not configured');
-      return;
+    if (data.clientId && !data.clientId.includes('your_google')) {
+      googleClientId = data.clientId;
+      console.log('[Google] Config loaded');
+      return true;
     }
-
-    google.accounts.id.initialize({
-      client_id: clientId,
-      callback: handleGoogleCredential
-    });
-
-    const btnWidth = Math.min(window.innerWidth - 60, 400);
-
-    // Render Login Google Button
-    const loginG = document.getElementById('google-signin-login');
-    if (loginG) {
-      google.accounts.id.renderButton(loginG, { theme: 'filled_blue', size: 'large', width: btnWidth, shape: 'pill' });
-      document.getElementById('google-login-wrapper').style.display = 'block';
-      document.getElementById('google-divider-login').style.display = 'flex';
-    }
-
-    // Render Signup Google Button
-    const signupG = document.getElementById('google-signin-signup');
-    if (signupG) {
-      google.accounts.id.renderButton(signupG, { theme: 'filled_blue', size: 'large', width: btnWidth, shape: 'pill' });
-      document.getElementById('google-signup-wrapper').style.display = 'block';
-      document.getElementById('google-divider-signup').style.display = 'flex';
-    }
-    console.log('[Google] Buttons rendered');
+    console.warn('[Google] Client ID not configured on server');
+    return false;
   } catch (e) {
-    console.error('[Google] Init error:', e);
+    console.error('[Google] Config fetch failed:', e);
+    return false;
   }
 }
 
-async function handleGoogleCredential(response) {
-  const statusEl = document.getElementById('statusMessage');
-  try {
-    console.log('[Google] Credential received, sending to server...');
-    if (statusEl) {
-      statusEl.textContent = 'Signing in with Google...';
-      statusEl.className = 'status-message success';
-      statusEl.style.display = 'block';
-    }
+function renderGoogleButtons() {
+  if (!googleClientId || !window.google) return;
 
+  google.accounts.id.initialize({
+    client_id: googleClientId,
+    callback: handleGoogleResponse
+  });
+
+  const options = { 
+    theme: 'filled_blue', 
+    size: 'large', 
+    width: Math.min(window.innerWidth - 80, 370), 
+    shape: 'pill',
+    text: 'continue_with'
+  };
+  
+  // Render into whichever container is currently visible
+  const loginG = document.getElementById('google-signin-login');
+  const signupG = document.getElementById('google-signin-signup');
+  
+  if (loginG && !document.getElementById('loginForm').classList.contains('hidden')) {
+    google.accounts.id.renderButton(loginG, options);
+  }
+  if (signupG && !document.getElementById('signupForm').classList.contains('hidden')) {
+    google.accounts.id.renderButton(signupG, options);
+  }
+}
+
+async function handleGoogleResponse(resp) {
+  showStatus('Signing in with Google...', 'success');
+  try {
     const res = await fetch('/api/auth/google', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ credential: response.credential })
+      body: JSON.stringify({ credential: resp.credential })
     });
-
     const data = await res.json();
-    console.log('[Google] Server response:', data);
-
-    if (data.status === 'success' || data.success === true) {
-      console.log('[Google] ✅ Authentication successful!');
-      const sid = data.sessionId || data.session_id;
-      localStorage.setItem('session_token', sid);
-      localStorage.setItem('__cached_session_id__', sid);
-      localStorage.setItem('session_active', 'true');
-      if (data.user) localStorage.setItem('user_data', JSON.stringify(data.user));
-      
-      if (window._NativeBio) window._NativeBio.saveSession(sid, data.user);
-
-      if (statusEl) {
-        statusEl.textContent = '✅ Signed in with Google! Redirecting...';
-        statusEl.className = 'status-message success';
-      }
-
-      updateAuthUI();
-      setTimeout(function() { window.location.href = '/codebank/indexCB.html'; }, 1000);
+    if (data.success || data.status === 'success') {
+      saveSession(data);
+      showStatus('✅ Google Login successful!', 'success');
+      setTimeout(() => window.location.href = '/codebank/indexCB.html', 1000);
     } else {
-      console.error('[Google] Server error:', data);
-      if (statusEl) {
-        statusEl.textContent = '❌ ' + (data.error || 'Google sign-in failed');
-        statusEl.className = 'status-message error';
+      showStatus(data.error || 'Google sign-in failed', 'error');
+    }
+  } catch (e) { 
+    console.error('[Google] Auth error:', e);
+    showStatus('Google sign-in network error', 'error'); 
+  }
+}
+
+// ── Initialization ──────────────────────────────────────────────────────────
+async function init() {
+  console.log('[Init] Starting...');
+  loadStaticData();
+  
+  // Handle URL mode
+  const mode = new URLSearchParams(window.location.search).get('mode');
+  switchTab(mode === 'login' ? 'login' : 'signup');
+
+  // Load Google
+  const hasGoogle = await fetchGoogleConfig();
+  if (hasGoogle) {
+    // Wait for SDK to be ready
+    let attempts = 0;
+    const checkGSI = setInterval(() => {
+      attempts++;
+      if (window.google && window.google.accounts) {
+        clearInterval(checkGSI);
+        renderGoogleButtons();
+      } else if (attempts > 20) {
+        clearInterval(checkGSI);
+        console.error('[Google] SDK load timeout');
       }
-    }
-  } catch (e) {
-    console.error('[Google Auth Error]', e);
-    if (statusEl) {
-      statusEl.textContent = '❌ Network error: ' + e.message;
-      statusEl.className = 'status-message error';
-    }
+    }, 200);
   }
 }
 
-function _tryInitGoogle() {
-  if (window.google && window.google.accounts) {
-    initGoogleSignIn();
-  } else {
-    setTimeout(_tryInitGoogle, 500);
-  }
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-  setTimeout(_tryInitGoogle, 500);
-});
+document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>
