@@ -2832,26 +2832,31 @@ class AuthController {
 
     setState(newState) {
         console.log('[AuthController] State change:', this.currentState, '->', newState);
-        
+
         const authNotLogged = document.getElementById('auth-not-logged');
         const loginModal = document.getElementById('login-modal');
         const signupModal = document.getElementById('signup-modal');
         const authLoggedIn = document.getElementById('auth-logged-in');
 
+        // Hide all states by default - ensure modals stay hidden
         if (authNotLogged) authNotLogged.style.display = 'none';
         if (loginModal) loginModal.style.display = 'none';
         if (signupModal) signupModal.style.display = 'none';
         if (authLoggedIn) authLoggedIn.style.display = 'none';
 
+        // Only show the 'not-logged' state - no modal should be shown automatically
         switch(newState) {
             case 'not-logged':
                 if (authNotLogged) authNotLogged.style.display = 'block';
                 break;
+            // Modal states are no longer used - we redirect to login.html instead
             case 'login-modal':
-                if (loginModal) loginModal.style.display = 'flex';
+                console.log('[AuthController] Login modal state called - redirecting to login.html');
+                window.location.href = '/login.html';
                 break;
             case 'signup-modal':
-                if (signupModal) signupModal.style.display = 'flex';
+                console.log('[AuthController] Signup modal state called - redirecting to login.html');
+                window.location.href = '/login.html?mode=signup';
                 break;
             case 'logged-in':
                 if (authLoggedIn) authLoggedIn.style.display = 'flex';
