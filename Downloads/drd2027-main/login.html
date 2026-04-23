@@ -655,6 +655,8 @@ function saveSession(data) {
 }
 
 // ── Google Sign-In Implementation ───────────────────────────────────────────
+// Embedded fallback client ID so button works even if /api/auth/google-client-id fails
+const FALLBACK_GOOGLE_CLIENT_ID = '190246442192-3b5onfffcrshjt95gfooqcr73vut0j3t.apps.googleusercontent.com';
 let googleClientId = null;
 let googleSdkReady = false;
 
@@ -664,14 +666,16 @@ async function fetchGoogleConfig() {
     const data = await res.json();
     if (data.clientId && data.configured) {
       googleClientId = data.clientId;
-      console.log('[Google] Config loaded, clientId available');
+      console.log('[Google] Config loaded from server');
       return true;
     }
-    console.warn('[Google] Client ID not configured on server');
-    return false;
+    console.warn('[Google] Server config missing, using fallback client ID');
+    googleClientId = FALLBACK_GOOGLE_CLIENT_ID;
+    return true; // We have fallback, so proceed
   } catch (e) {
-    console.warn('[Google] Failed to fetch config:', e);
-    return false;
+    console.warn('[Google] Failed to fetch config, using fallback client ID:', e);
+    googleClientId = FALLBACK_GOOGLE_CLIENT_ID;
+    return true; // We have fallback, so proceed
   }
 }
 
