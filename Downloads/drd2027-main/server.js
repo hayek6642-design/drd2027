@@ -518,43 +518,21 @@ app.get('/api/auth/me', (req, res) => {
     });
 });
 // Auth configuration endpoint (for Google Client ID)
-app.get('/api/auth/google-client-id', (req, res) => {
-  const raw = process.env.GOOGLE_CLIENT_ID || '';
-  
-  // Validate it's a real Google Client ID (not empty or placeholder)
-  const isValid = raw && 
-                  raw !== 'your_google_client_id.apps.googleusercontent.com' && 
-                  /^\d+(-[a-z0-9]+)?\.apps\.googleusercontent\.com$/.test(raw);
-  
-  if (!isValid) {
-    console.warn('[AUTH] GOOGLE_CLIENT_ID not configured or invalid:', raw ? '(set but invalid format)' : '(not set)');
-  }
-  
-  res.json({ 
-    clientId: isValid ? raw : '',
-    configured: isValid,
-    debug: {
-      isConfigured: !!raw,
-      isPlaceholder: raw === 'your_google_client_id.apps.googleusercontent.com',
-      isValid: isValid
-    }
-  });
-});
-
-// Google auth initiation
 // GET Google Client ID (PUBLIC - no auth required)
 app.get('/api/auth/google-client-id', (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID || '';
-  const isValid = clientId && !clientId.includes('your_google') && clientId.includes('.apps.googleusercontent.com');
+  const isValid = clientId && 
+                  clientId !== 'your_google_client_id.apps.googleusercontent.com' && 
+                  clientId.includes('.apps.googleusercontent.com');
   
   if (!isValid) {
-    console.warn('[GOOGLE] Client ID not properly configured:', clientId);
+    console.warn('[AUTH] GOOGLE_CLIENT_ID not configured or invalid format:', clientId || '(not set)');
   }
   
-  res.json({
+  res.json({ 
     clientId: clientId,
-    isValid: isValid,
-    configured: !!process.env.GOOGLE_CLIENT_ID
+    configured: isValid,
+    isValid: isValid
   });
 });
 
