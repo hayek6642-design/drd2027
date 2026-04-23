@@ -289,9 +289,6 @@
 
 <main class="main-content">
   <div class="auth-container">
-    <!-- SINGLE STATUS MESSAGE FOR BOTH FORMS -->
-    <div id="statusMessage" class="status-message"></div>
-
     <div class="tab-switcher">
       <button class="tab-btn active" id="tab-signup" onclick="switchTab('signup')">Create Account</button>
       <button class="tab-btn" id="tab-login" onclick="switchTab('login')">Welcome Back</button>
@@ -300,6 +297,7 @@
     <!-- LOGIN FORM -->
     <div id="loginForm" class="hidden">
       <h2>Login</h2>
+      <div id="loginStatus" class="status-message"></div>
       <div class="form-group">
         <label>Email Address</label>
         <input type="email" id="loginEmail" placeholder="your@email.com">
@@ -322,6 +320,7 @@
     <!-- SIGNUP FORM -->
     <div id="signupForm">
       <h2>Sign Up</h2>
+      <div id="signupStatus" class="status-message"></div>
       <div class="form-group">
         <label>Email Address</label>
         <input type="email" id="signupEmail" placeholder="your@email.com">
@@ -375,7 +374,10 @@
 const API_BASE = '';
 
 // ── UI Logic ────────────────────────────────────────────────────────────────
+let currentTab = 'signup';
+
 function switchTab(tab) {
+  currentTab = tab;
   const isLogin = tab === 'login';
   
   // Update Forms
@@ -398,22 +400,22 @@ function switchTab(tab) {
   document.getElementById('nav-login-btn').classList.toggle('active', isLogin);
   document.getElementById('nav-signup-btn').classList.toggle('active', !isLogin);
   
-  // Clear status message
-  const statusEl = document.getElementById('statusMessage');
-  statusEl.style.display = 'none';
-  statusEl.className = 'status-message';
+  // Clear status messages
+  document.getElementById('loginStatus').style.display = 'none';
+  document.getElementById('signupStatus').style.display = 'none';
 
   // Re-render Google button for the active tab (prevents rendering into hidden divs)
-  renderGoogleButtons();
+  setTimeout(renderGoogleButtons, 50);
 }
 
 function showStatus(msg, type) {
-  const statusEl = document.getElementById('statusMessage');
+  const statusId = currentTab === 'login' ? 'loginStatus' : 'signupStatus';
+  const statusEl = document.getElementById(statusId);
+  if (!statusEl) return;
+  
   statusEl.textContent = msg;
   statusEl.className = `status-message ${type}`;
   statusEl.style.display = 'block';
-  // Smooth scroll to top of auth container
-  document.querySelector('.auth-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ── Data Loading ────────────────────────────────────────────────────────────
@@ -562,30 +564,42 @@ async function fetchGoogleConfig() {
 }
 
 function renderGoogleButtons() {
-  if (!googleClientId || !window.google) return;
-
-  google.accounts.id.initialize({
-    client_id: googleClientId,
-    callback: handleGoogleResponse
-  });
-
-  const options = { 
-    theme: 'filled_blue', 
-    size: 'large', 
-    width: Math.min(window.innerWidth - 80, 370), 
-    shape: 'pill',
-    text: 'continue_with'
-  };
-  
-  // Render into whichever container is currently visible
-  const loginG = document.getElementById('google-signin-login');
-  const signupG = document.getElementById('google-signin-signup');
-  
-  if (loginG && !document.getElementById('loginForm').classList.contains('hidden')) {
-    google.accounts.id.renderButton(loginG, options);
+  if (!googleClientId || !window.google || !window.google.accounts) {
+    console.warn('[Google] Cannot render: missing config or SDK', { googleClientId, sdk: !!window.google });
+    return;
   }
-  if (signupG && !document.getElementById('signupForm').classList.contains('hidden')) {
-    google.accounts.id.renderButton(signupG, options);
+
+  try {
+    google.accounts.id.initialize({
+      client_id: googleClientId,
+      callback: handleGoogleResponse,
+      auto_select: false
+    });
+
+    const options = { 
+      theme: 'filled_blue', 
+      size: 'large', 
+      width: Math.min(window.innerWidth - 80, 370), 
+      shape: 'pill'
+    };
+    
+    // Render into whichever container is currently visible
+    const isLogin = currentTab === 'login';
+    const containerId = isLogin ? 'google-signin-login' : 'google-signin-signup';
+    const container = document.getElementById(containerId);
+    
+    if (container) {
+      container.innerHTML = ''; // Clear previous
+      google.accounts.id.renderButton(container, {
+        ...options,
+        text: isLogin ? 'signin_with' : 'signup_with'
+      });
+      console.log(`[Google] Button rendered into ${containerId}`);
+    } else {
+      console.error(`[Google] Container ${containerId} not found`);
+    }
+  } catch (e) {
+    console.error('[Google] Render error:', e);
   }
 }
 
