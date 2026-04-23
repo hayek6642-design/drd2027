@@ -521,18 +521,17 @@ app.get('/api/auth/me', (req, res) => {
 // GET Google Client ID (PUBLIC - no auth required)
 app.get('/api/auth/google-client-id', (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID || '';
-  const isValid = clientId && 
-                  clientId !== 'your_google_client_id.apps.googleusercontent.com' && 
-                  clientId.includes('.apps.googleusercontent.com');
+  // Be permissive: any non-empty string that looks like a client ID
+  const isConfigured = clientId && clientId.length > 20;
   
-  if (!isValid) {
-    console.warn('[AUTH] GOOGLE_CLIENT_ID not configured or invalid format:', clientId || '(not set)');
+  if (!isConfigured) {
+    console.warn('[AUTH] GOOGLE_CLIENT_ID not configured in .env');
   }
   
   res.json({ 
     clientId: clientId,
-    configured: isValid,
-    isValid: isValid
+    configured: isConfigured,
+    isValid: isConfigured
   });
 });
 

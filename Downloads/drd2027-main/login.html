@@ -446,8 +446,13 @@ function updateCountryCode() {
 
 // ── Authentication Handlers ──────────────────────────────────────────────────
 async function handleLogin() {
-  const email = document.getElementById('loginEmail').value.trim();
-  const password = document.getElementById('loginPassword').value;
+  const emailEl = document.getElementById('loginEmail');
+  const passwordEl = document.getElementById('loginPassword');
+  
+  if (!emailEl || !passwordEl) return;
+
+  const email = emailEl.value.trim();
+  const password = passwordEl.value;
 
   if (!email || !password) {
     showStatus('Email and password required', 'error');
@@ -459,12 +464,17 @@ async function handleLogin() {
   btn.innerHTML = '<span class="loading-spinner"></span> Logging in...';
 
   try {
-    console.log('[Auth] Attempting login for:', email);
     const res = await fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
+    
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.error || errorData.message || 'Login failed');
+    }
+
     const data = await res.json();
 
     if (data.success || data.status === 'success') {
@@ -472,13 +482,10 @@ async function handleLogin() {
       saveSession(data);
       setTimeout(() => window.location.href = '/codebank/indexCB.html', 1000);
     } else {
-      showStatus(data.error || data.message || 'Login failed', 'error');
-      btn.disabled = false;
-      btn.textContent = 'Login';
+      throw new Error(data.error || data.message || 'Login failed');
     }
   } catch (e) {
-    console.error('[Auth] Login error:', e);
-    showStatus('Network error. Please try again.', 'error');
+    showStatus(e.message || 'Network error. Please try again.', 'error');
     btn.disabled = false;
     btn.textContent = 'Login';
   }
@@ -510,12 +517,17 @@ async function handleSignup() {
   btn.innerHTML = '<span class="loading-spinner"></span> Creating account...';
 
   try {
-    console.log('[Auth] Attempting signup for:', fields.email);
     const res = await fetch(`${API_BASE}/api/auth/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(fields)
     });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.error || errorData.message || 'Signup failed');
+    }
+
     const data = await res.json();
 
     if (data.success || data.status === 'success') {
@@ -523,13 +535,10 @@ async function handleSignup() {
       saveSession(data);
       setTimeout(() => window.location.href = '/codebank/indexCB.html', 1500);
     } else {
-      showStatus(data.error || data.message || 'Signup failed', 'error');
-      btn.disabled = false;
-      btn.textContent = 'Complete Sign Up';
+      throw new Error(data.error || data.message || 'Signup failed');
     }
   } catch (e) {
-    console.error('[Auth] Signup error:', e);
-    showStatus('Network error. Please try again.', 'error');
+    showStatus(e.message || 'Network error. Please try again.', 'error');
     btn.disabled = false;
     btn.textContent = 'Complete Sign Up';
   }
@@ -545,58 +554,57 @@ function saveSession(data) {
 
 // ── Google Sign-In Implementation ───────────────────────────────────────────
 let googleClientId = null;
+let googleInitStarted = false;
 
 async function fetchGoogleConfig() {
   try {
     const res = await fetch('/api/auth/google-client-id');
     const data = await res.json();
-    if (data.clientId && !data.clientId.includes('your_google')) {
+    if (data.clientId && data.configured) {
       googleClientId = data.clientId;
       console.log('[Google] Config loaded');
       return true;
     }
-    console.warn('[Google] Client ID not configured on server');
     return false;
   } catch (e) {
-    console.error('[Google] Config fetch failed:', e);
     return false;
   }
 }
 
 function renderGoogleButtons() {
-  if (!googleClientId || !window.google || !window.google.accounts) {
-    console.warn('[Google] Cannot render: missing config or SDK', { googleClientId, sdk: !!window.google });
-    return;
-  }
+  if (!googleClientId || !window.google || !window.google.accounts) return;
 
   try {
-    google.accounts.id.initialize({
-      client_id: googleClientId,
-      callback: handleGoogleResponse,
-      auto_select: false
-    });
+    if (!googleInitStarted) {
+      google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: handleGoogleResponse,
+        auto_select: false
+      });
+      googleInitStarted = true;
+    }
 
     const options = { 
       theme: 'filled_blue', 
       size: 'large', 
-      width: Math.min(window.innerWidth - 80, 370), 
+      width: 350, // Fixed width for reliability
       shape: 'pill'
     };
     
-    // Render into whichever container is currently visible
     const isLogin = currentTab === 'login';
     const containerId = isLogin ? 'google-signin-login' : 'google-signin-signup';
     const container = document.getElementById(containerId);
     
     if (container) {
-      container.innerHTML = ''; // Clear previous
-      google.accounts.id.renderButton(container, {
-        ...options,
-        text: isLogin ? 'signin_with' : 'signup_with'
-      });
-      console.log(`[Google] Button rendered into ${containerId}`);
-    } else {
-      console.error(`[Google] Container ${containerId} not found`);
+      // Small delay to ensure container is fully painted
+      setTimeout(() => {
+        container.innerHTML = ''; 
+        google.accounts.id.renderButton(container, {
+          ...options,
+          text: isLogin ? 'signin_with' : 'signup_with'
+        });
+        console.log(`[Google] Button rendered into ${containerId}`);
+      }, 50);
     }
   } catch (e) {
     console.error('[Google] Render error:', e);
