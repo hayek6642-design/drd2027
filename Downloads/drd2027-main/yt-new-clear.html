@@ -2468,7 +2468,7 @@ function clearSessionAndLogout() {
             try { window.addEventListener('message', function (ev) { try { var data = ev && ev.data || {}; if (data && data.type === 'CODEBANK_ASSETS_HANDSHAKE') { try { var snap = AssetBus.snapshot(); if (snap && ev.source) { try { var out = sanitizeUISnapshot(Object.assign({}, snap, { source: 'ui' })); if (out && out.count === 0) { console.warn('[UI SNAPSHOT] zero-count snapshot blocked', out); }
                         try { window.__CODEBANK_ALLOWED_ORIGIN__ = ev && ev.origin || __cbOrigin__(); } catch(_){ }
                         var authed = false; try { authed = (window.Auth && typeof window.Auth.isAuthenticated==='function' && window.Auth.isAuthenticated()) || (window.AuthCore && typeof window.AuthCore.isAuthenticated==='function' && window.AuthCore.isAuthenticated()) || (!!window.__AUTH_READY__ && !!(window.APP_AUTH && window.APP_AUTH.user)); } catch(_){ authed = false }
-                        if (!authed) { console.warn('[SNAPSHOT BLOCKED] not authenticated'); return; }
+                        if (!authed && !window.__guestMode__) { console.warn('[SNAPSHOT BLOCKED] not authenticated and no guest mode'); return; } // Allow guest mode
                          if (window.DEBUG_MODE) console.log('[SNAPSHOT SENT]', out);
                         //  FIX: Use ev.origin as target origin for better compatibility and to avoid YouTube mismatch
                         var targetOrigin = (ev.origin && ev.origin !== 'null') ? ev.origin : window.location.origin;
@@ -2602,10 +2602,10 @@ function clearSessionAndLogout() {
                                               (!!window.__AUTH_READY__ && !!(window.APP_AUTH && window.APP_AUTH.user));
                                 } catch(_) { authed2 = false; }
                                 
-                                if (!authed2) { 
+                                if (!authed2 && !window.__guestMode__) { 
                                     console.warn('[SNAPSHOT BLOCKED] not authenticated (frame load)');
                                     return;
-                                }
+                                } // Allow guest mode
                                 
                                 console.log('[SNAPSHOT] Sending to iframe on load, snap:', out2);
                                 frame.contentWindow.postMessage({ type: 'CODEBANK_ASSETS_SYNC', payload: out2 }, window.location.origin);
@@ -2633,7 +2633,69 @@ function clearSessionAndLogout() {
                         } catch(_) {}
                     }, 1000);
                     
-                    // Listen for asset updates
+                    
+// UI UPDATE HANDLER - Display codes whenever assets are updated
+(function InitUIUpdateHandler() {
+    const updateCodeDisplay = function() {
+        try {
+            const codeDisplay = document.getElementById('code-display');
+            const countDisplay = document.getElementById('code-count') || document.querySelector('[data-id="code-count"]');
+            
+            if (!codeDisplay) return;
+            
+            // Get current codes from multiple sources
+            let codes = [];
+            try { codes = JSON.parse(localStorage.getItem('acc_assets') || '{}').codes || []; } catch(_) {}
+            if (!codes.length && window.__forcedAssets && window.__forcedAssets.codes) {
+                codes = window.__forcedAssets.codes;
+            }
+            if (!codes.length && window.AssetBus && typeof window.AssetBus.snapshot === 'function') {
+                const snap = window.AssetBus.snapshot();
+                codes = snap.codes || [];
+            }
+            
+            // Update code display
+            if (codes.length > 0) {
+                const latestCode = typeof codes[codes.length - 1] === 'string' ? 
+                    codes[codes.length - 1] : 
+                    (codes[codes.length - 1].code || codes[codes.length - 1]);
+                    
+                if (codeDisplay.textContent !== latestCode) {
+                    codeDisplay.textContent = latestCode;
+                    codeDisplay.style.color = '#00ff00';
+                    console.log('[UI UPDATE] Code display updated:', latestCode);
+                }
+                
+                if (countDisplay) {
+                    countDisplay.textContent = codes.length.toString();
+                }
+            }
+        } catch(e) {
+            console.log('[UI UPDATE] Error:', e.message);
+        }
+    };
+    
+    // Update on message receive
+    const origPostMessage = window.postMessage;
+    window.postMessage = function(data, origin) {
+        if (data && (data.type === 'CODEBANK_ASSETS_SYNC' || data.type === 'assetbus:snapshot')) {
+            setTimeout(updateCodeDisplay, 10);
+        }
+        return origPostMessage.call(window, data, origin);
+    };
+    
+    // Also listen to parent messages
+    window.addEventListener('message', function(e) {
+        if (e.data && (e.data.type === 'CODEBANK_ASSETS_SYNC' || e.data.type === 'assetbus:snapshot')) {
+            setTimeout(updateCodeDisplay, 10);
+        }
+    });
+    
+    // Update every 2 seconds as fallback
+    setInterval(updateCodeDisplay, 2000);
+})();
+
+// Listen for asset updates
                     var assetsUpdateHandler = function(e) {
                         try {
                             clearTimeout(resendSnapTimeout);
