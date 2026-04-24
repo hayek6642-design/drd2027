@@ -86,6 +86,7 @@
             </div>
         </main>
     </div>
+    <script src="/shared/app-state-unified.js"></script>
     <script>
         function switchView(n) {
             document.querySelectorAll('.zagel-iframe-container').forEach(el => el.classList.remove('active'));
@@ -95,10 +96,54 @@
             const t = {dashboard:'📊 Dashboard', youtube:'📺 YouTube', quran:'📖 Quran', mail:'📧 Mail', phone:'☎️ Phone', chat:'🤖 Chat', platform:'🏗️ Manager'};
             document.getElementById('headerTitle').textContent = t[n];
         }
-        function logout() { if (confirm('Logout?')) { localStorage.clear(); window.location.href = '/login.html'; } }
-        document.addEventListener('DOMContentLoaded', () => {
-            const auth = localStorage.getItem('session_token') || localStorage.getItem('session_active') === 'true';
-            if (!auth) window.location.href = '/login.html';
+        
+        function logout() { 
+            if (confirm('Logout?')) { 
+                if (window.AppState && window.AppState.auth) {
+                    window.AppState.auth.logout();
+                } else {
+                    localStorage.clear();
+                    window.location.href = '/login.html';
+                }
+            } 
+        }
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Verify auth with backend - SINGLE SOURCE OF TRUTH
+            if (!window.AppState || !window.AppState.auth) {
+                console.error('[CodeBank] AppState auth not initialized');
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            // Try to restore from sessionStorage first
+            const restored = await window.AppState.auth.restore();
+            
+            // Verify with backend (required)
+            const verified = await window.AppState.auth.verify();
+            
+            if (!verified) {
+                console.error('[CodeBank] Auth verification failed');
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            console.log('[CodeBank] Auth verified:', window.AppState.auth.user?.email);
+            
+            // Setup iframe postMessage listener for auth requests
+            window.addEventListener('message', (event) => {
+                if (event.data?.type === 'AUTH_REQUEST') {
+                    event.source.postMessage({
+                        type: 'AUTH_RESPONSE',
+                        auth: {
+                            isAuthenticated: window.AppState.auth.isAuthenticated,
+                            user: window.AppState.auth.user,
+                            token: window.AppState.auth.token
+                        }
+                    }, event.origin);
+                    console.log('[CodeBank] Sent auth to iframe:', event.origin);
+                }
+            });
         });
     </script>
 </body>
