@@ -31,7 +31,7 @@
             flex-direction: column;
         }
         
-        /* Auth Modal */
+        /* Auth Modal - ONLY USED BY CODEBANK */
         .auth-modal {
             position: fixed;
             top: 0;
@@ -39,7 +39,7 @@
             width: 100%;
             height: 100%;
             background: rgba(13, 17, 23, 0.95);
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
             z-index: 9999;
@@ -230,8 +230,8 @@
             background: rgba(88, 166, 255, 0.05);
         }
         
-        #main-content {
-            display: none;
+        #mainContent {
+            display: flex;
             flex: 1;
             overflow: auto;
         }
@@ -334,203 +334,135 @@
 
     <script>
         // ============================
-        // Auth Manager
+        // NO STARTUP AUTH - App loads immediately
         // ============================
-        const Auth = {
-            async initialize() {
-                console.log('[Auth] Initializing...');
+        (function bootstrapApp() {
+            'use strict';
+            
+            // Show app IMMEDIATELY - NO AUTH BLOCK
+            function showApp() {
+                const loading = document.querySelector('.loading');
+                if (loading) {
+                    loading.style.transition = 'opacity 0.5s ease';
+                    loading.style.opacity = '0';
+                    setTimeout(() => loading.style.display = 'none', 500);
+                }
                 
-                // Check if already authenticated
+                const mainContent = document.getElementById('mainContent');
+                if (mainContent) {
+                    mainContent.style.display = 'flex';
+                    mainContent.style.opacity = '0';
+                    requestAnimationFrame(() => {
+                        mainContent.style.opacity = '1';
+                        mainContent.style.transition = 'opacity 0.3s ease';
+                    });
+                }
+                
+                console.log('[App] Bootstrap complete - no auth gate');
+            }
+            
+            // Initialize immediately
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', showApp);
+            } else {
+                showApp();
+            }
+        })();
+        
+        // ============================================================
+        // CODEBANK AUTH SYSTEM - Lazy, only runs when CodeBank opens
+        // ============================================================
+        window.CodeBankAuth = {
+            initialized: false,
+            user: null,
+            sessionId: null,
+            
+            async init() {
+                if (this.initialized) return this.user;
+                
+                console.log('[CodeBankAuth] Initializing...');
+                
+                // Check existing session
                 const sessionId = localStorage.getItem('sessionId') || localStorage.getItem('session_token');
                 if (sessionId) {
-                    console.log('[Auth] Session found, checking validity...');
-                    const valid = await this.validateSession(sessionId);
-                    if (valid) {
-                        this.showMainContent();
-                        return;
+                    try {
+                        const res = await fetch('/api/auth/session', {
+                            headers: { 'x-session-token': sessionId }
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.authenticated === true) {
+                                this.user = data.user;
+                                this.sessionId = sessionId;
+                                this.initialized = true;
+                                console.log('[CodeBankAuth] Session restored');
+                                return this.user;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[CodeBankAuth] Invalid stored data');
                     }
                     localStorage.removeItem('sessionId');
                     localStorage.removeItem('session_token');
                 }
                 
-                this.showAuthModal();
+                // No session - show login inside CodeBank
+                this.showLoginModal();
+                return null;
             },
             
-            async validateSession(sessionId) {
-                try {
-                    const res = await fetch('/api/auth/session', {
-                        headers: { 'x-session-token': sessionId }
-                    });
-                    if (res.ok) {
-                        const data = await res.json();
-                        return data.authenticated === true;
-                    }
-                } catch (e) {
-                    console.error('[Auth] Validation error:', e.message);
-                }
-                return false;
-            },
-            
-            showAuthModal() {
-                document.getElementById('authModal').style.display = 'flex';
-                document.getElementById('mainContent').style.display = 'none';
-            },
-            
-            showMainContent() {
-                document.getElementById('authModal').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'flex';
-                this.loadApp();
-            },
-            
-            async handleSignIn(email, password) {
-                try {
-                    const res = await fetch('/api/auth/login', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email, password, verificationMethod: 'email-password' })
-                    });
-                    
-                    if (!res.ok) {
-                        const data = await res.json();
-                        throw new Error(data.error || 'Sign in failed');
-                    }
-                    
-                    const data = await res.json();
-                    if (data.sessionId) {
-                        localStorage.setItem('sessionId', data.sessionId);
-                        if (data.token) localStorage.setItem('session_token', data.token);
-                        this.showMainContent();
-                    }
-                } catch (e) {
-                    this.showError(e.message);
-                }
-            },
-            
-            async handleSignUp(name, email, password) {
-                try {
-                    const res = await fetch('/api/auth/signup', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name, email, password })
-                    });
-                    
-                    if (!res.ok) {
-                        const data = await res.json();
-                        throw new Error(data.error || 'Sign up failed');
-                    }
-                    
-                    const data = await res.json();
-                    if (data.sessionId) {
-                        localStorage.setItem('sessionId', data.sessionId);
-                        if (data.token) localStorage.setItem('session_token', data.token);
-                        this.showMainContent();
-                    }
-                } catch (e) {
-                    this.showError(e.message);
-                }
-            },
-            
-            async handleGoogleSignIn(credential) {
-                try {
-                    const res = await fetch('/api/auth/google', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ credential })
-                    });
-                    
-                    if (!res.ok) {
-                        const data = await res.json();
-                        throw new Error(data.message || 'Google sign-in failed');
-                    }
-                    
-                    const data = await res.json();
-                    if (data.sessionId) {
-                        localStorage.setItem('sessionId', data.sessionId);
-                        if (data.token) localStorage.setItem('session_token', data.token);
-                        this.showMainContent();
-                    }
-                } catch (e) {
-                    this.showError(e.message);
-                }
-            },
-            
-            handleGuestMode() {
-                const guestId = 'guest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('guestId', guestId);
-                localStorage.setItem('isGuest', 'true');
-                console.log('[Auth] Guest mode enabled:', guestId);
-                this.showMainContent();
-            },
-            
-            showError(msg) {
-                const err = document.getElementById('errorMessage');
-                if (err) {
-                    err.textContent = msg || 'An error occurred';
-                    err.classList.add('show');
-                    setTimeout(() => err.classList.remove('show'), 5000);
-                }
-            },
-            
-            loadApp() {
-                // Load the main app content
-                const mainContent = document.getElementById('mainContent');
-                mainContent.innerHTML = '<div style="padding: 20px; color: #c9d1d9;"><h2>Welcome to Dr.D</h2><p>Platform is loading...</p></div>';
-                console.log('[Auth] App loaded');
-            }
-        };
-        
-        // ============================
-        // UI Event Listeners
-        // ============================
-        document.addEventListener('DOMContentLoaded', () => {
-            // Tab switching
-            document.querySelectorAll('.auth-tab').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const tab = e.target.dataset.tab;
-                    document.querySelectorAll('.auth-tab').forEach(b => b.classList.remove('active'));
-                    document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-                    e.target.classList.add('active');
-                    document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
-                    document.getElementById(`${tab}Form`).classList.add('active');
-                });
-            });
-            
-            // Sign In
-            document.getElementById('signinForm').addEventListener('submit', (e) => {
-                e.preventDefault();
-                const email = document.getElementById('signinEmail').value;
-                const password = document.getElementById('signinPassword').value;
-                Auth.handleSignIn(email, password);
-            });
-            
-            // Sign Up
-            document.getElementById('signupForm').addEventListener('submit', (e) => {
-                e.preventDefault();
-                const name = document.getElementById('signupName').value;
-                const email = document.getElementById('signupEmail').value;
-                const password = document.getElementById('signupPassword').value;
-                Auth.handleSignUp(name, email, password);
-            });
-            
-            // Guest Mode
-            document.getElementById('guestSignin').addEventListener('click', (e) => {
-                e.preventDefault();
-                Auth.handleGuestMode();
-            });
-            
-            document.getElementById('googleSignin').addEventListener('click', (e) => {
-                e.preventDefault();
-                alert('Google Sign-In requires Google Client ID configuration');
-            });
-            
-            document.getElementById('googleSignup').addEventListener('click', (e) => {
-                e.preventDefault();
-                alert('Google Sign-In requires Google Client ID configuration');
-            });
-            
-            // Initialize auth
-            Auth.initialize();
-        });
-    </script>
-</body>
-</html>
+            showLoginModal() {
+                // Remove any existing modal
+                const existing = document.getElementById('cb-auth-modal');
+                if (existing) existing.remove();
+                
+                const modal = document.createElement('div');
+                modal.id = 'cb-auth-modal';
+                modal.innerHTML = `
+                    <div class="cb-auth-overlay">
+                        <div class="cb-auth-box">
+                            <h2>🔐 Sign In to CodeBank</h2>
+                            <p>Access your assets and services</p>
+                            <form id="cb-login-form">
+                                <input type="email" id="cb-email" placeholder="Email" required>
+                                <input type="password" id="cb-password" placeholder="Password" required>
+                                <div class="cb-error"></div>
+                                <button type="submit" class="cb-btn-primary">Sign In</button>
+                            </form>
+                            <button class="cb-btn-text" onclick="CodeBankAuth.showSignup()">Create Account</button>
+                            <button class="cb-btn-close" onclick="CodeBankAuth.closeModal()">✕</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                
+                // Add styles if not already present
+                if (!document.getElementById('cb-auth-styles')) {
+                    const style = document.createElement('style');
+                    style.id = 'cb-auth-styles';
+                    style.textContent = `
+                        .cb-auth-overlay {
+                            position: fixed; inset: 0; background: rgba(0,0,0,0.9);
+                            display: flex; align-items: center; justify-content: center;
+                            z-index: 99999; backdrop-filter: blur(10px);
+                        }
+                        .cb-auth-box {
+                            background: #1a1a2e; border: 1px solid #333;
+                            border-radius: 16px; padding: 40px; width: 90%; max-width: 400px;
+                            text-align: center; color: #fff; position: relative;
+                        }
+                        .cb-auth-box h2 { margin: 0 0 10px; font-size: 24px; }
+                        .cb-auth-box p { color: #888; margin-bottom: 24px; }
+                        .cb-auth-box input {
+                            width: 100%; padding: 12px 16px; margin-bottom: 12px;
+                            background: #0f0f1a; border: 1px solid #333; border-radius: 8px;
+                            color: #fff; font-size: 14px; box-sizing: border-box;
+                        }
+                        .cb-auth-box input:focus { outline: none; border-color: #00d4ff; }
+                        .cb-btn-primary {
+                            width: 100%; padding: 14px; background: #00d4ff; color: #000;
+                            border: none; border-radius: 8px; font-weight: 600; cursor: pointer;
+                            font-size: 15px; margin-top: 8px;
+                        }
+                        .cb-btn-primary:hover { background: #33ddff; }
+                        .cb-btn-primary:disabled { opacity: 0.5; cursor:
