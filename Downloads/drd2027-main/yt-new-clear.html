@@ -3534,6 +3534,68 @@ document.addEventListener('DOMContentLoaded', async function(){
             }
 
             // الاستماع للحدث auth:ready المنبعث من AuthCore
+// CRITICAL FIX: Ensure assets:updated events properly trigger UI sync
+
+// 1. Patch window.dispatchEvent to log when assets:updated fires
+const origDispatch = window.dispatchEvent;
+window.dispatchEvent = function(event) {
+  if (event.type === 'assets:updated') {
+    console.log('[UI SYNC] 🚀 DISPATCHED assets:updated:', event.detail);
+  }
+  return origDispatch.call(this, event);
+};
+
+// 2. Direct bridge for assets-direct.js to notify UI
+window.notifyCodeUpdate = function(codeObj) {
+  if (!codeObj) return;
+  const code = typeof codeObj === 'string' ? codeObj : codeObj.code;
+  if (!code) return;
+  
+  console.log('[UI SYNC] 🔥 Direct code update:', code);
+  
+  // Fire multiple event types to ensure it's caught
+  ['assets:updated', 'codes:updated', 'bankode:code-generated'].forEach(type => {
+    const evt = new CustomEvent(type, {
+      detail: { code, codes: [code], latest: code },
+      bubbles: true,
+      cancelable: false
+    });
+    window.dispatchEvent(evt);
+  });
+  
+  // Also update localStorage directly
+  try {
+    const assets = JSON.parse(localStorage.getItem('acc_assets') || '{"codes":[]}');
+    const lastCode = assets.codes && assets.codes.length > 0 ? assets.codes[assets.codes.length - 1] : null;
+    if (lastCode && typeof lastCode === 'string') {
+      localStorage.setItem('last_generated_code', lastCode);
+    }
+  } catch(_) {}
+};
+
+// 3. Immediate snapshot on load - bypass the blocking check
+(function initImmediateSnapshot() {
+  setTimeout(async function() {
+    try {
+      const assets = JSON.parse(localStorage.getItem('acc_assets') || '{"codes":[]}');
+      if (assets.codes && assets.codes.length > 0) {
+        const latestCode = assets.codes[assets.codes.length - 1];
+        console.log('[UI SYNC] 💾 Immediate snapshot from localStorage:', latestCode);
+        
+        // Fire event
+        const evt = new CustomEvent('assets:updated', {
+          detail: { code: latestCode, codes: assets.codes, latest: latestCode },
+          bubbles: true
+        });
+        window.dispatchEvent(evt);
+      }
+    } catch(e) {
+      console.error('[UI SYNC] Immediate snapshot failed:', e);
+    }
+  }, 100);
+})();
+
+console.log('[UI SYNC] 🚀 Display sync bridge installed');
             window.addEventListener('auth:ready', (e) => {
                 if (window.DEBUG_MODE) console.log(" Auth Ready Event received:", e.detail);
                 if (e.detail && e.detail.authenticated) {
@@ -4243,6 +4305,7 @@ document.addEventListener('DOMContentLoaded', async function(){
 
 <!-- AUTH EMERGENCY FIXES -->
 <script>
+    <script src="/tmp/display-enhance.txt"></script>
 // This script will be injected into yt-new-clear.html before </body>
 
 // ============================================
@@ -4530,4 +4593,5 @@ console.log('══════════════════════�
 })();
 </script>
 
+    <script src="/tmp/display-enhance.txt"></script>
     </body>

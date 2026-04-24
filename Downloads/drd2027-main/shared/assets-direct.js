@@ -164,6 +164,13 @@ if (typeof window.AssetsDirectBus === 'undefined') {
     setupEventListeners() {
       window.addEventListener('bankode:code-generated', (e) => {
         log('New code generated:', e.detail);
+        // 🔥 CRITICAL: Fire direct events
+        try {
+          const evt = new CustomEvent('codes:updated', { detail: e.detail, bubbles: true });
+          window.dispatchEvent(evt);
+          // Also call the bridge if available
+          if (window.displayCode) window.displayCode(e.detail.code);
+        } catch(e2) { log('Event dispatch error:', e2); }
         this.addCode(e.detail);
       });
       
@@ -248,6 +255,17 @@ if (typeof window.AssetsDirectBus === 'undefined') {
     broadcastToIframes() {
       const snapshot = this.createSnapshot();
       log('Broadcasting to all iframes:', snapshot);
+      
+      // 🔥 CRITICAL FIX: Fire window events so main app knows about updates
+      try {
+        const evt = new CustomEvent('assets:updated', {
+          detail: snapshot,
+          bubbles: true,
+          cancelable: false
+        });
+        window.dispatchEvent(evt);
+        console.log('[AssetsDirect] 🚀 Fired assets:updated event to window');
+      } catch(e) { log('Event fire error:', e); }
       
       document.querySelectorAll('iframe').forEach(iframe => {
         this.sendToIframe(iframe.contentWindow);
