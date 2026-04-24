@@ -4,7 +4,16 @@
     <!-- CRITICAL: Cache bypass - MUST BE FIRST -->
     <script>
         (function() {
-            console.log('[CACHE-BYPASS] Starting nuclear cache clear...');
+            // Only run cache clear ONCE per browser session - preserve auth!
+            const CACHE_BYPASS_KEY = 'cache_bypass_done_v2';
+            
+            if (sessionStorage.getItem(CACHE_BYPASS_KEY)) {
+                console.log('[CACHE-BYPASS] Already ran this session, skipping...');
+                return;
+            }
+            
+            console.log('[CACHE-BYPASS] Running one-time cache clear...');
+            sessionStorage.setItem(CACHE_BYPASS_KEY, 'true');
             
             // Unregister ALL service workers
             if ('serviceWorker' in navigator) {
@@ -16,12 +25,7 @@
                 });
             }
             
-            // Clear all storage
-            try {
-                localStorage.clear();
-                sessionStorage.clear();
-                console.log('[CACHE-BYPASS] Cleared localStorage and sessionStorage');
-            } catch(e) {}
+            // NOTE: We NO LONGER clear localStorage/sessionStorage to preserve auth sessions
             
             // Clear all caches
             if ('caches' in window) {
@@ -34,14 +38,7 @@
                 });
             }
             
-            // Force reload once with cache bypass
-            if (!location.href.includes('nocache=1')) {
-                console.log('[CACHE-BYPASS] First load - adding nocache parameter and reloading...');
-                const separator = location.href.includes('?') ? '&' : '?';
-                location.href = location.href + separator + 'nocache=1&v=' + Date.now();
-            } else {
-                console.log('[CACHE-BYPASS] Cache cleared, fresh load active');
-            }
+            // No reload needed - just cache clear
         })();
     </script>
     
