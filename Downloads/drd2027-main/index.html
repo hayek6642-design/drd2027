@@ -380,7 +380,7 @@
             async init() {
                 if (this.initialized) return this.user;
                 
-                console.log('[CodeBankAuth] Initializing...');
+                // console.log('[CodeBankAuth] Initializing...');  // DISABLED - no auth logging on startup
                 
                 // Check existing session
                 const sessionId = localStorage.getItem('sessionId') || localStorage.getItem('session_token');

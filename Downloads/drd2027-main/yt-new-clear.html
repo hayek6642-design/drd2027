@@ -199,7 +199,7 @@ function clearSessionAndLogout() {
         async init() {
             if (this.initialized) return this.user;
             
-            console.log('[CodeBankAuth] Initializing authentication...');
+            // console.log('[CodeBankAuth] Initializing authentication...');  // DISABLED - no auth logging
             
             // Check existing session
             const sessionId = localStorage.getItem('sessionId') || sessionStorage.getItem('sessionId');
