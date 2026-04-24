@@ -138,7 +138,19 @@
         if (!sm) {
           console.warn('[CodeBank] SessionManager not loaded, creating fallback');
           // Fallback if SessionManager fails to load
-          window.sessionManager = { getSession: () => ({ type: 'guest' }) };
+          window.sessionManager = {
+            getSession: () => ({ type: 'guest', user: null, token: null, guest: true }),
+            isUser: () => false,
+            isAdmin: () => false,
+            isGuest: () => true,
+            isAuthenticated: () => false,
+            getUser: () => null,
+            getToken: () => null,
+            setSession: () => {},
+            clearSession: () => {},
+            refreshSession: async () => false,
+            checkAuth: async () => ({ authenticated: false, guest: true })
+          };
         }
 
         const session = sm.getSession();

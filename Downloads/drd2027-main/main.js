@@ -127,7 +127,8 @@ SelfHealing.registerRule(
   10000
 );
 
-// Rule 5: Reload Loop Detection
+// DISABLED: Rule 5: Reload Loop Detection (causes infinite loops)
+/*
 SelfHealing.registerRule(
   "reload-loop",
   async () => {
@@ -145,6 +146,7 @@ SelfHealing.registerRule(
   },
   30000
 );
+*/
 
 // ==========================================
 // 🧩 2) Module Registrations
