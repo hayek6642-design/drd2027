@@ -3186,7 +3186,9 @@ console.log(`🗑️ Cleaned up ${tracksToRemove.length} old downloads to free s
     });
 
     // Initialize player
+    (async () => {
     await initPlayer();
+})();
 
     // Initialize IndexedDB and show storage info
     await initDB();
