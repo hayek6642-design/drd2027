@@ -3,6 +3,26 @@
 document.addEventListener('DOMContentLoaded', async function() {
     if (window.__SAMMA3NY_PLAYER_INIT__) return;
     window.__SAMMA3NY_PLAYER_INIT__ = true;
+    // Get userId from session/auth or use default for guest mode
+    const userId = (() => {
+        try {
+            // Try sessionStorage first
+            const sessUserId = sessionStorage.getItem('userId');
+            if (sessUserId) return sessUserId;
+            // Try localStorage
+            const storedUserId = localStorage.getItem('userId');
+            if (storedUserId) return storedUserId;
+            // Try to get from AppState/auth object
+            if (window.AppState?.auth?.userId) return window.AppState.auth.userId;
+            if (window.AppState?.userId) return window.AppState.userId;
+        } catch (e) {
+            console.warn('[Player] Could not retrieve userId from storage:', e);
+        }
+        // Fallback to guest mode
+        return `guest-${Date.now()}`;
+    })();
+    console.log('[Samma3ny] Initialized with userId:', userId);
+    
     // Player elements
     const audioPlayer = document.getElementById('audio-player');
     const playBtn = document.getElementById('play-btn');
