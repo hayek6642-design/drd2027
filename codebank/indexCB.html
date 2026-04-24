@@ -1,0 +1,3329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- CRITICAL: Cache bypass - MUST BE FIRST -->
+    <script>
+        (function() {
+            console.log('[CACHE-BYPASS] Starting nuclear cache clear...');
+            
+            // Unregister ALL service workers
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(regs => {
+                    regs.forEach(reg => {
+                        reg.unregister();
+                        console.log('[CACHE-BYPASS] Unregistered SW:', reg.scope);
+                    });
+                });
+            }
+            
+            // Clear all storage
+            try {
+                localStorage.clear();
+                sessionStorage.clear();
+                console.log('[CACHE-BYPASS] Cleared localStorage and sessionStorage');
+            } catch(e) {}
+            
+            // Clear all caches
+            if ('caches' in window) {
+                caches.keys().then(keys => {
+                    keys.forEach(k => {
+                        caches.delete(k).then(() => {
+                            console.log('[CACHE-BYPASS] Deleted cache:', k);
+                        });
+                    });
+                });
+            }
+            
+            // Force reload once with cache bypass
+            if (!location.href.includes('nocache=1')) {
+                console.log('[CACHE-BYPASS] First load - adding nocache parameter and reloading...');
+                const separator = location.href.includes('?') ? '&' : '?';
+                location.href = location.href + separator + 'nocache=1&v=' + Date.now();
+            } else {
+                console.log('[CACHE-BYPASS] Cache cleared, fresh load active');
+            }
+        })();
+    </script>
+    
+    <!-- Cache control headers -->
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, proxy-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <!-- App version stamp -->
+    <meta name="app-version" content="2.1.2-CACHE-BYPASS">
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <base href="/codebank/">
+    <title>CodeBank Exchange - Professional Banking Services</title>
+    
+    <!-- 2️⃣ FIXED CSP Policy -->
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; font-src * data: 'self'; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src * data: blob:; media-src *; frame-src *;">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAABILAAASCwAAAAAAAAAAAAD///8A////AP///wA=">
+    
+    <!-- ✅ Prevent service iframes from triggering "Leave site?" dialog -->
+    <script>
+      (function suppressBeforeunload() {
+        // Services no longer run in iframes — beforeunload no longer needs blocking
+        try {
+            Object.defineProperty(window, 'onbeforeunload', {
+                get: function() { return null; },
+                set: function() {},
+                configurable: false
+            });
+        } catch(e) {}
+    })();
+    </script>
+    <!-- ⚡ EMERGENCY PERFORMANCE FIXES (Phase 1) -->
+    <!-- Performance monitor DISABLED - replaced with CSS injection -->
+    <script>
+        // Kill performance monitor if it tries to load
+        window.DISABLE_PERF_MONITOR = true;
+        window.PerformanceMonitor = class { init() {} };
+    </script>
+    <!-- Hide any perf monitor CSS -->
+    <style>
+        #performance-monitor,
+        .perf-monitor,
+        [id*="perf-monitor"],
+        [class*="perf-monitor"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+    </style>
+    <script>
+        // 1. Reduce Watch-Dog polling frequency immediately
+        window.WATCH_DOG_INTERVAL = 30000; // 30s instead of 1s
+        
+        // 2. Performance-oriented CSS optimizations
+        const perfStyle = document.createElement('style');
+        perfStyle.textContent = `
+            /* Reduce CPU/GPU load from heavy effects */
+            * {
+                box-shadow: none !important;
+                text-shadow: none !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+            }
+            
+            /* Simplify animations */
+            .animate-spin {
+                animation: spin 2s linear infinite !important;
+            }
+            
+            /* Disable transitions globally for instant feel & zero CPU during idle */
+            * {
+                transition: none !important;
+            }
+            
+            /* Optimize will-change usage */
+            .app-card, .btn, .tab-btn {
+                will-change: auto !important;
+            }
+            
+            .app-card:hover {
+                will-change: transform !important;
+            }
+        `;
+        document.head.appendChild(perfStyle);
+
+        // 3. Pause non-critical tasks when tab is hidden
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                console.log('[PERF] Tab hidden, pausing non-critical tasks...');
+                window.__PAUSE_WATCHDOG__ = true;
+            } else {
+                console.log('[PERF] Tab visible, resuming tasks...');
+                window.__PAUSE_WATCHDOG__ = false;
+            }
+        });
+
+        // 4. Safe requestAnimationFrame throttling (Avoid breakage)
+        const originalRAF = window.requestAnimationFrame;
+        window.requestAnimationFrame = (fn) => {
+            return originalRAF(() => {
+                try {
+                    fn();
+                } catch (e) {
+                    console.error('RAF error:', e);
+                }
+            });
+        };
+    </script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles/styles.css">
+    <link rel="stylesheet" href="css/safe-asset-list.css">
+    
+    <!-- External Dependencies -->
+    <script src="/acc/asset-mirror.js"></script>
+    <script src="/codebank/js/index.js"></script>
+    <script src="/codebank/js/utils.js"></script>
+    <!-- Modular App Core -->
+    <script type="module" src="/codebank/js/app-core.js?v=3"></script>
+    <script src="/codebank/js/service-manager.js?v=3"></script>
+    <!-- ✅ Unified Global State Architecture (replaces all bridges) -->
+    <script src="/codebank/js/global-store.js?v=1"></script>
+    <script src="/codebank/js/event-bus-simple.js?v=1"></script>
+    <script src="/codebank/js/auth-unified.js?v=1"></script>
+    <script src="/codebank/js/assets-direct.js?v=2"></script>
+    <script src="/codebank/js/service-loader.js?v=1"></script>
+    <script src="/shared/single-session.js?v=3"></script>
+    <script src="/shared/client-session-manager.js?v=1"></script>
+
+    <style>
+        :root {
+            --primary-color: #FF6B35;
+            --secondary-color: #8B5CF6;
+            --accent-color: #58a6ff;
+            --bg-gradient-start: #87CEEB;
+            --bg-gradient-end: #B0E0E6;
+            --text-color: #E0E0E0;
+            --text-muted: #8b949e;
+            --text-bright: #ffffff;
+            --card-bg: rgba(22, 27, 34, 0.8);
+            --border-color: #30363d;
+            --hover-bg: #21262d;
+            --success-color: #00ff88;
+            --error-color: #f85149;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.2);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --glow-primary: 0 0 20px rgba(255, 107, 53, 0.3);
+            --glow-secondary: 0 0 20px rgba(139, 92, 246, 0.3);
+            --transition-fast: 0.2s ease;
+            --transition-normal: 0.3s ease;
+            --transition-slow: 0.6s ease;
+            
+            /* App Launcher Variables */
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --accent: #f59e0b;
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --bg-glass: rgba(30, 41, 59, 0.7);
+            --bg-glass-light: rgba(255, 255, 255, 0.05);
+            --text-primary: #f8fafc;
+            --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+            --gradient-dark: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+            --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.4);
+            --shadow-glow-pink: 0 0 20px rgba(236, 72, 153, 0.4);
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* 🎯 Community Mission Styles */
+        .mission-container {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 600px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mission-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #f8fafc;
+            margin-bottom: 12px;
+        }
+
+        .mission-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 20px;
+        }
+
+        /* Endless Progress Bar Logic */
+        .progress-wrapper {
+            position: relative;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            padding: 2px;
+        }
+
+        .progress-bracket {
+            color: rgba(255, 255, 255, 0.4);
+            font-weight: bold;
+            padding: 0 5px;
+            user-select: none;
+        }
+
+        .progress-track {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(255, 255, 255, 0.05) 10px,
+                rgba(255, 255, 255, 0.05) 20px
+            );
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s ease;
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+
+        /* Tiers */
+        .tier-grey { background-color: #ffffff; box-shadow: 0 0 10px rgba(255, 255, 255, 0.3); }
+        .tier-green { background-color: #00ff88; box-shadow: 0 0 15px rgba(0, 255, 136, 0.4); }
+        .tier-silver { background-color: #c0c0c0; box-shadow: 0 0 20px rgba(192, 192, 192, 0.5); background-image: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); background-size: 200% 100%; animation: silver-shine 3s infinite; }
+
+        @keyframes silver-shine {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .mission-stats {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        .multiplier-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .copy-icon {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .copy-icon:hover { color: #ffffff; }
+
+        body {
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            background-attachment: fixed;
+            color: var(--text-color);
+            font-family: 'Poppins', 'Inter', -apple-system, sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* Essential UI Classes */
+        .card { background: var(--card-bg); backdrop-filter: blur(20px); border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); }
+        .btn { padding: 12px 24px; border-radius: 12px; cursor: pointer; transition: all 0.3s; font-weight: 600; }
+        .btn-primary { background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; }
+        
+        /* Service Modal Styles - ONLY container used */
+        #service-modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          display: none;
+          flex-direction: column;
+          z-index: 10000;
+          background: #0f172a;
+        }
+
+        #service-modal.active {
+          display: flex !important;
+        }
+
+        #service-modal .service-modal-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 10px 20px;
+          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+          color: white;
+          height: 60px;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+          z-index: 10001;
+          flex-shrink: 0;
+        }
+
+        .service-iframe-container {
+          flex: 1;
+          position: relative;
+          background: #0f172a;
+          overflow: hidden;
+        }
+
+        #service-content-container { width:100% !important; height:100% !important; display:block !important; overflow:hidden !important; background:#0f172a !important; }
+        #service-iframe { width:100% !important; height:100% !important; border:none !important; display:block !important; }
+
+        .service-loading {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          background: #0f172a;
+          z-index: 10000;
+          transition: opacity 0.3s ease;
+        }
+
+        .service-loading.hidden {
+          display: none !important;
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        /* REMOVE LEGACY APP-RUNNER - Not used anymore */
+        #app-runner { display: none !important; }
+        
+        .dock-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 500; }
+        .dock { display: flex; align-items: flex-end; gap: 12px; padding: 12px 20px; background: var(--bg-glass); backdrop-filter: blur(20px); border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); }
+        
+        .launcher-section { margin-bottom: 32px; padding: 0 20px; }
+        .app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 12px; }
+        .app-card { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; transition: 0.3s; }
+        .app-icon-wrapper { width: 72px; height: 72px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 32px; background: var(--bg-glass-light); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 10000; }
+        .toast { background: rgba(22,27,34,0.95); border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; box-shadow: var(--shadow-lg); animation: toastSlideIn 0.3s ease-out; }
+        
+        @keyframes toastSlideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+        
+        /* Toast-Style Hover Side Panel */
+        .side-panel-trigger {
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 20px;
+            height: 100vh;
+            z-index: 999;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .side-panel-trigger::before {
+            content: '';
+            position: absolute;
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 60px;
+            background: linear-gradient(180deg, #00d4ff, #7b2cbf);
+            border-radius: 2px;
+            opacity: 0.3;
+            transition: opacity 0.3s;
+        }
+        .side-panel-trigger:hover, .side-panel-trigger:hover + .side-panel-toast {
+            opacity: 1;
+        }
+        .side-panel-trigger:hover::before {
+            opacity: 1;
+        }
+        .side-panel-toast {
+            position: fixed;
+            right: -320px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 300px;
+            height: auto;
+            max-height: 80vh;
+            background: rgba(15, 15, 30, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px 0 0 20px;
+            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5);
+            transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            padding: 24px;
+            overflow-y: auto;
+        }
+        .side-panel-toast:hover, body.side-panel-open .side-panel-toast {
+            right: 0;
+        }
+        .toast-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .toast-header h3 {
+            color: #fff;
+            font-size: 18px;
+            margin: 0;
+        }
+        .toast-close-btn {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+        .toast-close-btn:hover {
+            color: #fff;
+        }
+        
+        /* Auth Container */
+/* Bankode Header with Title */
+        .bankode-header {
+            position: fixed;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            text-align: center;
+        }
+        .bankode-title {
+            font-size: 26px;
+            font-weight: 800;
+            background: linear-gradient(90deg, #00d4ff, #7b2cbf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+            text-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+        }
+        .bankode-subtitle {
+            display: block;
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 2px;
+            letter-spacing: 1px;
+        }
+        .auth-container {
+            position: fixed;
+            top: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .auth-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-google {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background: #fff;
+            color: #333;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-google:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+        }
+        .btn-google img {
+            width: 16px;
+            height: 16px;
+        }
+        .auth-divider {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 11px;
+        }
+        .btn-primary {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            background: linear-gradient(135deg, #00d4ff, #7b2cbf);
+            color: white;
+        }
+        .btn-secondary {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            background: transparent;
+            color: #fff;
+        }
+        .btn-primary:hover, .btn-secondary:hover {
+            opacity: 0.9;
+        }
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+        }
+        .user-profile img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid #00d4ff;
+        }
+        .user-profile .signout-btn {
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        /* App Grid - Reduced gaps */
+        .app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 12px; }
+        
+        /* Bottom Dock - Zagel in middle */
+        .dock-item { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; transition: transform 0.2s; position: relative; padding: 8px; }
+        .dock-item:hover { transform: translateY(-8px); }
+        .dock-item.dock-center { transform: scale(1.2); margin: 0 8px; }
+        .dock-item.dock-center:hover { transform: scale(1.3) translateY(-8px); }
+        .dock-icon { width: 48px; height: 48px; border-radius: 14px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; border: 2px solid var(--accent, rgba(255,255,255,0.2)); }
+        .dock-center .dock-icon { width: 56px; height: 56px; border-radius: 16px; background: linear-gradient(135deg, #ff6b35, #f7931e); border: none; }
+        .dock-item span { font-size: 11px; color: rgba(255,255,255,0.8); font-weight: 500; }
+        .dock-badge { position: absolute; top: -4px; right: -4px; width: 18px; height: 18px; background: #ff4444; border-radius: 50%; font-size: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; opacity: 0; }
+        .dock-badge.active { opacity: 1; }
+        
+        /* SafeCode Content Visibility Fixes */
+        .safe-container,
+        .safe-asset-list,
+        #safeCodeFrame,
+        iframe[data-service="safecode"],
+        .service-iframe-container iframe {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            min-height: 400px !important;
+        }
+        
+        /* Ensure iframe content is visible */
+        iframe {
+            color-scheme: normal;
+        }
+
+        /* ══════════════════════════════════════════════════
+           MODERN DARK TILE SKIN — visual only, no logic
+        ══════════════════════════════════════════════════ */
+
+        /* 1. Dark purple page background */
+        body {
+            background: #12082e !important;
+            background-image: none !important;
+        }
+
+        /* 2. Compact section headers */
+        .launcher-section {
+            padding: 0 16px !important;
+            margin-bottom: 18px !important;
+        }
+        .launcher-section h2 {
+            font-size: 0.6rem !important;
+            color: rgba(255,255,255,0.2) !important;
+            letter-spacing: 0.18em !important;
+            margin-bottom: 10px !important;
+            padding-left: 2px !important;
+        }
+
+        /* 3. Phone-launcher app grid — organized by categories */
+        .app-launcher-grid {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)) !important;
+            gap: 8px !important;
+            padding: 8px !important;
+            align-content: start;
+        }
+        @media (max-width: 768px) {
+            .app-launcher-grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)) !important; gap: 8px !important; }
+        }
+        @media (max-width: 640px) {
+            .app-launcher-grid { grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)) !important; gap: 6px !important; }
+        }
+        @media (max-width: 480px) {
+            .app-launcher-grid { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)) !important; gap: 5px !important; }
+        }
+        @media (max-width: 380px) {
+            .app-launcher-grid { grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)) !important; gap: 4px !important; }
+        }
+
+        /* 4. Phone-launcher icon card — transparent, no border, no bg */
+        .app-launcher-icon {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 2px 1px !important;
+            cursor: pointer !important;
+            position: relative !important;
+            gap: 4px !important;
+            border-radius: 0 !important;
+        }
+        .app-launcher-icon:hover .app-icon-wrapper {
+            transform: scale(1.12) !important;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4) !important;
+        }
+        .app-launcher-icon:active .app-icon-wrapper {
+            transform: scale(0.92) !important;
+        }
+        .app-launcher-icon,
+        .app-launcher-icon:hover,
+        .app-launcher-icon:active {
+            transition: none !important;
+        }
+        .app-launcher-icon .app-icon-wrapper {
+            width: 56px !important;
+            height: 56px !important;
+            font-size: 26px !important;
+            border-radius: 14px !important;
+            transition: transform 0.15s var(--spring, ease), box-shadow 0.15s ease !important;
+        }
+        @media (max-width: 640px) {
+            .app-launcher-icon .app-icon-wrapper {
+                width: 52px !important;
+                height: 52px !important;
+                font-size: 24px !important;
+            }
+        }
+        @media (max-width: 480px) {
+            .app-launcher-icon .app-icon-wrapper {
+                width: 48px !important;
+                height: 48px !important;
+                font-size: 22px !important;
+            }
+        }
+        @media (max-width: 380px) {
+            .app-launcher-icon .app-icon-wrapper {
+                width: 42px !important;
+                height: 42px !important;
+                font-size: 18px !important;
+            }
+        }
+
+        /* 6. App name under icon */
+        .app-tile-name {
+            font-size: 9px !important;
+            font-weight: 500 !important;
+            color: rgba(255,255,255,0.85) !important;
+            text-align: center !important;
+            line-height: 1.2 !important;
+            max-width: 62px !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            white-space: nowrap !important;
+            letter-spacing: 0.01em !important;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important;
+        }
+        @media (max-width: 480px) {
+            .app-tile-name {
+                font-size: 8px !important;
+                max-width: 56px !important;
+            }
+        }
+        @media (max-width: 380px) {
+            .app-tile-name {
+                font-size: 7px !important;
+                max-width: 48px !important;
+            }
+        }
+
+        /* 7. Small badge top-right of icon wrapper */
+        .app-tile-badge {
+            position: absolute !important;
+            top: -2px !important;
+            right: 4px !important;
+            font-size: 7px !important;
+            font-weight: 800 !important;
+            color: #fff !important;
+            padding: 2px 5px !important;
+            border-radius: 4px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.06em !important;
+            line-height: 1.4 !important;
+            z-index: 2 !important;
+        }
+        /* End PHONE LAUNCHER SKIN */
+    
+        /* ============================================================
+           📱 PORTRAIT MOBILE — Full responsive overrides
+        ============================================================ */
+        
+        /* Prevent horizontal overflow globally */
+        html, body {
+            max-width: 100vw;
+            overflow-x: hidden;
+        }
+        
+        /* Safe area insets for notched phones */
+        body {
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        /* ── Header responsive ── */
+        @media (max-width: 600px) {
+            header .container {
+                flex-wrap: wrap !important;
+                gap: 8px !important;
+                padding: 8px 10px !important;
+            }
+            header .container > div:first-child {
+                flex: 1 1 auto;
+            }
+            header .container > div:last-child {
+                flex-wrap: wrap !important;
+                gap: 6px !important;
+            }
+            /* Hide Portfolio label on tiny screens */
+            #user-balance .font-semibold {
+                display: none !important;
+            }
+            #user-balance {
+                text-align: left !important;
+                font-size: 0.75rem !important;
+            }
+            /* Shrink title */
+            h1.text-2xl {
+                font-size: 1rem !important;
+            }
+            p.text-blue-300.text-sm {
+                font-size: 0.7rem !important;
+            }
+            /* Compact header */
+            header {
+                padding: 6px 0 !important;
+            }
+        }
+
+        /* ── App grid: max 2 cols on all phone sizes ── */
+        @media (max-width: 480px) {
+            .app-launcher-grid {
+                grid-template-columns: repeat(4, 1fr) !important;
+                gap: 10px 6px !important;
+            }
+        }
+
+        /* ── Mission container: full-width on mobile ── */
+        @media (max-width: 600px) {
+            .mission-container {
+                margin: 10px 8px !important;
+                padding: 14px 12px !important;
+            }
+            main.container {
+                padding-left: 8px !important;
+                padding-right: 8px !important;
+            }
+        }
+
+        /* ── Service modal: full screen on phone ── */
+        @media (max-width: 768px) {
+            #service-modal {
+                width: 100vw !important;
+                height: 100dvh !important;
+                max-width: 100vw !important;
+            }
+            #service-modal .service-modal-header {
+                padding: 8px 12px !important;
+                height: 50px !important;
+            }
+            #service-content-container { width:100% !important; height:100% !important; display:block !important; overflow:hidden !important; background:#0f172a !important; }
+        #service-iframe { width:100% !important; height:100% !important; border:none !important; display:block !important; }
+        }
+
+        /* ── Settings panel: full width on ALL phone screens ── */
+        /* Hide settings panel - user requested removal */
+        #settings-panel {
+            display: none !important;
+        }
+        
+        #settings-overlay {
+            display: none !important;
+        }
+
+        @media (max-width: 768px) {
+            #settings-panel {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                right: 0 !important;
+                display: none !important;
+            }
+        }
+
+        /* ── Dock: don't overflow ── */
+        @media (max-width: 480px) {
+            .dock {
+                gap: 6px !important;
+                padding: 8px 10px !important;
+            }
+            .dock-container {
+                width: 90% !important;
+            }
+        }
+
+        /* ── Launcher sections: reduce padding on mobile ── */
+        @media (max-width: 600px) {
+            .launcher-section {
+                padding: 0 8px !important;
+                margin-bottom: 12px !important;
+            }
+        }
+
+        /* ── App card tiles: ensure visibility ── */
+        @media (max-width: 480px) {
+            .app-launcher-icon .app-icon-wrapper {
+                width: 52px !important;
+                height: 52px !important;
+            }
+            .app-tile-name {
+                font-size: 9px !important;
+                max-width: 56px !important;
+            }
+        }
+
+        /* ── Auth cards: stack vertically ── */
+        .auth-cards-grid {
+            flex-direction: column !important;
+            align-items: center !important;
+        }
+        @media (max-width: 600px) {
+            .auth-card {
+                width: 100% !important;
+                max-width: 340px !important;
+                height: auto !important;
+                min-height: unset !important;
+            }
+        }
+        /* ============================================================ */
+        /* ══ Bankode Admin Tab Styles ══ */
+        .ba-tab { background:transparent; border:none; border-bottom:2px solid transparent; color:#6b7280; padding:10px 18px; font-size:.85rem; font-weight:600; cursor:pointer; margin-bottom:-1px; }
+        .ba-tab:hover { color:#d1d5db; }
+        .ba-tab.active { color:#a78bfa; border-bottom-color:#a78bfa; }
+        #ba-content::-webkit-scrollbar { width:4px; }
+        #ba-content::-webkit-scrollbar-thumb { background:#3730a3; border-radius:4px; }
+</style>
+
+<!-- Google Sign-In SDK -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+    // Initialize Google Sign-In when SDK is ready
+    window.onload = function () {
+        // Fetch Google Client ID from server
+        fetch('/api/auth/google-client-id')
+            .then(res => res.json())
+            .then(data => {
+                if (data.clientId && window.google && window.google.accounts) {
+                    console.log('[Google] Initializing with client ID');
+                    window.google.accounts.id.initialize({
+                        client_id: data.clientId,
+                        callback: window.handleGoogleSignInResponse
+                    });
+                    console.log('[Google] SDK initialized successfully');
+                } else {
+                    console.warn('[Google] Client ID not configured');
+                }
+            })
+            .catch(err => console.error('[Google] Failed to load client ID:', err));
+    };
+</script>
+
+</head>
+<body>
+    <div id="codebank-root">
+
+
+
+        <!-- Main Launcher Grid -->
+        <main class="container mx-auto py-8">
+
+            <!-- Flat App Grid — phone launcher style -->
+            <div id="all-apps" class="app-launcher-grid"></div>
+        </main>
+
+        <!-- App Runner View -->
+        <div id="app-runner" class="app-runner">
+            <header class="runner-header">
+                <button id="runner-back" class="p-3 hover:bg-white/10 rounded-xl text-white mr-4">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <h2 id="runner-title" class="text-lg font-bold text-white flex-1">App Name</h2>
+                <div class="flex space-x-2">
+                    <button id="runner-reload" class="p-3 text-gray-400 hover:text-white"><i class="fas fa-redo"></i></button>
+                    <button id="runner-fullscreen" class="p-3 text-gray-400 hover:text-white"><i class="fas fa-expand"></i></button>
+                </div>
+            </header>
+            <div class="runner-content" style="flex: 1; position: relative; overflow: hidden; background: #0f172a; visibility: visible;">
+                <div id="runner-loading" class="absolute inset-0 flex items-center justify-center bg-slate-900 z-10">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                </div>
+                <iframe id="runner-iframe" src="about:blank" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-top-navigation-by-user-activation" style="width: 100%; height: 100%; border: none; background: #ffffff; display: block; visibility: visible;"></iframe>
+            </div>
+        </div>
+
+        <!-- Service Modal (actly.md implementation) -->
+        <div id="service-modal">
+            <header class="service-modal-header">
+                <div class="flex items-center">
+                    <button id="service-modal-back" class="p-2 mr-4 hover:bg-white/10 rounded-full transition-colors">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <h2 id="service-modal-title" class="text-lg font-bold">SafeCode</h2>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="service-modal-reload" class="p-2 hover:bg-white/10 rounded-full transition-colors">
+                        <i class="fas fa-redo-alt"></i>
+                    </button>
+                    <button id="service-modal-close" class="p-2 hover:bg-white/10 rounded-full transition-colors text-xl">
+                        &times;
+                    </button>
+                </div>
+            </header>
+            <div class="service-iframe-container">
+                <div id="service-modal-loading" class="service-loading">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+                    <span data-i18n="loading_service">Loading Service...</span>
+                </div>
+                <!-- Services injected via iframe (service-modal-iframe) - content container hidden -->
+                <iframe id="service-modal-iframe" data-service="" data-origin="" style="width:100%;height:100%;border:none;display:block;background:#0f172a;" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-top-navigation-by-user-activation"></iframe>
+                <div id="service-content-container" style="width:100%;height:100%;overflow:hidden;position:relative;display:none;"></div>
+            </div>
+        </div>
+
+        <!-- Dock -->
+        <div class="dock-container">
+            <nav class="dock" id="dock">
+                <div class="dock-item" data-app="safecode" onclick="openService('/codebank/safecode.html', 'SafeCode')">
+                    <div class="dock-icon" style="--accent: #00ff88;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+                    </div>
+                    <span>SafeCode</span>
+                </div>
+                <div class="dock-item dock-center" data-app="zagel" onclick="openZagelVoice()">
+                    <div class="dock-icon" style="--accent: #ff6b35;">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                    </div>
+                    <span>Zagel</span>
+                    <div class="dock-badge" id="zagelBadge"></div>
+                </div>
+                <div class="dock-item" data-app="e7ki" onclick="openService('/codebank/e7ki.html', 'E7ki')">
+                    <div class="dock-icon" style="--accent: #00d4ff;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+                    </div>
+                    <span>E7ki</span>
+                </div>
+                <div class="dock-item" onclick="document.getElementById('all-apps').scrollIntoView({behavior:'smooth'})">
+                    <div class="dock-icon" style="--accent: #a78bfa;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
+                    </div>
+                    <span>More</span>
+                </div>
+            </nav>
+        </div>
+
+        <!-- Toast-Style Side Panel Trigger & Panel -->
+        <div class="side-panel-trigger"></div>
+        <div class="side-panel-toast" id="sidePanel">
+            <div class="toast-header">
+                <h3>Settings</h3>
+                <button class="toast-close-btn" onclick="document.body.classList.remove('side-panel-open')">&times;</button>
+            </div>
+            <div class="toast-settings-content">
+                <!-- Settings content from original panel will appear here -->
+                <div id="toast-settings-inner"></div>
+            </div>
+        </div>
+
+        <!-- Bankode Header with Title -->
+        <div class="bankode-header" id="bankodeHeader">
+            <h1 class="bankode-title">Bankode</h1>
+            <span class="bankode-subtitle">CodeBank Exchange</span>
+
+        <!-- Main Navigation Navbar (below bankode title) -->
+        <div class="main-navbar">
+            <div class="navbar-left">
+                <button class="nav-btn nav-btn-primary" onclick="showLoginModal()">
+                    <span class="btn-icon">👤</span> Login
+                </button>
+                <button class="nav-btn nav-btn-google" onclick="triggerGoogleSignIn()">
+                    <span class="btn-icon">🔐</span> Google Sign-In
+                </button>
+            </div>
+            
+            <div class="navbar-center">
+                <!-- DRD-Mail Icon/Link -->
+                <a href="#" class="nav-mail-btn" title="DRD-Mail">
+                    <span class="mail-icon">✉️</span>
+                    <span class="mail-badge" id="mail-count" style="display:none;">0</span>
+                </a>
+            </div>
+            
+            <div class="navbar-right">
+                <!-- Language Switcher -->
+                <div class="language-switcher">
+                    <select id="language-select" class="lang-select" onchange="changeLanguage(this.value)">
+                        <option value="en">English</option>
+                        <option value="es">Español</option>
+                        <option value="fr">Français</option>
+                        <option value="de">Deutsch</option>
+                        <option value="ar">العربية</option>
+                        <option value="zh">中文</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navbar CSS Styles (injected inline) -->
+        <style>
+            .main-navbar {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 20px;
+                background: linear-gradient(90deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1));
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+                margin: 10px 0;
+                border-radius: 8px;
+                backdrop-filter: blur(10px);
+                gap: 20px;
+            }
+            
+            .navbar-left, .navbar-right {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+            }
+            
+            .navbar-center {
+                flex: 1;
+                display: flex;
+                justify-content: center;
+            }
+            
+            .nav-btn {
+                padding: 8px 16px;
+                border: none;
+                border-radius: 6px;
+                font-size: 14px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                transition: all 0.3s ease;
+                font-weight: 500;
+                white-space: nowrap;
+            }
+            
+            .nav-btn-primary {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #fff;
+                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            }
+            
+            .nav-btn-primary:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+            }
+            
+            .nav-btn-google {
+                background: #fff;
+                color: #333;
+                border: 1px solid #ddd;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+            
+            .nav-btn-google:hover {
+                background: #f9f9f9;
+                border-color: #999;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            }
+            
+            .btn-icon {
+                font-size: 16px;
+            }
+            
+            .nav-mail-btn {
+                position: relative;
+                font-size: 28px;
+                cursor: pointer;
+                text-decoration: none;
+                transition: transform 0.3s ease;
+                display: flex;
+                align-items: center;
+            }
+            
+            .nav-mail-btn:hover {
+                transform: scale(1.15);
+            }
+            
+            .mail-icon {
+                display: block;
+            }
+            
+            .mail-badge {
+                position: absolute;
+                top: -5px;
+                right: -8px;
+                background: #ff4757;
+                color: #fff;
+                border-radius: 50%;
+                width: 20px;
+                height: 20px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 11px;
+                font-weight: bold;
+            }
+            
+            .language-switcher {
+                display: flex;
+                align-items: center;
+            }
+            
+            .lang-select {
+                padding: 8px 12px;
+                border: 1px solid rgba(255,255,255,0.3);
+                border-radius: 6px;
+                background: rgba(0,0,0,0.2);
+                color: #fff;
+                font-size: 13px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+            
+            .lang-select:hover {
+                background: rgba(0,0,0,0.3);
+                border-color: rgba(255,255,255,0.5);
+            }
+            
+            .lang-select:focus {
+                outline: none;
+                background: rgba(0,0,0,0.4);
+                border-color: rgba(102, 126, 234, 0.7);
+                box-shadow: 0 0 8px rgba(102, 126, 234, 0.3);
+            }
+            
+            .lang-select option {
+                background: #1a1a2e;
+                color: #fff;
+            }
+            
+            @media (max-width: 768px) {
+                .main-navbar {
+                    flex-wrap: wrap;
+                    padding: 10px;
+                    gap: 10px;
+                }
+                
+                .navbar-left {
+                    width: 100%;
+                }
+                
+                .navbar-center,
+                .navbar-right {
+                    flex: 1;
+                    min-width: 150px;
+                }
+                
+                .nav-btn {
+                    padding: 6px 12px;
+                    font-size: 13px;
+                }
+            }
+        </style>
+
+        <!-- Navbar JavaScript Functions -->
+        <script>
+            function showLoginModal() {
+                const loginModal = document.getElementById('login-modal') || document.querySelector('.login-modal');
+                if (loginModal) {
+                    loginModal.style.display = 'block';
+                    console.log('[Navbar] Login modal opened');
+                }
+            }
+            
+            function triggerGoogleSignIn() {
+                console.log('[Navbar] Triggering Google Sign-In');
+                // This will call the google.accounts.id.renderButton or similar
+                if (window.google && window.google.accounts) {
+                    // Trigger Google Sign-In
+                    document.querySelector('[data-text="signin_with"]')?.click?.();
+                }
+            }
+            
+            function changeLanguage(lang) {
+                console.log(`[Navbar] Language changed to: ${lang}`);
+                localStorage.setItem('preferred_language', lang);
+                // Trigger language change event
+                window.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: lang } }));
+            }
+            
+            // Update mail badge count
+            function updateMailBadge(count) {
+                const badge = document.getElementById('mail-count');
+                if (badge) {
+                    if (count > 0) {
+                        badge.textContent = count;
+                        badge.style.display = 'block';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+            }
+            
+            // Restore language preference on load
+            window.addEventListener('load', () => {
+                const saved_lang = localStorage.getItem('preferred_language') || 'en';
+                const lang_select = document.getElementById('language-select');
+                if (lang_select) {
+                    lang_select.value = saved_lang;
+                }
+            });
+            
+            console.log('[Navbar] Navigation bar initialized');
+        </script>
+
+
+        </div>
+
+        <!-- Auth Container (STATE-BASED: Only one state visible at a time) -->
+        <div class="auth-container" id="authContainer">
+            
+            <!-- STATE 1: NOT LOGGED IN -->
+            <div id="auth-not-logged" class="auth-state">
+                <button id="btn-show-login" class="btn-primary" style="padding:10px 24px;background:linear-gradient(135deg,#00d4ff,#7b2cbf);border:none;color:white;border-radius:8px;cursor:pointer;font-weight:600;">
+                    Sign In
+                </button>
+            </div>
+            
+            <!-- STATE 2: LOGIN MODAL -->
+            <div id="login-modal" class="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;align-items:center;justify-content:center;">
+                <div style="background:rgba(30,27,75,0.95);border:1px solid rgba(167,139,250,0.3);border-radius:16px;padding:32px;width:90%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+                    <button id="login-close" style="position:absolute;top:12px;right:12px;background:none;border:none;color:#999;font-size:24px;cursor:pointer;">&times;</button>
+                    
+                    <h2 style="color:#fff;text-align:center;margin:0 0 24px;font-size:20px;font-weight:600;">Sign In</h2>
+                    
+                    <!-- Google Button Container -->
+                    <div id="google-signin-container" style="margin-bottom:20px;text-align:center;">
+                        <button id="google-btn" onclick="initGoogleSignIn()" class="btn-google" style="width:100%;padding:12px;background:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;">
+                            <img src="https://www.google.com/favicon.ico" alt="Google" style="width:20px;">
+                            Sign in with Google
+                        </button>
+                    </div>
+                    
+                    <div style="text-align:center;color:#666;font-size:13px;margin-bottom:20px;">or</div>
+                    
+                    <!-- Email Form -->
+                    <form id="signin-form" onsubmit="handleEmailLogin(event)" style="display:flex;flex-direction:column;">
+                        <div style="margin-bottom:18px;">
+                            <label style="display:block;color:#94a3b8;font-size:12px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Email</label>
+                            <input type="email" id="signin-email" placeholder="your@email.com" required style="width:100%;padding:12px 14px;background:rgba(0,0,0,0.4);border:1px solid rgba(167,139,250,0.3);border-radius:8px;color:#fff;font-size:15px;outline:none;box-sizing:border-box;">
+                        </div>
+                        
+                        <div style="margin-bottom:20px;">
+                            <label style="display:block;color:#94a3b8;font-size:12px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Password</label>
+                            <input type="password" id="signin-password" placeholder="Enter your password" required style="width:100%;padding:12px 14px;background:rgba(0,0,0,0.4);border:1px solid rgba(167,139,250,0.3);border-radius:8px;color:#fff;font-size:15px;outline:none;box-sizing:border-box;">
+                        </div>
+                        
+                        <div id="signin-status" style="text-align:center;font-size:13px;color:#ff6b6b;margin-bottom:16px;min-height:18px;"></div>
+                        
+                        <button type="submit" style="width:100%;padding:12px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;border-radius:8px;font-weight:600;cursor:pointer;font-size:15px;margin-bottom:12px;">Sign In</button>
+                    </form>
+                    
+                    <div style="text-align:center;color:#666;font-size:13px;">
+                        Don't have an account? <a href="#" onclick="showSignupModal()" style="color:#00d4ff;text-decoration:none;cursor:pointer;">Sign Up</a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- STATE 3: SIGNUP MODAL -->
+            <div id="signup-modal" class="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;align-items:center;justify-content:center;">
+                <div style="background:rgba(30,27,75,0.95);border:1px solid rgba(167,139,250,0.3);border-radius:16px;padding:32px;width:90%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+                    <button id="signup-close" style="position:absolute;top:12px;right:12px;background:none;border:none;color:#999;font-size:24px;cursor:pointer;">&times;</button>
+                    
+                    <h2 style="color:#fff;text-align:center;margin:0 0 24px;font-size:20px;font-weight:600;">Create Account</h2>
+                    
+                    <form id="signup-form" onsubmit="handleSignup(event)" style="display:flex;flex-direction:column;">
+                        <div style="margin-bottom:18px;">
+                            <label style="display:block;color:#94a3b8;font-size:12px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Email</label>
+                            <input type="email" id="signup-email" placeholder="your@email.com" required style="width:100%;padding:12px 14px;background:rgba(0,0,0,0.4);border:1px solid rgba(167,139,250,0.3);border-radius:8px;color:#fff;font-size:15px;outline:none;box-sizing:border-box;">
+                        </div>
+                        
+                        <div style="margin-bottom:18px;">
+                            <label style="display:block;color:#94a3b8;font-size:12px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Password</label>
+                            <input type="password" id="signup-password" placeholder="Enter password" required style="width:100%;padding:12px 14px;background:rgba(0,0,0,0.4);border:1px solid rgba(167,139,250,0.3);border-radius:8px;color:#fff;font-size:15px;outline:none;box-sizing:border-box;">
+                        </div>
+                        
+                        <div style="margin-bottom:20px;">
+                            <label style="display:block;color:#94a3b8;font-size:12px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Confirm Password</label>
+                            <input type="password" id="signup-confirm" placeholder="Confirm password" required style="width:100%;padding:12px 14px;background:rgba(0,0,0,0.4);border:1px solid rgba(167,139,250,0.3);border-radius:8px;color:#fff;font-size:15px;outline:none;box-sizing:border-box;">
+                        </div>
+                        
+                        <div id="signup-status" style="text-align:center;font-size:13px;color:#ff6b6b;margin-bottom:16px;min-height:18px;"></div>
+                        
+                        <button type="submit" style="width:100%;padding:12px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;border-radius:8px;font-weight:600;cursor:pointer;font-size:15px;margin-bottom:12px;">Create Account</button>
+                    </form>
+                    
+                    <div style="text-align:center;color:#666;font-size:13px;">
+                        Already have an account? <a href="#" onclick="showLoginModal()" style="color:#00d4ff;text-decoration:none;cursor:pointer;">Sign In</a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- STATE 4: LOGGED IN -->
+            <div id="auth-logged-in" class="user-profile" style="display:none;text-align:center;">
+                <span id="user-email-display" style="color:#fff;margin-right:15px;">user@example.com</span>
+                <button id="btn-logout" class="signout-btn" style="padding:8px 20px;background:transparent;border:1px solid #00d4ff;color:#00d4ff;border-radius:6px;cursor:pointer;font-weight:600;">
+                    Sign Out
+                </button>
+            </div>
+            
+        </div>
+
+        <!-- Toast Notifications -->
+        <div id="toast-container" class="toast-container"></div>
+
+        <!-- Settings Slide Panel -->
+        <aside id="settings-panel" style="display:none !important;" class="fixed top-0 right-0 h-full w-80 bg-slate-900 shadow-2xl transform translate-x-full transition-transform duration-300">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-8">
+                    <h2 class="text-xl font-bold" data-i18n="my_room">My Room</h2>
+                    <button id="settings-close" class="text-2xl">&times;</button>
+                </div>
+                <div class="space-y-6">
+                    <!-- User Account Info -->
+                    <section id="user-account-section" style="display:none;">
+                        <h3 class="text-xs font-bold text-gray-500 uppercase mb-4" data-i18n="account">Account</h3>
+                        <div class="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-4 text-center">
+                            <div style="font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;" data-i18n="logged_in_as">Logged in as</div>
+                            <div id="user-email-display" style="font-size: 13px; font-weight: 600; color: #00d4ff; word-break: break-all;">Loading...</div>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h3 class="text-xs font-bold text-gray-500 uppercase mb-4" data-i18n="appearance">Appearance</h3>
+                        <div class="bg-white/5 rounded-xl p-4 flex items-center justify-between">
+                            <span data-i18n="dark_mode">Dark Mode</span>
+                            <input type="checkbox" id="theme-toggle" checked>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h3 class="text-xs font-bold text-gray-500 uppercase mb-4" data-i18n="account">Account</h3>
+                        <!-- Auth Panel: Shows based on authentication state -->
+                        <div id="auth-panel" class="mb-4">
+                            <!-- Guest View (default) -->
+                            <div id="guest-view" class="flex flex-col gap-3" style="display:none;">
+                                <div class="flex items-center gap-2 p-3 bg-yellow-500/10 rounded-xl">
+                                    <span class="text-xl">👤</span>
+                                    <div class="flex flex-col">
+                                        <span class="text-yellow-400 font-bold" data-i18n="guest_mode">Guest Mode</span>
+                                        <span class="text-xs text-gray-400">Sign in to sync across devices</span>
+                                    </div>
+                                </div>
+                                <a href="/login.html" class="w-full p-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold text-center flex items-center justify-center gap-2">
+                                    <i class="fas fa-sign-in-alt"></i>
+                                    <span data-i18n="sign_in">Sign In</span>
+                                </a>
+                                <a href="/api/auth/google" class="w-full p-3 bg-white hover:bg-gray-100 text-gray-800 rounded-xl font-bold text-center flex items-center justify-center gap-2">
+                                    <img src="https://www.google.com/favicon.ico" class="w-4 h-4">
+                                    <span>Continue with Google</span>
+                                </a>
+                                <a href="/login.html?mode=signup" class="text-center text-gray-400 text-sm hover:text-gray-300">
+                                    Create Account
+                                </a>
+                            </div>
+                            <!-- Authenticated View -->
+                            <div id="user-view" class="flex flex-col gap-3" style="display:none;">
+                                <div class="flex items-center gap-2 p-3 bg-green-500/10 rounded-xl">
+                                    <span class="text-xl">✓</span>
+                                    <div class="flex flex-col">
+                                        <span class="text-green-400 font-bold" data-i18n="signed_in">Signed In</span>
+                                        <span id="user-email" class="text-xs text-gray-400"></span>
+                                    </div>
+                                </div>
+                                <button id="signOutBtn" class="w-full p-4 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl transition-colors flex items-center justify-between">
+                                    <span data-i18n="sign_out">Sign Out</span>
+                                    <i class="fas fa-sign-out-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h3 class="text-xs font-bold text-gray-500 uppercase mb-4" data-i18n="messages">Messages</h3>
+                        <button id="drmailBtn" class="w-full p-4 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-xl transition-colors flex items-center justify-between" style="position:relative;">
+                            <span style="display:flex;align-items:center;gap:8px;">
+                                <i class="fas fa-envelope"></i>
+                                <span data-i18n="drmail">Dr.D-mail</span>
+                                <span id="drmail-sidebar-badge" style="display:none;background:#ef4444;color:#fff;font-size:0.62rem;font-weight:700;padding:1px 6px;border-radius:99px;line-height:1.5;">0</span>
+                            </span>
+                            <i class="fas fa-chevron-right" style="font-size:0.75rem;"></i>
+                        </button>
+                    </section>
+                </div>
+            </div>
+        </aside>
+        <div id="settings-overlay" style="display:none !important;" class="fixed inset-0 bg-black/50 opacity-0 pointer-events-none transition-opacity duration-300"></div>
+    </div>
+
+    <!-- SERVICE PATH FIX - Handles both folder and flat file structures -->
+    <script>
+        (function() {
+            // Override the openService function to try multiple path variants
+            const originalOpenService = window.openService;
+            
+            window.openService = function(serviceUrl, title) {
+                console.log('[CodeBank] Routing request for:', serviceUrl);
+                
+                // If it's a folder-based path that might 404, try flat path
+                if (serviceUrl.includes('/index.html')) {
+                    const flatUrl = serviceUrl.replace('/index.html', '.html');
+                    console.log('[CodeBank] Folder path detected, checking flat path:', flatUrl);
+                    
+                    // Try flat path first via HEAD request
+                    fetch(flatUrl, { method: 'HEAD' })
+                        .then(res => {
+                            if (res.ok) {
+                                console.log('[CodeBank] Flat path exists, using:', flatUrl);
+                                originalOpenService(flatUrl, title);
+                            } else {
+                                console.log('[CodeBank] Flat path not found, falling back to original folder path');
+                                originalOpenService(serviceUrl, title);
+                            }
+                        })
+                        .catch(() => {
+                            // Fallback to original on error
+                            originalOpenService(serviceUrl, title);
+                        });
+                } else {
+                    // Already flat or other structure
+                    originalOpenService(serviceUrl, title);
+                }
+            };
+        })();
+    </script>
+
+    <script>
+        // ✅ Unified Service Manager — AppState + ServiceLoader (no postMessage, no bridges)
+        (function() {
+            const modal     = document.getElementById('service-modal');
+            const loading   = document.getElementById('service-modal-loading');
+            const titleEl   = document.getElementById('service-modal-title');
+            const closeBtn  = document.getElementById('service-modal-close');
+            const backBtn   = document.getElementById('service-modal-back');
+            const reloadBtn = document.getElementById('service-modal-reload');
+
+            let currentServiceUrl   = null;
+            let currentServiceTitle = null;
+
+            // Init ServiceLoader with the content container
+            function _initLoader() {
+                const container = document.getElementById('service-content-container');
+                if (container && window.ServiceLoader) {
+                    window.ServiceLoader.init(container);
+                }
+            }
+            _initLoader();
+
+            function _showLoading() {
+                if (loading) { loading.classList.remove('hidden'); loading.style.display = 'flex'; }
+            }
+            function _hideLoading() {
+                if (loading) { loading.classList.add('hidden'); loading.style.display = 'none'; }
+            }
+
+            window.openService = function(serviceUrl, title) {
+                console.log('[CodeBank] Opening service:', serviceUrl);
+
+                if (currentServiceUrl === serviceUrl && modal.classList.contains('active')) {
+                    console.log('[CodeBank] Service already active:', serviceUrl);
+                    return;
+                }
+
+                currentServiceUrl   = serviceUrl;
+                currentServiceTitle = title || 'Service';
+
+                if (titleEl) titleEl.textContent = currentServiceTitle;
+                modal.classList.add('active');
+                _showLoading();
+                document.body.style.overflow = 'hidden';
+
+                // Ensure loader is ready
+                _initLoader();
+
+                if (window.ServiceLoader) {
+                    window.ServiceLoader.mount(serviceUrl, title)
+                        .then(_hideLoading)
+                        .catch(_hideLoading);
+                } else {
+                    setTimeout(() => {
+                        _initLoader();
+                        if (window.ServiceLoader) {
+                            window.ServiceLoader.mount(serviceUrl, title)
+                                .then(_hideLoading)
+                                .catch(_hideLoading);
+                        } else {
+                            _hideLoading();
+                        }
+                    }, 500);
+                }
+
+                // Safety timeout
+                setTimeout(_hideLoading, 12000);
+            };
+
+            function closeModal() {
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
+                if (window.ServiceLoader) window.ServiceLoader.unmount();
+                currentServiceUrl = null;
+                currentServiceTitle = null;
+            }
+
+            function reloadService() {
+                if (!currentServiceUrl) return;
+                _showLoading();
+                if (window.ServiceLoader) {
+                    window.ServiceLoader.unmount();
+                    window.ServiceLoader.mount(currentServiceUrl, currentServiceTitle)
+                        .then(_hideLoading)
+                        .catch(_hideLoading);
+                }
+            }
+
+            if (closeBtn)  closeBtn.onclick  = closeModal;
+            if (backBtn)   backBtn.onclick   = closeModal;
+            if (reloadBtn) reloadBtn.onclick = reloadService;
+
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape' && modal.classList.contains('active')) closeModal();
+            });
+
+            // EventBus listeners
+            if (window.EventBus) {
+                window.EventBus.on('service:ready',   _hideLoading);
+                window.EventBus.on('service:error',   _hideLoading);
+            }
+
+            // Legacy compat
+            window.openServiceLegacy = window.openService;
+
+            console.log('[CodeBank] Unified Service Manager initialized (AppState + ServiceLoader).');
+        })();
+    </script>
+
+
+
+    <!-- 🔄 Render Keep-Alive: prevents free-tier cold starts while page is open -->
+    <script>
+    (function() {
+        var PING_INTERVAL = 4 * 60 * 1000; // 4 minutes
+        function ping() {
+            fetch('/ping', { method: 'GET', credentials: 'include' })
+                .then(function() { console.log('[KeepAlive] Server pinged OK'); })
+                .catch(function() {}); // silent fail
+        }
+        // Start pinging
+        setInterval(ping, PING_INTERVAL);
+        console.log('[KeepAlive] Started — pinging every 4 min to prevent cold start');
+    })();
+    </script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+        <!-- ══ ADMIN DASHBOARD OVERLAY ══ -->
+        <div id="bankode-admin-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:#0a0613;flex-direction:column;">
+            <div style="background:linear-gradient(135deg,#1a0533,#0f1729);border-bottom:1px solid rgba(167,139,250,.25);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+                <div style="display:flex;align-items:center;gap:14px;">
+                    <span style="font-size:1.5rem;font-weight:900;letter-spacing:.12em;background:linear-gradient(135deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Bankode</span>
+                    <span style="font-size:.7rem;color:#a78bfa;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);padding:2px 10px;border-radius:99px;font-weight:700;letter-spacing:.1em;">ADMIN</span>
+                </div>
+                <button onclick="document.getElementById('bankode-admin-overlay').style.display='none'" style="background:rgba(255,255,255,.07);border:none;color:#fff;border-radius:10px;padding:8px 16px;cursor:pointer;font-size:.85rem;">✕ Close</button>
+            </div>
+            <div style="display:flex;gap:0;padding:0 20px;background:#0d0921;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.07);overflow-x:auto;">
+                <button class="ba-tab active" onclick="baShowTab('users')" data-tab="users">👥 Users &amp; Assets</button>
+                <button class="ba-tab" onclick="baShowTab('pebalaash')" data-tab="pebalaash">🛒 Pebalaash</button>
+                <button class="ba-tab" onclick="baShowTab('qarsan')" data-tab="qarsan">⚔️ Qarsan Steals</button>
+                <button class="ba-tab" onclick="baShowTab('send')" data-tab="send">📤 Send Assets</button>
+            </div>
+            <div id="ba-content" style="flex:1;overflow-y:auto;padding:20px;">
+                <!-- USERS TAB -->
+                <div id="ba-tab-users">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                        <h2 style="color:#fff;font-size:1.1rem;font-weight:700;margin:0;">All Users &amp; Their Assets</h2>
+                        <button onclick="baLoadUsers()" style="background:rgba(167,139,250,.15);border:1px solid #a78bfa;color:#a78bfa;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:.8rem;">↻ Refresh</button>
+                    </div>
+                    <div id="ba-users-body"><div style="color:#6b7280;text-align:center;padding:40px;">Loading users...</div></div>
+                </div>
+                <!-- PEBALAASH TAB -->
+                <div id="ba-tab-pebalaash" style="display:none;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                        <h2 style="color:#fff;font-size:1.1rem;font-weight:700;margin:0;">Pebalaash — Purchases &amp; Stats</h2>
+                        <button onclick="baLoadPebalaash()" style="background:rgba(56,189,248,.15);border:1px solid #38bdf8;color:#38bdf8;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:.8rem;">↻ Refresh</button>
+                    </div>
+                    <div id="ba-pebalaash-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px;"></div>
+                    <h3 style="color:#94a3b8;font-size:.85rem;margin:0 0 12px;text-transform:uppercase;letter-spacing:.1em;">Recent Orders</h3>
+                    <div id="ba-pebalaash-body"><div style="color:#6b7280;text-align:center;padding:40px;">Loading purchases...</div></div>
+                </div>
+                <!-- QARSAN TAB -->
+                <div id="ba-tab-qarsan" style="display:none;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                        <h2 style="color:#fff;font-size:1.1rem;font-weight:700;margin:0;">Qarsan — Steal Activity Log</h2>
+                        <button onclick="baLoadQarsan()" style="background:rgba(251,146,60,.15);border:1px solid #fb923c;color:#fb923c;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:.8rem;">↻ Refresh</button>
+                    </div>
+                    <div id="ba-qarsan-body"><div style="color:#6b7280;text-align:center;padding:40px;">Loading steal log...</div></div>
+                </div>
+                <!-- SEND TAB -->
+                <div id="ba-tab-send" style="display:none;max-width:480px;margin:0 auto;">
+                    <h2 style="color:#fff;font-size:1.1rem;font-weight:700;margin-bottom:20px;">Send Assets to User</h2>
+                    <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:24px;display:flex;flex-direction:column;gap:16px;">
+                        <div>
+                            <label style="color:#94a3b8;font-size:.8rem;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">Recipient Email</label>
+                            <input id="ba-send-email" type="email" placeholder="user@example.com" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:12px 14px;color:#fff;font-size:.95rem;box-sizing:border-box;outline:none;" />
+                        </div>
+                        <div>
+                            <label style="color:#94a3b8;font-size:.8rem;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">Asset Type</label>
+                            <select id="ba-send-type" style="width:100%;background:#1e1b4b;border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:12px 14px;color:#fff;font-size:.95rem;box-sizing:border-box;outline:none;cursor:pointer;">
+                                <option value="codes">💎 Codes</option>
+                                <option value="silver">🥈 Silver Bars</option>
+                                <option value="gold">🥇 Gold Bars</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="color:#94a3b8;font-size:.8rem;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">Amount</label>
+                            <input id="ba-send-amount" type="number" min="1" placeholder="e.g. 100" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:12px 14px;color:#fff;font-size:.95rem;box-sizing:border-box;outline:none;" />
+                        </div>
+                        <div id="ba-send-preview" style="display:none;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:10px;padding:14px;font-size:.9rem;color:#c4b5fd;"></div>
+                        <button id="ba-send-preview-btn" onclick="baSendPreview()" style="background:rgba(167,139,250,.15);border:1px solid #a78bfa;color:#a78bfa;padding:12px;border-radius:10px;cursor:pointer;font-weight:600;font-size:.95rem;">Verify &amp; Preview</button>
+                        <button id="ba-send-confirm-btn" onclick="baSendConfirm()" style="display:none;background:linear-gradient(135deg,#7c3aed,#2563eb);border:none;color:#fff;padding:14px;border-radius:10px;cursor:pointer;font-weight:700;font-size:1rem;">✓ Confirm Send</button>
+                        <div id="ba-send-status" style="text-align:center;font-size:.9rem;min-height:20px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ PASSWORD MODAL ══ -->
+        <div id="bankode-pw-modal" style="display:none;position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.85);align-items:center;justify-content:center;">
+            <div style="background:#1a0533;border:1px solid rgba(167,139,250,.4);border-radius:18px;padding:36px 32px;width:320px;max-width:90vw;text-align:center;box-shadow:0 0 60px rgba(124,58,237,.3);">
+                <div style="font-size:1.8rem;margin-bottom:8px;">🔐</div>
+                <div style="font-size:1.2rem;font-weight:800;color:#fff;margin-bottom:4px;">Admin Access</div>
+                <div style="font-size:.8rem;color:#7c6fa0;margin-bottom:24px;">Enter your password to continue</div>
+                <input id="bankode-pw-input" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')bankodeCheckPassword()" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:12px 16px;color:#fff;font-size:1rem;box-sizing:border-box;margin-bottom:12px;outline:none;text-align:center;letter-spacing:.12em;" />
+                <div id="bankode-pw-error" style="color:#f87171;font-size:.82rem;min-height:18px;margin-bottom:12px;"></div>
+                <div style="display:flex;gap:10px;">
+                    <button onclick="document.getElementById('bankode-pw-modal').style.display='none';document.getElementById('bankode-pw-input').value='';document.getElementById('bankode-pw-error').textContent='';" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:#9ca3af;padding:11px;border-radius:10px;cursor:pointer;">Cancel</button>
+                    <button onclick="bankodeCheckPassword()" style="flex:1;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;padding:11px;border-radius:10px;cursor:pointer;font-weight:700;">Enter</button>
+                </div>
+            </div>
+        </div>
+
+    <script>
+        // ══ BANKODE - 7-Click Admin Gate ══
+        (function() {
+            var clickCount = 0;
+            var clickTimer = null;
+            var titleEl = document.getElementById('bankode-title');
+            if (!titleEl) return;
+            titleEl.addEventListener('click', function() {
+                clickCount++;
+                clearTimeout(clickTimer);
+                if (clickCount >= 7) {
+                    clickCount = 0;
+                    var modal = document.getElementById('bankode-pw-modal');
+                    if (modal) {
+                        modal.style.display = 'flex';
+                        setTimeout(function(){ var inp=document.getElementById('bankode-pw-input'); if(inp) inp.focus(); }, 80);
+                    }
+                } else {
+                    titleEl.style.filter = 'brightness(1.6)';
+                    setTimeout(function(){ titleEl.style.filter = ''; }, 130);
+                    clickTimer = setTimeout(function(){ clickCount = 0; }, 1600);
+                }
+            });
+        })();
+
+        // ── Helper: read XSRF-TOKEN cookie (for CSRF header) ──────────────────
+        function baCsrfToken() {
+            var match = document.cookie.match(/(?:^|;)\s*XSRF-TOKEN=([^;]+)/);
+            return match ? decodeURIComponent(match[1]) : '';
+        }
+
+        // ── Helper: fetch wrapper that adds Auth + CSRF headers automatically ──
+        async function baFetch(url, opts) {
+            opts = opts || {};
+            opts.credentials = 'include';
+            opts.headers = Object.assign({}, opts.headers || {});
+            // Bearer token (obtained after bankode-login)
+            if (window.__baToken) {
+                opts.headers['Authorization'] = 'Bearer ' + window.__baToken;
+            }
+            // CSRF token for unsafe methods
+            var method = (opts.method || 'GET').toUpperCase();
+            if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
+                var csrf = baCsrfToken();
+                if (csrf) opts.headers['x-csrf-token'] = csrf;
+            }
+            return fetch(url, opts);
+        }
+
+        async function bankodeCheckPassword() {
+            var inp = document.getElementById('bankode-pw-input');
+            var errEl = document.getElementById('bankode-pw-error');
+            var pw = inp ? inp.value : '';
+            if (pw === 'doitasap2025') {
+                // Exchange password for a real server-side session token
+                try {
+                    var csrf = baCsrfToken();
+                    var headers = { 'Content-Type': 'application/json' };
+                    if (csrf) headers['x-csrf-token'] = csrf;
+                    var r = await fetch('/api/admin/bankode-login', {
+                        method: 'POST', credentials: 'include',
+                        headers: headers,
+                        body: JSON.stringify({ password: pw })
+                    });
+                    var data = await r.json();
+                    if (data.ok && data.token) {
+                        window.__baToken = data.token;
+                        window.__baPw = pw; // keep for pebalaash x-admin-password
+                    }
+                } catch(e) {
+                    console.warn('[bankode] token exchange failed, admin API calls may fail:', e.message);
+                }
+                document.getElementById('bankode-pw-modal').style.display = 'none';
+                inp.value = ''; errEl.textContent = '';
+                var overlay = document.getElementById('bankode-admin-overlay');
+                overlay.style.display = 'flex';
+                baShowTab('users');
+                baLoadUsers();
+            } else {
+                errEl.textContent = '⚠️ Incorrect password';
+                inp.style.borderColor = '#f87171';
+                setTimeout(function(){ inp.style.borderColor = 'rgba(167,139,250,.3)'; }, 1200);
+            }
+        }
+
+        var BA_TABS = ['users','pebalaash','qarsan','send'];
+        function baShowTab(tab) {
+            BA_TABS.forEach(function(t) {
+                var el = document.getElementById('ba-tab-'+t);
+                if (el) el.style.display = (t===tab) ? 'block' : 'none';
+            });
+            document.querySelectorAll('.ba-tab').forEach(function(btn) {
+                btn.classList.toggle('active', btn.dataset.tab===tab);
+            });
+            if (tab==='pebalaash') baLoadPebalaash();
+            if (tab==='qarsan')    baLoadQarsan();
+        }
+
+        function baTable(headers, rows, emptyMsg) {
+            if (!rows || rows.length === 0) return '<div style="color:#6b7280;text-align:center;padding:32px;">'+(emptyMsg||'No data.')+'</div>';
+            var h = headers.map(function(hh){ return '<th style="padding:10px 14px;text-align:left;color:#a78bfa;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid rgba(255,255,255,.08);white-space:nowrap;">'+hh+'</th>'; }).join('');
+            var b = rows.map(function(row,i){
+                var cells = row.map(function(c){ return '<td style="padding:10px 14px;color:#e2e8f0;font-size:.83rem;border-bottom:1px solid rgba(255,255,255,.04);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis;">'+(c===null||c===undefined?'&#8212;':c)+'</td>'; }).join('');
+                return '<tr style="background:'+(i%2===0?'rgba(255,255,255,.02)':'transparent')+'">'+cells+'</tr>';
+            }).join('');
+            return '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;min-width:500px;"><thead><tr>'+h+'</tr></thead><tbody>'+b+'</tbody></table></div>';
+        }
+
+        function fmtDate(dt) {
+            if (!dt) return '&#8212;';
+            try { return new Date(dt).toLocaleString(); } catch(e) { return dt; }
+        }
+
+        async function baLoadUsers() {
+            var el = document.getElementById('ba-users-body');
+            el.innerHTML = '<div style="color:#6b7280;text-align:center;padding:32px;">⏳ Loading...</div>';
+            try {
+                var r = await baFetch('/api/admin/users/full');
+                var data = await r.json();
+                if (!data.ok) { el.innerHTML = '<div style="color:#f87171;padding:20px;">Error: '+data.error+'</div>'; return; }
+                var rows = (data.users||[]).map(function(u){ return [
+                    '<span style="font-size:.75rem;color:#7c6fa0;">'+(u.id||'').slice(0,8)+'…</span>',
+                    u.email||'&#8212;', u.user_type||'user',
+                    u.disabled ? '<span style="color:#f87171;">Disabled</span>' : '<span style="color:#34d399;">Active</span>',
+                    '<span style="color:#fbbf24;">💎 '+(Number(u.codes)||0)+'</span>',
+                    '<span style="color:#c0c0c0;">🥈 '+(Number(u.silver)||0)+'</span>',
+                    '<span style="color:#fbbf24;">🥇 '+(Number(u.gold)||0)+'</span>',
+                    fmtDate(u.created_at)
+                ]; });
+                el.innerHTML = baTable(['ID','Email','Type','Status','Codes','Silver','Gold','Joined'], rows, 'No users found.');
+            } catch(e) { el.innerHTML = '<div style="color:#f87171;padding:20px;">Error: '+e.message+'</div>'; }
+        }
+
+        async function baLoadPebalaash() {
+            var summary = document.getElementById('ba-pebalaash-summary');
+            var body = document.getElementById('ba-pebalaash-body');
+            body.innerHTML = '<div style="color:#6b7280;text-align:center;padding:32px;">⏳ Loading...</div>';
+            try {
+                var r = await baFetch('/api/pebalaash/admin/stats', {
+                    headers: window.__baPw ? { 'x-admin-password': window.__baPw } : {}
+                });
+                var data = await r.json();
+                summary.innerHTML = [
+                    ['🛒 Total Sold', data.totalSold||0, '#38bdf8'],
+                    ['💎 Total Revenue', (data.totalRevenueCodes||0)+' codes', '#fbbf24'],
+                    ['⚠️ Low Stock', (data.lowStockProducts||[]).length+' items', '#f87171'],
+                ].map(function(item){ return '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:16px;"><div style="font-size:.75rem;color:#6b7280;margin-bottom:6px;">'+item[0]+'</div><div style="font-size:1.4rem;font-weight:800;color:'+item[2]+';">'+item[1]+'</div></div>'; }).join('');
+                var orders = (data.recentOrders||[]).map(function(o){ return [
+                    (o.user_id||'').slice(0,8)+'…',
+                    o.product_name_display||o.product_name||'&#8212;',
+                    '💎 '+(o.price_codes||0),
+                    o.payment_type||'&#8212;',
+                    o.status||'&#8212;',
+                    fmtDate(o.created_at)
+                ]; });
+                body.innerHTML = baTable(['User ID','Product','Price','Method','Status','Date'], orders, 'No orders yet.');
+            } catch(e) { body.innerHTML = '<div style="color:#f87171;padding:20px;">Error: '+e.message+'</div>'; }
+        }
+
+        async function baLoadQarsan() {
+            var el = document.getElementById('ba-qarsan-body');
+            el.innerHTML = '<div style="color:#6b7280;text-align:center;padding:32px;">⏳ Loading...</div>';
+            try {
+                var r = await baFetch('/api/admin/qarsan/steals');
+                var data = await r.json();
+                if (!data.ok) { el.innerHTML = '<div style="color:#f87171;padding:20px;">Error: '+data.error+'</div>'; return; }
+                var rows = (data.steals||[]).map(function(s){ return [
+                    s.actor_email||(s.actor_id||'').slice(0,8)+'…',
+                    s.target_email||(s.target_id||'').slice(0,8)+'…',
+                    s.codes_stolen||0, s.silver_stolen||0, s.gold_stolen||0,
+                    '<strong style="color:#fb923c;">'+(s.total_stolen||0)+'</strong>',
+                    fmtDate(s.created_at)
+                ]; });
+                el.innerHTML = baTable(['Actor (Thief)','Target (Victim)','Codes','Silver','Gold','Total Stolen','Date'], rows, 'No steal events recorded.');
+            } catch(e) { el.innerHTML = '<div style="color:#f87171;padding:20px;">Error: '+e.message+'</div>'; }
+        }
+
+        function baSendPreview() {
+            var email = document.getElementById('ba-send-email').value.trim();
+            var type  = document.getElementById('ba-send-type').value;
+            var amt   = parseInt(document.getElementById('ba-send-amount').value, 10);
+            var prev  = document.getElementById('ba-send-preview');
+            var confBtn = document.getElementById('ba-send-confirm-btn');
+            var status = document.getElementById('ba-send-status');
+            status.textContent = '';
+            if (!email || !/@/.test(email)) { status.style.color='#f87171'; status.textContent='⚠️ Enter a valid email.'; return; }
+            if (!amt || amt < 1) { status.style.color='#f87171'; status.textContent='⚠️ Enter a valid amount.'; return; }
+            var typeLabel = {codes:'💎 Codes',silver:'🥈 Silver Bars',gold:'🥇 Gold Bars'}[type]||type;
+            prev.style.display='block';
+            prev.innerHTML='Sending <strong style="color:#fff;">'+amt+' '+typeLabel+'</strong> to <strong style="color:#fff;">'+email+'</strong>.<br>Tap <em>Confirm Send</em> to deposit instantly.';
+            confBtn.style.display='block';
+        }
+
+        async function baSendConfirm() {
+            var email = document.getElementById('ba-send-email').value.trim();
+            var type  = document.getElementById('ba-send-type').value;
+            var amt   = parseInt(document.getElementById('ba-send-amount').value, 10);
+            var status = document.getElementById('ba-send-status');
+            var confBtn = document.getElementById('ba-send-confirm-btn');
+            confBtn.disabled = true; confBtn.textContent = 'Sending...';
+            status.style.color='#94a3b8'; status.textContent='Processing...';
+            try {
+                var r = await baFetch('/api/admin/send-by-email', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({email:email, assetType:type, amount:amt})
+                });
+                var data = await r.json();
+                if (data.ok) {
+                    status.style.color='#34d399'; status.textContent='✅ '+data.message;
+                    document.getElementById('ba-send-email').value='';
+                    document.getElementById('ba-send-amount').value='';
+                    document.getElementById('ba-send-preview').style.display='none';
+                    confBtn.style.display='none';
+                } else {
+                    status.style.color='#f87171'; status.textContent='❌ '+(data.error||data.message||'Failed');
+                }
+            } catch(e) { status.style.color='#f87171'; status.textContent='❌ Network error: '+e.message; }
+            confBtn.disabled=false; confBtn.textContent='✓ Confirm Send';
+        }
+    </script>
+
+    <!-- 🌐 CodeBank Multi-Language Support -->
+    <script>
+    // Display logged-in user email
+    function displayUserEmail() {
+        const section = document.getElementById('user-account-section');
+        const emailDisplay = document.getElementById('user-email-display');
+        
+        if (!section || !emailDisplay) return;
+        
+        const email = getUserEmailFromSources();
+        
+        if (email) {
+            emailDisplay.textContent = email;
+            section.style.display = 'block';
+            console.log('[UserDisplay] Showing email:', email);
+        } else {
+            console.warn('[UserDisplay] No email found in auth sources');
+        }
+    }
+
+    function getUserEmailFromSources() {
+        // Source 1: Check AppState (from auth-unified.js)
+        if (window.AppState && window.AppState.user && window.AppState.user.email) {
+            return window.AppState.user.email;
+        }
+
+        // Source 2: LocalStorage (cached)
+        try {
+            const cached = localStorage.getItem('__cached_user__');
+            if (cached) {
+                const user = JSON.parse(cached);
+                if (user.email) return user.email;
+            }
+        } catch (e) {}
+        
+        // Source 3: Check old cache location
+        try {
+            const cached = localStorage.getItem('bankode_user_cache');
+            if (cached) {
+                const user = JSON.parse(cached);
+                if (user.email) return user.email;
+            }
+        } catch (e) {}
+        
+        // Source 4: Session ID from cookie (decode JWT if present)
+        try {
+            const sessionMatch = document.cookie.match(/sessionId=([^;]+)/);
+            if (sessionMatch && sessionMatch[1]) {
+                const sessionData = sessionMatch[1];
+                // Try to decode if it looks like JWT
+                if (sessionData.includes('.')) {
+                    const parts = sessionData.split('.');
+                    if (parts.length >= 2) {
+                        const decoded = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
+                        const payload = JSON.parse(decoded);
+                        if (payload.email) return payload.email;
+                        if (payload.user?.email) return payload.user.email;
+                    }
+                }
+            }
+        } catch (e) {}
+        
+        // Source 5: Check window objects
+        if (window.AuthCore && window.AuthCore.getState) {
+            try {
+                const state = window.AuthCore.getState();
+                if (state?.user?.email) return state.user.email;
+            } catch (e) {}
+        }
+        
+        if (window.currentUser && window.currentUser.email) {
+            return window.currentUser.email;
+        }
+        
+        return null;
+    }
+
+    // Initialize when DOM is ready - Listen for auth changes instead of fixed timeout
+    document.addEventListener('DOMContentLoaded', () => {
+        // Try immediately (auth may have cached)
+        setTimeout(displayUserEmail, 100);
+        
+        // 🔧 FIX: Sync assets when auth is ready (for code bar display)
+        if (window.EventBus) {
+            window.EventBus.on('auth:changed', (data) => {
+                if (data && data.user && data.user.email) {
+                    displayUserEmail();
+                    // Sync assets when authenticated
+                    if (window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
+                        window.AssetsManager.sync().catch(e => {
+                            console.error('[CodeBank] Asset sync error:', e);
+                        });
+                    }
+                }
+            });
+        }
+        
+        // Fallback: retry every 200ms for up to 5 seconds
+        let retries = 0;
+        const retryInterval = setInterval(() => {
+            if (++retries > 25) { clearInterval(retryInterval); return; }
+            const email = getUserEmailFromSources();
+            if (email) {
+                displayUserEmail();
+                clearInterval(retryInterval);
+                // Also try to sync assets
+                if (window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
+                    window.AssetsManager.sync().catch(e => {});
+                }
+            }
+        }, 200);
+    });
+    </script>
+    
+    <script src="/codebank/translate.js?v=1"></script>
+
+    <!-- Service Modal Auth Bridge -->
+    <script>
+(function() {
+  console.log('[CodeBank] Service Modal Auth Bridge Initializing...');
+  let globalAuthState = {
+    authenticated: false,
+    userId: null,
+    user: null,
+    token: null
+  };
+
+  function loadAuthState() {
+    try {
+      const stored = localStorage.getItem('codebank_auth');
+      if (stored) {
+        globalAuthState = JSON.parse(stored);
+        console.log('[CodeBank] Loaded auth state:', globalAuthState);
+      }
+    } catch(e) { console.warn('[CodeBank] Cannot load auth:', e); }
+  }
+
+  function saveAuthState() {
+    try {
+      localStorage.setItem('codebank_auth', JSON.stringify(globalAuthState));
+    } catch(e) { }
+  }
+
+  function simulateLogin() {
+    globalAuthState = {
+      authenticated: true,
+      userId: 'user_' + Math.random().toString(36).substr(2, 9),
+      user: {
+        id: 'user_' + Math.random().toString(36).substr(2, 9),
+        name: 'CodeBank User',
+        email: 'user@codebank.app'
+      },
+      token: 'Bearer_' + Math.random().toString(36).substr(2, 20)
+    };
+    saveAuthState();
+    console.log('[CodeBank] ✅ Logged in:', globalAuthState.user.name);
+    broadcastAuthToAllIframes('AUTH_CHANGED', globalAuthState);
+  }
+
+  function broadcastAuthToAllIframes(msgType, data) {
+    const iframes = document.querySelectorAll('iframe[data-service]');
+    iframes.forEach(iframe => {
+      try {
+        const origin = iframe.dataset.origin || window.location.origin;
+        const msg = {
+          type: msgType,
+          authenticated: data.authenticated,
+          userId: data.userId,
+          user: data.user,
+          token: data.token
+        };
+        iframe.contentWindow.postMessage(msg, origin);
+      } catch(e) { }
+    });
+  }
+
+  window.addEventListener('message', (event) => {
+    if (!event.data || typeof event.data !== 'object') return;
+    const msgType = event.data.type;
+    switch(msgType) {
+      case 'AUTH_REQUEST':
+        event.source.postMessage({
+          type: 'AUTH_RESPONSE',
+          authenticated: globalAuthState.authenticated,
+          userId: globalAuthState.userId,
+          user: globalAuthState.user,
+          token: globalAuthState.token
+        }, event.origin);
+        if (!globalAuthState.authenticated) {
+          // Don't auto-login - show sign-in modal instead
+          console.log('[CodeBank] Not authenticated, waiting for user to sign in');
+        }
+        break;
+      case 'REQUEST_LOGIN':
+        // Don't auto-login - this was causing fake "Signed In" status
+        // Show a message that user needs to sign in first
+        console.log('[CodeBank] Login requested - user must sign in manually');
+        break;
+    }
+  });
+
+  window.CodeBankAuth = {
+    getAuthState: () => ({ ...globalAuthState }),
+    isAuthenticated: () => globalAuthState.authenticated,
+    login: simulateLogin,
+    broadcastAuth: () => broadcastAuthToAllIframes('AUTH_CHANGED', globalAuthState),
+    loadAuthState: loadAuthState
+  };
+
+  loadAuthState();
+  setTimeout(() => {
+    console.log('[CodeBank] Broadcasting auth readiness to iframes...');
+    const iframes = document.querySelectorAll('iframe[data-service]');
+    iframes.forEach(iframe => {
+      try {
+        const origin = iframe.dataset.origin || window.location.origin;
+        iframe.contentWindow.postMessage({ type: 'auth:ready' }, origin);
+      } catch(e) { }
+    });
+  }, 1000);
+
+  console.log('[CodeBank] ✅ Service Auth Bridge Ready');
+})();
+    </script>
+
+<!-- Auth Panel Initialization -->
+    <script>
+    (function initAuthPanel() {
+        // Wait for DOM and then update auth panel visibility
+        function updateAuthUI() {
+            const guestView = document.getElementById('guest-view');
+            const userView = document.getElementById('user-view');
+            const userEmail = document.getElementById('user-email');
+            
+            if (!guestView || !userView) {
+                console.warn('[AuthPanel] UI elements not found');
+                return;
+            }
+            
+            // Check authentication state from multiple sources
+            let isAuthenticated = false;
+            let userEmailText = '';
+            
+            // Check CodeBankAuth (local auth)
+            if (window.CodeBankAuth && typeof window.CodeBankAuth.isAuthenticated === 'function') {
+                isAuthenticated = window.CodeBankAuth.isAuthenticated();
+                const authState = window.CodeBankAuth.getAuthState();
+                if (authState && authState.user && authState.user.email) {
+                    userEmailText = authState.user.email;
+                }
+            }
+            
+            // Check localStorage as fallback
+            if (!isAuthenticated) {
+                try {
+                    const stored = localStorage.getItem('codebank_auth');
+                    if (stored) {
+                        const parsed = JSON.parse(stored);
+                        isAuthenticated = parsed.authenticated;
+                        if (parsed.user && parsed.user.email) {
+                            userEmailText = parsed.user.email;
+                        }
+                    }
+                } catch(e) {}
+            }
+            
+            // Check session_active
+            if (!isAuthenticated) {
+                isAuthenticated = localStorage.getItem('session_active') === 'true';
+            }
+            
+            // Toggle views
+            if (isAuthenticated) {
+                guestView.style.display = 'none';
+                userView.style.display = 'flex';
+                if (userEmail && userEmailText) {
+                    userEmail.textContent = userEmailText;
+                }
+                console.log('[AuthPanel] Showing authenticated view');
+            } else {
+                guestView.style.display = 'flex';
+                userView.style.display = 'none';
+                console.log('[AuthPanel] Showing guest view');
+            }
+        }
+        
+        // Handle sign out
+        window.signOut = function() {
+            console.log('[AuthPanel] Signing out...');
+            
+            // Clear CodeBankAuth
+            if (window.CodeBankAuth) {
+                localStorage.removeItem('codebank_auth');
+                window.CodeBankAuth.loadAuthState();
+            }
+            
+            // Clear localStorage
+            localStorage.removeItem('session_active');
+            localStorage.removeItem('session_token');
+            localStorage.removeItem('user_data');
+            localStorage.removeItem('codebank_auth');
+            
+            // Reload to apply changes
+            window.location.reload();
+        };
+        
+        // Sign out button handler
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                updateAuthUI();
+                
+                const signOutBtn = document.getElementById('signOutBtn');
+                if (signOutBtn) {
+                    signOutBtn.addEventListener('click', window.signOut);
+                }
+            }, 100);
+        });
+        
+        // Also run on load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', updateAuthUI);
+        } else {
+            setTimeout(updateAuthUI, 100);
+        }
+    })();
+    </script>
+
+    <!-- Zagel Voice Assistant FAB -->
+    <div id="zagel-fab-container" style="display:none;">
+        <button id="zagel-fab" onclick="openZagelVoice()" style="
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+            border: none;
+            box-shadow: 0 8px 32px rgba(0, 212, 255, 0.4);
+            cursor: pointer;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        ">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+        </button>
+        <div class="pulse-ring" style="
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: rgba(0, 212, 255, 0.3);
+            animation: pulse-expand 2s infinite;
+            pointer-events: none;
+        "></div>
+        <div class="pulse-ring" style="
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: rgba(0, 212, 255, 0.2);
+            animation: pulse_expand 2s infinite 0.5s;
+            pointer-events: none;
+        "></div>
+        <div class="pulse-ring" style="
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: rgba(0, 212, 255, 0.1);
+            animation: pulse_expand 2s infinite 1s;
+            pointer-events: none;
+        "></div>
+    </div>
+    
+    <style>
+    @keyframes pulse_expand {
+        0% { transform: translateX(-50%) scale(1); opacity: 0.6; }
+        100% { transform: translateX(-50%) scale(1.5); opacity: 0; }
+    }
+    </style>
+    
+    <script>
+    // Auth Functions for top-right auth container
+    window.showSignInModal = function() {
+        console.log('[Auth] Opening inline email/password sign in modal...');
+        const modal = document.getElementById('emailLoginModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            document.getElementById('emailLoginInput').focus();
+        }
+    };
+    
+    window.closeEmailLoginModal = function() {
+        const modal = document.getElementById('emailLoginModal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.getElementById('emailLoginInput').value = '';
+            document.getElementById('passwordLoginInput').value = '';
+            document.getElementById('emailLoginStatus').textContent = '';
+        }
+    };
+    
+    window.handleEmailLogin = async function() {
+        const email = document.getElementById('emailLoginInput').value.trim();
+        const password = document.getElementById('passwordLoginInput').value;
+        const statusEl = document.getElementById('emailLoginStatus');
+        
+        if (!email || !password) {
+            statusEl.textContent = '⚠️ Email and password required';
+            return;
+        }
+        
+        try {
+            statusEl.textContent = '🔄 Signing in...';
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ email, password })
+            });
+            
+            const data = await response.json();
+            
+            if (data.status === 'success' || data.success) {
+                // Store session tokens
+                localStorage.setItem('session_token', data.sessionId || data.token);
+                localStorage.setItem('__cached_session_id__', data.sessionId || data.token);
+                localStorage.setItem('session_active', 'true');
+                if (data.user) {
+                    localStorage.setItem('user_data', JSON.stringify(data.user));
+                    localStorage.setItem('__cached_user__', JSON.stringify(data.user));
+                }
+                
+                // Update auth UI
+                if (window.AuthManager && typeof window.AuthManager.login === 'function') {
+                    window.AuthManager.login(data.user, data.sessionId || data.token);
+                }
+                
+                statusEl.textContent = '✅ Login successful!';
+                statusEl.style.color = '#00c853';
+                
+                // Close modal and reload after brief delay
+                setTimeout(() => {
+                    window.closeEmailLoginModal();
+                    // Emit auth event for UI updates
+                    window.dispatchEvent(new CustomEvent('auth:login', { 
+                        detail: { user: data.user, sessionId: data.sessionId || data.token } 
+                    }));
+                    window.location.reload();
+                }, 800);
+            } else {
+                statusEl.textContent = data.error || '❌ Login failed';
+                statusEl.style.color = '#ff6b6b';
+            }
+        } catch (error) {
+            console.error('[Auth] Login error:', error);
+            statusEl.textContent = '❌ Network error. Please try again.';
+            statusEl.style.color = '#ff6b6b';
+        }
+    };
+    
+    window.showSignUpModal = function() {
+        console.log('[Auth] Opening sign up modal...');
+        // Show existing sign up page in service modal
+        window.openService('/login.html?mode=signup', 'Sign Up');
+    };
+    
+    window.initGoogleSignIn = function() {
+        console.log('[Auth] Google sign in clicked...');
+        
+        // Check if Google API is loaded
+        if (typeof window.google === 'undefined' || !window.google.accounts) {
+            console.error('[Auth] Google Sign-In SDK not loaded');
+            alert('Google Sign-In is loading. Please try again in a moment.');
+            return;
+        }
+        
+        // Trigger the Google Sign-In flow
+        try {
+            window.google.accounts.id.renderButton(
+                document.createElement('div'),
+                {
+                    type: 'standard',
+                    size: 'large',
+                    text: 'signin_with',
+                    locale: 'en'
+                }
+            );
+            
+            // Trigger sign-in programmatically
+            window.google.accounts.id.prompt((notification) => {
+                console.log('[Google] Prompt notification:', notification);
+            });
+        } catch (error) {
+            console.error('[Auth] Google Sign-In error:', error);
+            alert('Failed to initialize Google Sign-In. Please try again.');
+        }
+    };
+    
+    // Handle Google Sign-In response
+    window.handleGoogleSignInResponse = async function(response) {
+        console.log('[Auth] Google Sign-In response received');
+        
+        if (!response.credential) {
+            console.error('[Auth] No credential in response');
+            alert('Google Sign-In failed: No credential received');
+            return;
+        }
+        
+        try {
+            // Send the credential to our backend
+            const res = await fetch('/api/auth/google', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    credential: response.credential
+                })
+            });
+            
+            const data = await res.json();
+            
+            if (!res.ok || !data.success) {
+                console.error('[Auth] Authentication failed:', data);
+                alert('Authentication failed: ' + (data.error || 'Unknown error'));
+                return;
+            }
+            
+            console.log('[Auth] Google authentication successful');
+            
+            // Store session
+            localStorage.setItem('session_token', data.token);
+            localStorage.setItem('sessionId', data.sessionId);
+            localStorage.setItem('user_id', data.userId);
+            localStorage.setItem('user_email', data.user.email);
+            
+            // Close auth modal if open
+            const modal = document.getElementById('auth-modal');
+            if (modal) modal.style.display = 'none';
+            
+            // Reload page or update UI
+            window.location.href = '/codebank/';
+        } catch (error) {
+            console.error('[Auth] Google sign-in request failed:', error);
+            alert('Sign-in failed: ' + error.message);
+        }
+    };
+    
+    window.handleSignOut = function() {
+        console.log('[Auth] Signing out...');
+        // Clear local storage
+        localStorage.removeItem('codebank_auth');
+        localStorage.removeItem('session_active');
+        localStorage.removeItem('session_token');
+        localStorage.removeItem('user_data');
+        // Reload to apply
+        window.location.reload();
+    };
+    
+    // Initialize auth state on load
+    window.initAuthState = function() {
+        const auth = localStorage.getItem('codebank_auth');
+        const authButtons = document.getElementById('customAuthButtons');
+        const userProfile = document.getElementById('userProfile');
+        const userAvatar = document.getElementById('userAvatar');
+        const userName = document.getElementById('userName');
+        
+        if (auth) {
+            try {
+                const user = JSON.parse(auth);
+                if (user && user.email) {
+                    if (authButtons) authButtons.style.display = 'none';
+                    if (userProfile) {
+                        userProfile.style.display = 'flex';
+                        if (userAvatar) userAvatar.src = user.avatar || '';
+                        if (userName) userName.textContent = user.name || user.email || 'User';
+                    }
+                    console.log('[Auth] User logged in:', user.email);
+                }
+            } catch(e) {
+                console.log('[Auth] No valid session');
+            }
+        } else {
+            if (authButtons) authButtons.style.display = 'flex';
+            if (userProfile) userProfile.style.display = 'none';
+        }
+    };
+    
+    // Run on DOM ready
+    if (document.readyState === 'loading') {
+        // DISABLED AUTO-INIT: document.addEventListener('DOMContentLoaded', window.initAuthState);
+    } else {
+        // DISABLED AUTO-INIT: setTimeout(window.initAuthState, 100);
+    }
+    
+    // Zagel Voice Modal Functions
+    window.openZagelVoice = function() {
+        console.log('[Zagel] Opening voice assistant...');
+        
+        // Create modal if not exists
+        let modal = document.getElementById('zagel-voice-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'zagel-voice-modal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;';
+            modal.innerHTML = `
+                <button onclick="this.parentElement.remove()" style="position:absolute;top:20px;right:20px;background:none;border:none;color:#fff;font-size:32px;cursor:pointer;">✕</button>
+                <div style="text-align:center;">
+                    <div style="width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg,#00d4ff,#0099cc);margin:0 auto 20px;display:flex;align-items:center;justify-content:center;animation:breathing 3s infinite;">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="white">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                    </div>
+                    <p style="color:#fff;font-size:24px;margin-bottom:20px;">Talk to Zagel</p>
+                    <p style="color:#888;font-size:16px;margin-bottom:30px;" id="zagel-status">Tap microphone to start</p>
+                    <button onclick="startZagelRecording()" style="width:100px;height:100px;border-radius:50%;background:#ff4444;border:none;cursor:pointer;margin:0 auto;display:block;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="white" style="display:block;margin:26px auto;">
+                            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                        </svg>
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        } else {
+            modal.style.display = 'flex';
+        }
+    };
+    
+    window.startZagelRecording = function() {
+        const status = document.getElementById('zagel-status');
+        if (status) {
+            status.textContent = '🎙️ Listening...';
+        }
+        console.log('[Zagel] Recording started...');
+        // Voice recognition would go here in production
+    };
+    
+    // Admin Zagel Voice Teaching
+    window.openZagelTeach = function() {
+        console.log('[Admin] Opening voice teaching...');
+        if (window.ZagelSystem?.openTeachMode) {
+            window.ZagelSystem.openTeachMode();
+        } else {
+            alert('Voice teaching mode activated for admin');
+        }
+    };
+    
+    // Check if admin and show/hide button
+    function checkAdminZagel() {
+        var ADMIN_EMAIL = 'dia201244@gmail.com';
+        var session = null;
+        
+        if (window.ZagelSessionManager?.getSession) {
+            session = window.ZagelSessionManager.getSession();
+        } else if (window.CodeBankAuth?.getAuthState) {
+            var state = window.CodeBankAuth.getAuthState();
+            if (state && state.user) session = state.user;
+        } else {
+            try {
+                session = JSON.parse(localStorage.getItem('zagelsession') || localStorage.getItem('codebank_auth') || 'null');
+            } catch(e) { session = null; }
+        }
+        
+        var isAdmin = session && (session.email === ADMIN_EMAIL || session.user?.email === ADMIN_EMAIL);
+        var section = document.getElementById('admin-zagel-section');
+        
+        console.log('[AdminCheck] Is admin:', isAdmin);
+        
+        if (section && isAdmin) {
+            section.style.display = 'block';
+        }
+    }
+    
+    setTimeout(checkAdminZagel, 1000);
+    setTimeout(checkAdminZagel, 2500);
+    
+    // Show Zagel FAB after a delay - ONLY for admin
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+            // Check if admin before showing FAB
+            var ADMIN_EMAIL = 'dia201244@gmail.com';
+            var session = null;
+            
+            try {
+                session = JSON.parse(localStorage.getItem('zagelsession') || localStorage.getItem('codebank_auth') || 'null');
+            } catch(e) { session = null; }
+            
+            var isAdmin = session && (session.email === ADMIN_EMAIL || session.user?.email === ADMIN_EMAIL);
+            
+            const fab = document.getElementById('zagel-fab-container');
+            if (fab && isAdmin) {
+                fab.style.display = 'block';
+                console.log('[Zagel] Admin FAB visible for:', session.email || session.user?.email);
+            } else if (fab) {
+                console.log('[Zagel] Non-admin user - hiding FAB');
+            }
+        }, 2000);
+    });
+    
+    // ==========================================
+    // ZAGEL PULL-TO-REFRESH - Smart refresh
+    // ==========================================
+    (function() {
+      // Only enable if not in iframe and touch supported
+      if ('ontouchstart' in window && window.self === window.top) {
+        // Load the pull-refresh controller
+        const script = document.createElement('script');
+        script.src = '/shared/zagel-pull-refresh.js';
+        script.onload = function() {
+          console.log('[Zagel] Pull-to-refresh initialized');
+        };
+        document.head.appendChild(script);
+      }
+    })();
+    </script>
+
+    <!-- Guardian 3D Container -->
+    <div id="guardian-dog-container" style="position: fixed; bottom: 20px; right: 20px; width: 180px; height: 180px; z-index: 100; pointer-events: none;"></div>
+
+    <!-- Initialize AssetBus Global Object -->
+    <script>
+        // Initialize AssetBus if not already defined
+        if (!window.AssetBus) {
+            window.AssetBus = {
+                state: { codes: [], silver: [], gold: [], lastSync: 0 },
+                listeners: [],
+                
+                getState: function() {
+                    return this.state;
+                },
+                
+                snapshot: function() {
+                    return {
+                        codes: this.state.codes || [],
+                        silver: this.state.silver || [],
+                        gold: this.state.gold || [],
+                        count: (this.state.codes?.length || 0),
+                        lastSync: this.state.lastSync || 0
+                    };
+                },
+                
+                sync: function(data) {
+                    if (data) {
+                        this.state = { ...this.state, ...data };
+                        this.notify();
+                    }
+                },
+                
+                subscribe: function(listener) {
+                    if (typeof listener === 'function') {
+                        this.listeners.push(listener);
+                    }
+                },
+                
+                notify: function() {
+                    this.listeners.forEach(listener => {
+                        try {
+                            listener(this.state);
+                        } catch(e) {
+                            console.warn('[AssetBus] Listener error:', e);
+                        }
+                    });
+                }
+            };
+            console.log('[AssetBus] Global object initialized');
+        }
+    </script>
+    
+    <!-- Auth Controller - INLINED to bypass static file serving issues -->
+    <script>
+/**
+ * Auth Controller - Single source of truth for authentication UI state
+ * Only ONE state is visible at a time
+ */
+class AuthController {
+    constructor() {
+        this.currentState = 'not-logged';
+        this.user = null;
+        this.token = null;
+        console.log('[AuthController] Initialized');
+    }
+
+    init() {
+        this.bindUIEvents();
+        this.checkExistingSession();
+    }
+
+    bindUIEvents() {
+        const btnShowLogin = document.getElementById('btn-show-login');
+        if (btnShowLogin) {
+            btnShowLogin.addEventListener('click', () => this.showLoginModal());
+        }
+
+        const loginClose = document.getElementById('login-close');
+        if (loginClose) {
+            loginClose.addEventListener('click', () => this.closeModals());
+        }
+
+        const signinForm = document.getElementById('signin-form');
+        if (signinForm) {
+            signinForm.addEventListener('submit', (e) => this.handleSignIn(e));
+        }
+
+        const signupClose = document.getElementById('signup-close');
+        if (signupClose) {
+            signupClose.addEventListener('click', () => this.closeModals());
+        }
+
+        const signupForm = document.getElementById('signup-form');
+        if (signupForm) {
+            signupForm.addEventListener('submit', (e) => this.handleSignUp(e));
+        }
+
+        const btnLogout = document.getElementById('btn-logout');
+        if (btnLogout) {
+            btnLogout.addEventListener('click', () => this.logout());
+        }
+
+        console.log('[AuthController] UI events bound');
+    }
+
+    setState(newState) {
+        console.log('[AuthController] State change:', this.currentState, '->', newState);
+        
+        const authNotLogged = document.getElementById('auth-not-logged');
+        const loginModal = document.getElementById('login-modal');
+        const signupModal = document.getElementById('signup-modal');
+        const authLoggedIn = document.getElementById('auth-logged-in');
+
+        if (authNotLogged) authNotLogged.style.display = 'none';
+        if (loginModal) loginModal.style.display = 'none';
+        if (signupModal) signupModal.style.display = 'none';
+        if (authLoggedIn) authLoggedIn.style.display = 'none';
+
+        switch(newState) {
+            case 'not-logged':
+                if (authNotLogged) authNotLogged.style.display = 'block';
+                break;
+            case 'login-modal':
+                if (loginModal) loginModal.style.display = 'flex';
+                break;
+            case 'signup-modal':
+                if (signupModal) signupModal.style.display = 'flex';
+                break;
+            case 'logged-in':
+                if (authLoggedIn) authLoggedIn.style.display = 'flex';
+                break;
+        }
+
+        this.currentState = newState;
+    }
+
+    showLoginModal() {
+        this.setState('login-modal');
+        const signinStatus = document.getElementById('signin-status');
+        if (signinStatus) signinStatus.textContent = '';
+    }
+
+    showSignupModal() {
+        this.setState('signup-modal');
+        const signupStatus = document.getElementById('signup-status');
+        if (signupStatus) signupStatus.textContent = '';
+    }
+
+    closeModals() {
+        this.setState('not-logged');
+    }
+
+    async handleSignIn(e) {
+        if (e) e.preventDefault();
+
+        const email = document.getElementById('signin-email')?.value;
+        const password = document.getElementById('signin-password')?.value;
+        const signinStatus = document.getElementById('signin-status');
+
+        if (!email || !password) {
+            if (signinStatus) signinStatus.textContent = 'Email and password required';
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                this.saveSession(data);
+                this.setLoggedIn(data.user);
+            } else {
+                if (signinStatus) {
+                    signinStatus.textContent = data.error || 'Login failed';
+                }
+            }
+        } catch (error) {
+            console.error('[AuthController] Sign in error:', error);
+            if (signinStatus) signinStatus.textContent = 'Network error: ' + error.message;
+        }
+    }
+
+    async handleSignUp(e) {
+        if (e) e.preventDefault();
+
+        const email = document.getElementById('signup-email')?.value;
+        const password = document.getElementById('signup-password')?.value;
+        const confirm = document.getElementById('signup-confirm')?.value;
+        const signupStatus = document.getElementById('signup-status');
+
+        if (!email || !password || !confirm) {
+            if (signupStatus) signupStatus.textContent = 'All fields required';
+            return;
+        }
+
+        if (password !== confirm) {
+            if (signupStatus) signupStatus.textContent = 'Passwords do not match';
+            return;
+        }
+
+        if (password.length < 6) {
+            if (signupStatus) signupStatus.textContent = 'Password must be at least 6 characters';
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert('Account created! Please sign in.');
+                this.showLoginModal();
+            } else {
+                if (signupStatus) {
+                    signupStatus.textContent = data.error || 'Registration failed';
+                }
+            }
+        } catch (error) {
+            console.error('[AuthController] Sign up error:', error);
+            if (signupStatus) signupStatus.textContent = 'Network error: ' + error.message;
+        }
+    }
+
+    setLoggedIn(user) {
+        console.log('[AuthController] User logged in:', user.email);
+        
+        this.user = user;
+        
+        const userEmailDisplay = document.getElementById('user-email-display');
+        if (userEmailDisplay) {
+            userEmailDisplay.textContent = user.email;
+        }
+
+        this.setState('logged-in');
+    }
+
+    saveSession(data) {
+        if (data.token) {
+            localStorage.setItem('session_token', data.token);
+            this.token = data.token;
+        }
+        if (data.user?.id) {
+            localStorage.setItem('userId', data.user.id);
+        }
+        if (data.user?.email) {
+            localStorage.setItem('user_email', data.user.email);
+        }
+    }
+
+    async checkExistingSession() {
+        const token = localStorage.getItem('session_token');
+        
+        if (!token) {
+            console.log('[AuthController] No existing session');
+            this.setState('not-logged');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/auth/verify', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.token = token;
+                this.setLoggedIn(data.user);
+            } else {
+                console.log('[AuthController] Session invalid, clearing');
+                this.logout();
+            }
+        } catch (error) {
+            console.error('[AuthController] Session check error:', error);
+            this.setState('not-logged');
+        }
+    }
+
+    logout() {
+        console.log('[AuthController] User signed out');
+        
+        try {
+            localStorage.removeItem('session_token');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('user_email');
+        } catch(e) {}
+
+        this.user = null;
+        this.token = null;
+        this.setState('not-logged');
+        
+        location.reload();
+    }
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.authController = new AuthController();
+        window.authController.init();
+    });
+} else {
+    window.authController = new AuthController();
+    window.authController.init();
+}
+
+// Make functions global
+window.showLoginModal = () => window.authController?.showLoginModal();
+window.showSignupModal = () => window.authController?.showSignupModal();
+window.handleSignIn = (e) => window.authController?.handleSignIn(e);
+window.handleSignUp = (e) => window.authController?.handleSignUp(e);
+window.closeModals = () => window.authController?.closeModals();
+    </script>
+
+
+<!-- ============================================
+     LOGIN/SIGNUP MODAL WIDTH EMERGENCY FIX
+     ============================================ -->
+<style>
+/* Target the modal by all possible selectors */
+#auth-modal,
+#signup-modal,
+#login-modal,
+.signin-modal,
+.auth-modal,
+.modal-overlay,
+[class*="modal"][class*="auth"],
+[id*="modal"][id*="auth"],
+[id*="signup"],
+[id*="signin"] {
+    /* Force minimum width - critical */
+    min-width: 380px !important;
+    width: 400px !important;
+    max-width: 90vw !important;
+    
+    /* Prevent flex/grid squeezing */
+    flex-shrink: 0 !important;
+    flex-basis: 400px !important;
+    
+    /* Center properly */
+    position: fixed !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    
+    /* Ensure it's above everything */
+    z-index: 99999 !important;
+    
+    /* Visible container */
+    background: #1a1a2e !important;
+    border-radius: 16px !important;
+    padding: 32px !important;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.5) !important;
+    
+    /* Prevent parent constraints */
+    display: block !important;
+    box-sizing: border-box !important;
+}
+
+/* Fix the inner form container */
+#auth-modal form,
+#signup-modal form,
+#login-modal form,
+.auth-modal form,
+.modal-overlay form {
+    width: 100% !important;
+    min-width: 100% !important;
+    display: block !important;
+}
+
+/* Fix input fields */
+#auth-modal input[type="email"],
+#auth-modal input[type="password"],
+#auth-modal input[type="text"],
+#signup-modal input,
+#login-modal input,
+.auth-modal input {
+    width: 100% !important;
+    min-width: 100% !important;
+    height: 48px !important;
+    padding: 12px 16px !important;
+    font-size: 16px !important;
+    background: #16213e !important;
+    border: 2px solid #0f3460 !important;
+    border-radius: 10px !important;
+    color: #fff !important;
+    display: block !important;
+    box-sizing: border-box !important;
+    margin-bottom: 16px !important;
+}
+
+/* Fix the Sign In/Up button */
+#auth-modal button[type="submit"],
+#signup-modal button[type="submit"],
+#login-modal button[type="submit"],
+.auth-modal .submit-btn,
+.signin-btn,
+#signin-btn,
+#signup-btn {
+    width: 100% !important;
+    height: 48px !important;
+    background: #e94560 !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    display: block !important;
+    margin-top: 8px !important;
+}
+
+/* Fix labels */
+#auth-modal label,
+.auth-modal label {
+    display: block !important;
+    color: #a0a0a0 !important;
+    font-size: 14px !important;
+    margin-bottom: 6px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+
+/* Close button positioning */
+#auth-modal .close-btn,
+#auth-modal [class*="close"],
+.auth-modal .close-btn {
+    position: absolute !important;
+    top: 16px !important;
+    right: 16px !important;
+    width: 32px !important;
+    height: 32px !important;
+    background: rgba(255,255,255,0.1) !important;
+    border-radius: 50% !important;
+    border: none !important;
+    color: #fff !important;
+    cursor: pointer !important;
+    z-index: 10 !important;
+}
+
+/* "Don't have an account?" text */
+#auth-modal p,
+.auth-modal p {
+    color: #888 !important;
+    font-size: 14px !important;
+    text-align: center !important;
+    margin-top: 20px !important;
+}
+
+#auth-modal a,
+#auth-modal [class*="signup"],
+.auth-modal a {
+    color: #e94560 !important;
+    cursor: pointer !important;
+    text-decoration: underline !important;
+}
+</style>
+
+<script>
+// ============================================
+// MODAL WIDTH EMERGENCY FIX - JS OVERRIDE
+// ============================================
+(function() {
+    'use strict';
+    
+    const MODAL_MIN_WIDTH = 400;
+    
+    function fixModalWidth(modal) {
+        if (!modal) return;
+        
+        // Force inline styles with maximum priority
+        modal.style.cssText = `
+            position: fixed !important;
+            left: 50% !important;
+            top: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            width: ${MODAL_MIN_WIDTH}px !important;
+            min-width: ${MODAL_MIN_WIDTH}px !important;
+            max-width: 90vw !important;
+            max-height: 90vh !important;
+            background: #1a1a2e !important;
+            border-radius: 16px !important;
+            padding: 32px !important;
+            z-index: 99999 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5) !important;
+            overflow-y: auto !important;
+        `;
+        
+        // Fix all inputs inside
+        modal.querySelectorAll('input').forEach(input => {
+            input.style.cssText = `
+                width: 100% !important;
+                height: 48px !important;
+                padding: 12px 16px !important;
+                font-size: 16px !important;
+                background: #16213e !important;
+                border: 2px solid #0f3460 !important;
+                border-radius: 10px !important;
+                color: #fff !important;
+                margin-bottom: 16px !important;
+                box-sizing: border-box !important;
+                display: block !important;
+            `;
+        });
+        
+        // Fix all buttons inside
+        modal.querySelectorAll('button, .submit-btn, [type="submit"]').forEach(btn => {
+            btn.style.cssText = `
+                width: 100% !important;
+                height: 48px !important;
+                background: #e94560 !important;
+                color: #fff !important;
+                border: none !important;
+                border-radius: 10px !important;
+                font-size: 16px !important;
+                font-weight: 600 !important;
+                cursor: pointer !important;
+                margin-top: 8px !important;
+                display: block !important;
+            `;
+        });
+        
+        console.log('[ModalFix] Modal dimensions forced:', modal.offsetWidth, 'x', modal.offsetHeight);
+    }
+    
+    // Intercept all modal opens
+    const originalShowModal = window.showModal || function(){};
+    
+    function openAuthModal(mode) {
+        const modal = document.getElementById('auth-modal') || 
+                     document.getElementById('signup-modal') || 
+                     document.getElementById('login-modal') ||
+                     document.querySelector('.auth-modal') ||
+                     document.querySelector('.modal-overlay');
+        
+        if (!modal) {
+            console.error('[ModalFix] No modal found in DOM');
+            return;
+        }
+        
+        // Reset any parent constraints
+        modal.parentElement?.style?.setProperty('display', 'contents', 'important');
+        
+        // Show it
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+        modal.setAttribute('data-mode', mode);
+        
+        // Fix dimensions
+        fixModalWidth(modal);
+        
+        // Force reflow
+        void modal.offsetWidth;
+        
+        // Fix again after any animations
+        setTimeout(() => fixModalWidth(modal), 50);
+        setTimeout(() => fixModalWidth(modal), 300);
+        
+        console.log('[ModalFix] Auth modal opened:', mode);
+    }
+    
+    // Override global functions
+    window.showAuthModal = openAuthModal;
+    window.showSignupModal = () => openAuthModal('signup');
+    window.showSigninModal = () => openAuthModal('signin');
+    window.showLoginModal = () => openAuthModal('signin');
+    
+    // Hook into existing auth controller if present
+    if (window.AuthController) {
+        const orig = AuthController.setState;
+        AuthController.setState = function(state) {
+            if (state && (state.includes('modal') || state.includes('login') || state.includes('signup'))) {
+                const mode = state.includes('signup') ? 'signup' : 'signin';
+                setTimeout(() => openAuthModal(mode), 10);
+            }
+            return orig?.apply(this, arguments);
+        };
+    }
+    
+    // Also hook button clicks directly
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('#signup-btn, #signin-btn, #google-signin-btn, [data-action="signup"], [data-action="signin"], [data-action="login"]');
+        if (btn) {
+            const mode = btn.id?.includes('signup') || btn.dataset?.action?.includes('signup') ? 'signup' : 'signin';
+            e.preventDefault();
+            e.stopPropagation();
+            openAuthModal(mode);
+        }
+    }, true);
+    
+    console.log('[ModalFix] Auth modal width fix installed');
+})();
+</script>
+</body>
+</html>
