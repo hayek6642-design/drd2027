@@ -206,16 +206,33 @@ class AuthController {
      * SET LOGGED IN STATE - Update UI and save session
      */
     setLoggedIn(user) {
-        console.log('[AuthController] User logged in:', user.email);
-        
-        this.user = user;
-        
-        const userEmailDisplay = document.getElementById('user-email-display');
-        if (userEmailDisplay) {
-            userEmailDisplay.textContent = user.email;
-        }
+        if (user && user.email) {
+            console.log('[AuthController] User logged in:', user.email);
+            
+            this.user = user;
+            
+            // Update single source of truth
+            if (!window.AppState) window.AppState = {};
+            window.AppState.auth = {
+                isAuthenticated: true,
+                user: user
+            };
+            
+            // PostMessage for iframes
+            if (window.parent !== window) {
+                window.parent.postMessage({
+                    type: "AUTH_UPDATE",
+                    user: user
+                }, "*");
+            }
+            
+            const userEmailDisplay = document.getElementById('user-email-display');
+            if (userEmailDisplay) {
+                userEmailDisplay.textContent = user.email;
+            }
 
-        this.setState('logged-in');
+            this.setState('logged-in');
+        }
     }
 
     /**
@@ -309,3 +326,17 @@ window.showSignupModal = () => window.location.href = '/login.html?mode=signup';
 window.handleSignIn = (e) => window.authController?.handleSignIn(e);
 window.handleSignUp = (e) => window.authController?.handleSignUp(e);
 window.closeModals = () => window.authController?.closeModals();
+
+// Iframe auth listener
+window.addEventListener("message", (e) => {
+    if (e.data.type === "AUTH_UPDATE") {
+        if (!window.AppState) window.AppState = {};
+        window.AppState.auth = {
+            isAuthenticated: !!e.data.user,
+            user: e.data.user
+        };
+        if (window.authController && e.data.user) {
+            window.authController.setLoggedIn(e.data.user);
+        }
+    }
+});
