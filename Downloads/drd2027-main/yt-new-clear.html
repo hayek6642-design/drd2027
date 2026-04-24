@@ -2996,31 +2996,8 @@ function clearSessionAndLogout() {
     <!-- Modular JavaScript Files -->
     <!-- modules: migrated from yt-coder to yt-clear -->
     <!-- 1. Core -->
-    <script src="/shared/auth-core.js"></script>
-    <script>
-    // Force session restoration if AuthCore doesn't do it
-    window.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => {
-            const sessionId = localStorage.getItem('sessionId') || 
-                             localStorage.getItem('session_token') ||
-                             sessionStorage.getItem('sessionId');
-            const sessionActive = localStorage.getItem('session_active') === 'true';
-            
-            console.log('[AUTH] Restore check - sessionId:', !!sessionId, 'session_active:', sessionActive);
-            
-            if (sessionId && sessionActive && window.AuthCore && !window.AuthCore.isAuthenticated?.()) {
-                console.log('[AUTH] Force-restoring authenticated state');
-                window.AuthCore._setState({
-                    authenticated: true,
-                    status: 'authenticated',
-                    sessionId: sessionId
-                });
-            }
-        }, 2000);
-    });
-    </script>
-    <script src="/shared/single-session.js"></script>
-    <script src="/shared/client-session-manager.js?v=1"></script>
+    <!-- AUTH DISABLED AT STARTUP - MOVED TO CODEBANK ONLY -->
+    <!-- Auth will be initialized ONLY when CodeBank is opened -->
     
     <!-- 2. Layout (creates video-container) -->
     <script type="module" src="/layout-bootstrap.js"></script>
@@ -3056,7 +3033,6 @@ function clearSessionAndLogout() {
     </script>
 
     <!-- Auth + Assets - from shared -->
-    <script src="/shared/auth-global.js"></script>
     <script src="/shared/assets-direct.js"></script>
     
     <!-- 6. Safe Asset List - REMOVED from main page, only in CodeBank iframe -->
@@ -3091,16 +3067,7 @@ function clearSessionAndLogout() {
 
     <!-- Screenshot Module removed (migrated above) -->
     <!-- main.js loaded below after acc bridges -->
-    <script>
-        (function () {
-            try { window.__UV_TRACE__ = Array.isArray(window.__UV_TRACE__) ? window.__UV_TRACE__ : []; } catch(_){}
-            function __uvlog__(type, data, source){ try { var rec = { type: String(type||''), data: data||{}, source: String(source||'unknown'), ts: Date.now() }; window.__UV_TRACE__.push(rec); } catch(_){} }
-            try { window.UVLog = __uvlog__ } catch(_){}
-            try { window.dumpUVTrace = function(){ try { return (window.__UV_TRACE__||[]).slice() } catch(_){ return [] } } } catch(_){}
-            try { window.addEventListener('auth:ready', function(e){ try { __uvlog__('auth:ready', e&&e.detail||{}, 'auth-core') } catch(_){} }); } catch(_){}
-            try { window.addEventListener('assets:updated', function(e){ try { __uvlog__('assets:updated', e&&e.detail||{}, 'assetbus') } catch(_){} }); } catch(_){}
-        })();
-    </script>
+    <!-- AUTH EVENTS DISABLED - WILL BE INITIALIZED IN CODEBANK -->
 
 
 
@@ -3111,17 +3078,7 @@ function clearSessionAndLogout() {
 
     
 
-<!-- Initialize Bankode timers after auth -->
-<script>
-document.addEventListener('DOMContentLoaded', async function(){
-  if (!window.Bankode) return;
-  try {
-    if (window.Auth && typeof window.Auth.isAuthenticated === 'function') {
-      if (window.Auth.isAuthenticated()) { Bankode.startTimer(300000) } else { window.addEventListener('auth:ready', function(e){ try { var ok=!!(e&&e.detail&&e.detail.authenticated); if(ok){ Bankode.startTimer(300000) } } catch(_){} }) }
-    } else { Bankode.startTimer(300000) }
-  } catch(_){}
-});
-</script>
+<!-- Bankode timers disabled - will run when CodeBank initializes auth -->
 
 
     <script src="/player/ui-controller.js"></script>
