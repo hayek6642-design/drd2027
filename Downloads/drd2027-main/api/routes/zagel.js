@@ -247,37 +247,6 @@ router.post('/broadcast-all', validateSession, express.json(), (req, res) => {
 // =========================================================================================
 
 /**
- * POST /api/auth/login
- * Simple login endpoint
- * 
- * Body:
- *   { "email": "user@example.com", "password": "pass" }
- */
-router.post('/auth/login', express.json(), (req, res) => {
-  const { email, password } = req.body;
-  
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password required' });
-  }
-  
-  // In production, validate against DB and hash password
-  const sessionToken = crypto.randomBytes(32).toString('hex');
-  const sessionId = crypto.randomBytes(16).toString('hex');
-  
-  res.json({
-    success: true,
-    sessionToken,
-    sessionId,
-    user: {
-      id: sessionId,
-      email,
-      name: email.split('@')[0]
-    },
-    expiresIn: 86400 // 24 hours
-  });
-});
-
-/**
  * GET /api/auth/me
  * Get current user info
  */
