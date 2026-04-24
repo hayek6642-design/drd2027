@@ -337,6 +337,8 @@
   /* Ensure hidden elements are actually hidden */
   .hidden { display: none !important; }
 </style>
+<!-- Unified Auth System - MUST load before any auth operations -->
+<script src="/shared/app-state-unified.js"></script>
 <!-- Google GSI Library -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -591,7 +593,19 @@ async function handleLogin() {
     if (data.success || data.status === 'success') {
       showStatus('✅ Login successful! Redirecting...', 'success');
       saveSession(data);
-      setTimeout(() => window.location.href = '/codebank/indexCB.html', 1000);
+      setTimeout(async () => {
+      // Verify session with backend before redirect
+      if (window.AppState && window.AppState.auth) {
+        const verified = await window.AppState.auth.verify();
+        if (verified) {
+          window.location.href = '/codebank/indexCB.html';
+        } else {
+          showStatus('Session verification failed. Please try again.', 'error');
+        }
+      } else {
+        window.location.href = '/codebank/indexCB.html';
+      }
+    }, 1000);
     } else {
       throw new Error(data.error || data.message || 'Login failed');
     }
@@ -668,7 +682,18 @@ async function handleSignup() {
     if (data.success || data.status === 'success') {
       showStatus('✅ Account created! Redirecting...', 'success');
       saveSession(data);
-      setTimeout(() => window.location.href = '/codebank/indexCB.html', 1500);
+      setTimeout(async () => {
+      if (window.AppState && window.AppState.auth) {
+        const verified = await window.AppState.auth.verify();
+        if (verified) {
+          window.location.href = '/codebank/indexCB.html';
+        } else {
+          showStatus('Session verification failed. Please try again.', 'error');
+        }
+      } else {
+        window.location.href = '/codebank/indexCB.html';
+      }
+    }, 1500);
     } else {
       throw new Error(data.error || data.message || 'Signup failed');
     }
@@ -814,7 +839,19 @@ async function handleGoogleResponse(resp) {
         statusEl.textContent = '✅ Google Login successful! Redirecting...';
         statusEl.className = 'status-message success';
       }
-      setTimeout(() => window.location.href = '/codebank/indexCB.html', 1000);
+      setTimeout(async () => {
+      // Verify session with backend before redirect
+      if (window.AppState && window.AppState.auth) {
+        const verified = await window.AppState.auth.verify();
+        if (verified) {
+          window.location.href = '/codebank/indexCB.html';
+        } else {
+          showStatus('Session verification failed. Please try again.', 'error');
+        }
+      } else {
+        window.location.href = '/codebank/indexCB.html';
+      }
+    }, 1000);
     } else {
       if (statusEl) {
         statusEl.textContent = data.error || 'Google sign-in failed';
