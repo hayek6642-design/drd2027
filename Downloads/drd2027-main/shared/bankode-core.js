@@ -457,12 +457,43 @@
     // 📣 Centralized snapshot publishing
     async publishSnapshot(triggerSource = 'internal') {
       try {
-        // 🛡️ REPEAT UNTIL READY: AssetBus might be late to the party
+        // ✅ PERMANENT FIX: Event Replay System + Retry instead of defer
+        // Never lose codes again due to timing / race conditions
         let attempts = 0;
-        while (!window.AssetBus && attempts < 10) {
-          await new Promise(r => setTimeout(r, 500));
-          attempts++;
-        }
+        const maxAttempts = 40; // 20 seconds total retry window
+        const retryDelay = 500;
+
+        // Store snapshot in global buffer immediately
+        window.__BANKODE_PENDING_SNAPSHOTS__ = window.__BANKODE_PENDING_SNAPSHOTS__ || [];
+        window.__BANKODE_PENDING_SNAPSHOTS__.push({
+          snapshot: snapshot,
+          timestamp: Date.now(),
+          triggerSource: triggerSource
+        });
+
+        // Retry until AssetBus is available (no more defer!)
+        const publishWithRetry = async () => {
+          while (attempts < maxAttempts) {
+            if (window.AssetBus && typeof window.AssetBus.update === 'function') {
+              // Publish all pending snapshots
+              for (let i = 0; i < window.__BANKODE_PENDING_SNAPSHOTS__.length; i++) {
+                const pending = window.__BANKODE_PENDING_SNAPSHOTS__[i];
+                window.AssetBus.update(pending.snapshot, pending.triggerSource);
+                if (window.DEBUG_MODE) console.log(`[Bankode] ✅ Published pending snapshot (attempt ${attempts + 1})`, pending.snapshot.code);
+              }
+              window.__BANKODE_PENDING_SNAPSHOTS__ = [];
+              return true;
+            }
+            attempts++;
+            await new Promise(r => setTimeout(r, retryDelay));
+          }
+
+          console.warn(`[Bankode] ⚠️ Failed to publish after ${maxAttempts} attempts, snapshot preserved in buffer`);
+          return false;
+        };
+
+        // Run in background without blocking generation
+        publishWithRetry();
 
         if (window.AssetBus && typeof window.AssetBus.update === 'function') {
           // 🛡️ RE-LOAD FROM IDB: If codes array is empty, force reload from StorageAdapter
