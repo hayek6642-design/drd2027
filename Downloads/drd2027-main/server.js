@@ -81,6 +81,7 @@ import { setupSessionWebSocket } from './server/websocket-server.js';
 import * as sessionManagerWs from './server/core/session-manager.js';
 import rateLimit from 'express-rate-limit';
 import trustRouter from './api/modules/trust.js';
+import { setupCORSHeaders, setupAuthHeaders } from './server/cors-and-headers-fix.js';
 // Clerk removed: zero-auth mode
 
 import * as monetizationMod from './api/modules/monetization.js';
@@ -167,6 +168,8 @@ function signJwt(userId, email) {
 }
 
 const app = express();
+setupCORSHeaders(app);
+setupAuthHeaders(app);
 // Share devSessions with all routers via req.app.get('devSessions')
 app.set('devSessions', devSessions);
 
