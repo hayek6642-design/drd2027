@@ -586,6 +586,14 @@
             align-items: center;
             gap: 8px;
         }
+        /* Double-force: Prevent any auth modal from auto-showing */
+        #login-modal, #signup-modal, #auth-modal, .auth-modal {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+        
         .btn-google {
             display: flex;
             align-items: center;
@@ -2658,6 +2666,12 @@
             if (authButtons) authButtons.style.display = 'flex';
             if (userProfile) userProfile.style.display = 'none';
         }
+    };
+    
+    // DANGER: Prevent auth modal auto-show after auth state loads
+    const originalShowModal = window.showAuthModal || window.showLoginModal;
+    window.showAuthModal = window.showLoginModal = function() {
+        console.log('[AUTH] Modal show BLOCKED - user must click Sign In');
     };
     
     // Run on DOM ready
