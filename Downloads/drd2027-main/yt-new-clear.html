@@ -2,6 +2,13 @@
 <html lang="en">
 
 <head>
+    <!-- GUEST MODE INITIALIZATION - Allow snapshots for unauthenticated users -->
+    <script>
+    // CRITICAL: Set guest mode flag IMMEDIATELY
+    window.__guestMode__ = true;  // Allows all snapshots to be sent
+    window.__allowGuestAssets__ = true;
+    console.log('[GuestMode] Initialized - snapshots will be sent regardless of auth state');
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!--  RELOAD PROTECTION (from actly.md) -->
@@ -100,6 +107,14 @@ function clearSessionAndLogout() {
     <!-- FORCE CODES INTO SNAPSHOT - Fix code bar showing 0 -->
     <script>
     (function ensureCodesInSnapshot() {
+// DETECT GUEST MODE from auth state
+try {
+    const authGlobal = window.AUTH_GLOBAL || JSON.parse(localStorage.getItem('AUTH_GLOBAL') || '{}');
+    window.__guestMode__ = window.__guestMode__ || (authGlobal.guest === true) || !authGlobal.authenticated;
+    console.log('[GuestMode] Detected from auth state:', window.__guestMode__);
+} catch(e) {
+    window.__guestMode__ = true;  // Default to guest mode
+}
         // Get codes from localStorage cache
         let cache = null;
         try { 
@@ -134,7 +149,7 @@ function clearSessionAndLogout() {
             const latest = assets.codes[assets.codes.length - 1];
             assets.latestCode = typeof latest === 'string' ? latest : (latest.code || latest);
         }
-        console.log('[Code Fix] Forced', assets.codes.length, 'codes into snapshot (latestCode:', assets.latestCode, ')');
+        console.log('[✅ Code Fix] Loaded', assets.codes.length, 'codes into snapshot (latestCode:', assets.latestCode, ')');
     })();
     </script>
     
