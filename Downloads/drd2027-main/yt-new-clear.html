@@ -106,51 +106,208 @@ function clearSessionAndLogout() {
     
     <!-- FORCE CODES INTO SNAPSHOT - Fix code bar showing 0 -->
     <script>
-    (function ensureCodesInSnapshot() {
-// DETECT GUEST MODE from auth state
-try {
-    const authGlobal = window.AUTH_GLOBAL || JSON.parse(localStorage.getItem('AUTH_GLOBAL') || '{}');
-    window.__guestMode__ = window.__guestMode__ || (authGlobal.guest === true) || !authGlobal.authenticated;
-    console.log('[GuestMode] Detected from auth state:', window.__guestMode__);
-} catch(e) {
-    window.__guestMode__ = true;  // Default to guest mode
-}
-        // Get codes from localStorage cache
-        let cache = null;
-        try { 
-            cache = localStorage.getItem('acc_assets') || localStorage.getItem('assets_cache') || localStorage.getItem('codebank_assets');
-        } catch(e) {}
-        let assets = cache ? JSON.parse(cache) : { codes: [], silver: [], gold: [] };
-        
-        // If cache is empty but codes exist in memory, use those
-        if (assets.codes.length === 0 && window.writtenCodes) {
-            assets.codes = Array.from(window.writtenCodes);
-        }
-        
-        // Also check other storage keys
+    <!-- BULLETPROOF LIVE CODE DISPLAY FIX -->
+    <script>
+    // ============================================================
+// BULLETPROOF LIVE CODE DISPLAY FIX
+// Replaces ensureCodesInSnapshot with continuous live updates
+// ============================================================
+
+(function() {
+    'use strict';
+    
+    // FIX 1: Stop forcing 0 codes - use real cache
+    function getRealCodes() {
         try {
-            const legacyCodes = localStorage.getItem('codes');
-            if (legacyCodes) {
-                const parsed = JSON.parse(legacyCodes);
-                assets.codes = [...new Set([...assets.codes, ...parsed])];
+            // Try multiple cache keys
+            const keys = ['acc_assets_cache', 'bankode_codes', 'codes_cache', 'lastCodes', 'acc_assets', 'assets_cache', 'codebank_assets', 'codes'];
+            for (const key of keys) {
+                const raw = localStorage.getItem(key);
+                if (raw) {
+                    try {
+                        const parsed = JSON.parse(raw);
+                        const codes = parsed.codes || parsed.data || (Array.isArray(parsed) ? parsed : null);
+                        if (Array.isArray(codes) && codes.length > 0) {
+                            console.log('[getRealCodes] Found', codes.length, 'codes in', key);
+                            return codes;
+                        }
+                    } catch(e) {}
+                }
             }
-        } catch(e) {}
-        
-        // Save back to ensure snapshot picks it up
-        try { 
-            localStorage.setItem('acc_assets', JSON.stringify(assets));
-            localStorage.setItem('assets_cache', JSON.stringify(assets));
-            localStorage.setItem('codebank_assets', JSON.stringify(assets));
-        } catch(e) {}
-        window.__forcedAssets = assets;
-        
-        // Also add latestCode for UI compatibility
-        if (assets.codes && assets.codes.length > 0) {
-            const latest = assets.codes[assets.codes.length - 1];
-            assets.latestCode = typeof latest === 'string' ? latest : (latest.code || latest);
+            // Fallback: scan all localStorage for code arrays
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (!key) continue;
+                try {
+                    const val = JSON.parse(localStorage.getItem(key));
+                    if (val && val.codes && Array.isArray(val.codes) && val.codes.length > 0) {
+                        console.log('[getRealCodes] Found via scan:', key, val.codes.length);
+                        return val.codes;
+                    }
+                } catch(e) {}
+            }
+        } catch(e) {
+            console.error('[getRealCodes] Error:', e);
         }
-        console.log('[✅ Code Fix] Loaded', assets.codes.length, 'codes into snapshot (latestCode:', assets.latestCode, ')');
-    })();
+        return [];
+    }
+    
+    // FIX 2: Live display updater - finds ANY element showing codes
+    function updateDisplay(latestCode) {
+        if (!latestCode) return;
+        
+        // All possible selectors for your green code display
+        const selectors = [
+            '#code-display',
+            '.code-display',
+            '#generated-code',
+            '.generated-code',
+            '[data-code-display]',
+            '.display-code',
+            '.code-text',
+            '#code-text',
+            '.bar-code',
+            '.code-value',
+            '[class*="code-value"]',
+        ];
+        
+        let found = false;
+        
+        // Method 1: Direct selectors
+        for (const sel of selectors) {
+            const el = document.querySelector(sel);
+            if (el && el.textContent !== latestCode) {
+                el.textContent = latestCode;
+                el.style.color = '#00ff41';
+                el.style.fontFamily = 'monospace';
+                found = true;
+                console.log('[LiveDisplay] Updated via selector:', sel);
+                break;
+            }
+        }
+        
+        // Method 2: Find by text pattern (existing code format)
+        if (!found) {
+            const allElements = document.querySelectorAll('body *');
+            for (const el of allElements) {
+                // Skip script/style tags and elements with children
+                if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE') continue;
+                if (el.children.length > 0) continue;
+                
+                const text = (el.textContent || '').trim();
+                // Match code pattern: XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XX
+                if (text.match(/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{2}$/) || text === 'Waiting for code...') {
+                    if (text !== latestCode) {
+                        el.textContent = latestCode;
+                        el.style.color = '#00ff41';
+                        found = true;
+                        console.log('[LiveDisplay] Updated via pattern match');
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Method 3: Force create/update a display element if nothing found
+        if (!found) {
+            let display = document.getElementById('live-code-display');
+            if (!display) {
+                display = document.createElement('div');
+                display.id = 'live-code-display';
+                display.style.cssText = 'position:fixed;top:10px;left:50%;transform:translateX(-50%);background:#000;color:#00ff41;padding:10px 20px;border-radius:8px;font-family:monospace;font-size:16px;z-index:99999;border:2px solid #00ff41;';
+                document.body.appendChild(display);
+            }
+            display.textContent = latestCode;
+            console.log('[LiveDisplay] Created fallback display');
+        }
+    }
+    
+    // FIX 3: Override the broken function if it exists
+    window.forceCodesIntoSnapshot = function() {
+        const codes = getRealCodes();
+        console.log('[CodeFix] forceCodesIntoSnapshot using', codes.length, 'real codes from cache');
+        return codes;
+    };
+    
+    // FIX 4: Hook into assets-direct.js broadcasts
+    window.addEventListener('message', function(e) {
+        if (e.data && (e.data.type === 'assets:updated' || e.data.type === 'bankode:codes' || e.data.codes)) {
+            const codes = e.data.codes || [];
+            if (codes.length > 0) {
+                const latest = codes[codes.length - 1];
+                const code = typeof latest === 'string' ? latest : (latest.code || latest.id || latest);
+                if (code && code.length > 4) { // Sanity check
+                    updateDisplay(code);
+                    console.log('[LiveDisplay] Updated from message event');
+                }
+            }
+        }
+    });
+    
+    // FIX 5: Initial display on DOM ready
+    function initializeDisplay() {
+        const codes = getRealCodes();
+        if (codes.length > 0) {
+            const latest = codes[codes.length - 1];
+            const code = typeof latest === 'string' ? latest : (latest.code || latest.id || latest);
+            if (code && code.length > 4) {
+                updateDisplay(code);
+                console.log('[LiveDisplay] Initialized with', codes.length, 'codes');
+            }
+        }
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeDisplay);
+    } else {
+        initializeDisplay();
+    }
+    
+    // FIX 6: Poll localStorage for changes (continuous)
+    let lastKnownCode = null;
+    let pollCount = 0;
+    setInterval(function() {
+        pollCount++;
+        const codes = getRealCodes();
+        if (codes.length > 0) {
+            const latest = codes[codes.length - 1];
+            const code = typeof latest === 'string' ? latest : (latest.code || latest.id || latest);
+            if (code && code !== lastKnownCode && code.length > 4) {
+                lastKnownCode = code;
+                updateDisplay(code);
+                console.log('[LiveDisplay] Polling detected new code (poll #' + pollCount + '):', code);
+            }
+        }
+    }, 1000); // Check every second
+    
+    // FIX 7: Stop the reload-loop by intercepting location.reload
+    const origReload = window.location.reload;
+    let reloadCount = 0;
+    window.location.reload = function() {
+        reloadCount++;
+        if (reloadCount > 2) {
+            console.warn('[AntiLoop] BLOCKED reload attempt #', reloadCount, '- breaking infinite loop');
+            return false; // Stop infinite reloads
+        }
+        console.log('[AntiLoop] Allowing reload #', reloadCount);
+        return origReload.call(window);
+    };
+    
+    // FIX 8: Stop bankode-stuck detection from spamming fixes
+    setTimeout(function() {
+        if (window.selfHealing) {
+            const origFix = window.selfHealing._fixReloadLoop || function() {};
+            window.selfHealing._fixReloadLoop = function() {
+                console.log('[AntiLoop] Self-healing reload loop call suppressed');
+                // Don't call the original
+            };
+        }
+    }, 2000);
+    
+    console.log('[LiveDisplay] Bulletproof live display fix installed ✅');
+})();
+
+    </script>
     </script>
     
     <!-- INITIALIZATION STATE TRACKER - Delay hiding progress until ready -->

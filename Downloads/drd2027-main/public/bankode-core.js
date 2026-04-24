@@ -19,11 +19,18 @@
 
 (function() { 
    const originalSetItem = localStorage.setItem; 
+   
    localStorage.setItem = function(key, value) { 
-     if (key === 'Bankode.pIndex' && value === '0') { 
-       console.trace('[DEBUG] Something is resetting pIndex to 0!'); 
-       console.warn('[DEBUG] Current value was:', localStorage.getItem('Bankode.pIndex')); 
-     } 
+     // PROTECT pIndex from being reset to 0
+     if (key === 'Bankode.pIndex') {
+       const currentValue = localStorage.getItem('Bankode.pIndex');
+       // Block if: trying to set to 0, AND current value is > 0
+       if (value === '0' && currentValue && parseInt(currentValue) > 0) {
+         console.warn('[pIndex Protection] BLOCKED reset to 0! Current:', currentValue);
+         console.trace('[pIndex Protection] Stack trace of attempted reset:');
+         return; // Don't execute the reset
+       }
+     }
      return originalSetItem.apply(this, arguments); 
    }; 
  })();
