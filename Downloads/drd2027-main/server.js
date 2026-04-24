@@ -83,9 +83,6 @@ import rateLimit from 'express-rate-limit';
 import trustRouter from './api/modules/trust.js';
 // Clerk removed: zero-auth mode
 
-// ⭐ CORS & Headers Middleware
-import { setupCORSHeaders, setupAuthHeaders } from './server/cors-and-headers-fix.js';
-
 import * as monetizationMod from './api/modules/monetization.js';
 import * as samma3nyMod from './api/modules/samma3ny.js';
 import * as nostalgiaMod from './api/modules/nostalgia.js';
@@ -156,6 +153,9 @@ import { enforceFinancialSecurity, enforceWatchDog, storeIdempotencyResponse } f
 import { WatchDogGuardian } from './shared/watch-dog-guardian.js';
 const { feedWatchDog } = WatchDogGuardian;
 
+// ── CORS & Auth Headers Middleware ──────────────────────────
+import { setupCORSHeaders, setupAuthHeaders } from './server/cors-and-headers-fix.js';
+
 // ─────────────────────────────────────────────────────────────
 // JWT Helper Function
 // ─────────────────────────────────────────────────────────────
@@ -170,12 +170,11 @@ function signJwt(userId, email) {
 }
 
 const app = express();
+setupCORSHeaders(app);  // MUST be first, before all other middleware
+setupAuthHeaders(app);
+
 // Share devSessions with all routers via req.app.get('devSessions')
 app.set('devSessions', devSessions);
-
-// ⭐ Setup CORS & Auth Headers (MUST be before all other middleware)
-setupCORSHeaders(app);
-setupAuthHeaders(app);
 
 // ── Phase 3: Auth Utilities Middleware ──────────────────────────
 // Make auth utilities available globally for all routes
@@ -433,83 +432,6 @@ app.get('/api/auth/session', async (req, res) => {
   }
 });
 
-// ✅ CRITICAL FIX: /api/auth/me - Real user endpoint (MUST be before Zagel mount)
-app.get('/api/auth/me', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.replace('Bearer ', '') || req.cookies?.session_token || null;
-    
-    if (!token) {
-      return res.status(401).json({
-        authenticated: false,
-        message: 'No authentication token provided',
-        user: null
-      });
-    }
-    
-    // Check devSessions first
-    let session = devSessions.get(token);
-    
-    // Try JWT verification as fallback
-    if (!session) {
-      try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret-key-change-in-production');
-        if (decoded && (decoded.userId || decoded.id)) {
-          session = {
-            userId: decoded.userId || decoded.id,
-            email: decoded.email,
-            role: 'user'
-          };
-        }
-      } catch (e) {
-        // Invalid JWT
-      }
-    }
-    
-    // DB fallback
-    if (!session) {
-      try {
-        const dbSess = await query('SELECT user_id, expires_at FROM auth_sessions WHERE token = $1', [token]);
-        if (dbSess.rows && dbSess.rows.length > 0) {
-          const expiry = new Date(dbSess.rows[0].expires_at);
-          if (expiry > new Date()) {
-            const userId = dbSess.rows[0].user_id;
-            const userRes = await query('SELECT email, user_type FROM users WHERE id = $1', [userId]);
-            if (userRes.rows && userRes.rows.length > 0) {
-              const u = userRes.rows[0];
-              session = { userId, email: u.email, role: u.user_type || 'user' };
-              devSessions.set(token, session);
-            }
-          }
-        }
-      } catch (dbErr) {
-        // DB error
-      }
-    }
-    
-    if (!session) {
-      return res.status(401).json({
-        authenticated: false,
-        message: 'Invalid or expired session',
-        user: null
-      });
-    }
-    
-    res.json({
-      authenticated: true,
-      user: {
-        id: session.userId,
-        email: session.email,
-        role: session.role || 'user'
-      },
-      sessionId: token
-    });
-  } catch (err) {
-    console.error('[AUTH ME] Error:', err.message);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
 // Register WatchDog routes
 // ============================================================================
 // ROOT ROUTE & STATIC FILES (MUST BE BEFORE API ROUTES)
@@ -586,21 +508,52 @@ app.get('/health', (req, res) => {
     });
 });
 
+// Auth endpoint (stub for unauthenticated requests)
+app.get('/api/auth/me', (req, res) => {
+    res.status(401).json({
+        authenticated: false,
+        message: 'Guest mode - no auth token provided',
+        user: null
+    });
+});
 // Auth configuration endpoint (for Google Client ID)
-// GET Google Client ID (PUBLIC - no auth required)
 app.get('/api/auth/google-client-id', (req, res) => {
-  const clientId = process.env.GOOGLE_CLIENT_ID || '';
-  // Be permissive: any non-empty string that looks like a client ID
-  const isConfigured = clientId && clientId.length > 20;
+  const raw = process.env.GOOGLE_CLIENT_ID || '';
   
-  if (!isConfigured) {
-    console.warn('[AUTH] GOOGLE_CLIENT_ID not configured in .env');
+  // Validate it's a real Google Client ID (not empty or placeholder)
+  const isValid = raw && 
+                  raw !== 'your_google_client_id.apps.googleusercontent.com' && 
+                  /^\d+(-[a-z0-9]+)?\.apps\.googleusercontent\.com$/.test(raw);
+  
+  if (!isValid) {
+    console.warn('[AUTH] GOOGLE_CLIENT_ID not configured or invalid:', raw ? '(set but invalid format)' : '(not set)');
   }
   
   res.json({ 
+    clientId: isValid ? raw : '',
+    configured: isValid,
+    debug: {
+      isConfigured: !!raw,
+      isPlaceholder: raw === 'your_google_client_id.apps.googleusercontent.com',
+      isValid: isValid
+    }
+  });
+});
+
+// Google auth initiation
+// GET Google Client ID (PUBLIC - no auth required)
+app.get('/api/auth/google-client-id', (req, res) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID || '';
+  const isValid = clientId && !clientId.includes('your_google') && clientId.includes('.apps.googleusercontent.com');
+  
+  if (!isValid) {
+    console.warn('[GOOGLE] Client ID not properly configured:', clientId);
+  }
+  
+  res.json({
     clientId: clientId,
-    configured: isConfigured,
-    isValid: isConfigured
+    isValid: isValid,
+    configured: !!process.env.GOOGLE_CLIENT_ID
   });
 });
 
@@ -677,29 +630,19 @@ app.post('/api/auth/google', async (req, res) => {
     console.log('[GOOGLE AUTH] Token verified for:', email);
 
     // Find existing user
-    let user = await dbAdapter.queryOne(
-      'SELECT * FROM users WHERE email = ?',
-      [email]
-    );
+    let user = process.env.DATABASE_URL ? await sqliteFindUserByEmail(email) : memFindUserByEmail(email);
 
     if (!user) {
       // Auto-create account for Google users
       console.log('[GOOGLE AUTH] Creating new user for:', email);
       const randomPassword = crypto.randomUUID();
-      const passwordHash = await bcrypt.hash(randomPassword, 10);
-      const userId = `user_${crypto.randomUUID()}`;
-      const now = Date.now();
-      
-      await dbAdapter.execute(`
-        INSERT INTO users (id, email, username, password_hash, created_at, updated_at, is_active, metadata)
-        VALUES (?, ?, ?, ?, ?, ?, 1, ?)
-      `, [userId, email, displayName, passwordHash, now, now, JSON.stringify({
+      const created = await memCreateUser(email, displayName, randomPassword, {
         emailVerified: true,
         googleId: gUser.sub,
         avatar: gUser.picture || null
-      })]);
-      
-      user = { id: userId, email, username: displayName, user_type: 'user' };
+      });
+      if (!created || !created.id) throw new Error('User creation failed');
+      user = { id: created.id, email, username: displayName, user_type: 'user' };
       console.log('[GOOGLE AUTH] New user created:', user.id, email);
     } else {
       console.log('[GOOGLE AUTH] Existing user found:', user.id, email);
@@ -741,34 +684,20 @@ app.post('/api/auth/google', async (req, res) => {
   }
 });
 app.post('/api/auth/validate-session', (req, res) => {
-    const sessionToken = req.headers['x-session-token'] || req.body?.sessionToken || req.cookies?.session_token || req.headers.authorization?.replace('Bearer ', '');
+    const sessionToken = req.headers['x-session-token'] || req.body?.sessionToken;
     
     if (!sessionToken) {
-        return res.status(401).json({ valid: false, error: 'No session token provided' });
+        return res.status(401).json({ valid: false });
     }
     
-    // Validate against devSessions
-    const session = devSessions.get(sessionToken);
-    if (!session) {
-        return res.status(401).json({ valid: false, error: 'Invalid or expired session' });
-    }
-    
-    res.json({ valid: true, userId: session.userId });
+    // TODO: Validate against your session database
+    res.json({ valid: true, userId: 'user-' + Date.now() });
 });
 
 // Logout endpoint
 app.post('/api/auth/logout', (req, res) => {
-    const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.session_token || req.body?.sessionToken;
-    if (token) {
-        devSessions.delete(token);
-    }
-    res.clearCookie('session_token', { path: '/' });
-    res.clearCookie('auth_token', { path: '/' });
     res.json({ success: true, message: 'Logged out' });
 });
-
-// ✅ CRITICAL FIX: Mount auth-v2 routes (were imported but never mounted)
-app.use('/api/auth-v2', authV2Routes);
 
 // ============================================================================
 // MISSING AUTH ENDPOINTS - Added to fix frontend failures
@@ -833,45 +762,15 @@ app.post('/api/auth/resend-otp', async (req, res) => {
 app.post('/api/auth/signup', async (req, res) => {
   try {
     const { email, password, name, phone, country, religion, gender } = req.body;
-    
-    // ✅ Validation
     if (!email || !password) {
       return res.status(400).json({ success: false, error: 'Email and password required' });
     }
     
-    if (password.length < 6) {
-      return res.status(400).json({ success: false, error: 'Password must be at least 6 characters' });
-    }
-    
+    const userId = crypto.randomUUID();
     const userEmail = email.toLowerCase().trim();
     const displayName = name || email.split('@')[0];
     
-    // ✅ CHECK: User already exists?
-    const existing = await dbAdapter.queryOne(
-      'SELECT id FROM users WHERE email = ?',
-      [userEmail]
-    );
-    
-    if (existing) {
-      console.log('[SIGNUP] User already exists:', userEmail);
-      return res.status(409).json({ success: false, error: 'Email already registered' });
-    }
-    
-    // ✅ HASH PASSWORD: Use bcrypt for secure password storage
-    const passwordHash = await bcrypt.hash(password, 10);
-    
-    // ✅ CREATE USER: Insert into database
-    const userId = `user_${crypto.randomUUID()}`;
-    const now = Date.now();
-    
-    const metadata = JSON.stringify({ name: displayName, phone, country, religion, gender });
-    
-    await dbAdapter.execute(`
-      INSERT INTO users (id, email, username, password_hash, created_at, updated_at, is_active, metadata)
-      VALUES (?, ?, ?, ?, ?, ?, 1, ?)
-    `, [userId, userEmail, displayName, passwordHash, now, now, metadata]);
-    
-    // ✅ CREATE SESSION for auto-login after signup
+    // Create session
     const token = signJwt(userId, userEmail);
     const sessionId = crypto.randomUUID();
     devSessions.set(sessionId, {
@@ -881,9 +780,9 @@ app.post('/api/auth/signup', async (req, res) => {
       email: userEmail
     });
     
-    console.log('[SIGNUP] ✅ New user created:', userId, userEmail);
+    console.log('[SIGNUP] New user created:', userId, userEmail);
     
-    res.status(201).json({
+    res.json({
       success: true,
       message: 'Account created successfully',
       authenticated: true,
@@ -901,51 +800,43 @@ app.post('/api/auth/signup', async (req, res) => {
 // Login - Authenticate user with email/password or OTP
 app.post('/api/auth/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, phone, otp, verificationMethod } = req.body;
     
-    // ✅ REQUIRED: Email and password must be provided
-    if (!email || !password) {
-      return res.status(400).json({ success: false, error: 'Email and password required' });
+    // Support both email/password and phone/OTP
+    let userId = null;
+    let userEmail = null;
+    
+    if (verificationMethod === 'email-otp') {
+      if (!email) return res.status(400).json({ success: false, error: 'Email required' });
+      userEmail = email.toLowerCase().trim();
+      userId = crypto.randomUUID();
+      console.log('[LOGIN] Email OTP login:', userEmail);
+    } else if (verificationMethod === 'phone-otp') {
+      if (!phone) return res.status(400).json({ success: false, error: 'Phone required' });
+      userId = crypto.randomUUID();
+      userEmail = phone + '@phone.local';
+      console.log('[LOGIN] Phone OTP login:', phone);
+    } else {
+      // Default: email/password
+      if (!email || !password) {
+        return res.status(400).json({ success: false, error: 'Email and password required' });
+      }
+      userEmail = email.toLowerCase().trim();
+      userId = crypto.randomUUID();
+      console.log('[LOGIN] Email/password login:', userEmail);
     }
     
-    const userEmail = email.toLowerCase().trim();
-    
-    // ✅ CHECK DATABASE: Look up user by email
-    const user = await dbAdapter.queryOne(
-      'SELECT * FROM users WHERE email = ?',
-      [userEmail]
-    );
-    
-    // ✅ CRITICAL: User must exist (not allowing signup-on-login)
-    if (!user) {
-      console.log('[LOGIN] User not found:', userEmail);
-      return res.status(401).json({ success: false, error: 'Invalid email or password' });
-    }
-    
-    // ✅ VERIFY PASSWORD: Compare provided password with hash
-    const passwordMatch = await bcrypt.compare(password, user.password_hash);
-    if (!passwordMatch) {
-      console.log('[LOGIN] Password mismatch for:', userEmail);
-      return res.status(401).json({ success: false, error: 'Invalid email or password' });
-    }
-    
-    // ✅ UPDATE LAST LOGIN
-    await dbAdapter.execute(
-      'UPDATE users SET last_login = ? WHERE id = ?',
-      [Date.now(), user.id]
-    );
-    
-    // ✅ CREATE SESSION
-    const token = signJwt(user.id, userEmail);
+    // Create session
+    const token = signJwt(userId, userEmail);
     const sessionId = crypto.randomUUID();
     devSessions.set(sessionId, {
-      userId: user.id,
+      userId,
       role: 'user',
       sessionId,
       email: userEmail
     });
     
-    console.log('[LOGIN] ✅ User authenticated:', user.id, userEmail);
+    console.log('[LOGIN] User authenticated:', userId, userEmail);
     
     res.json({
       success: true,
@@ -953,8 +844,8 @@ app.post('/api/auth/login', async (req, res) => {
       authenticated: true,
       sessionId,
       token,
-      userId: user.id,
-      user: { id: user.id, email: userEmail }
+      userId,
+      user: { id: userId, email: userEmail }
     });
   } catch (error) {
     console.error('[LOGIN ERROR]', error.message);
@@ -1153,20 +1044,6 @@ import { MigrationRunner } from './server/database/migration-runner.js';
     if (dbAdapter?.isConnected) {
       const migrationRunner = new MigrationRunner(dbAdapter);
       await migrationRunner.runPendingMigrations();
-      
-      // Fix schema by adding conversation_id column to tables
-      async function fixSchema() {
-        try {
-          await dbAdapter.execute(`ALTER TABLE e7ki_messages ADD COLUMN conversation_id TEXT`);
-        } catch(e) { /* ignore if exists */ }
-        try {
-          await dbAdapter.execute(`ALTER TABLE zagel_messages ADD COLUMN conversation_id TEXT`);
-        } catch(e) { /* ignore if exists */ }
-        await dbAdapter.execute(`CREATE INDEX IF NOT EXISTS idx_e7ki_messages_conversation_id ON e7ki_messages(conversation_id)`);
-        await dbAdapter.execute(`CREATE INDEX IF NOT EXISTS idx_zagel_messages_conversation_id ON zagel_messages(conversation_id)`);
-        console.log('[DB] Schema migration complete');
-      }
-      await fixSchema();
     } else {
       console.warn('[Migrations] Database not connected - skipping migrations');
     }
@@ -1185,39 +1062,17 @@ app.use((req, res) => {
 });
 
 // ============================================================================
-// FINAL: Initialize Database + Bind to port with timeout verification
+// FINAL: Bind to port with timeout verification
 // ============================================================================
 
 const SERVER_STARTUP_TIMEOUT = 15000; // 15 second timeout
 let startupTimer = null;
 
-// ✅ CRITICAL FIX: Initialize database BEFORE server starts
-async function startServer() {
-    try {
-        console.log('[DB] Initializing database adapter...');
-        await dbAdapter.init();
-        console.log('[DB] ✅ Database initialized and ready');
-        
-        if (!dbAdapter.isConnected) {
-            console.warn('[DB] ⚠️  WARNING: Database not connected - auth may be in demo mode');
-        }
-    } catch (err) {
-        console.error('[DB] Error initializing database:', err.message);
-    }
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ [CRITICAL] Server bound to 0.0.0.0:${PORT}`);
+    console.log(`✅ [BOOT] Dr.D Backend v2.0 is now listening`);
     
-    server.listen(PORT, '0.0.0.0', () => {
-        console.log(`✅ [CRITICAL] Server bound to 0.0.0.0:${PORT}`);
-        console.log(`✅ [BOOT] Dr.D Backend v2.0 is now listening`);
-        console.log(`✅ [AUTH] Database-backed auth: ${dbAdapter.isConnected ? 'ENABLED' : 'DISABLED (FALLBACK MODE)'}`);
-        
-        if (startupTimer) clearTimeout(startupTimer);
-    });
-}
-
-// Start the server
-startServer().catch(err => {
-    console.error('[STARTUP] Fatal error:', err.message);
-    process.exit(1);
+    if (startupTimer) clearTimeout(startupTimer);
 });
 
 server.on('error', (err) => {
