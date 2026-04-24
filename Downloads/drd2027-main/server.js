@@ -435,6 +435,16 @@ app.get('/api/auth/session', async (req, res) => {
 // ============================================================================
 
 // Root path: serve yt-new-clear.html
+// Cache-busting for HTML files (prevent service worker stale cache)
+app.use((req, res, next) => {
+    if (req.path.endsWith('.html') || req.path === '/') {
+        res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.set('Pragma', 'no-cache');
+        res.set('Expires', '0');
+    }
+    next();
+});
+
 app.get('/', (req, res) => {
     const htmlPath = path.join(__dirname, 'public/indexCB.html');
     if (fs.existsSync(htmlPath)) {
@@ -1305,6 +1315,16 @@ app.get('/api/auth/session', async (req, res) => {
 // ============================================================================
 
 // Root path: serve yt-new-clear.html
+// Cache-busting for HTML files (prevent service worker stale cache)
+app.use((req, res, next) => {
+    if (req.path.endsWith('.html') || req.path === '/') {
+        res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.set('Pragma', 'no-cache');
+        res.set('Expires', '0');
+    }
+    next();
+});
+
 app.get('/', (req, res) => {
     const htmlPath = path.join(__dirname, 'public/indexCB.html');
     if (fs.existsSync(htmlPath)) {
