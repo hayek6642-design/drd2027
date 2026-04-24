@@ -36,12 +36,20 @@
   var $userName, $headerTitle;
 
   // ── Initialize ──────────────────────────────────────────
-  function init() {
-    // Auth should already be set by auth-global.js
-    if (!window.AUTH_GLOBAL) {
-      console.log('[Launcher] No auth - staying as guest');
-      // Stay on page as guest instead of redirect
-      return;
+  async function init() {
+    // Initialize auth ONLY when CodeBank opens
+    if (!window.CodeBankAuth) {
+      console.log('[CodeBank Launcher] Initializing authentication system...');
+      
+      // Initialize CodeBank authentication
+      const user = await window.CodeBankAuth.init();
+      
+      if (user) {
+        console.log('[CodeBank Launcher] User authenticated:', user.email);
+      } else {
+        console.log('[CodeBank Launcher] Login modal shown');
+        return;
+      }
     }
 
     $serviceGrid = document.getElementById('service-grid');
