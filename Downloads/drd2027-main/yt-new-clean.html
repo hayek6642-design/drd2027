@@ -406,8 +406,8 @@
                     localStorage.removeItem('session_token');
                 }
                 
-                // No session - show login inside CodeBank
-                this.showLoginModal();
+                // No session - wait for indexCB.html to handle auth
+                console.log('[CodeBankAuth] No session - guest mode (auth handled by CodeBank)');
                 return null;
             },
             
@@ -465,4 +465,42 @@
                             font-size: 15px; margin-top: 8px;
                         }
                         .cb-btn-primary:hover { background: #33ddff; }
+                    `;
+                    document.head.appendChild(style);
+                }
+            }
+        };
+        
+        // Initialize auth on page load
+        window.CodeBankAuth.init();
+        
+        // Listen for auth broadcasts from login.html or indexCB.html
+        window.addEventListener('message', (ev) => {
+            if (ev.data && ev.data.type === 'auth:broadcast') {
+                console.log('[App] Received auth broadcast:', ev.data.user?.email);
+                // Update CodeBankAuth state
+                window.CodeBankAuth.user = ev.data.user;
+                window.CodeBankAuth.sessionId = ev.data.sessionId;
+                window.CodeBankAuth.authenticated = ev.data.authenticated;
+                window.CodeBankAuth.initialized = true;
+                
+                // Persist to localStorage
+                if (ev.data.sessionId) {
+                    localStorage.setItem('session_token', ev.data.sessionId);
+                    localStorage.setItem('sessionId', ev.data.sessionId);
+                }
+                if (ev.data.user) {
+                    localStorage.setItem('__cached_user__', JSON.stringify(ev.data.user));
+                }
+                
+                // Remove any login modals if visible
+                const modal = document.getElementById('cb-auth-modal');
+                if (modal) modal.remove();
+                
+                console.log('[App] Auth state updated - user:', ev.data.user?.email);
+            }
+        });
+    </script>
+</body>
+</html>
                         .cb-btn-primary:disabled { opacity: 0.5; cursor:
