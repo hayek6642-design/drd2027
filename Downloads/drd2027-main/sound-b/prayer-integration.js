@@ -129,6 +129,9 @@
         }
 
         testNotification() {
+            // DISABLED - Service workers disabled globally
+            return false;
+            /*
             if (navigator.serviceWorker && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.controller.postMessage({
                     type: 'TEST_NOTIFICATION'
@@ -136,6 +139,7 @@
                 return true;
             }
             return false;
+            */
         }
 
         getSystemStatus() {
@@ -188,6 +192,9 @@
 
         // Method to trigger persistent prayer notification
         async triggerPersistentPrayer(prayer, index) {
+            // DISABLED - Service workers disabled globally
+            return;
+            /*
             try {
                 await this.initialize();
                 
@@ -211,6 +218,7 @@
             } catch (error) {
                 console.error('Error triggering persistent prayer:', error);
             }
+            */
         }
 
         getCurrentLanguage() {

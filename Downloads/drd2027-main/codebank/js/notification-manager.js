@@ -574,6 +574,9 @@ export class NotificationManager {
 
     // Initialize push notifications
     async _initializePushNotifications() {
+        // DISABLED - Service workers disabled globally
+        return;
+        /*
         if (!this.enablePushNotifications || !('serviceWorker' in navigator)) {
             return;
         }
@@ -589,6 +592,7 @@ export class NotificationManager {
         } catch (error) {
             console.error('Failed to initialize push notifications:', error);
         }
+        */
     }
 
     // Add to notification history
@@ -711,7 +715,7 @@ export class NotificationManager {
 // Create global instance
 export const notificationManager = new NotificationManager({
     enableWebSocket: true,
-    enablePushNotifications: 'serviceWorker' in navigator,
+    enablePushNotifications: false,  // DISABLED - Service workers disabled globally
     enableEmail: false, // Would need email service configuration
     enableSMS: false     // Would need SMS service configuration
 });

@@ -194,6 +194,11 @@
             
             try {
                 // Check Service Worker support
+                // DISABLED - Service workers disabled globally
+                addLog('⚠️ Service Worker disabled globally', 'warning');
+                return;
+                
+                /*
                 if (!('serviceWorker' in navigator)) {
                     throw new Error('Service Workers not supported in this browser');
                 }
@@ -201,12 +206,15 @@
                 // Register Service Worker
                 const registration = await navigator.serviceWorker.register('/yt-coder/enhanced-persistent-service-worker.js');
                 addLog('✅ Service Worker registered successfully', 'success');
+                */
                 
+                /*
                 updateStatus('sw-status', 'sw-text', 'Active', 'active');
                 
                 // Wait for service worker to be ready
                 await navigator.serviceWorker.ready;
                 addLog('✅ Service Worker is ready', 'success');
+                */
                 
                 // Initialize the persistent prayer system
                 if (window.EnhancedPersistentPrayerSystem) {
