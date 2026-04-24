@@ -471,8 +471,8 @@
             }
         };
         
-        // Initialize auth on page load
-        window.CodeBankAuth.init();
+        // DO NOT auto-initialize auth - let CodeBank handle it when user opens it
+        // window.CodeBankAuth.init();  // DISABLED - app loads first
         
         // Listen for auth broadcasts from login.html or indexCB.html
         window.addEventListener('message', (ev) => {

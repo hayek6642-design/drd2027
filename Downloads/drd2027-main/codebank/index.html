@@ -198,12 +198,14 @@
     }
   </script>
 
-  <!-- Service Worker -->
+  <!-- Service Worker - DISABLED to prevent caching issues -->
   <script>
+    // Service worker disabled - app loads from network
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js', { 
-        updateViaCache: 'imports' 
-      }).catch(console.error);
+      // Unregister any existing service workers
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(reg => reg.unregister().catch(() => {}));
+      }).catch(() => {});
     }
   </script>
 </body>
