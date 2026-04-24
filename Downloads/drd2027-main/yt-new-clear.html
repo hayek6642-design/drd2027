@@ -2,13 +2,6 @@
 <html lang="en">
 
 <head>
-    <!-- GUEST MODE INITIALIZATION - Allow snapshots for unauthenticated users -->
-    <script>
-    // CRITICAL: Set guest mode flag IMMEDIATELY
-    window.__guestMode__ = true;  // Allows all snapshots to be sent
-    window.__allowGuestAssets__ = true;
-    console.log('[GuestMode] Initialized - snapshots will be sent regardless of auth state');
-    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!--  RELOAD PROTECTION (from actly.md) -->
@@ -106,208 +99,32 @@ function clearSessionAndLogout() {
     
     <!-- FORCE CODES INTO SNAPSHOT - Fix code bar showing 0 -->
     <script>
-    <!-- BULLETPROOF LIVE CODE DISPLAY FIX -->
-    <script>
-    // ============================================================
-// BULLETPROOF LIVE CODE DISPLAY FIX
-// Replaces ensureCodesInSnapshot with continuous live updates
-// ============================================================
-
-(function() {
-    'use strict';
-    
-    // FIX 1: Stop forcing 0 codes - use real cache
-    function getRealCodes() {
+    (function ensureCodesInSnapshot() {
+        // Get codes from localStorage cache
+        let cache = null;
+        try { cache = localStorage.getItem('assets_cache'); } catch(e) {}
+        let assets = cache ? JSON.parse(cache) : { codes: [], silver: [], gold: [] };
+        
+        // If cache is empty but codes exist in memory, use those
+        if (assets.codes.length === 0 && window.writtenCodes) {
+            assets.codes = Array.from(window.writtenCodes);
+        }
+        
+        // Also check other storage keys
         try {
-            // Try multiple cache keys
-            const keys = ['acc_assets_cache', 'bankode_codes', 'codes_cache', 'lastCodes', 'acc_assets', 'assets_cache', 'codebank_assets', 'codes'];
-            for (const key of keys) {
-                const raw = localStorage.getItem(key);
-                if (raw) {
-                    try {
-                        const parsed = JSON.parse(raw);
-                        const codes = parsed.codes || parsed.data || (Array.isArray(parsed) ? parsed : null);
-                        if (Array.isArray(codes) && codes.length > 0) {
-                            console.log('[getRealCodes] Found', codes.length, 'codes in', key);
-                            return codes;
-                        }
-                    } catch(e) {}
-                }
+            const legacyCodes = localStorage.getItem('codes');
+            if (legacyCodes) {
+                const parsed = JSON.parse(legacyCodes);
+                assets.codes = [...new Set([...assets.codes, ...parsed])];
             }
-            // Fallback: scan all localStorage for code arrays
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (!key) continue;
-                try {
-                    const val = JSON.parse(localStorage.getItem(key));
-                    if (val && val.codes && Array.isArray(val.codes) && val.codes.length > 0) {
-                        console.log('[getRealCodes] Found via scan:', key, val.codes.length);
-                        return val.codes;
-                    }
-                } catch(e) {}
-            }
-        } catch(e) {
-            console.error('[getRealCodes] Error:', e);
-        }
-        return [];
-    }
-    
-    // FIX 2: Live display updater - finds ANY element showing codes
-    function updateDisplay(latestCode) {
-        if (!latestCode) return;
+        } catch(e) {}
         
-        // All possible selectors for your green code display
-        const selectors = [
-            '#code-display',
-            '.code-display',
-            '#generated-code',
-            '.generated-code',
-            '[data-code-display]',
-            '.display-code',
-            '.code-text',
-            '#code-text',
-            '.bar-code',
-            '.code-value',
-            '[class*="code-value"]',
-        ];
+        // Save back to ensure snapshot picks it up
+        try { localStorage.setItem('assets_cache', JSON.stringify(assets)); } catch(e) {}
+        window.__forcedAssets = assets;
         
-        let found = false;
-        
-        // Method 1: Direct selectors
-        for (const sel of selectors) {
-            const el = document.querySelector(sel);
-            if (el && el.textContent !== latestCode) {
-                el.textContent = latestCode;
-                el.style.color = '#00ff41';
-                el.style.fontFamily = 'monospace';
-                found = true;
-                console.log('[LiveDisplay] Updated via selector:', sel);
-                break;
-            }
-        }
-        
-        // Method 2: Find by text pattern (existing code format)
-        if (!found) {
-            const allElements = document.querySelectorAll('body *');
-            for (const el of allElements) {
-                // Skip script/style tags and elements with children
-                if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE') continue;
-                if (el.children.length > 0) continue;
-                
-                const text = (el.textContent || '').trim();
-                // Match code pattern: XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XX
-                if (text.match(/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{2}$/) || text === 'Waiting for code...') {
-                    if (text !== latestCode) {
-                        el.textContent = latestCode;
-                        el.style.color = '#00ff41';
-                        found = true;
-                        console.log('[LiveDisplay] Updated via pattern match');
-                        break;
-                    }
-                }
-            }
-        }
-        
-        // Method 3: Force create/update a display element if nothing found
-        if (!found) {
-            let display = document.getElementById('live-code-display');
-            if (!display) {
-                display = document.createElement('div');
-                display.id = 'live-code-display';
-                display.style.cssText = 'position:fixed;top:10px;left:50%;transform:translateX(-50%);background:#000;color:#00ff41;padding:10px 20px;border-radius:8px;font-family:monospace;font-size:16px;z-index:99999;border:2px solid #00ff41;';
-                document.body.appendChild(display);
-            }
-            display.textContent = latestCode;
-            console.log('[LiveDisplay] Created fallback display');
-        }
-    }
-    
-    // FIX 3: Override the broken function if it exists
-    window.forceCodesIntoSnapshot = function() {
-        const codes = getRealCodes();
-        console.log('[CodeFix] forceCodesIntoSnapshot using', codes.length, 'real codes from cache');
-        return codes;
-    };
-    
-    // FIX 4: Hook into assets-direct.js broadcasts
-    window.addEventListener('message', function(e) {
-        if (e.data && (e.data.type === 'assets:updated' || e.data.type === 'bankode:codes' || e.data.codes)) {
-            const codes = e.data.codes || [];
-            if (codes.length > 0) {
-                const latest = codes[codes.length - 1];
-                const code = typeof latest === 'string' ? latest : (latest.code || latest.id || latest);
-                if (code && code.length > 4) { // Sanity check
-                    updateDisplay(code);
-                    console.log('[LiveDisplay] Updated from message event');
-                }
-            }
-        }
-    });
-    
-    // FIX 5: Initial display on DOM ready
-    function initializeDisplay() {
-        const codes = getRealCodes();
-        if (codes.length > 0) {
-            const latest = codes[codes.length - 1];
-            const code = typeof latest === 'string' ? latest : (latest.code || latest.id || latest);
-            if (code && code.length > 4) {
-                updateDisplay(code);
-                console.log('[LiveDisplay] Initialized with', codes.length, 'codes');
-            }
-        }
-    }
-    
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initializeDisplay);
-    } else {
-        initializeDisplay();
-    }
-    
-    // FIX 6: Poll localStorage for changes (continuous)
-    let lastKnownCode = null;
-    let pollCount = 0;
-    setInterval(function() {
-        pollCount++;
-        const codes = getRealCodes();
-        if (codes.length > 0) {
-            const latest = codes[codes.length - 1];
-            const code = typeof latest === 'string' ? latest : (latest.code || latest.id || latest);
-            if (code && code !== lastKnownCode && code.length > 4) {
-                lastKnownCode = code;
-                updateDisplay(code);
-                console.log('[LiveDisplay] Polling detected new code (poll #' + pollCount + '):', code);
-            }
-        }
-    }, 1000); // Check every second
-    
-    // FIX 7: Stop the reload-loop by intercepting location.reload
-    const origReload = window.location.reload;
-    let reloadCount = 0;
-    window.location.reload = function() {
-        reloadCount++;
-        if (reloadCount > 2) {
-            console.warn('[AntiLoop] BLOCKED reload attempt #', reloadCount, '- breaking infinite loop');
-            return false; // Stop infinite reloads
-        }
-        console.log('[AntiLoop] Allowing reload #', reloadCount);
-        return origReload.call(window);
-    };
-    
-    // FIX 8: Stop bankode-stuck detection from spamming fixes
-    setTimeout(function() {
-        if (window.selfHealing) {
-            const origFix = window.selfHealing._fixReloadLoop || function() {};
-            window.selfHealing._fixReloadLoop = function() {
-                console.log('[AntiLoop] Self-healing reload loop call suppressed');
-                // Don't call the original
-            };
-        }
-    }, 2000);
-    
-    console.log('[LiveDisplay] Bulletproof live display fix installed ✅');
-})();
-
-    </script>
+        console.log('[Code Fix] Forced', assets.codes.length, 'codes into snapshot');
+    })();
     </script>
     
     <!-- INITIALIZATION STATE TRACKER - Delay hiding progress until ready -->
@@ -2640,7 +2457,7 @@ function clearSessionAndLogout() {
             try { window.addEventListener('message', function (ev) { try { var data = ev && ev.data || {}; if (data && data.type === 'CODEBANK_ASSETS_HANDSHAKE') { try { var snap = AssetBus.snapshot(); if (snap && ev.source) { try { var out = sanitizeUISnapshot(Object.assign({}, snap, { source: 'ui' })); if (out && out.count === 0) { console.warn('[UI SNAPSHOT] zero-count snapshot blocked', out); }
                         try { window.__CODEBANK_ALLOWED_ORIGIN__ = ev && ev.origin || __cbOrigin__(); } catch(_){ }
                         var authed = false; try { authed = (window.Auth && typeof window.Auth.isAuthenticated==='function' && window.Auth.isAuthenticated()) || (window.AuthCore && typeof window.AuthCore.isAuthenticated==='function' && window.AuthCore.isAuthenticated()) || (!!window.__AUTH_READY__ && !!(window.APP_AUTH && window.APP_AUTH.user)); } catch(_){ authed = false }
-                        if (!authed && !window.__guestMode__) { console.warn('[SNAPSHOT BLOCKED] not authenticated and no guest mode'); return; } // Allow guest mode
+                        if (!authed) { console.warn('[SNAPSHOT BLOCKED] not authenticated'); return; }
                          if (window.DEBUG_MODE) console.log('[SNAPSHOT SENT]', out);
                         //  FIX: Use ev.origin as target origin for better compatibility and to avoid YouTube mismatch
                         var targetOrigin = (ev.origin && ev.origin !== 'null') ? ev.origin : window.location.origin;
@@ -2774,10 +2591,10 @@ function clearSessionAndLogout() {
                                               (!!window.__AUTH_READY__ && !!(window.APP_AUTH && window.APP_AUTH.user));
                                 } catch(_) { authed2 = false; }
                                 
-                                if (!authed2 && !window.__guestMode__) { 
+                                if (!authed2) { 
                                     console.warn('[SNAPSHOT BLOCKED] not authenticated (frame load)');
                                     return;
-                                } // Allow guest mode
+                                }
                                 
                                 console.log('[SNAPSHOT] Sending to iframe on load, snap:', out2);
                                 frame.contentWindow.postMessage({ type: 'CODEBANK_ASSETS_SYNC', payload: out2 }, window.location.origin);
@@ -2805,69 +2622,7 @@ function clearSessionAndLogout() {
                         } catch(_) {}
                     }, 1000);
                     
-                    
-// UI UPDATE HANDLER - Display codes whenever assets are updated
-(function InitUIUpdateHandler() {
-    const updateCodeDisplay = function() {
-        try {
-            const codeDisplay = document.getElementById('code-display');
-            const countDisplay = document.getElementById('code-count') || document.querySelector('[data-id="code-count"]');
-            
-            if (!codeDisplay) return;
-            
-            // Get current codes from multiple sources
-            let codes = [];
-            try { codes = JSON.parse(localStorage.getItem('acc_assets') || '{}').codes || []; } catch(_) {}
-            if (!codes.length && window.__forcedAssets && window.__forcedAssets.codes) {
-                codes = window.__forcedAssets.codes;
-            }
-            if (!codes.length && window.AssetBus && typeof window.AssetBus.snapshot === 'function') {
-                const snap = window.AssetBus.snapshot();
-                codes = snap.codes || [];
-            }
-            
-            // Update code display
-            if (codes.length > 0) {
-                const latestCode = typeof codes[codes.length - 1] === 'string' ? 
-                    codes[codes.length - 1] : 
-                    (codes[codes.length - 1].code || codes[codes.length - 1]);
-                    
-                if (codeDisplay.textContent !== latestCode) {
-                    codeDisplay.textContent = latestCode;
-                    codeDisplay.style.color = '#00ff00';
-                    console.log('[UI UPDATE] Code display updated:', latestCode);
-                }
-                
-                if (countDisplay) {
-                    countDisplay.textContent = codes.length.toString();
-                }
-            }
-        } catch(e) {
-            console.log('[UI UPDATE] Error:', e.message);
-        }
-    };
-    
-    // Update on message receive
-    const origPostMessage = window.postMessage;
-    window.postMessage = function(data, origin) {
-        if (data && (data.type === 'CODEBANK_ASSETS_SYNC' || data.type === 'assetbus:snapshot')) {
-            setTimeout(updateCodeDisplay, 10);
-        }
-        return origPostMessage.call(window, data, origin);
-    };
-    
-    // Also listen to parent messages
-    window.addEventListener('message', function(e) {
-        if (e.data && (e.data.type === 'CODEBANK_ASSETS_SYNC' || e.data.type === 'assetbus:snapshot')) {
-            setTimeout(updateCodeDisplay, 10);
-        }
-    });
-    
-    // Update every 2 seconds as fallback
-    setInterval(updateCodeDisplay, 2000);
-})();
-
-// Listen for asset updates
+                    // Listen for asset updates
                     var assetsUpdateHandler = function(e) {
                         try {
                             clearTimeout(resendSnapTimeout);
@@ -3097,50 +2852,6 @@ function clearSessionAndLogout() {
     <script src="/shared/auth-global.js"></script>
     <script src="/shared/assets-direct.js"></script>
     
-    <!-- FIX: Bankode AssetBus Compatibility Bridge -->
-    <script>
-    // Fix: Make AssetsDirectBus available as AssetBus for Bankode compatibility (fixes "AssetBus not found after 5s" warning)
-    (function() {
-      // Wait for AssetsDirectBus to initialize
-      const installBridge = () => {
-        if (!window.AssetsDirectBus) return setTimeout(installBridge, 100);
-        
-        window.AssetBus = window.AssetBus || window.AssetsDirectBus;
-        
-        // Add update method that Bankode expects
-        window.AssetBus.update = window.AssetBus.update || function(snapshot, source) {
-          console.log('[AssetBus Bridge] Received snapshot from Bankode:', snapshot.code);
-          
-          // Broadcast code generated event
-          window.dispatchEvent(new CustomEvent('bankode:code-generated', { 
-            detail: snapshot.code || snapshot.latest || snapshot.latestCode 
-          }));
-          
-          // Update display immediately
-          if (typeof window.updateCodeDisplay === 'function') {
-            window.updateCodeDisplay(snapshot);
-          }
-          
-          // Update __currentCode global
-          if (snapshot.latestCode || snapshot.code) {
-            window.__currentCode = snapshot.latestCode || snapshot.code;
-          }
-          
-          return true;
-        };
-        
-        // Add snapshot method that Bankode checks for
-        window.AssetBus.snapshot = window.AssetBus.snapshot || function() {
-          return window.__forcedAssets || { codes: [], latest: null };
-        };
-        
-        console.log('[Fix] ✅ AssetBus bridge installed successfully - Bankode will now work properly');
-      };
-      
-      installBridge();
-    })();
-    </script>
-
     <!-- 6. Safe Asset List - REMOVED from main page, only in CodeBank iframe -->
     <script src="/codebank/js/safe-storage.js"></script>
     <script src="/codebank/js/guardian-3d.js"></script>
@@ -3534,68 +3245,6 @@ document.addEventListener('DOMContentLoaded', async function(){
             }
 
             // الاستماع للحدث auth:ready المنبعث من AuthCore
-// CRITICAL FIX: Ensure assets:updated events properly trigger UI sync
-
-// 1. Patch window.dispatchEvent to log when assets:updated fires
-const origDispatch = window.dispatchEvent;
-window.dispatchEvent = function(event) {
-  if (event.type === 'assets:updated') {
-    console.log('[UI SYNC] 🚀 DISPATCHED assets:updated:', event.detail);
-  }
-  return origDispatch.call(this, event);
-};
-
-// 2. Direct bridge for assets-direct.js to notify UI
-window.notifyCodeUpdate = function(codeObj) {
-  if (!codeObj) return;
-  const code = typeof codeObj === 'string' ? codeObj : codeObj.code;
-  if (!code) return;
-  
-  console.log('[UI SYNC] 🔥 Direct code update:', code);
-  
-  // Fire multiple event types to ensure it's caught
-  ['assets:updated', 'codes:updated', 'bankode:code-generated'].forEach(type => {
-    const evt = new CustomEvent(type, {
-      detail: { code, codes: [code], latest: code },
-      bubbles: true,
-      cancelable: false
-    });
-    window.dispatchEvent(evt);
-  });
-  
-  // Also update localStorage directly
-  try {
-    const assets = JSON.parse(localStorage.getItem('acc_assets') || '{"codes":[]}');
-    const lastCode = assets.codes && assets.codes.length > 0 ? assets.codes[assets.codes.length - 1] : null;
-    if (lastCode && typeof lastCode === 'string') {
-      localStorage.setItem('last_generated_code', lastCode);
-    }
-  } catch(_) {}
-};
-
-// 3. Immediate snapshot on load - bypass the blocking check
-(function initImmediateSnapshot() {
-  setTimeout(async function() {
-    try {
-      const assets = JSON.parse(localStorage.getItem('acc_assets') || '{"codes":[]}');
-      if (assets.codes && assets.codes.length > 0) {
-        const latestCode = assets.codes[assets.codes.length - 1];
-        console.log('[UI SYNC] 💾 Immediate snapshot from localStorage:', latestCode);
-        
-        // Fire event
-        const evt = new CustomEvent('assets:updated', {
-          detail: { code: latestCode, codes: assets.codes, latest: latestCode },
-          bubbles: true
-        });
-        window.dispatchEvent(evt);
-      }
-    } catch(e) {
-      console.error('[UI SYNC] Immediate snapshot failed:', e);
-    }
-  }, 100);
-})();
-
-console.log('[UI SYNC] 🚀 Display sync bridge installed');
             window.addEventListener('auth:ready', (e) => {
                 if (window.DEBUG_MODE) console.log(" Auth Ready Event received:", e.detail);
                 if (e.detail && e.detail.authenticated) {
@@ -4305,7 +3954,6 @@ console.log('[UI SYNC] 🚀 Display sync bridge installed');
 
 <!-- AUTH EMERGENCY FIXES -->
 <script>
-    <script src="/tmp/display-enhance.txt"></script>
 // This script will be injected into yt-new-clear.html before </body>
 
 // ============================================
@@ -4458,140 +4106,9 @@ console.log('[UI SYNC] 🚀 Display sync bridge installed');
   console.log('[AuthFix] ✅ FIX 5: Auth panel UI patched');
 })();
 
-console.log('═════════════════════════════════════════════════════════════');
+console.log('═════════════════════════════════════════════════════');
 console.log('✅ ALL 6 AUTH EMERGENCY FIXES INSTALLED');
 console.log('═════════════════════════════════════════════════════');
 </script>
 
-<!-- ============================================================ -->
-<!-- NUCLEAR LIVE CODE DISPLAY FIX -->
-<!-- This runs AFTER everything else and forces display updates -->
-<!-- ============================================================ -->
-<script>
-(function(){
-    'use strict';
-    
-    // STEP 1: Find your display element by scanning for the green code pattern
-    let displayEl = null;
-    function findDisplay() {
-        if (displayEl) return displayEl;
-        
-        // Try all known selectors
-        const selectors = [
-            '#code-display', '.code-display', '#generated-code',
-            '.generated-code', '.code-text', '#code-text',
-            '.display-code', '[data-code]', '.bar-code',
-            '.code-value', '#code-value'
-        ];
-        for (const s of selectors) {
-            const el = document.querySelector(s);
-            if (el) { displayEl = el; return el; }
-        }
-        
-        // Scan for element containing code pattern
-        const all = document.querySelectorAll('body *');
-        for (const el of all) {
-            if (el.children.length > 0) continue;
-            if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE') continue;
-            const txt = el.textContent || '';
-            if (txt.match(/[A-Z0-9]{4}-[A-Z0-9]{4}/)) {
-                displayEl = el;
-                return el;
-            }
-        }
-        return null;
-    }
-    
-    // STEP 2: Get latest code from ANY source
-    function getLatestCode() {
-        try {
-            // Check assets-direct cache
-            const cache = localStorage.getItem('acc_assets_cache');
-            if (cache) {
-                const d = JSON.parse(cache);
-                if (d.codes && d.codes.length) {
-                    const c = d.codes[d.codes.length - 1];
-                    return typeof c === 'string' ? c : (c.code || c.id);
-                }
-            }
-            // Check acc_assets (our fix)
-            const acc = localStorage.getItem('acc_assets');
-            if (acc) {
-                const d = JSON.parse(acc);
-                if (d.codes && d.codes.length) {
-                    const c = d.codes[d.codes.length - 1];
-                    return typeof c === 'string' ? c : (c.code || c.id);
-                }
-            }
-            // Check bankode direct storage
-            const bc = localStorage.getItem('bankode_codes');
-            if (bc) {
-                const d = JSON.parse(bc);
-                if (Array.isArray(d) && d.length) return d[d.length - 1];
-            }
-            // Check last code
-            const lc = localStorage.getItem('lastGeneratedCode');
-            if (lc) return lc;
-        } catch(e){}
-        return null;
-    }
-    
-    // STEP 3: Force update display
-    function forceUpdate() {
-        const code = getLatestCode();
-        if (!code) return;
-        
-        const el = findDisplay();
-        if (!el) {
-            // Create fallback display if none found
-            const fb = document.getElementById('nuclear-code-display');
-            if (!fb) {
-                const div = document.createElement('div');
-                div.id = 'nuclear-code-display';
-                div.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#0a0a0a;color:#00ff41;padding:8px 16px;border-radius:12px;font-family:monospace;font-size:14px;z-index:99999;border:1px solid #00ff41;box-shadow:0 0 10px #00ff41;';
-                document.body.appendChild(div);
-            }
-            document.getElementById('nuclear-code-display').textContent = code;
-            return;
-        }
-        
-        if (el.textContent !== code) {
-            el.textContent = code;
-            el.style.color = '#00ff41';
-            console.log('[NUCLEAR] Display updated:', code);
-        }
-    }
-    
-    // STEP 4: Hook into generateCode if exists
-    const origGenerate = window.generateCode;
-    if (origGenerate) {
-        window.generateCode = function(...args) {
-            const result = origGenerate.apply(this, args);
-            setTimeout(forceUpdate, 100);
-            return result;
-        };
-    }
-    
-    // STEP 5: Poll every 500ms (nuclear option)
-    setInterval(forceUpdate, 500);
-    
-    // STEP 6: Listen for ANY storage changes
-    window.addEventListener('storage', function(e){
-        if (e.key && (e.key.includes('code') || e.key.includes('asset'))) {
-            setTimeout(forceUpdate, 50);
-        }
-    });
-    
-    // STEP 7: Unblock snapshot by faking auth for display only
-    window._FAKE_AUTH_FOR_DISPLAY = true;
-    
-    // STEP 8: Run immediately
-    setTimeout(forceUpdate, 1000);
-    setTimeout(forceUpdate, 3000);
-    
-    console.log('[NUCLEAR] Live display fix active');
-})();
-</script>
-
-    <script src="/tmp/display-enhance.txt"></script>
     </body>
