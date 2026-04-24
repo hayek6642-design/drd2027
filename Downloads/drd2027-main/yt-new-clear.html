@@ -2852,6 +2852,50 @@ function clearSessionAndLogout() {
     <script src="/shared/auth-global.js"></script>
     <script src="/shared/assets-direct.js"></script>
     
+    <!-- FIX: Bankode AssetBus Compatibility Bridge -->
+    <script>
+    // Fix: Make AssetsDirectBus available as AssetBus for Bankode compatibility (fixes "AssetBus not found after 5s" warning)
+    (function() {
+      // Wait for AssetsDirectBus to initialize
+      const installBridge = () => {
+        if (!window.AssetsDirectBus) return setTimeout(installBridge, 100);
+        
+        window.AssetBus = window.AssetBus || window.AssetsDirectBus;
+        
+        // Add update method that Bankode expects
+        window.AssetBus.update = window.AssetBus.update || function(snapshot, source) {
+          console.log('[AssetBus Bridge] Received snapshot from Bankode:', snapshot.code);
+          
+          // Broadcast code generated event
+          window.dispatchEvent(new CustomEvent('bankode:code-generated', { 
+            detail: snapshot.code || snapshot.latest || snapshot.latestCode 
+          }));
+          
+          // Update display immediately
+          if (typeof window.updateCodeDisplay === 'function') {
+            window.updateCodeDisplay(snapshot);
+          }
+          
+          // Update __currentCode global
+          if (snapshot.latestCode || snapshot.code) {
+            window.__currentCode = snapshot.latestCode || snapshot.code;
+          }
+          
+          return true;
+        };
+        
+        // Add snapshot method that Bankode checks for
+        window.AssetBus.snapshot = window.AssetBus.snapshot || function() {
+          return window.__forcedAssets || { codes: [], latest: null };
+        };
+        
+        console.log('[Fix] ✅ AssetBus bridge installed successfully - Bankode will now work properly');
+      };
+      
+      installBridge();
+    })();
+    </script>
+
     <!-- 6. Safe Asset List - REMOVED from main page, only in CodeBank iframe -->
     <script src="/codebank/js/safe-storage.js"></script>
     <script src="/codebank/js/guardian-3d.js"></script>
