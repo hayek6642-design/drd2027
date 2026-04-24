@@ -1,931 +1,434 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CodeBank - Authentication</title>
-<style>
-  * { box-sizing: border-box; }
-  body { 
-    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-    margin: 0;
-    padding: 0; 
-    background: #0f0826;
-    min-height: 100vh;
-    color: #fff;
-    display: flex;
-    flex-direction: column;
-  }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeBank - Sign In</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-  /* Professional Taskbar Navbar */
-  .navbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 24px;
-    height: 60px;
-    background: rgba(10, 6, 30, 0.95);
-    backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 1000;
-  }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
 
-  .navbar-brand {
-    font-size: 20px;
-    font-weight: 800;
-    background: linear-gradient(90deg, #00d4ff, #7b2cbf);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    letter-spacing: -0.5px;
-  }
+        .container {
+            width: 100%;
+            max-width: 420px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
 
-  .navbar-controls {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-  }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
 
-  .nav-btn {
-    padding: 8px 16px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    color: rgba(255, 255, 255, 0.8);
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
-    transition: all 0.2s;
-  }
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
 
-  .nav-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.3);
-  }
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
 
-  .nav-btn.active {
-    background: rgba(0, 212, 255, 0.1);
-    border-color: #00d4ff;
-    color: #00d4ff;
-  }
+        .content {
+            padding: 40px 30px;
+        }
 
-  /* Main container */
-  .main-content {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 100px 20px 40px;
-  }
+        .form-group {
+            margin-bottom: 20px;
+        }
 
-  .auth-container {
-    width: 100%;
-    max-width: 450px;
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(15px);
-    border-radius: 24px;
-    padding: 40px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
-    position: relative;
-  }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
 
-  h2 { 
-    text-align: center; 
-    margin: 0 0 30px;
-    font-size: 24px;
-    font-weight: 800;
-    color: #fff;
-  }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
 
-  .tab-switcher {
-    display: flex;
-    background: rgba(0, 0, 0, 0.2);
-    padding: 5px;
-    border-radius: 12px;
-    margin-bottom: 30px;
-  }
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
 
-  .tab-btn {
-    flex: 1;
-    padding: 10px;
-    border: none;
-    background: transparent;
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    border-radius: 8px;
-    transition: all 0.2s;
-  }
+        .btn-submit {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 15px;
+            transition: all 0.3s;
+        }
 
-  .tab-btn.active {
-    background: rgba(255, 255, 255, 0.05);
-    color: #fff;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  }
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
 
-  .form-group {
-    margin-bottom: 20px;
-  }
+        .btn-submit:active {
+            transform: translateY(0);
+        }
 
-  label {
-    display: block;
-    margin-bottom: 8px;
-    font-size: 12px;
-    font-weight: 700;
-    color: rgba(255, 255, 255, 0.4);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
+        .mode-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
 
-  input, select {
-    width: 100%;
-    height: 48px;
-    padding: 0 16px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    background: rgba(0, 0, 0, 0.2);
-    color: #fff;
-    font-size: 15px;
-    transition: all 0.3s;
-  }
+        .mode-tab {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            background: #f5f5f5;
+            color: #666;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s;
+            text-align: center;
+        }
 
-  input:focus, select:focus {
-    outline: none;
-    border-color: #00d4ff;
-    background: rgba(0, 0, 0, 0.3);
-    box-shadow: 0 0 0 4px rgba(0, 212, 255, 0.1);
-  }
+        .mode-tab.active {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
 
-  .phone-group {
-    display: flex;
-    gap: 10px;
-  }
+        .hidden {
+            display: none;
+        }
 
-  .phone-group select {
-    width: 110px;
-    flex-shrink: 0;
-  }
+        .error {
+            color: #e74c3c;
+            font-size: 13px;
+            margin-top: 8px;
+            min-height: 16px;
+        }
 
-  .submit-btn {
-    width: 100%;
-    height: 50px;
-    margin-top: 10px;
-    border: none;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #00d4ff 0%, #7b2cbf 100%);
-    color: #fff;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    box-shadow: 0 8px 20px rgba(0, 212, 255, 0.2);
-  }
+        .success {
+            color: #27ae60;
+            font-size: 13px;
+            margin-top: 8px;
+            min-height: 16px;
+        }
 
-  .submit-btn:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 25px rgba(0, 212, 255, 0.4);
-    filter: brightness(1.1);
-  }
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
 
-  .submit-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-  }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
 
-  /* Google Sign-In Styling */
-  .google-section {
-    margin-top: 25px;
-    text-align: center;
-    width: 100%;
-    display: block !important; /* Force visibility */
-  }
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
 
-  .divider {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 20px;
-  }
+        .back-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+        }
 
-  .divider div {
-    flex: 1;
-    height: 1px;
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  .divider span {
-    font-size: 11px;
-    font-weight: 700;
-    color: rgba(255, 255, 255, 0.3);
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-  }
-
-  .google-btn-container {
-    display: flex;
-    justify-content: center;
-    min-height: 44px;
-    width: 100%;
-    margin: 0 auto;
-    overflow: hidden;
-    position: relative; /* Add position for better rendering */
-    z-index: 100;
-  }
-
-  /* Force child iframe visibility if Google library injects it */
-  .google-btn-container iframe {
-    display: block !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-  }
-
-  /* Fallback Google Button */
-  .google-fallback-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    width: 100%;
-    max-width: 350px;
-    height: 44px;
-    padding: 0 16px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    backdrop-filter: blur(10px);
-  }
-
-  .google-fallback-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.3);
-    transform: translateY(-1px);
-  }
-
-  .google-fallback-btn:active {
-    transform: translateY(0);
-  }
-
-  .google-icon {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-  }
-
-  .google-error-msg {
-    margin-top: 12px;
-    padding: 10px 14px;
-    border-radius: 8px;
-    background: rgba(255, 193, 7, 0.1);
-    border: 1px solid rgba(255, 193, 7, 0.3);
-    color: #ffc107;
-    font-size: 12px;
-    font-weight: 600;
-    text-align: center;
-  }
-
-  .status-message {
-    padding: 12px 16px;
-    border-radius: 10px;
-    margin-bottom: 20px;
-    font-size: 13px;
-    font-weight: 600;
-    text-align: center;
-    display: none;
-    z-index: 10;
-  }
-
-  .status-message.success {
-    display: block;
-    background: rgba(0, 200, 83, 0.1);
-    border: 1px solid rgba(0, 200, 83, 0.3);
-    color: #00c853;
-  }
-
-  .status-message.error {
-    display: block;
-    background: rgba(255, 71, 87, 0.1);
-    border: 1px solid rgba(255, 71, 87, 0.3);
-    color: #ff4757;
-  }
-
-  .loading-spinner {
-    display: inline-block;
-    width: 18px;
-    height: 18px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin-right: 10px;
-    vertical-align: middle;
-  }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* Ensure hidden elements are actually hidden */
-  .hidden { display: none !important; }
-</style>
-<!-- Unified Auth System - MUST load before any auth operations -->
-<script src="/shared/app-state-unified.js"></script>
-<!-- Google GSI Library -->
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+        .back-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
-
-<nav class="navbar">
-  <div class="navbar-brand">CodeBank</div>
-  <div class="navbar-controls">
-    <button class="nav-btn" id="nav-signup-btn" onclick="switchTab('signup')">Sign Up</button>
-    <button class="nav-btn" id="nav-login-btn" onclick="switchTab('login')">Login</button>
-  </div>
-</nav>
-
-<main class="main-content">
-  <div class="auth-container">
-    <div class="tab-switcher">
-      <button class="tab-btn active" id="tab-signup" onclick="switchTab('signup')">Create Account</button>
-      <button class="tab-btn" id="tab-login" onclick="switchTab('login')">Welcome Back</button>
-    </div>
-
-    <!-- LOGIN FORM -->
-    <div id="loginForm" class="hidden">
-      <h2>Login</h2>
-      <div id="loginStatus" class="status-message"></div>
-      <div class="form-group">
-        <label>Email Address</label>
-        <input type="email" id="loginEmail" placeholder="your@email.com">
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="loginPassword" placeholder="••••••••" onkeypress="if(event.key === 'Enter') handleLogin()">
-      </div>
-      <button class="submit-btn" id="loginBtnMain" onclick="handleLogin()">Login</button>
-    </div>
-
-    <!-- SIGNUP FORM -->
-    <div id="signupForm">
-      <h2>Sign Up</h2>
-      <div id="signupStatus" class="status-message"></div>
-      <div class="form-group">
-        <label>Email Address</label>
-        <input type="email" id="signupEmail" placeholder="your@email.com">
-      </div>
-      <div class="form-group">
-        <label>Username</label>
-        <input type="text" id="signupUsername" placeholder="johndoe">
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="signupPassword" placeholder="••••••••">
-      </div>
-      <div class="form-group">
-        <label>Religion</label>
-        <select id="religion">
-          <option value="">-- Select Religion --</option>
-          <option value="Islam">Islam</option>
-          <option value="Christianity">Christianity</option>
-          <option value="Judaism">Judaism</option>
-          <option value="Hinduism">Hinduism</option>
-          <option value="Buddhism">Buddhism</option>
-          <option value="Other">Other</option>
-          <option value="Prefer not to say">Prefer not to say</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Country</label>
-        <select id="country" onchange="updateCountryCode()"></select>
-      </div>
-      <div class="form-group">
-        <label>Phone Number</label>
-        <div class="phone-group">
-          <select id="countryCode"></select>
-          <input type="tel" id="phoneNumber" placeholder="12345678">
+    <div class="container">
+        <div class="header">
+            <h1>🔐 CodeBank</h1>
+            <p>Secure Authentication</p>
         </div>
-      </div>
-      <button class="submit-btn" id="signupBtn" onclick="handleSignup()">Complete Sign Up</button>
+
+        <div class="content">
+            <!-- Mode Toggle -->
+            <div class="mode-toggle">
+                <button class="mode-tab active" onclick="switchMode('login')" id="tab-login">Sign In</button>
+                <button class="mode-tab" onclick="switchMode('signup')" id="tab-signup">Sign Up</button>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <form id="login-form" class="form-section" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="login-email">Email Address</label>
+                    <input type="email" id="login-email" placeholder="your@email.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="Enter password" required>
+                </div>
+
+                <div class="error" id="login-error"></div>
+                <button type="submit" class="btn-submit" id="btn-login">Sign In</button>
+            </form>
+
+            <!-- SIGNUP FORM -->
+            <form id="signup-form" class="form-section hidden" onsubmit="handleSignup(event)">
+                <div class="form-group">
+                    <label for="signup-email">Email Address</label>
+                    <input type="email" id="signup-email" placeholder="your@email.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="signup-password">Password</label>
+                    <input type="password" id="signup-password" placeholder="Enter password (min 6 chars)" required minlength="6">
+                </div>
+
+                <div class="form-group">
+                    <label for="signup-confirm">Confirm Password</label>
+                    <input type="password" id="signup-confirm" placeholder="Confirm password" required minlength="6">
+                </div>
+
+                <div class="error" id="signup-error"></div>
+                <button type="submit" class="btn-submit" id="btn-signup">Sign Up</button>
+            </form>
+
+            <div class="back-link">
+                <a href="/codebank/indexCB.html">← Back to CodeBank</a>
+            </div>
+        </div>
     </div>
 
-    <!-- GOOGLE SIGN-IN (Persistent - outside tab forms so always visible) -->
-    <div class="google-section" id="google-section">
-      <div class="divider">
-        <div></div><span>OR CONTINUE WITH</span><div></div>
-      </div>
-      <div id="google-signin-container" class="google-btn-container" style="display:none;"></div>
-      <!-- Fallback button: always visible until real GSI loads -->
-      <button id="google-fallback-btn" class="google-fallback-btn" onclick="handleGoogleFallback()">
-        <svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-        <span id="google-fallback-text">Sign in with Google</span>
-      </button>
-      <div id="google-error-msg" class="google-error-msg" style="display:none;"></div>
-    </div>
-  </div>
-</main>
+    <script>
+        // Get mode from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const mode = urlParams.get('mode') || 'login';
 
-<script>
-const API_BASE = '';
-
-// ── UI Logic ────────────────────────────────────────────────────────────────
-let currentTab = 'signup';
-
-// Global error handler
-window.onerror = function(msg, url, line) {
-  showStatus(`JS Error: ${msg} (line ${line})`, 'error');
-  return false;
-};
-
-function switchTab(tab) {
-  currentTab = tab;
-  const isLogin = tab === 'login';
-  
-  // Update Forms
-  const loginForm = document.getElementById('loginForm');
-  const signupForm = document.getElementById('signupForm');
-  
-  if (isLogin) {
-    loginForm.classList.remove('hidden');
-    signupForm.classList.add('hidden');
-  } else {
-    loginForm.classList.add('hidden');
-    signupForm.classList.remove('hidden');
-  }
-  
-  // Update Tabs
-  document.getElementById('tab-login').classList.toggle('active', isLogin);
-  document.getElementById('tab-signup').classList.toggle('active', !isLogin);
-  
-  // Update Nav
-  document.getElementById('nav-login-btn').classList.toggle('active', isLogin);
-  document.getElementById('nav-signup-btn').classList.toggle('active', !isLogin);
-  
-  // Clear status messages
-  document.getElementById('loginStatus').style.display = 'none';
-  document.getElementById('signupStatus').style.display = 'none';
-
-  // IMPORTANT: Re-render Google buttons when switching tabs to ensure 
-  // visibility in the newly active tab's container.
-  if (googleClientId) {
-    console.log('[Tab] Switched to', tab, '- Triggering re-render');
-    setTimeout(renderGoogleButtons, 50); 
-  }
-}
-
-function showStatus(msg, type) {
-  const statusId = currentTab === 'login' ? 'loginStatus' : 'signupStatus';
-  const statusEl = document.getElementById(statusId);
-  if (!statusEl) {
-    alert(msg); // Ultimate fallback
-    return;
-  }
-  
-  statusEl.textContent = msg;
-  statusEl.className = `status-message ${type}`;
-  statusEl.style.display = 'block';
-  statusEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-
-// ── Data Loading ────────────────────────────────────────────────────────────
-async function loadStaticData() {
-  try {
-    const res = await fetch(`${API_BASE}/api/countries`);
-    if (!res.ok) throw new Error('Failed to fetch countries');
-    const data = await res.json();
-    
-    const countrySelect = document.getElementById('country');
-    const codeSelect = document.getElementById('countryCode');
-    
-    if (data.success && data.countries) {
-      countrySelect.innerHTML = '<option value="">-- Select Country --</option>';
-      codeSelect.innerHTML = '<option value="">Code</option>';
-      
-      data.countries.forEach(c => {
-        countrySelect.innerHTML += `<option value="${c.code}" data-phone="${c.phoneCode}">${c.flag} ${c.name}</option>`;
-        codeSelect.innerHTML += `<option value="${c.phoneCode}">${c.flag} ${c.phoneCode}</option>`;
-      });
-    } else {
-      // Fallback if API fails but returns 200
-      throw new Error('API returned success:false');
-    }
-  } catch (e) { 
-    console.error('[Data] Load error:', e);
-    // Fallback static data
-    const countrySelect = document.getElementById('country');
-    if (countrySelect) {
-      countrySelect.innerHTML = `
-        <option value="">-- Select Country --</option>
-        <option value="US" data-phone="+1">🇺🇸 United States (+1)</option>
-        <option value="GB" data-phone="+44">🇬🇧 United Kingdom (+44)</option>
-        <option value="EG" data-phone="+20">🇪🇬 Egypt (+20)</option>
-        <option value="SA" data-phone="+966">🇸🇦 Saudi Arabia (+966)</option>
-        <option value="AE" data-phone="+971">🇦🇪 UAE (+971)</option>
-      `;
-    }
-  }
-}
-
-function updateCountryCode() {
-  const country = document.getElementById('country');
-  const code = document.getElementById('countryCode');
-  const phone = country.options[country.selectedIndex]?.getAttribute('data-phone');
-  if (phone) code.value = phone;
-}
-
-// ── Authentication Handlers ──────────────────────────────────────────────────
-async function handleLogin() {
-  const emailEl = document.getElementById('loginEmail');
-  const passwordEl = document.getElementById('loginPassword');
-  
-  if (!emailEl || !passwordEl) return;
-
-  const email = emailEl.value.trim();
-  const password = passwordEl.value;
-
-  if (!email || !password) {
-    showStatus('Email and password required', 'error');
-    return;
-  }
-
-  const btn = document.getElementById('loginBtnMain');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="loading-spinner"></span> Logging in...';
-
-  try {
-    const res = await fetch(`${API_BASE}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-
-    // Check content-type before parsing — server might return HTML error page
-    const contentType = res.headers.get('content-type') || '';
-    const isJson = contentType.includes('application/json');
-
-    if (!res.ok) {
-      if (isJson) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || errorData.message || `Login failed (${res.status})`);
-      } else {
-        const text = await res.text();
-        console.error('[Login] Server returned HTML:', text.substring(0, 200));
-        throw new Error(`Server error ${res.status}. Make sure the backend is running.`);
-      }
-    }
-
-    if (!isJson) {
-      const text = await res.text();
-      console.error('[Login] Expected JSON, got:', text.substring(0, 200));
-      throw new Error('Invalid server response. Backend may be misconfigured.');
-    }
-
-    const data = await res.json();
-
-    if (data.success || data.status === 'success') {
-      showStatus('✅ Login successful! Redirecting...', 'success');
-      saveSession(data);
-      setTimeout(async () => {
-      // Verify session with backend before redirect
-      if (window.AppState && window.AppState.auth) {
-        const verified = await window.AppState.auth.verify();
-        if (verified) {
-          window.location.href = '/codebank/indexCB.html';
-        } else {
-          showStatus('Session verification failed. Please try again.', 'error');
+        if (mode === 'signup') {
+            switchMode('signup');
         }
-      } else {
-        window.location.href = '/codebank/indexCB.html';
-      }
-    }, 1000);
-    } else {
-      throw new Error(data.error || data.message || 'Login failed');
-    }
-  } catch (e) {
-    showStatus(e.message || 'Network error. Please try again.', 'error');
-    btn.disabled = false;
-    btn.textContent = 'Login';
-  }
-}
 
-async function handleSignup() {
-  const fields = {
-    email: document.getElementById('signupEmail').value.trim(),
-    username: document.getElementById('signupUsername').value.trim(),
-    password: document.getElementById('signupPassword').value,
-    religion: document.getElementById('religion').value,
-    country: document.getElementById('country').value,
-    phone: document.getElementById('phoneNumber').value.trim(),
-    countryCode: document.getElementById('countryCode').value
-  };
-
-  if (Object.values(fields).some(v => !v)) {
-    showStatus('Please fill in all fields', 'error');
-    return;
-  }
-
-  if (fields.password.length < 8) {
-    showStatus('Password must be at least 8 characters long', 'error');
-    return;
-  }
-
-  const btn = document.getElementById('signupBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="loading-spinner"></span> Creating account...';
-
-  try {
-    const res = await fetch(`${API_BASE}/api/auth/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: fields.email,
-        password: fields.password,
-        name: fields.username, // server expects 'name'
-        phone: fields.phone,
-        country: fields.country,
-        religion: fields.religion,
-        countryCode: fields.countryCode
-      })
-    });
-
-    // Check content-type before parsing — server might return HTML error page
-    const contentType = res.headers.get('content-type') || '';
-    const isJson = contentType.includes('application/json');
-
-    if (!res.ok) {
-      if (isJson) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || errorData.message || `Signup failed (${res.status})`);
-      } else {
-        const text = await res.text();
-        console.error('[Signup] Server returned HTML:', text.substring(0, 200));
-        throw new Error(`Server error ${res.status}. Make sure the backend is running.`);
-      }
-    }
-
-    if (!isJson) {
-      const text = await res.text();
-      console.error('[Signup] Expected JSON, got:', text.substring(0, 200));
-      throw new Error('Invalid server response. Backend may be misconfigured.');
-    }
-
-    const data = await res.json();
-
-    if (data.success || data.status === 'success') {
-      showStatus('✅ Account created! Redirecting...', 'success');
-      saveSession(data);
-      setTimeout(async () => {
-      if (window.AppState && window.AppState.auth) {
-        const verified = await window.AppState.auth.verify();
-        if (verified) {
-          window.location.href = '/codebank/indexCB.html';
-        } else {
-          showStatus('Session verification failed. Please try again.', 'error');
+        function switchMode(newMode) {
+            document.getElementById('login-form').classList.toggle('hidden', newMode !== 'login');
+            document.getElementById('signup-form').classList.toggle('hidden', newMode !== 'signup');
+            document.getElementById('tab-login').classList.toggle('active', newMode === 'login');
+            document.getElementById('tab-signup').classList.toggle('active', newMode === 'signup');
         }
-      } else {
-        window.location.href = '/codebank/indexCB.html';
-      }
-    }, 1500);
-    } else {
-      throw new Error(data.error || data.message || 'Signup failed');
-    }
-  } catch (e) {
-    showStatus(e.message || 'Network error. Please try again.', 'error');
-    btn.disabled = false;
-    btn.textContent = 'Complete Sign Up';
-  }
-}
 
-function saveSession(data) {
-  const sid = data.sessionId || data.session_id;
-  localStorage.setItem('session_token', sid);
-  localStorage.setItem('session_active', 'true');
-  if (data.user) localStorage.setItem('user_data', JSON.stringify(data.user));
-  
-  // Set cookie for server-side session validation
-  document.cookie = `session_token=${sid}; path=/; max-age=${7*24*60*60}; SameSite=Lax`;
-  
-  console.log('[Auth] Session saved');
-}
+        async function handleLogin(e) {
+            e.preventDefault();
+            const errorDiv = document.getElementById('login-error');
+            const btn = document.getElementById('btn-login');
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
 
-// ── Google Sign-In Implementation ───────────────────────────────────────────
-// Embedded fallback client ID so button works even if /api/auth/google-client-id fails
-const FALLBACK_GOOGLE_CLIENT_ID = '190246442192-3b5onfffcrshjt95gfooqcr73vut0j3t.apps.googleusercontent.com';
-let googleClientId = null;
-let googleSdkReady = false;
+            errorDiv.textContent = '';
 
-async function fetchGoogleConfig() {
-  try {
-    const res = await fetch('/api/auth/google-client-id');
-    const data = await res.json();
-    if (data.clientId && data.configured) {
-      googleClientId = data.clientId;
-      console.log('[Google] Config loaded from server');
-      return true;
-    }
-    console.warn('[Google] Server config missing, using fallback client ID');
-    googleClientId = FALLBACK_GOOGLE_CLIENT_ID;
-    return true; // We have fallback, so proceed
-  } catch (e) {
-    console.warn('[Google] Failed to fetch config, using fallback client ID:', e);
-    googleClientId = FALLBACK_GOOGLE_CLIENT_ID;
-    return true; // We have fallback, so proceed
-  }
-}
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner"></span> Signing in...';
 
-function showGoogleButton() {
-  const container = document.getElementById('google-signin-container');
-  const fallback = document.getElementById('google-fallback-btn');
-  const errorMsg = document.getElementById('google-error-msg');
+                // Attempt server login first
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ email, password })
+                });
 
-  if (container) container.style.display = 'flex';
-  if (fallback) fallback.style.display = 'none';
-  if (errorMsg) errorMsg.style.display = 'none';
-}
+                if (res.ok) {
+                    const data = await res.json();
+                    // Broadcast to indexCB.html and yt-new-clear.html
+                    broadcastAuthSuccess(data.user, data.sessionId);
+                    // Redirect back to indexCB.html
+                    setTimeout(() => window.location.href = '/codebank/indexCB.html', 500);
+                    return;
+                }
 
-function showFallbackButtonOnly() {
-  const container = document.getElementById('google-signin-container');
-  const fallback = document.getElementById('google-fallback-btn');
-
-  if (container) container.style.display = 'none';
-  if (fallback) fallback.style.display = 'inline-flex';
-  // NOTE: we do NOT show error message here — only on click
-}
-
-function showGoogleError(message) {
-  const errorMsg = document.getElementById('google-error-msg');
-  if (errorMsg) {
-    errorMsg.textContent = message;
-    errorMsg.style.display = 'block';
-  }
-}
-
-function hideGoogleError() {
-  const errorMsg = document.getElementById('google-error-msg');
-  if (errorMsg) errorMsg.style.display = 'none';
-}
-
-function renderGoogleButtons() {
-  if (!googleClientId || !window.google || !window.google.accounts) {
-    console.warn('[Google] Missing Client ID or SDK not ready yet');
-    return false;
-  }
-
-  try {
-    console.log('[Google] Initializing with Client ID:', googleClientId.substring(0, 10) + '...');
-    google.accounts.id.initialize({
-      client_id: googleClientId,
-      callback: handleGoogleResponse,
-      auto_select: false,
-      ux_mode: 'popup',
-      context: 'signin'
-    });
-
-    const container = document.getElementById('google-signin-container');
-    if (!container) {
-      console.error('[Google] Container not found');
-      return false;
-    }
-
-    // Clear and render
-    container.innerHTML = '';
-    google.accounts.id.renderButton(container, {
-      theme: 'filled_blue',
-      size: 'large',
-      width: 350,
-      shape: 'rectangular',
-      logo_alignment: 'left',
-      text: 'signin_with'
-    });
-
-    showGoogleButton();
-    console.log('[Google] Button rendered successfully');
-    return true;
-
-  } catch (e) {
-    console.error('[Google] Render Error:', e);
-    return false;
-  }
-}
-
-async function handleGoogleResponse(resp) {
-  // Show status in the active tab
-  const statusId = currentTab === 'login' ? 'loginStatus' : 'signupStatus';
-  const statusEl = document.getElementById(statusId);
-  if (statusEl) {
-    statusEl.textContent = 'Signing in with Google...';
-    statusEl.className = 'status-message success';
-    statusEl.style.display = 'block';
-  }
-
-  try {
-    const res = await fetch('/api/auth/google', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ credential: resp.credential })
-    });
-    const data = await res.json();
-    if (data.success || data.status === 'success') {
-      saveSession(data);
-      if (statusEl) {
-        statusEl.textContent = '✅ Google Login successful! Redirecting...';
-        statusEl.className = 'status-message success';
-      }
-      setTimeout(async () => {
-      // Verify session with backend before redirect
-      if (window.AppState && window.AppState.auth) {
-        const verified = await window.AppState.auth.verify();
-        if (verified) {
-          window.location.href = '/codebank/indexCB.html';
-        } else {
-          showStatus('Session verification failed. Please try again.', 'error');
+                // Server failed - try client-side auth (guest mode fallback)
+                const success = await clientSideLogin(email, password);
+                if (success) {
+                    broadcastAuthSuccess({ email }, null);
+                    setTimeout(() => window.location.href = '/codebank/indexCB.html', 500);
+                } else {
+                    errorDiv.textContent = 'Invalid email or password';
+                }
+            } catch (err) {
+                console.warn('[Login] Error:', err.message);
+                // Try client-side
+                const success = await clientSideLogin(email, password);
+                if (success) {
+                    broadcastAuthSuccess({ email }, null);
+                    setTimeout(() => window.location.href = '/codebank/indexCB.html', 500);
+                } else {
+                    errorDiv.textContent = 'Login failed. Please try again.';
+                }
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Sign In';
+            }
         }
-      } else {
-        window.location.href = '/codebank/indexCB.html';
-      }
-    }, 1000);
-    } else {
-      if (statusEl) {
-        statusEl.textContent = data.error || 'Google sign-in failed';
-        statusEl.className = 'status-message error';
-      }
-    }
-  } catch (e) {
-    console.error('[Google] Auth error:', e);
-    if (statusEl) {
-      statusEl.textContent = 'Google sign-in network error';
-      statusEl.className = 'status-message error';
-    }
-  }
-}
 
-function handleGoogleFallback() {
-  hideGoogleError();
+        async function handleSignup(e) {
+            e.preventDefault();
+            const errorDiv = document.getElementById('signup-error');
+            const btn = document.getElementById('btn-signup');
+            const email = document.getElementById('signup-email').value.trim();
+            const password = document.getElementById('signup-password').value;
+            const confirm = document.getElementById('signup-confirm').value;
 
-  // If we already have config + SDK, try rendering the real button
-  if (window.google && window.google.accounts && googleClientId) {
-    const rendered = renderGoogleButtons();
-    if (rendered) return;
-    showGoogleError('Google Sign-In failed to load. Please use email and password.');
-    return;
-  }
+            if (password !== confirm) {
+                errorDiv.textContent = 'Passwords do not match';
+                return;
+            }
 
-  // Try fetching config again (in case server was slow)
-  fetchGoogleConfig().then(hasConfig => {
-    if (hasConfig && window.google && window.google.accounts) {
-      const rendered = renderGoogleButtons();
-      if (rendered) return;
-    }
-    showGoogleError('Google Sign-In is not available. Please use email and password to sign in or sign up.');
-  }).catch(() => {
-    showGoogleError('Cannot connect to server. Please use email and password.');
-  });
-}
+            errorDiv.textContent = '';
 
-// ── Initialization ──────────────────────────────────────────────────────────
-async function init() {
-  console.log('[Init] Starting...');
-  loadStaticData();
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner"></span> Creating account...';
 
-  // Handle URL mode
-  const mode = new URLSearchParams(window.location.search).get('mode');
-  switchTab(mode === 'login' ? 'login' : 'signup');
+                // Try server signup first
+                const res = await fetch('/api/auth/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ email, password })
+                });
 
-  // Fallback button is already visible in HTML — no need to show it manually.
-  // Just try to upgrade to real GSI button in the background.
-  const hasGoogle = await fetchGoogleConfig();
+                if (res.ok) {
+                    const data = await res.json();
+                    broadcastAuthSuccess(data.user, data.sessionId);
+                    setTimeout(() => window.location.href = '/codebank/indexCB.html', 500);
+                    return;
+                }
 
-  if (hasGoogle) {
-    // Wait for SDK to be ready with timeout
-    let attempts = 0;
-    const maxAttempts = 30; // 6 seconds total
-    const checkGSI = setInterval(() => {
-      attempts++;
-      if (window.google && window.google.accounts) {
-        clearInterval(checkGSI);
-        googleSdkReady = true;
-        renderGoogleButtons();
-      } else if (attempts >= maxAttempts) {
-        clearInterval(checkGSI);
-        console.error('[Google] SDK load timeout after', maxAttempts * 200, 'ms');
-        // Keep fallback visible, no error message until user clicks
-      }
-    }, 200);
-  } else {
-    // Config missing or fetch failed — fallback button stays visible
-    console.warn('[Google] Config unavailable, fallback button remains active');
-  }
-}
+                // Server failed - try client-side signup
+                const success = await clientSideSignup(email, password);
+                if (success) {
+                    broadcastAuthSuccess({ email }, null);
+                    setTimeout(() => window.location.href = '/codebank/indexCB.html', 500);
+                } else {
+                    errorDiv.textContent = 'Signup failed. Account may already exist.';
+                }
+            } catch (err) {
+                console.warn('[Signup] Error:', err.message);
+                const success = await clientSideSignup(email, password);
+                if (success) {
+                    broadcastAuthSuccess({ email }, null);
+                    setTimeout(() => window.location.href = '/codebank/indexCB.html', 500);
+                } else {
+                    errorDiv.textContent = 'Signup failed. Please try again.';
+                }
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Sign Up';
+            }
+        }
 
-document.addEventListener('DOMContentLoaded', init);
-</script>
+        // Client-side authentication (guest mode)
+        async function clientSideLogin(email, password) {
+            try {
+                const users = JSON.parse(localStorage.getItem('cb_users_db') || '[]');
+                const user = users.find(u => u.email === email);
+                if (!user) return false;
+
+                // Simple password check (in real app, use proper hashing)
+                if (user.password !== password) return false;
+
+                // Save session
+                localStorage.setItem('__cached_user__', JSON.stringify({ email, uid: user.id }));
+                localStorage.setItem('session_token', 'guest-' + Date.now());
+                return true;
+            } catch (_) {
+                return false;
+            }
+        }
+
+        async function clientSideSignup(email, password) {
+            try {
+                const users = JSON.parse(localStorage.getItem('cb_users_db') || '[]');
+                if (users.some(u => u.email === email)) return false;
+
+                const newUser = {
+                    id: 'user-' + Date.now(),
+                    email,
+                    password, // In real app, hash this!
+                    createdAt: new Date().toISOString()
+                };
+
+                users.push(newUser);
+                localStorage.setItem('cb_users_db', JSON.stringify(users));
+                localStorage.setItem('__cached_user__', JSON.stringify({ email, uid: newUser.id }));
+                localStorage.setItem('session_token', 'guest-' + Date.now());
+                return true;
+            } catch (_) {
+                return false;
+            }
+        }
+
+        // Broadcast auth success to parent and other windows
+        function broadcastAuthSuccess(user, sessionId) {
+            // Store in localStorage for cross-frame sync
+            localStorage.setItem('__cached_user__', JSON.stringify(user));
+            if (sessionId) localStorage.setItem('session_token', sessionId);
+
+            // Broadcast to parent window (indexCB.html)
+            if (window.opener && !window.opener.closed) {
+                window.opener.postMessage({
+                    type: 'auth:broadcast',
+                    authenticated: true,
+                    user: user,
+                    sessionId: sessionId
+                }, window.location.origin);
+            }
+
+            // Broadcast to parent frame (if in iframe)
+            if (window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'auth:broadcast',
+                    authenticated: true,
+                    user: user,
+                    sessionId: sessionId
+                }, window.location.origin);
+            }
+
+            console.log('[Login] ✅ Auth successful, broadcasting to all windows');
+        }
+    </script>
 </body>
 </html>

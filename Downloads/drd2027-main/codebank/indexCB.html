@@ -2262,6 +2262,20 @@
         // Show a message that user needs to sign in first
         console.log('[CodeBank] Login requested - user must sign in manually');
         break;
+      case 'auth:broadcast':
+        // Received auth success from login.html
+        console.log('[CodeBank] Received auth broadcast:', event.data.user?.email);
+        globalAuthState.authenticated = event.data.authenticated;
+        globalAuthState.user = event.data.user;
+        globalAuthState.userId = event.data.user?.email || event.data.user?.uid;
+        globalAuthState.token = event.data.sessionId;
+        localStorage.setItem('__cached_user__', JSON.stringify(event.data.user));
+        if (event.data.sessionId) localStorage.setItem('session_token', event.data.sessionId);
+        // Broadcast to all iframes
+        broadcastAuthToAllIframes('AUTH_CHANGED', globalAuthState);
+        // Update navbar
+        if (window.updateNavbarAuthState) updateNavbarAuthState();
+        break;
     }
   });
 
