@@ -1,41 +1,42 @@
 /**
- * ⭐ CORS & Security Headers Fix
- * Fixes:
- * 1. CORS for all origins (development mode)
- * 2. Removes x-guest-mode header from aladhan.com API calls
- * 3. Sets proper security headers
+ * CORS & Headers Middleware
+ * Add to server.js BEFORE other middleware
  */
 
 export function setupCORSHeaders(app) {
-  // Apply CORS globally
   app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    const origin = req.headers.origin;
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Guest-Mode, X-Session-Token');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Max-Age', '3600');
+    res.header('Access-Control-Expose-Headers', 'X-Total-Count, X-Page-Number, X-Auth-Status');
     
-    // Handle preflight requests
-    if (req.method === 'OPTIONS') {
-      return res.sendStatus(200);
-    }
+    if (req.method === 'OPTIONS') return res.sendStatus(200);
     next();
   });
 }
 
 export function setupAuthHeaders(app) {
-  // Add security headers
   app.use((req, res, next) => {
-    // Ensure auth headers don't include problematic headers
-    // This prevents x-guest-mode and similar custom headers from breaking CORS with third-party APIs
-    if (req.headers['x-guest-mode']) {
-      delete req.headers['x-guest-mode'];
-    }
+    const authHeader = req.headers.authorization;
+    const sessionToken = req.headers['x-session-token'];
     
-    // Set security headers
-    res.header('X-Content-Type-Options', 'nosniff');
-    res.header('X-Frame-Options', 'SAMEORIGIN');
-    res.header('X-XSS-Protection', '1; mode=block');
+    req.auth = {
+      token: null,
+      sessionToken: sessionToken,
+      guestMode: req.headers['x-guest-mode'] === 'true',
+      type: null
+    };
+    
+    if (authHeader?.startsWith('Bearer ')) {
+      req.auth.token = authHeader.substring(7);
+      req.auth.type = 'jwt';
+    }
     
     next();
   });
 }
+
+export default { setupCORSHeaders, setupAuthHeaders };
