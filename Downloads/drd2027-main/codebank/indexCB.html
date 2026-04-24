@@ -2682,6 +2682,15 @@
         }
     };
     
+    // Listen for auth trigger from parent app (yt-new-clear)
+    window.addEventListener('message', function(e) {
+        if (e.data && e.data.type === 'TRIGGER_AUTH') {
+            console.log('[Auth] Received trigger from parent app');
+            // Open login page as fallback (or trigger local auth)
+            window.location.href = '/login.html';
+        }
+    });
+
     // DANGER: Prevent auth modal auto-show after auth state loads
     const originalShowModal = window.showAuthModal || window.showLoginModal;
     window.showAuthModal = window.showLoginModal = function() {
