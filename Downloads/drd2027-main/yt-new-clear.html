@@ -102,7 +102,9 @@ function clearSessionAndLogout() {
     (function ensureCodesInSnapshot() {
         // Get codes from localStorage cache
         let cache = null;
-        try { cache = localStorage.getItem('assets_cache'); } catch(e) {}
+        try { 
+            cache = localStorage.getItem('acc_assets') || localStorage.getItem('assets_cache') || localStorage.getItem('codebank_assets');
+        } catch(e) {}
         let assets = cache ? JSON.parse(cache) : { codes: [], silver: [], gold: [] };
         
         // If cache is empty but codes exist in memory, use those
@@ -120,10 +122,19 @@ function clearSessionAndLogout() {
         } catch(e) {}
         
         // Save back to ensure snapshot picks it up
-        try { localStorage.setItem('assets_cache', JSON.stringify(assets)); } catch(e) {}
+        try { 
+            localStorage.setItem('acc_assets', JSON.stringify(assets));
+            localStorage.setItem('assets_cache', JSON.stringify(assets));
+            localStorage.setItem('codebank_assets', JSON.stringify(assets));
+        } catch(e) {}
         window.__forcedAssets = assets;
         
-        console.log('[Code Fix] Forced', assets.codes.length, 'codes into snapshot');
+        // Also add latestCode for UI compatibility
+        if (assets.codes && assets.codes.length > 0) {
+            const latest = assets.codes[assets.codes.length - 1];
+            assets.latestCode = typeof latest === 'string' ? latest : (latest.code || latest);
+        }
+        console.log('[Code Fix] Forced', assets.codes.length, 'codes into snapshot (latestCode:', assets.latestCode, ')');
     })();
     </script>
     
