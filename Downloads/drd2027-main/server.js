@@ -433,6 +433,83 @@ app.get('/api/auth/session', async (req, res) => {
   }
 });
 
+// ✅ CRITICAL FIX: /api/auth/me - Real user endpoint (MUST be before Zagel mount)
+app.get('/api/auth/me', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.replace('Bearer ', '') || req.cookies?.session_token || null;
+    
+    if (!token) {
+      return res.status(401).json({
+        authenticated: false,
+        message: 'No authentication token provided',
+        user: null
+      });
+    }
+    
+    // Check devSessions first
+    let session = devSessions.get(token);
+    
+    // Try JWT verification as fallback
+    if (!session) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret-key-change-in-production');
+        if (decoded && (decoded.userId || decoded.id)) {
+          session = {
+            userId: decoded.userId || decoded.id,
+            email: decoded.email,
+            role: 'user'
+          };
+        }
+      } catch (e) {
+        // Invalid JWT
+      }
+    }
+    
+    // DB fallback
+    if (!session) {
+      try {
+        const dbSess = await query('SELECT user_id, expires_at FROM auth_sessions WHERE token = $1', [token]);
+        if (dbSess.rows && dbSess.rows.length > 0) {
+          const expiry = new Date(dbSess.rows[0].expires_at);
+          if (expiry > new Date()) {
+            const userId = dbSess.rows[0].user_id;
+            const userRes = await query('SELECT email, user_type FROM users WHERE id = $1', [userId]);
+            if (userRes.rows && userRes.rows.length > 0) {
+              const u = userRes.rows[0];
+              session = { userId, email: u.email, role: u.user_type || 'user' };
+              devSessions.set(token, session);
+            }
+          }
+        }
+      } catch (dbErr) {
+        // DB error
+      }
+    }
+    
+    if (!session) {
+      return res.status(401).json({
+        authenticated: false,
+        message: 'Invalid or expired session',
+        user: null
+      });
+    }
+    
+    res.json({
+      authenticated: true,
+      user: {
+        id: session.userId,
+        email: session.email,
+        role: session.role || 'user'
+      },
+      sessionId: token
+    });
+  } catch (err) {
+    console.error('[AUTH ME] Error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Register WatchDog routes
 // ============================================================================
 // ROOT ROUTE & STATIC FILES (MUST BE BEFORE API ROUTES)
@@ -509,14 +586,6 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Auth endpoint (stub for unauthenticated requests)
-app.get('/api/auth/me', (req, res) => {
-    res.status(401).json({
-        authenticated: false,
-        message: 'Guest mode - no auth token provided',
-        user: null
-    });
-});
 // Auth configuration endpoint (for Google Client ID)
 // GET Google Client ID (PUBLIC - no auth required)
 app.get('/api/auth/google-client-id', (req, res) => {
@@ -608,19 +677,29 @@ app.post('/api/auth/google', async (req, res) => {
     console.log('[GOOGLE AUTH] Token verified for:', email);
 
     // Find existing user
-    let user = process.env.DATABASE_URL ? await sqliteFindUserByEmail(email) : memFindUserByEmail(email);
+    let user = await dbAdapter.queryOne(
+      'SELECT * FROM users WHERE email = ?',
+      [email]
+    );
 
     if (!user) {
       // Auto-create account for Google users
       console.log('[GOOGLE AUTH] Creating new user for:', email);
       const randomPassword = crypto.randomUUID();
-      const created = await memCreateUser(email, displayName, randomPassword, {
+      const passwordHash = await bcrypt.hash(randomPassword, 10);
+      const userId = `user_${crypto.randomUUID()}`;
+      const now = Date.now();
+      
+      await dbAdapter.execute(`
+        INSERT INTO users (id, email, username, password_hash, created_at, updated_at, is_active, metadata)
+        VALUES (?, ?, ?, ?, ?, ?, 1, ?)
+      `, [userId, email, displayName, passwordHash, now, now, JSON.stringify({
         emailVerified: true,
         googleId: gUser.sub,
         avatar: gUser.picture || null
-      });
-      if (!created || !created.id) throw new Error('User creation failed');
-      user = { id: created.id, email, username: displayName, user_type: 'user' };
+      })]);
+      
+      user = { id: userId, email, username: displayName, user_type: 'user' };
       console.log('[GOOGLE AUTH] New user created:', user.id, email);
     } else {
       console.log('[GOOGLE AUTH] Existing user found:', user.id, email);
@@ -662,20 +741,34 @@ app.post('/api/auth/google', async (req, res) => {
   }
 });
 app.post('/api/auth/validate-session', (req, res) => {
-    const sessionToken = req.headers['x-session-token'] || req.body?.sessionToken;
+    const sessionToken = req.headers['x-session-token'] || req.body?.sessionToken || req.cookies?.session_token || req.headers.authorization?.replace('Bearer ', '');
     
     if (!sessionToken) {
-        return res.status(401).json({ valid: false });
+        return res.status(401).json({ valid: false, error: 'No session token provided' });
     }
     
-    // TODO: Validate against your session database
-    res.json({ valid: true, userId: 'user-' + Date.now() });
+    // Validate against devSessions
+    const session = devSessions.get(sessionToken);
+    if (!session) {
+        return res.status(401).json({ valid: false, error: 'Invalid or expired session' });
+    }
+    
+    res.json({ valid: true, userId: session.userId });
 });
 
 // Logout endpoint
 app.post('/api/auth/logout', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.session_token || req.body?.sessionToken;
+    if (token) {
+        devSessions.delete(token);
+    }
+    res.clearCookie('session_token', { path: '/' });
+    res.clearCookie('auth_token', { path: '/' });
     res.json({ success: true, message: 'Logged out' });
 });
+
+// ✅ CRITICAL FIX: Mount auth-v2 routes (were imported but never mounted)
+app.use('/api/auth-v2', authV2Routes);
 
 // ============================================================================
 // MISSING AUTH ENDPOINTS - Added to fix frontend failures

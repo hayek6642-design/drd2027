@@ -382,7 +382,7 @@
           if (!this._sessionId && localToken) {
             if (window.DEBUG_MODE) console.log('[AuthCore] No cookie but found token in localStorage, restoring...');
             this._sessionId = localToken;
-            document.cookie = `session_token=${localToken}; path=/; max-age=${7*24*60*60}`;
+            document.cookie = `session_token=${localToken}; path=/; max-age=${7*24*60*60}; SameSite=Lax`;
           }
 
           if (cachedUserStr && this._sessionId) {

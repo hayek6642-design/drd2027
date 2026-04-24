@@ -683,6 +683,10 @@ function saveSession(data) {
   localStorage.setItem('session_token', sid);
   localStorage.setItem('session_active', 'true');
   if (data.user) localStorage.setItem('user_data', JSON.stringify(data.user));
+  
+  // Set cookie for server-side session validation
+  document.cookie = `session_token=${sid}; path=/; max-age=${7*24*60*60}; SameSite=Lax`;
+  
   console.log('[Auth] Session saved');
 }
 
