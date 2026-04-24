@@ -217,8 +217,9 @@ function clearSessionAndLogout() {
                 }
             }
             
-            // No session - will show login modal INSIDE CodeBank
-            this.showLoginModal();
+            // No session - WAIT for indexCB.html to call showLoginModal()
+            // Do NOT auto-show login modal from yt-new-clear.html
+            console.log('[CodeBankAuth] No session - auth will be handled by indexCB.html');
             return null;
         },
         
