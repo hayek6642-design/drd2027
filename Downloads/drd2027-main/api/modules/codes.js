@@ -435,4 +435,79 @@ router.delete('/purge-old-format', requireAuth, async (req, res) => {
   }
 })
 
+// ============================================================================
+// EXPORTS - Functions for other modules to use
+// ============================================================================
+
+/**
+ * Add a code to the pending queue for batch persistence
+ * Used by /api/assets/sync endpoint to queue codes from frontend
+ */
+export function queueCode(codeData) {
+  const {
+    id = crypto.randomUUID(),
+    userId,
+    code,
+    source = 'unknown',
+    expiresAt = new Date(Date.now() + CODE_EXPIRY_HOURS * 60 * 60 * 1000).toISOString(),
+    metadata = {}
+  } = codeData;
+
+  // Validate required fields
+  if (!userId || !code) {
+    throw new Error('userId and code are required');
+  }
+
+  // Validate code format
+  if (!CODE_PATTERN.test(code)) {
+    console.warn(`[CODES] Invalid code format: ${code}`);
+    return false;
+  }
+
+  // Add to queue
+  const record = {
+    id,
+    userId,
+    code,
+    source,
+    expiresAt,
+    metadata: typeof metadata === 'string' ? metadata : JSON.stringify(metadata)
+  };
+
+  pendingCodes.push(record);
+  saveQueueToDisk();
+  
+  console.log(`[CODES] Queued code for user ${userId}: ${code} (queue size: ${pendingCodes.length})`);
+  return true;
+}
+
+/**
+ * Queue multiple codes at once (batch add)
+ */
+export function queueCodes(codeDataArray, userId) {
+  if (!Array.isArray(codeDataArray)) {
+    throw new Error('codeDataArray must be an array');
+  }
+
+  const successful = [];
+  const failed = [];
+
+  for (const codeData of codeDataArray) {
+    try {
+      const dataWithUserId = { ...codeData, userId };
+      if (queueCode(dataWithUserId)) {
+        successful.push(codeData.code);
+      } else {
+        failed.push(codeData.code);
+      }
+    } catch (e) {
+      console.error(`[CODES] Failed to queue code:`, e.message);
+      failed.push(codeData.code);
+    }
+  }
+
+  console.log(`[CODES] Batch queue summary: ${successful.length} successful, ${failed.length} failed`);
+  return { successful, failed };
+}
+
 export default router

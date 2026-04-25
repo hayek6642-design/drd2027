@@ -598,6 +598,47 @@ function updateCountryCode() {
   if (phone) code.value = phone;
 }
 
+// ── Session Management ────────────────────────────────────────────────────────
+// Save session data to both sessionStorage and AppState
+function saveSession(data) {
+  if (data.token) {
+    // Save to sessionStorage for immediate use
+    sessionStorage.setItem('appstate_auth', JSON.stringify({
+      isAuthenticated: true,
+      user: {
+        id: data.userId || data.user?.id,
+        email: data.email || data.user?.email
+      },
+      token: data.token,
+      sessionId: data.sessionId || data.token
+    }));
+    
+    // Also save to localStorage as backup (per Kimi's refactor)
+    localStorage.setItem('appstate_auth', JSON.stringify({
+      isAuthenticated: true,
+      user: {
+        id: data.userId || data.user?.id,
+        email: data.email || data.user?.email
+      },
+      token: data.token,
+      sessionId: data.sessionId || data.token
+    }));
+    
+    // Also set in AppState if available
+    if (window.AppState?.auth?.setUser) {
+      try {
+        window.AppState.auth.setUser(
+          { id: data.userId || data.user?.id, email: data.email || data.user?.email },
+          data.token,
+          data.sessionId || data.token
+        );
+      } catch(e) {
+        console.warn('[Login] AppState not ready yet:', e.message);
+      }
+    }
+  }
+}
+
 // ── Authentication Handlers ──────────────────────────────────────────────────
 async function handleLogin() {
   const emailEl = document.getElementById('loginEmail');

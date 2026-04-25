@@ -98,6 +98,7 @@ import e7kiDefault from './api/modules/e7ki.js';
 import * as logicodeMod from './api/modules/logicode.js';
 import * as corsaMod from './api/modules/corsa.js';
 import * as codesMod from './api/modules/codes.js';
+import { queueCodes, queueCode } from './api/modules/codes.js';
 import syncRouter from './api/modules/sync.js';
 import persistenceRouter from './api/modules/persistence.js';
 import settaDefault from './api/modules/setta.js';
@@ -1036,10 +1037,63 @@ app.post('/api/codes/sync', (req, res) => {
     res.json({ success: true, saved: true, count: 1 });
 });
 
-// Assets sync endpoint  
-app.post('/api/assets/sync', (req, res) => {
-    console.log('[API] Assets sync received:', req.body);
-    res.json({ success: true });
+// Assets sync endpoint - Receives generated codes from frontend and persists them
+app.post('/api/assets/sync', async (req, res) => {
+    const { userId, assets } = req.body;
+    
+    // Validate userId
+    if (!userId) {
+        console.warn('[API] Assets sync: missing userId', req.body);
+        return res.status(400).json({ 
+            success: false, 
+            error: 'userId is required',
+            received: req.body 
+        });
+    }
+    
+    console.log(`[API] Assets sync received for user ${userId}:`, {
+        codes: assets?.codes?.length || 0,
+        silver: assets?.silver?.length || 0,
+        gold: assets?.gold?.length || 0
+    });
+    
+    const syncResult = {
+        success: true,
+        codesQueued: 0,
+        silverQueued: 0,
+        goldQueued: 0,
+        errors: []
+    };
+    
+    try {
+        // Queue codes if present
+        if (assets?.codes && Array.isArray(assets.codes) && assets.codes.length > 0) {
+            try {
+                const { successful, failed } = queueCodes(assets.codes, userId);
+                syncResult.codesQueued = successful.length;
+                if (failed.length > 0) {
+                    syncResult.errors.push(`${failed.length} codes failed validation`);
+                }
+                console.log(`[API] Queued ${successful.length} codes for user ${userId}`);
+            } catch (err) {
+                console.error('[API] Error queueing codes:', err.message);
+                syncResult.errors.push(`Codes queue failed: ${err.message}`);
+            }
+        }
+        
+        // TODO: Handle silver and gold assets if needed
+        
+        // Return success even if some items failed (partial success is ok)
+        res.json(syncResult);
+        
+    } catch (err) {
+        console.error('[API] Assets sync error:', err.message);
+        res.status(500).json({
+            success: false,
+            error: err.message,
+            errors: syncResult.errors
+        });
+    }
 });
 
 // SQLite codes endpoint
