@@ -211,22 +211,59 @@ window.AppState.auth = {
 // Broadcast auth state changes to iframes via postMessage
 function broadcastAuthToIframes() {
   if (window.self === window.top) {
-    // This is parent window
+    // This is parent window - listen for auth requests from ALL iframe types
     window.addEventListener('message', (e) => {
-      // Support BOTH old (AUTH_REQUEST) and new (auth:request) formats for backwards compatibility
-      if (e.data?.type === 'AUTH_REQUEST' || e.data?.type === 'auth:request') {
-        const authData = {
-          isAuthenticated: AppState.auth.isAuthenticated,
-          user: AppState.auth.user,
-          token: AppState.auth.token,
-          userId: AppState.auth.user?.id || null,
-          email: AppState.auth.user?.email || null
-        };
-        console.log('[AppState::AUTH] Responding to auth request from iframe with token:', !!authData.token);
+      const msgType = e.data?.type;
+      
+      // Support ALL auth request formats:
+      // 1. auth:request (from service-auth.js)
+      // 2. AUTH_REQUEST (from iframe-auth-client.js)
+      // 3. e7ki:request-auth (from React E7ki)
+      if (!msgType || !['auth:request', 'AUTH_REQUEST', 'e7ki:request-auth'].includes(msgType)) {
+        return;
+      }
+      
+      const authData = {
+        isAuthenticated: AppState.auth.isAuthenticated,
+        user: AppState.auth.user,
+        token: AppState.auth.token,
+        userId: AppState.auth.user?.id || null,
+        email: AppState.auth.user?.email || null,
+        authenticated: AppState.auth.isAuthenticated  // For auth:ready format
+      };
+      
+      console.log(`[AppState::AUTH] ${msgType} → Responding with token:`, !!authData.token, 'user:', authData.email);
+      
+      // Send response in the appropriate format for each client type
+      // 1. For service-auth.js clients
+      if (msgType === 'auth:request') {
         e.source.postMessage({
-          type: 'auth:response',  // ✅ FIXED: Use lowercase with colon for ServiceAuth compatibility
+          type: 'auth:response',
           authenticated: authData.isAuthenticated,
           userId: authData.userId,
+          user: authData.user,
+          token: authData.token,
+          auth: authData
+        }, e.origin);
+      }
+      // 2. For iframe-auth-client.js clients
+      else if (msgType === 'AUTH_REQUEST') {
+        e.source.postMessage({
+          type: 'AUTH_RESPONSE',
+          authenticated: authData.isAuthenticated,
+          userId: authData.userId,
+          user: authData.user,
+          token: authData.token,
+          auth: authData
+        }, e.origin);
+      }
+      // 3. For React E7ki clients
+      else if (msgType === 'e7ki:request-auth') {
+        e.source.postMessage({
+          type: 'auth:ready',
+          authenticated: authData.isAuthenticated,
+          userId: authData.userId,
+          id: authData.userId,  // React version expects 'id' field
           user: authData.user,
           token: authData.token,
           auth: authData
@@ -235,15 +272,28 @@ function broadcastAuthToIframes() {
     });
   } else {
     // This is an iframe - request auth from parent
-    window.parent.postMessage({ type: 'auth:request' }, '*');  // ✅ FIXED: Use lowercase with colon
+    // Try all auth request types to ensure compatibility
+    window.parent.postMessage({ type: 'auth:request' }, '*');
+    window.parent.postMessage({ type: 'AUTH_REQUEST' }, '*');
+    window.parent.postMessage({ type: 'e7ki:request-auth' }, '*');
+    
     window.addEventListener('message', (e) => {
-      // Support BOTH old (AUTH_RESPONSE) and new (auth:response) formats for backwards compatibility
-      if (e.data?.type === 'AUTH_RESPONSE' || e.data?.type === 'auth:response') {
-        // Receive plain object, not functions
-        if (e.data.auth) {
-          Object.assign(AppState.auth, e.data.auth);
-        }
-        console.log('[AppState::AUTH] Iframe received auth:', e.data.auth?.email || e.data.user?.email || 'no user');
+      // Support ALL auth response formats
+      const msgType = e.data?.type;
+      if (!msgType || !['AUTH_RESPONSE', 'auth:response', 'auth:ready', 'e7ki:auth'].includes(msgType)) {
+        return;
+      }
+      
+      // Receive plain object, not functions
+      const authData = e.data.auth || e.data;
+      if (authData && (authData.token || authData.authenticated)) {
+        Object.assign(AppState.auth, {
+          isAuthenticated: authData.authenticated || !!authData.token,
+          user: authData.user || { id: authData.userId || authData.id, email: authData.email },
+          token: authData.token,
+          userId: authData.userId || authData.id
+        });
+        console.log('[AppState::AUTH] Iframe received auth via', msgType, ':', authData.email || authData.user?.email || 'no user');
       }
     });
   }

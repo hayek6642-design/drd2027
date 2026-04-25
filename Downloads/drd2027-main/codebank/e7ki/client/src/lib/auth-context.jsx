@@ -51,39 +51,53 @@ export const AuthProvider = ({ children }) => {
     };
 
     const handleMessage = (e) => {
-      if (e.data?.type === 'auth:ready' || e.data?.type === 'e7ki:auth' || (e.data?.authenticated && e.data?.userId)) {
-        console.log('[E7ki] Received auth from parent');
-        const authData = e.data.auth || e.data;
-        
-        // Validate required fields
-        if (!authData.token || !(authData.userId || authData.id)) {
-          // Check for window.Auth as fallback
-          if (window.Auth && window.Auth.isAuthenticated()) {
-             const userData = {
-                id: window.Auth.getUser()?.id,
-                username: window.Auth.getUser()?.id,
-                token: window.Auth.getToken()
-             };
-             setUser(userData);
-             localStorage.setItem('jwt_token', userData.token);
-             setLoading(false);
-             return;
-          }
-          setError('Invalid authentication data from parent');
-          setLoading(false);
+      // Support ALL auth message types from parent:
+      // 1. auth:ready (from app-state-unified.js)
+      // 2. AUTH_RESPONSE (from embedded iframe-auth-client.js)
+      // 3. e7ki:auth (from custom parent auth)
+      // 4. Any message with authenticated + userId fields
+      const messageType = e.data?.type;
+      if (!messageType || !['auth:ready', 'AUTH_RESPONSE', 'e7ki:auth', 'AUTH_CHANGED', 'auth:response'].includes(messageType)) {
+        // Also check for authenticated + userId pattern (old format)
+        if (!(e.data?.authenticated && (e.data?.userId || e.data?.id))) {
           return;
         }
-        
-        const userData = {
-          id: authData.userId || authData.id,
-          username: authData.username || authData.name,
-          token: authData.token
-        };
-        
-        setUser(userData);
-        localStorage.setItem('jwt_token', authData.token);
-        setLoading(false);
       }
+      
+      console.log('[E7ki] Received auth from parent via:', messageType || 'legacy format');
+      const authData = e.data.auth || e.data;
+      
+      // Validate required fields
+      if (!authData.token || !(authData.userId || authData.id)) {
+        console.warn('[E7ki] Missing token or userId in auth data:', { hasToken: !!authData.token, userId: authData.userId, id: authData.id });
+        // Check for window.Auth as fallback
+        if (window.Auth && window.Auth.isAuthenticated()) {
+           console.log('[E7ki] Using fallback window.Auth');
+           const userData = {
+              id: window.Auth.getUser()?.id,
+              username: window.Auth.getUser()?.id,
+              token: window.Auth.getToken()
+           };
+           setUser(userData);
+           localStorage.setItem('jwt_token', userData.token);
+           setLoading(false);
+           return;
+        }
+        setError('Invalid authentication data from parent');
+        setLoading(false);
+        return;
+      }
+      
+      const userData = {
+        id: authData.userId || authData.id,
+        username: authData.username || authData.name || authData.email,
+        token: authData.token
+      };
+      
+      console.log('[E7ki] Auth successful for:', userData.username);
+      setUser(userData);
+      localStorage.setItem('jwt_token', authData.token);
+      setLoading(false);
     };
 
     window.addEventListener('message', handleMessage);
