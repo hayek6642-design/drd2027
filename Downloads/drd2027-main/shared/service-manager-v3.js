@@ -22,7 +22,7 @@
       // Core services
       codebank: { 
         name: 'CodeBank', 
-        path: '/codebank/indexCB.html',
+        path: '/codebank/indexCB/',
         priority: 'high',
         preload: true 
       },

@@ -5,7 +5,7 @@
       "label": "Yahood! Mining World",
       "icon": "🗺️",
       "description": "Geo-based treasure mining & PvP",
-      "path": "/codebank/yahood.html",
+      "path": "/codebank/yahood/",
       "external": true,
       "badge": "New",
       "category": "adventure"

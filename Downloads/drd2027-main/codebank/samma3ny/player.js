@@ -3276,7 +3276,7 @@ console.log(`🗑️ Cleaned up ${tracksToRemove.length} old downloads to free s
         if (leftArrow) {
             leftArrow.addEventListener('click', () => {
                 // Navigate to codebank page
-                window.location.href = window.location.origin + '/codebank/indexCB.html';
+                window.location.href = window.location.origin + '/codebank/indexCB/';
             });
         }
 

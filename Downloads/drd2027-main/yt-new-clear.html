@@ -2269,7 +2269,7 @@ function clearSessionAndLogout() {
         <div id="code-popup-overlay" style="display: none;">
             <div id="code-popup-frame">
                 <button id="code-popup-close">&times;</button>
-                <iframe id="code-popup-iframe" src="/codebank/indexCB.html"
+                <iframe id="code-popup-iframe" src="/codebank/indexCB/"
                     style="width:100%;height:100%;border:none"></iframe>
             </div>
         </div>
@@ -3560,7 +3560,7 @@ document.addEventListener('DOMContentLoaded', async function(){
 // ============================================================
 // PARENT MESSAGE HANDLER - Responds to SafeCode iframe requests
 // ============================================================
-// This handler allows the SafeCode iframe (in codebank/indexCB.html)
+// This handler allows the SafeCode iframe (in codebank/indexCB/)
 // to request and receive assets from the parent window.
 // The iframe triggers this via: parent.postMessage({type: 'safecode:request-assets'}, '*')
 // ============================================================

@@ -11,7 +11,7 @@ export const API_BASE = '';
 
 // Service iframe paths - relative to the app root
 export const SERVICE_PATHS = {
-  codebank: '/codebank/indexCB.html',
+  codebank: '/codebank/indexCB/',
   corsa:    '/codebank/corsa/index.html',
   e7ki:     '/codebank/e7ki/client/index.html',
   farragna: '/codebank/farragna/index.html',

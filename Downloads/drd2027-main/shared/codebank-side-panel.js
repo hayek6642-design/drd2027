@@ -388,7 +388,7 @@ class CodeBankSidePanel {
                 break;
             case 'nostalgia':
                 // Load nostalgia HTML page in iframe
-                content.innerHTML = '<iframe src="/codebank/nostagia.html" style="width:100%;height:100%;border:none;background:transparent;" allow="autoplay;fullscreen"></iframe>';
+                content.innerHTML = '<iframe src="/codebank/nostagia/" style="width:100%;height:100%;border:none;background:transparent;" allow="autoplay;fullscreen"></iframe>';
                 break;
             case 'pebalaash':
                 content.innerHTML = await this.loadPebalaashTab();

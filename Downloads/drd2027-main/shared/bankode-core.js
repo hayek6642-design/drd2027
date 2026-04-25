@@ -463,13 +463,8 @@
         const maxAttempts = 40; // 20 seconds total retry window
         const retryDelay = 500;
 
-        // Store snapshot in global buffer immediately
+        // Initialize pending snapshots buffer
         window.__BANKODE_PENDING_SNAPSHOTS__ = window.__BANKODE_PENDING_SNAPSHOTS__ || [];
-        window.__BANKODE_PENDING_SNAPSHOTS__.push({
-          snapshot: snapshot,
-          timestamp: Date.now(),
-          triggerSource: triggerSource
-        });
 
         // Retry until AssetBus is available (no more defer!)
         const publishWithRetry = async () => {

@@ -11,7 +11,7 @@
       // Core services
       codebank: {
         name: 'CodeBank',
-        path: '/codebank/indexCB.html',
+        path: '/codebank/indexCB/',
         default: true
       },
       safecode: {

@@ -411,7 +411,7 @@ class AppInitializer {
 
             overlay.classList.add('open');
             overlay.style.display = 'flex';
-            iframe.src = '/services/yt-clear/codebank/indexCB.html';
+            iframe.src = '/services/yt-clear/codebank/indexCB/';
 
         } catch (error) {
             console.error('Error opening CodeBank dashboard:', error);

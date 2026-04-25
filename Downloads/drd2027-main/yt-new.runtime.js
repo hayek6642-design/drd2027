@@ -1957,7 +1957,7 @@ function openCodeBankPanel() {
         } catch (_) { }
     });
     const iframe = document.createElement('iframe');
-    iframe.src = 'codebank/indexCB.html';
+    iframe.src = 'codebank/indexCB/';
     iframe.style.cssText = 'width:100%;height:100%;border:0;';
     container.appendChild(closeBtn);
     container.appendChild(iframe);
@@ -1972,7 +1972,7 @@ function showAlternativeDashboard() {
     overlay.style.display = 'flex';
     content.innerHTML = '';
     const iframe = document.createElement('iframe');
-    iframe.src = '/services/codebank/indexCB.html';
+    iframe.src = '/services/codebank/indexCB/';
     iframe.style.cssText = 'width:100%;height:100%;border:0;';
     content.appendChild(iframe);
 }

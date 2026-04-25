@@ -25,7 +25,7 @@ export const AppRegistry = {
             category: 'media',
             icon: 'fa-music',
             color: '#8b5cf6',
-            url: '/codebank/samma3ny.html',
+            url: '/codebank/samma3ny/',
             description: 'Audio platform',
             status: 'online',
             badge: null
@@ -36,7 +36,7 @@ export const AppRegistry = {
             category: 'media',
             icon: 'fa-microphone-alt',
             color: '#e74c3c',
-            url: '/codebank/battaloosa-modern.html',
+            url: '/codebank/battalooda/',
             description: 'Vocal talent discovery platform',
             status: 'online',
             badge: null
@@ -47,7 +47,7 @@ export const AppRegistry = {
             category: 'media',
             icon: 'fa-chart-line',
             color: '#ec4899',
-            url: '/codebank/farragna-modern.html',
+            url: '/codebank/farragna/',
             description: 'Trading platform',
             status: 'online',
             badge: null
@@ -115,7 +115,7 @@ export const AppRegistry = {
             category: 'finance',
             icon: 'fa-gamepad',
             color: '#f59e0b',
-            url: '/codebank/pebalaash-modern.html',
+            url: '/codebank/pebalaash/',
             description: 'Marketplace platform',
             status: 'online',
             badge: null
@@ -138,7 +138,7 @@ export const AppRegistry = {
             category: 'games',
             icon: 'fa-gamepad',
             color: '#f59e0b',
-            url: '/codebank/Games-Centre.html',
+            url: '/codebank/games-centre/',
             status: 'online',
             description: 'Gaming hub',
             badge: null
@@ -160,7 +160,7 @@ export const AppRegistry = {
             category: 'games',
             icon: 'fa-cog',
             color: '#f59e0b',
-            url: '/codebank/piston.html',
+            url: '/codebank/piston/',
             status: 'offline',
             description: 'Game engine',
             badge: null
