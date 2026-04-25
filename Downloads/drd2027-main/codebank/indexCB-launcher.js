@@ -16,19 +16,19 @@
   // ── Service Registry ────────────────────────────────────
   var services = [
     { id: 'yt-clear',       name: 'YT-Clear',       icon: '📺', url: '/yt-new-clear.html',  desc: 'Watch & Earn', isExternal: true },
-    { id: 'safecode',       name: 'SafeCode',        icon: '🔐', url: '/codebank/services/safecode/index.html',      desc: 'Asset Vault' },
-    { id: 'cottery',        name: 'Cottery',         icon: '🎯', url: '/codebank/services/cottery/index.html',  desc: 'Prediction Game' },
-    { id: 'e7ki',           name: 'E7ki',             icon: '💬', url: '/codebank/services/e7ki/index.html',   desc: 'Chat' },
-    { id: 'samma3ny',       name: 'Samma3ny',        icon: '🤖', url: '/codebank/services/samma3ny/index.html', desc: 'AI Assistant' },
-    { id: 'farragna',       name: 'Farragna',        icon: '❤️', url: '/codebank/services/farragna/index.html',      desc: 'Social Likes' },
-    { id: 'nostalgia',      name: 'Nostalgia',       icon: '💿', url: '/codebank/services/nostalgia/index.html', desc: 'Retro Memories' },
-    { id: 'estshara',       name: 'Estshara',        icon: '💼', url: '/codebank/services/estshara/index.html',  desc: 'Consultations' },
-    { id: 'pebalaash',      name: 'Pebalaash',       icon: '🏪', url: '/codebank/services/pebalaash/index.html',     desc: 'Barter & Trade' },
-    { id: 'corsa',          name: 'CoRsA',            icon: '🏎️', url: '/codebank/services/corsa/index.html',         desc: 'Racing Game' },
-    { id: 'eb3at',          name: 'Eb3at',            icon: '📤', url: '/codebank/services/eb3at/index.html',         desc: 'File Transfer' },
-    { id: 'battalooda',     name: 'Battalooda',      icon: '🎵', url: '/codebank/services/battalooda/index.html',    desc: 'Music Studio' },
-    { id: 'games-centre',   name: 'Games Centre',    icon: '🎮', url: '/codebank/services/Games-Centre/index.html',  desc: 'Mini Games' },
-    { id: 'yahood',         name: 'Yahood!',          icon: '📰', url: '/codebank/services/yahood/index.html',        desc: 'News & Content' }
+    { id: 'safecode',       name: 'SafeCode',        icon: '🔐', url: '/codebank/safecode/index.html',      desc: 'Asset Vault' },
+    { id: 'cottery',        name: 'Cottery',         icon: '🎯', url: '/codebank/cottery/index.html',  desc: 'Prediction Game' },
+    { id: 'e7ki',           name: 'E7ki',             icon: '💬', url: '/codebank/e7ki/index.html',   desc: 'Chat' },
+    { id: 'samma3ny',       name: 'Samma3ny',        icon: '🤖', url: '/codebank/samma3ny/index.html', desc: 'AI Assistant' },
+    { id: 'farragna',       name: 'Farragna',        icon: '❤️', url: '/codebank/farragna/index.html',      desc: 'Social Likes' },
+    { id: 'nostalgia',      name: 'Nostalgia',       icon: '💿', url: '/codebank/nostalgia/index.html', desc: 'Retro Memories' },
+    { id: 'estshara',       name: 'Estshara',        icon: '💼', url: '/codebank/estshara/index.html',  desc: 'Consultations' },
+    { id: 'pebalaash',      name: 'Pebalaash',       icon: '🏪', url: '/codebank/pebalaash/index.html',     desc: 'Barter & Trade' },
+    { id: 'corsa',          name: 'CoRsA',            icon: '🏎️', url: '/codebank/corsa/index.html',         desc: 'Racing Game' },
+    { id: 'eb3at',          name: 'Eb3at',            icon: '📤', url: '/codebank/eb3at/index.html',         desc: 'File Transfer' },
+    { id: 'battalooda',     name: 'Battalooda',      icon: '🎵', url: '/codebank/battalooda/index.html',    desc: 'Music Studio' },
+    { id: 'games-centre',   name: 'Games Centre',    icon: '🎮', url: '/codebank/Games-Centre/index.html',  desc: 'Mini Games' },
+    { id: 'yahood',         name: 'Yahood!',          icon: '📰', url: '/codebank/yahood/index.html',        desc: 'News & Content' }
   ];
 
   var activeService = null;

@@ -22,27 +22,27 @@
       // External services
       e7ki: {
         name: 'E7ki',
-        path: '/services/e7ki/index.html'
+        path: '/codebank/e7ki/index.html'
       },
       farragna: {
         name: 'Farragna',
-        path: '/services/farragna/index.html'
+        path: '/codebank/farragna/index.html'
       },
       samman: {
         name: 'Samman',
-        path: '/services/samman/index.html'
+        path: '/codebank/samman/index.html'
       },
       pebalaash: {
         name: 'Pebalaash',
-        path: '/services/pebalaash/index.html'
+        path: '/codebank/pebalaash/index.html'
       },
       eb3at: {
         name: 'Eb3at',
-        path: '/services/eb3at/index.html'
+        path: '/codebank/eb3at/index.html'
       },
       games: {
         name: 'Games',
-        path: '/services/games/index.html'
+        path: '/codebank/games/index.html'
       },
       
       // Add more services here as needed
