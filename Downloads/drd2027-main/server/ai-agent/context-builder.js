@@ -4,16 +4,16 @@
 import { query } from '../../api/config/db.js';
 
 export const PLATFORM_SERVICES = [
-  { id: 'pebalaash', name: 'Pebalaash',      icon: '🛍️', url: '/codebank/pebalaash.html',       status: 'active' },
-  { id: 'games',     name: 'Games Centre',   icon: '🎮', url: '/codebank/Games-Centre.html',    status: 'active' },
-  { id: 'safecode',  name: 'SafeCode',       icon: '🔐', url: '/codebank/safecode.html',        status: 'active' },
-  { id: 'samma3ny',  name: 'Samma3ny',       icon: '🎵', url: '/codebank/samma3ny.html',        status: 'active' },
-  { id: 'farragna',  name: 'Farragna',       icon: '📹', url: '/codebank/farragna.html',        status: 'active' },
-  { id: 'shots',     name: 'Shots',          icon: '📸', url: '/codebank/shots.html',           status: 'active' },
-  { id: 'aihub',     name: 'AI Hub',         icon: '🤖', url: '/codebank/aihub.html',           status: 'active' },
-  { id: 'e7ki',      name: 'E7ki Analytics', icon: '📊', url: '/codebank/e7ki.html',            status: 'active' },
+  { id: 'pebalaash', name: 'Pebalaash',      icon: '🛍️', url: '/codebank/pebalaash/',       status: 'active' },
+  { id: 'games',     name: 'Games Centre',   icon: '🎮', url: '/codebank/games-centre/',    status: 'active' },
+  { id: 'safecode',  name: 'SafeCode',       icon: '🔐', url: '/codebank/safecode/',        status: 'active' },
+  { id: 'samma3ny',  name: 'Samma3ny',       icon: '🎵', url: '/codebank/samma3ny/',        status: 'active' },
+  { id: 'farragna',  name: 'Farragna',       icon: '📹', url: '/codebank/farragna/',        status: 'active' },
+  { id: 'shots',     name: 'Shots',          icon: '📸', url: '/codebank/shots/',           status: 'active' },
+  { id: 'aihub',     name: 'AI Hub',         icon: '🤖', url: '/codebank/aihub/',           status: 'active' },
+  { id: 'e7ki',      name: 'E7ki Analytics', icon: '📊', url: '/codebank/e7ki/',            status: 'active' },
   { id: 'ledger',    name: 'Ledger',         icon: '📒', url: '/codebank/bankode/ledger.html',  status: 'active' },
-  { id: 'qarsan',    name: 'Qarsan',         icon: '🐕', url: '/codebank/qarsan.html',          status: 'active' },
+  { id: 'qarsan',    name: 'Qarsan',         icon: '🐕', url: '/codebank/qarsan/',          status: 'active' },
 ];
 
 function getTier(value) {

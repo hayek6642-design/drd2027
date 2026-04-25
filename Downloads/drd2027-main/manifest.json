@@ -44,7 +44,7 @@
       "name": "AI Hub",
       "short_name": "AI Hub",
       "description": "Access 100+ AI services",
-      "url": "/codebank/aihub.html",
+      "url": "/codebank/aihub/",
       "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
     }
   ],

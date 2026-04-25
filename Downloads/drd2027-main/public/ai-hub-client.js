@@ -26,7 +26,7 @@ class AIHubClient {
 
     if (res.status === 401) {
       // Redirect to login
-      window.location.href = '/codebank/index.html';
+      window.location.href = '/codebank/index/';
       throw new Error('UNAUTHORIZED');
     }
     return res.json();

@@ -42,7 +42,7 @@ export default function BankodeTab() {
           <h2 style={{ marginBottom: 8 }}>Unable to open CodeBank (indexCB.html)</h2>
           <p style={{ color: '#888', marginBottom: 12 }}>{String(error)}</p>
           <p style={{ fontSize: 14 }}>
-            Ensure the dev server is running and that <code>indexCB.html</code> exists at <code>/codebank/indexCB.html</code>.
+            Ensure the dev server is running and that <code>indexCB.html</code> exists at <code>/codebank/indexCB/</code>.
           </p>
         </div>
       </div>

@@ -598,12 +598,12 @@ async function handleLogin() {
       if (window.AppState && window.AppState.auth) {
         const verified = await window.AppState.auth.verify();
         if (verified) {
-          window.location.href = '/codebank/indexCB.html';
+          window.location.href = '/codebank/indexCB/';
         } else {
           showStatus('Session verification failed. Please try again.', 'error');
         }
       } else {
-        window.location.href = '/codebank/indexCB.html';
+        window.location.href = '/codebank/indexCB/';
       }
     }, 1000);
     } else {
@@ -686,12 +686,12 @@ async function handleSignup() {
       if (window.AppState && window.AppState.auth) {
         const verified = await window.AppState.auth.verify();
         if (verified) {
-          window.location.href = '/codebank/indexCB.html';
+          window.location.href = '/codebank/indexCB/';
         } else {
           showStatus('Session verification failed. Please try again.', 'error');
         }
       } else {
-        window.location.href = '/codebank/indexCB.html';
+        window.location.href = '/codebank/indexCB/';
       }
     }, 1500);
     } else {
@@ -854,12 +854,12 @@ async function handleGoogleResponse(resp) {
       if (window.AppState && window.AppState.auth) {
         const verified = await window.AppState.auth.verify();
         if (verified) {
-          window.location.href = '/codebank/indexCB.html';
+          window.location.href = '/codebank/indexCB/';
         } else {
           showStatus('Session verification failed. Please try again.', 'error');
         }
       } else {
-        window.location.href = '/codebank/indexCB.html';
+        window.location.href = '/codebank/indexCB/';
       }
     }, 1000);
     } else {

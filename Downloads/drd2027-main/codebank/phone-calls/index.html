@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phone Calls - CodeBank</title>
+    <link rel="stylesheet" href="phone-calls.css">
+
+  <script src="../auth-bridge.js"></script>
+  <script>
+    // Listen for auth changes from main app
+    authBridge.onAuthChange((user, token) => {
+      if (!user || !token) {
+        console.warn('[Service Auth] Not authenticated. Redirecting to login...');
+        // Show auth required message
+        if (document.body) {
+          document.body.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:linear-gradient(135deg,#0f0f1a,#1a1a2e);font-family:sans-serif;color:#fff;">
+              <div style="text-align:center;padding:40px;">
+                <div style="font-size:64px;margin-bottom:20px;">🔐</div>
+                <h1 style="margin:0;color:#00d4ff;">Authentication Required</h1>
+                <p style="color:#aaa;margin:10px 0 20px;">Please log in first to access this service.</p>
+                <a href="/login.html" style="background:linear-gradient(135deg,#00d4ff,#0099cc);color:#000;padding:12px 30px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">Go to Login</a>
+              </div>
+            </div>
+          `;
+        }
+        return;
+      }
+      console.log('[Service Auth] User authenticated:', user.email);
+      // Initialize service with authenticated user
+      if (window.serviceInit && typeof window.serviceInit === 'function') {
+        window.serviceInit(user, token);
+      }
+    });
+  </script>
+  </head>
+<body>
+    <div class="phone-container">
+        <!-- Header -->
+        <div class="phone-header">
+            <h1>☎️ Phone System</h1>
+            <p>VoIP & Call Management</p>
+        </div>
+
+        <!-- Main Layout -->
+        <div class="phone-main">
+            <!-- Contacts Panel -->
+            <div class="contacts-panel">
+                <div class="contacts-header">
+                    <h2>📇 Contacts</h2>
+                    <input type="text" id="contactSearch" placeholder="Search..." class="contact-search">
+                </div>
+                <div class="contacts-list" id="contactsList">
+                    <!-- Contacts populated here -->
+                </div>
+            </div>
+
+            <!-- Dial Pad & Call View -->
+            <div class="phone-view">
+                <!-- Dial Pad -->
+                <div class="dial-pad" id="dialPad">
+                    <div class="display">
+                        <input type="tel" id="phoneDisplay" placeholder="Enter number..." readonly>
+                    </div>
+
+                    <div class="keypad">
+                        <button class="key" data-digit="1">1</button>
+                        <button class="key" data-digit="2">2 ABC</button>
+                        <button class="key" data-digit="3">3 DEF</button>
+                        
+                        <button class="key" data-digit="4">4 GHI</button>
+                        <button class="key" data-digit="5">5 JKL</button>
+                        <button class="key" data-digit="6">6 MNO</button>
+                        
+                        <button class="key" data-digit="7">7 PQRS</button>
+                        <button class="key" data-digit="8">8 TUV</button>
+                        <button class="key" data-digit="9">9 WXYZ</button>
+                        
+                        <button class="key" data-digit="*">*</button>
+                        <button class="key" data-digit="0">0</button>
+                        <button class="key" data-digit="#">#</button>
+                    </div>
+
+                    <div class="call-controls">
+                        <button id="backspaceBtn" class="btn-control backspace" title="Delete">🔙 Delete</button>
+                        <button id="callBtn" class="btn-control call" title="Call">📞 Call</button>
+                        <button id="clearBtn" class="btn-control clear" title="Clear">🗑️ Clear</button>
+                    </div>
+                </div>
+
+                <!-- Active Call View -->
+                <div class="call-view" id="callView" style="display: none;">
+                    <div class="call-info">
+                        <div class="caller-avatar" id="callerAvatar">👤</div>
+                        <h2 id="callerName">John Doe</h2>
+                        <p id="callerNumber">+1 (555) 123-4567</p>
+                        <p id="callStatus" class="call-status">Calling...</p>
+                        <p id="callDuration" class="call-duration">00:00</p>
+                    </div>
+
+                    <div class="call-actions">
+                        <button class="call-btn mute" id="muteBtn" title="Mute">🔇 Mute</button>
+                        <button class="call-btn speaker" id="speakerBtn" title="Speaker">📢 Speaker</button>
+                        <button class="call-btn keypad-toggle" id="keypadToggleBtn" title="Keypad">⌨️ Keypad</button>
+                        <button class="call-btn add" id="addCallBtn" title="Add Call">➕ Add Call</button>
+                        <button class="call-btn end" id="endCallBtn" title="End Call">☎️ End Call</button>
+                    </div>
+
+                    <div class="in-call-keypad" id="inCallKeypad" style="display: none;">
+                        <input type="tel" id="inCallDisplay" readonly>
+                        <div class="mini-keypad">
+                            <button class="key small" data-digit="1">1</button>
+                            <button class="key small" data-digit="2">2</button>
+                            <button class="key small" data-digit="3">3</button>
+                            <button class="key small" data-digit="4">4</button>
+                            <button class="key small" data-digit="5">5</button>
+                            <button class="key small" data-digit="6">6</button>
+                            <button class="key small" data-digit="7">7</button>
+                            <button class="key small" data-digit="8">8</button>
+                            <button class="key small" data-digit="9">9</button>
+                            <button class="key small" data-digit="*">*</button>
+                            <button class="key small" data-digit="0">0</button>
+                            <button class="key small" data-digit="#">#</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Call History Panel -->
+            <div class="history-panel">
+                <div class="history-header">
+                    <h2>📞 Recent Calls</h2>
+                    <button class="btn-clear-history">Clear History</button>
+                </div>
+                <div class="call-history" id="callHistory">
+                    <!-- Call history populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="phone-calls.js"></script>
+</body>
+</html>

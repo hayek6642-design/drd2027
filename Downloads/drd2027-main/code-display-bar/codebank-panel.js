@@ -64,7 +64,7 @@
             overlay.style.display = 'flex';
             // Use correct path — do NOT overwrite src if already loaded to avoid reload loop
             if (!iframe.__cbLoaded) {
-                iframe.src = '/codebank/indexCB.html';
+                iframe.src = '/codebank/indexCB/';
                 iframe.__cbLoaded = true;
             }
             window.dispatchEvent(new Event('codebank:opened'));
@@ -81,7 +81,7 @@
             overlay.style.display = 'flex';
             // Use correct path — do NOT overwrite src if already loaded to avoid reload loop
             if (!iframe.__cbLoaded) {
-                iframe.src = '/codebank/indexCB.html';
+                iframe.src = '/codebank/indexCB/';
                 iframe.__cbLoaded = true;
             }
             window.dispatchEvent(new Event('codebank:opened'));

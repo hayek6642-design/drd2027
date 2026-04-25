@@ -11,12 +11,12 @@
       // Core services
       codebank: {
         name: 'CodeBank',
-        path: '/codebank/indexCB.html',
+        path: '/codebank/indexCB/',
         default: true
       },
       safecode: {
         name: 'SafeCode',
-        path: '/codebank/safecode.html'
+        path: '/codebank/safecode/'
       },
       
       // External services

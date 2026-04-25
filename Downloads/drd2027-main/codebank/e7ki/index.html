@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; font-src * data: 'self'; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src * data: blob:; media-src *; frame-src *;">
+    <title>E7ki Messenger</title>
+    
+    <!-- AUTH BRIDGE - INJECT FIRST -->
+    <script>
+// iframe-auth-client.js - Minimal Auth Bridge
+(function() {
+  'use strict';
+  if (window.self === window.top) return;
+  if (window.__IFRAME_AUTH_CLIENT_LOADED__) return;
+  window.__IFRAME_AUTH_CLIENT_LOADED__ = true;
+
+  const CONFIG = { REQUEST_TIMEOUT: 8000, MAX_RETRIES: 5, DEBUG: true };
+  const state = { parentOrigin: null, authenticated: false, userId: null, user: null, connected: false };
+  const listeners = { authReady: [], authChanged: [], authError: [] };
+
+  function log(...args) { if (CONFIG.DEBUG) console.log('[E7kiAuth]', ...args); }
+  function warn(...args) { console.warn('[E7kiAuth]', ...args); }
+  function error(...args) { console.error('[E7kiAuth]', ...args); }
+
+  function detectParentOrigin() {
+    // Method 1: URL parameter
+    const params = new URLSearchParams(window.location.search);
+    const authOrigin = params.get('auth_origin');
+    if (authOrigin) {
+      try {
+        const decoded = decodeURIComponent(authOrigin);
+        new URL(decoded);
+        state.parentOrigin = decoded;
+        log('Parent origin from URL:', state.parentOrigin);
+        return true;
+      } catch(e) { warn('Invalid auth_origin param:', authOrigin); }
+    }
+
+    // Method 2: Referrer (skip about:blank)
+    if (document.referrer && document.referrer !== 'about:blank') {
+      try {
+        const url = new URL(document.referrer);
+        const refOrigin = url.origin;
+        if (refOrigin && refOrigin !== 'null') {
+          state.parentOrigin = refOrigin;
+          log('Parent origin from referrer:', state.parentOrigin);
+          return true;
+        }
+      } catch(e) { warn('Invalid referrer:', document.referrer); }
+    }
+
+    // Fallback: Use window.location.origin
+    state.parentOrigin = window.location.origin;
+    log('Using current origin as parent:', state.parentOrigin);
+    return true;
+  }
+
+  function handleMessage(event) {
+    // Self-heal parentOrigin from trusted messages
+    if ((!state.parentOrigin || state.parentOrigin === 'null') && event.origin && event.origin !== 'null') {
+      const _d = event.data;
+      if (_d && typeof _d === 'object' && (_d.type === 'AUTH_RESPONSE' || _d.type === 'AUTH_CHANGED' || _d.type === 'auth:ready')) {
+        state.parentOrigin = event.origin;
+        log('Parent origin self-healed from message:', state.parentOrigin);
+      }
+    }
+
+    if (event.origin !== state.parentOrigin) return;
+
+    const data = event.data;
+    if (!data || typeof data !== 'object') return;
+
+    log('Message:', data.type, data);
+
+    switch(data.type) {
+      case 'AUTH_RESPONSE':
+        if (data.authenticated) {
+          state.authenticated = true;
+          state.userId = data.userId;
+          state.user = data.user;
+          state.connected = true;
+          log('✅ Authenticated as:', state.user);
+          showApp();
+          callListeners('authReady', data.user);
+        } else {
+          showLoginRequired();
+        }
+        break;
+      case 'AUTH_CHANGED':
+        state.authenticated = data.authenticated;
+        state.userId = data.userId;
+        state.user = data.user;
+        log('Auth changed:', state.authenticated ? 'logged in' : 'logged out');
+        callListeners('authChanged', data.user);
+        if (!data.authenticated) showLoginRequired();
+        break;
+      case 'auth:ready':
+        log('Parent auth is ready');
+        state.connected = true;
+        requestAuth();
+        break;
+    }
+  }
+
+  function callListeners(event, data) {
+    if (listeners[event]) {
+      listeners[event].forEach(fn => fn(data));
+    }
+  }
+
+  function requestAuth() {
+    log('Requesting auth from parent:', state.parentOrigin);
+    const msg = { type: 'AUTH_REQUEST', source: 'e7ki-iframe' };
+    window.parent.postMessage(msg, state.parentOrigin || '*');
+  }
+
+  function showApp() {
+    const loading = document.getElementById('auth-loading');
+    const error = document.getElementById('auth-error');
+    const root = document.getElementById('root');
+    if (loading) loading.style.display = 'none';
+    if (error) error.style.display = 'none';
+    if (root) root.style.display = 'block';
+    log('App displayed');
+  }
+
+  function showError(msg) {
+    const loading = document.getElementById('auth-loading');
+    const error = document.getElementById('auth-error');
+    const root = document.getElementById('root');
+    if (loading) loading.style.display = 'none';
+    if (error) error.style.display = 'flex';
+    if (root) root.style.display = 'none';
+    const details = document.getElementById('error-details');
+    if (details) details.textContent = msg;
+    log('Error shown:', msg);
+  }
+
+  function showLoginRequired() {
+    const loading = document.getElementById('auth-loading');
+    const loginReq = document.getElementById('auth-required');
+    const root = document.getElementById('root');
+    if (loading) loading.style.display = 'none';
+    if (loginReq) loginReq.style.display = 'flex';
+    if (root) root.style.display = 'none';
+    log('Login required');
+  }
+
+  // Public API
+  window.E7kiAuth = {
+    isAuthenticated: () => state.authenticated,
+    getUser: () => state.user,
+    getUserId: () => state.userId,
+    getToken: () => state.token,
+    on: (event, fn) => { if (!listeners[event]) listeners[event] = []; listeners[event].push(fn); },
+    reconnect: () => { detectParentOrigin(); requestAuth(); },
+    init: () => {
+      if (!detectParentOrigin()) { showError('Cannot detect parent'); return; }
+      window.addEventListener('message', handleMessage);
+      log('Initialized, waiting for auth...');
+      requestAuth();
+      // Timeout if no response
+      setTimeout(() => {
+        if (!state.authenticated && !state.connected) {
+          showError('Auth request timeout (3 retries)');
+        }
+      }, CONFIG.REQUEST_TIMEOUT * 3);
+    }
+  };
+
+  // Auto-init on load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => window.E7kiAuth.init());
+  } else {
+    window.E7kiAuth.init();
+  }
+})();
+    </script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #0a0a0f; 
+            color: #fff; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* Auth State Containers */
+        .auth-state-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            text-align: center;
+            background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .error-icon { font-size: 4rem; margin-bottom: 20px; }
+        
+        .retry-btn, .login-btn {
+            margin-top: 20px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .retry-btn:hover, .login-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .error-details {
+            margin-top: 20px;
+            padding: 10px;
+            background: rgba(255,0,0,0.1);
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            max-width: 100%;
+            overflow: auto;
+        }
+        
+        #root { width: 100%; height: 100%; display: none; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Loading State -->
+        <div id="auth-loading" class="auth-state-container">
+            <div class="spinner"></div>
+            <p>جاري الاتصال بالنظام...</p>
+            <p style="font-size: 0.9rem; color: #666; margin-top: 10px;">Connecting to CodeBank Auth...</p>
+        </div>
+        
+        <!-- Auth Error State -->
+        <div id="auth-error" class="auth-state-container" style="display:none;">
+            <div class="error-icon">⚠️</div>
+            <h3>فشل الاتصال بالمصادقة</h3>
+            <p>Could not connect to CodeBank authentication</p>
+            <button onclick="E7kiAuth.reconnect()" class="retry-btn">
+                إعادة المحاولة
+            </button>
+            <div class="error-details" id="error-details"></div>
+        </div>
+        
+        <!-- Not Authenticated State -->
+        <div id="auth-required" class="auth-state-container" style="display:none;">
+            <div class="error-icon">🔒</div>
+            <h3>التحقق مطلوب</h3>
+            <p>Please login in the main CodeBank window</p>
+            <button onclick="window.parent.postMessage({type: 'REQUEST_LOGIN'}, '*')" class="login-btn">
+                العودة للتحقق
+            </button>
+        </div>
+    </div>
+
+    <!-- React Root (will be shown when auth is ready) -->
+    <div id="root"></div>
+
+    <!-- E7ki App Script -->
+    <script type="module">
+        import React from 'https://esm.sh/react@18.2.0';
+        import ReactDOM from 'https://esm.sh/react-dom@18.2.0/client';
+
+        // Simple E7ki Chat Component
+        const E7kiApp = () => {
+            const [messages, setMessages] = React.useState([
+                { id: 1, user: 'You', text: 'Hello!', timestamp: new Date() }
+            ]);
+            const [inputText, setInputText] = React.useState('');
+            const user = window.E7kiAuth?.getUser() || { id: 'user1', name: 'User' };
+
+            const sendMessage = () => {
+                if (!inputText.trim()) return;
+                
+                const newMsg = {
+                    id: messages.length + 1,
+                    user: user.name || 'You',
+                    text: inputText,
+                    timestamp: new Date(),
+                    userId: user.id
+                };
+
+                setMessages([...messages, newMsg]);
+                
+                // Send to parent for ZAGEL voice processing
+                window.parent.postMessage({
+                    type: 'E7KI_MESSAGE',
+                    message: newMsg,
+                    source: 'e7ki-chat'
+                }, '*');
+
+                setInputText('');
+            };
+
+            React.useEffect(() => {
+                window.E7kiAuth?.on('authReady', (user) => {
+                    console.log('E7kiApp - Auth ready:', user);
+                });
+            }, []);
+
+            return React.createElement('div', { style: styles.container },
+                React.createElement('div', { style: styles.header },
+                    React.createElement('h2', null, '💬 E7ki Messenger'),
+                    React.createElement('p', null, 'Logged in as: ' + (user.name || 'User'))
+                ),
+                React.createElement('div', { style: styles.messagesContainer },
+                    messages.map(msg => 
+                        React.createElement('div', { key: msg.id, style: styles.message },
+                            React.createElement('strong', null, msg.user + ':'),
+                            React.createElement('p', null, msg.text),
+                            React.createElement('small', null, msg.timestamp.toLocaleTimeString())
+                        )
+                    )
+                ),
+                React.createElement('div', { style: styles.inputContainer },
+                    React.createElement('input', {
+                        type: 'text',
+                        value: inputText,
+                        onChange: (e) => setInputText(e.target.value),
+                        onKeyPress: (e) => e.key === 'Enter' && sendMessage(),
+                        placeholder: 'Type a message...',
+                        style: styles.input
+                    }),
+                    React.createElement('button', {
+                        onClick: sendMessage,
+                        style: styles.sendBtn
+                    }, 'Send 📤')
+                )
+            );
+        };
+
+        const styles = {
+            container: {
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100vh',
+                background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+                color: '#fff',
+                fontFamily: 'system-ui'
+            },
+            header: {
+                padding: '20px',
+                borderBottom: '1px solid #333',
+                textAlign: 'center'
+            },
+            messagesContainer: {
+                flex: 1,
+                overflowY: 'auto',
+                padding: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px'
+            },
+            message: {
+                padding: '10px',
+                background: 'rgba(0, 212, 255, 0.1)',
+                borderLeft: '3px solid #00d4ff',
+                borderRadius: '4px',
+                fontSize: '0.9rem'
+            },
+            inputContainer: {
+                display: 'flex',
+                gap: '10px',
+                padding: '20px',
+                borderTop: '1px solid #333'
+            },
+            input: {
+                flex: 1,
+                padding: '12px',
+                background: '#333',
+                border: '1px solid #555',
+                borderRadius: '4px',
+                color: '#fff',
+                fontSize: '1rem'
+            },
+            sendBtn: {
+                padding: '12px 24px',
+                background: 'linear-gradient(135deg, #00d4ff 0%, #0099cc 100%)',
+                border: 'none',
+                borderRadius: '4px',
+                color: '#000',
+                fontWeight: '600',
+                cursor: 'pointer'
+            }
+        };
+
+        // Mount when auth is ready
+        window.E7kiAuth?.on('authReady', () => {
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(React.createElement(E7kiApp));
+        });
+    </script>
+</body>
+</html>

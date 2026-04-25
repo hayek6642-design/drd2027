@@ -113,7 +113,7 @@ function openCodeBankPanel() {
   if (!overlay || !iframe) return;
   overlay.classList.add('open');
   overlay.style.display = 'flex';
-  iframe.src = '/codebank/indexCB.html';
+  iframe.src = '/codebank/indexCB/';
   window.dispatchEvent(new Event('codebank:opened'));
 }
 
@@ -125,7 +125,7 @@ function showAlternativeDashboard() {
   overlay.style.display = 'flex';
   content.innerHTML = '';
   const iframe = document.createElement('iframe');
-  iframe.src = '/services/codebank/indexCB.html';
+  iframe.src = '/services/codebank/indexCB/';
   iframe.style.cssText = 'width:100%;height:100%;border:0;';
   content.appendChild(iframe);
 }

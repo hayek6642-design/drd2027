@@ -2,15 +2,15 @@
 // Generate smart action buttons based on user assets + intent
 
 const ACTION_DEFS = {
-  pebalaash: { label: '🛍️ Pebalaash',      labelAr: '🛍️ بيبالاش',        url: '/codebank/pebalaash.html',       color: '#7c3aed' },
-  games:     { label: '🎮 Play Games',      labelAr: '🎮 العب الآن',       url: '/codebank/Games-Centre.html',   color: '#22c55e' },
-  safecode:  { label: '🔐 SafeCode',        labelAr: '🔐 تأمن الكودز',     url: '/codebank/safecode.html',       color: '#f59e0b' },
-  samma3ny:  { label: '🎵 Samma3ny',        labelAr: '🎵 سمعني',           url: '/codebank/samma3ny.html',       color: '#06b6d4' },
-  farragna:  { label: '📹 Watch & Earn',    labelAr: '📹 شاهد وأكسب',      url: '/codebank/farragna.html',       color: '#ef4444' },
-  e7ki:      { label: '📊 Analytics',       labelAr: '📊 التحليلات',       url: '/codebank/e7ki.html',           color: '#8b5cf6' },
+  pebalaash: { label: '🛍️ Pebalaash',      labelAr: '🛍️ بيبالاش',        url: '/codebank/pebalaash/',       color: '#7c3aed' },
+  games:     { label: '🎮 Play Games',      labelAr: '🎮 العب الآن',       url: '/codebank/games-centre/',   color: '#22c55e' },
+  safecode:  { label: '🔐 SafeCode',        labelAr: '🔐 تأمن الكودز',     url: '/codebank/safecode/',       color: '#f59e0b' },
+  samma3ny:  { label: '🎵 Samma3ny',        labelAr: '🎵 سمعني',           url: '/codebank/samma3ny/',       color: '#06b6d4' },
+  farragna:  { label: '📹 Watch & Earn',    labelAr: '📹 شاهد وأكسب',      url: '/codebank/farragna/',       color: '#ef4444' },
+  e7ki:      { label: '📊 Analytics',       labelAr: '📊 التحليلات',       url: '/codebank/e7ki/',           color: '#8b5cf6' },
   ledger:    { label: '📒 Ledger',          labelAr: '📒 السجل',           url: '/codebank/bankode/ledger.html', color: '#64748b' },
-  aihub:     { label: '🤖 AI Hub',          labelAr: '🤖 مركز الذكاء',     url: '/codebank/aihub.html',          color: '#00d4ff' },
-  shots:     { label: '📸 Shots',           labelAr: '📸 شوتس',            url: '/codebank/shots.html',          color: '#ec4899' },
+  aihub:     { label: '🤖 AI Hub',          labelAr: '🤖 مركز الذكاء',     url: '/codebank/aihub/',          color: '#00d4ff' },
+  shots:     { label: '📸 Shots',           labelAr: '📸 شوتس',            url: '/codebank/shots/',          color: '#ec4899' },
 };
 
 function makeAction(id, reasonEn, reasonAr, isArabic) {
