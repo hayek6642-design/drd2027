@@ -97,8 +97,8 @@ export const AppRegistry = {
             category: 'media',
             icon: 'fa-image',
             color: '#8b5cf6',
-            url: '/codebank/shots/index.html',
-            fallbackUrls: ['/codebank/shots.html'],
+            url: '/codebank/shots.html',
+            fallbackUrls: [],
             status: 'online',
             description: 'Screenshot manager',
             badge: null
@@ -172,8 +172,8 @@ export const AppRegistry = {
             category: 'games',
             icon: 'fa-cog',
             color: '#f59e0b',
-            url: '/codebank/piston/index.html',
-            fallbackUrls: ['/codebank/piston.html'],
+            url: '/codebank/piston.html',
+            fallbackUrls: [],
             status: 'offline',
             description: 'Game engine',
             badge: null
