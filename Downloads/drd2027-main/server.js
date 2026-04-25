@@ -539,6 +539,14 @@ app.use(express.static(__dirname, {
     }
 }));
 
+// Codebank static assets (CSS, JS, images in codebank directory)
+app.use('/codebank', express.static(path.join(__dirname, 'codebank'), {
+    maxAge: '1h',
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+}));
 
 app.use('/api/watchdog', watchdogRoutes);
 
