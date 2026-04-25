@@ -1039,14 +1039,30 @@ app.post('/api/codes/sync', (req, res) => {
 
 // Assets sync endpoint - Receives generated codes from frontend and persists them
 app.post('/api/assets/sync', async (req, res) => {
-    const { userId, assets } = req.body;
+    let { userId, assets } = req.body;
+    
+    // Extract userId from Authorization header token if not in body
+    if (!userId && req.headers.authorization) {
+        const token = req.headers.authorization.replace('Bearer ', '');
+        try {
+            const decoded = jwt.verify(token, JWT_SECRET);
+            userId = decoded.userId || decoded.sub || decoded.email;
+            console.log('[API] Extracted userId from token:', userId);
+        } catch (err) {
+            console.warn('[API] Token verification failed:', err.message);
+        }
+    }
     
     // Validate userId
     if (!userId) {
-        console.warn('[API] Assets sync: missing userId', req.body);
+        console.warn('[API] Assets sync: missing userId in body and token', { 
+            bodyUserId: req.body.userId,
+            hasAuth: !!req.headers.authorization,
+            body: req.body 
+        });
         return res.status(400).json({ 
             success: false, 
-            error: 'userId is required',
+            error: 'userId is required (not found in body or token)',
             received: req.body 
         });
     }

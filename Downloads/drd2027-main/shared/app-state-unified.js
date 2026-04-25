@@ -209,14 +209,20 @@ function broadcastAuthToIframes() {
     // This is parent window
     window.addEventListener('message', (e) => {
       if (e.data?.type === 'AUTH_REQUEST') {
+        const authData = {
+          isAuthenticated: AppState.auth.isAuthenticated,
+          user: AppState.auth.user,
+          token: AppState.auth.token,
+          userId: AppState.auth.user?.id || null,
+          email: AppState.auth.user?.email || null
+        };
         e.source.postMessage({
           type: 'AUTH_RESPONSE',
-          auth: {
-            isAuthenticated: AppState.auth.isAuthenticated,
-            user: AppState.auth.user,
-            token: AppState.auth.token,
-            getAuthHeader: () => AppState.auth.getAuthHeader()
-          }
+          authenticated: authData.isAuthenticated,
+          userId: authData.userId,
+          user: authData.user,
+          token: authData.token,
+          auth: authData
         }, e.origin);
       }
     });
@@ -225,8 +231,11 @@ function broadcastAuthToIframes() {
     window.parent.postMessage({ type: 'AUTH_REQUEST' }, '*');
     window.addEventListener('message', (e) => {
       if (e.data?.type === 'AUTH_RESPONSE') {
-        Object.assign(window.AppState.auth, e.data.auth);
-        console.log('[AppState] Iframe received auth:', e.data.auth.user?.email);
+        // Receive plain object, not functions
+        if (e.data.auth) {
+          Object.assign(AppState.auth, e.data.auth);
+        }
+        console.log('[AppState] Iframe received auth:', e.data.user?.email || 'no user');
       }
     });
   }
