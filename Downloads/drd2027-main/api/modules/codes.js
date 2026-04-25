@@ -278,7 +278,7 @@ router.get('/list', requireAuth, async (req, res) => {
 
     // Get user's codes
     const result = await query(
-      'SELECT code, source, created_at, expires_at FROM codes WHERE user_id = $1 ORDER BY created_at DESC',
+      'SELECT code, source, created_at FROM codes WHERE user_id = $1 ORDER BY created_at DESC',
       [identity.userId]
     )
 
@@ -287,8 +287,7 @@ router.get('/list', requireAuth, async (req, res) => {
       .map(row => ({
         code: row.code,
         source: row.source,
-        created_at: row.created_at,
-        expires_at: row.expires_at
+        created_at: row.created_at
       }))
 
     res.json({
