@@ -561,6 +561,12 @@ app.use('/api/persistence', persistenceRouter);
 app.use('/api/activity', activityRouter);
 
 // ============================================================================
+// CODES API - Code Generation & Management Routes
+// ============================================================================
+// Mount codes router BEFORE generic /api mount so /api/codes/* routes work
+app.use('/api/codes', codesMod.default || codesMod);
+
+// ============================================================================
 // ZAGEL COMMAND WHEEL - Real-time Event & Service Integration
 // ============================================================================
 

@@ -495,6 +495,61 @@ function showStatus(msg, type) {
   statusEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
+// ── Session Management ───────────────────────────────────────────────────────
+/**
+ * Save session after successful login/signup
+ * Stores auth state in sessionStorage and AppState for immediate use
+ */
+function saveSession(data) {
+  if (!data || !data.token) {
+    console.warn('[Session] No token in login response');
+    return;
+  }
+
+  const userId = data.userId || data.user?.id;
+  const email = data.email || data.user?.email;
+
+  if (!userId || !email) {
+    console.warn('[Session] Missing userId or email in response');
+    return;
+  }
+
+  // Save to sessionStorage for persistence across page reloads
+  const authState = {
+    isAuthenticated: true,
+    user: {
+      id: userId,
+      email: email,
+      role: data.role || data.user?.role || 'user'
+    },
+    token: data.token,
+    sessionId: data.sessionId || data.token
+  };
+
+  try {
+    sessionStorage.setItem('appstate_auth', JSON.stringify(authState));
+    console.log('[Session] Saved to sessionStorage:', email);
+  } catch (e) {
+    console.error('[Session] Failed to save to sessionStorage:', e.message);
+  }
+
+  // Also set in window.AppState if available
+  if (window.AppState && window.AppState.auth && typeof window.AppState.auth.setUser === 'function') {
+    try {
+      window.AppState.auth.setUser(
+        { id: userId, email: email, role: authState.user.role },
+        data.token,
+        authState.sessionId
+      );
+      console.log('[Session] Set AppState.auth for', email);
+    } catch (e) {
+      console.warn('[Session] AppState.setUser failed:', e.message);
+    }
+  } else {
+    console.warn('[Session] AppState not available yet (OK if script loads later)');
+  }
+}
+
 // ── Data Loading ────────────────────────────────────────────────────────────
 async function loadStaticData() {
   try {
