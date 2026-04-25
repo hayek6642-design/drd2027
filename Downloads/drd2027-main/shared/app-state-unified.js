@@ -5,6 +5,28 @@
  * No fallbacks. No fake users. No desync.
  */
 
+// === PROTECTION: Block pIndex from being reset to 0 ===
+// This intercepts ALL localStorage.setItem() calls to prevent code generation corruption
+const _originalSetItem = localStorage.setItem;
+localStorage.setItem = function(key, value) {
+  if (key === 'bankode_pIndex') {
+    const current = localStorage.getItem('bankode_pIndex');
+    const currentVal = current ? parseInt(current) : 0;
+    const newVal = parseInt(value);
+    
+    // BLOCK: Trying to reset pIndex to 0 when it's already > 0
+    if (currentVal > 0 && newVal === 0) {
+      console.warn('[AppState::pIndex-Guard] 🛡️ BLOCKED reset from', currentVal, '→ 0');
+      console.warn('[AppState::pIndex-Guard] Stack:', new Error().stack);
+      return; // Don't allow reset
+    }
+  }
+  
+  // Allow all other operations
+  return _originalSetItem.apply(this, arguments);
+};
+console.log('[AppState::pIndex-Guard] ✅ Protection activated');
+
 window.AppState = window.AppState || {};
 
 window.AppState.auth = {
