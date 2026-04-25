@@ -128,8 +128,19 @@ window.AppState.auth = {
     this.sessionId = null;
     this.lastVerified = null;
     
-    sessionStorage.clear();
-    localStorage.clear();
+    // CRITICAL: Only remove auth-related keys, NOT code generation state
+    const authKeys = [
+      'appstate_auth', 'auth_token', 'session_token', 
+      'refresh_token', 'user_email', 'auth_session',
+      'auth_verified', 'auth_timestamp'
+    ];
+    authKeys.forEach(key => {
+      sessionStorage.removeItem(key);
+      localStorage.removeItem(key);
+    });
+    
+    // DO NOT touch: bankode_pIndex, bankode_nextDueAt, bankode_codes, user_prefs, etc.
+    console.log('[AppState] Auth keys cleared; code generation state preserved');
     
     // Redirect to login
     window.location.href = '/login.html';
