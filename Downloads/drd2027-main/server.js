@@ -517,7 +517,7 @@ app.get('/api/auth/me', async (req, res) => {
 
 // Root path: serve yt-new-clear.html
 app.get('/', (req, res) => {
-    const htmlPath = path.join(__dirname, 'yt-new-clean.html');
+    const htmlPath = path.join(__dirname, 'yt-new-clear.html');
     if (fs.existsSync(htmlPath)) {
         return res.sendFile(htmlPath);
     }
