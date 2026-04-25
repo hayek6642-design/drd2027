@@ -11,8 +11,8 @@ export const AppRegistry = {
             category: 'core',
             icon: 'fa-shield-alt',
             color: '#10b981',
-            url: '/codebank/safecode/',
-            fallbackUrls: [],
+            url: '/codebank/safecode/index.html',
+            fallbackUrls: ['/codebank/safecode.html'],
             description: 'Secure code storage',
             status: 'online',
             badge: null
@@ -25,7 +25,8 @@ export const AppRegistry = {
             category: 'media',
             icon: 'fa-music',
             color: '#8b5cf6',
-            url: '/codebank/samma3ny/',
+            url: '/codebank/samma3ny/index.html',
+            fallbackUrls: ['/codebank/samma3ny.html'],
             description: 'Audio platform',
             status: 'online',
             badge: null
@@ -36,7 +37,8 @@ export const AppRegistry = {
             category: 'media',
             icon: 'fa-microphone-alt',
             color: '#e74c3c',
-            url: '/codebank/battalooda/',
+            url: '/codebank/battalooda/talent-studio.html',
+            fallbackUrls: ['/codebank/battalooda.html'],
             description: 'Vocal talent discovery platform',
             status: 'online',
             badge: null
@@ -47,7 +49,8 @@ export const AppRegistry = {
             category: 'media',
             icon: 'fa-chart-line',
             color: '#ec4899',
-            url: '/codebank/farragna/',
+            url: '/codebank/farragna/index.html',
+            fallbackUrls: ['/codebank/farragna.html'],
             description: 'Trading platform',
             status: 'online',
             badge: null
@@ -59,6 +62,7 @@ export const AppRegistry = {
             icon: 'fa-globe',
             color: '#8b5cf6',
             url: '/codebank/oneworld/index.html',
+            fallbackUrls: ['/codebank/oneworld.html'],
             status: 'online',
             description: 'Global content hub',
             badge: null
@@ -69,7 +73,8 @@ export const AppRegistry = {
             category: 'media',
             icon: 'fa-compact-disc',
             color: '#8b5cf6',
-            url: '/codebank/nostalgia/',
+            url: '/codebank/nostalgia/index.html',
+            fallbackUrls: ['/codebank/nostalgia.html'],
             status: 'maintenance',
             description: 'Retro music collection',
             badge: null
@@ -80,7 +85,8 @@ export const AppRegistry = {
             category: 'media',
             icon: 'fa-camera',
             color: '#8b5cf6',
-            url: '/codebank/setta/',
+            url: '/codebank/setta/index.html',
+            fallbackUrls: ['/codebank/setta.html'],
             status: 'maintenance',
             description: 'Photo & video gallery',
             badge: null
@@ -91,7 +97,8 @@ export const AppRegistry = {
             category: 'media',
             icon: 'fa-image',
             color: '#8b5cf6',
-            url: '/codebank/shots/',
+            url: '/codebank/shots/index.html',
+            fallbackUrls: ['/codebank/shots.html'],
             status: 'online',
             description: 'Screenshot manager',
             badge: null
@@ -104,7 +111,8 @@ export const AppRegistry = {
             category: 'finance',
             icon: 'fa-paper-plane',
             color: '#3b82f6',
-            url: '/codebank/eb3at/',
+            url: '/codebank/eb3at/index.html',
+            fallbackUrls: ['/codebank/eb3at.html'],
             description: 'Messaging service',
             status: 'online',
             badge: null
@@ -115,7 +123,8 @@ export const AppRegistry = {
             category: 'finance',
             icon: 'fa-gamepad',
             color: '#f59e0b',
-            url: '/codebank/pebalaash/',
+            url: '/codebank/pebalaash/index.html',
+            fallbackUrls: ['/codebank/pebalaash.html'],
             description: 'Marketplace platform',
             status: 'online',
             badge: null
@@ -126,6 +135,7 @@ export const AppRegistry = {
             icon: 'fa-shield-alt',
             color: '#3b82f6',
             url: '/codebank/qarsan/index.html',
+            fallbackUrls: ['/codebank/qarsan.html'],
             status: 'online',
             description: 'Security & protection',
             badge: null
@@ -138,7 +148,8 @@ export const AppRegistry = {
             category: 'games',
             icon: 'fa-gamepad',
             color: '#f59e0b',
-            url: '/codebank/games-centre/',
+            url: '/codebank/games-centre/index.html',
+            fallbackUrls: ['/codebank/games-centre.html'],
             status: 'online',
             description: 'Gaming hub',
             badge: null
@@ -149,7 +160,8 @@ export const AppRegistry = {
             category: 'games',
             icon: 'fa-map-marked-alt',
             color: '#10b981',
-            url: '/codebank/yahood/',
+            url: '/codebank/yahood/index.html',
+            fallbackUrls: ['/codebank/yahood.html'],
             status: 'online',
             description: 'Geo-based treasure mining & PvP world',
             badge: null
@@ -160,7 +172,8 @@ export const AppRegistry = {
             category: 'games',
             icon: 'fa-cog',
             color: '#f59e0b',
-            url: '/codebank/piston/',
+            url: '/codebank/piston/index.html',
+            fallbackUrls: ['/codebank/piston.html'],
             status: 'offline',
             description: 'Game engine',
             badge: null
@@ -173,7 +186,8 @@ export const AppRegistry = {
             category: 'tools',
             icon: 'fa-brain',
             color: '#7c3aed',
-            url: '/codebank/corsa/',
+            url: '/codebank/corsa/index.html',
+            fallbackUrls: ['/codebank/corsa.html'],
             status: 'online',
             description: 'AI Assistant',
             badge: null
@@ -184,7 +198,8 @@ export const AppRegistry = {
             category: 'tools',
             icon: 'fa-robot',
             color: '#7c3aed',
-            url: '/codebank/aihub/',
+            url: '/codebank/aihub/index.html',
+            fallbackUrls: ['/codebank/aihub.html'],
             description: 'Gateway to the AI World',
             status: 'online',
             badge: null
@@ -207,7 +222,8 @@ export const AppRegistry = {
             category: 'tools',
             icon: 'fa-calculator',
             color: '#10b981',
-            url: '/codebank/calculator/',
+            url: '/codebank/calculator/index.html',
+            fallbackUrls: ['/codebank/calculator.html'],
             description: 'Scientific Calculator',
             status: 'online',
             badge: null
@@ -218,7 +234,8 @@ export const AppRegistry = {
             category: 'tools',
             icon: 'fa-comments',
             color: '#06b6d4',
-            url: '/codebank/e7ki/',
+            url: '/codebank/e7ki/index.html',
+            fallbackUrls: ['/codebank/e7ki.html'],
             description: 'Chat platform with ZAGEL messenger',
             status: 'online',
             badge: null
