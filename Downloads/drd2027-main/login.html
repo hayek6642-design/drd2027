@@ -514,7 +514,7 @@ function saveSession(data) {
     return;
   }
 
-  // Save to sessionStorage for persistence across page reloads
+  // Build auth state (will be saved to localStorage + sessionStorage)
   const authState = {
     isAuthenticated: true,
     user: {
@@ -527,10 +527,12 @@ function saveSession(data) {
   };
 
   try {
+    // Save to BOTH localStorage (persists on F5) and sessionStorage (compatibility)
+    localStorage.setItem('appstate_auth', JSON.stringify(authState));
     sessionStorage.setItem('appstate_auth', JSON.stringify(authState));
-    console.log('[Session] Saved to sessionStorage:', email);
+    console.log('[Session] ✅ Saved to localStorage + sessionStorage:', email);
   } catch (e) {
-    console.error('[Session] Failed to save to sessionStorage:', e.message);
+    console.error('[Session] Failed to save auth state:', e.message);
   }
 
   // Also set in window.AppState if available

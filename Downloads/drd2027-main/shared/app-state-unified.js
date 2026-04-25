@@ -14,17 +14,35 @@ window.AppState.auth = {
   sessionId: null,
   lastVerified: null,
   
-  // Initialize from session storage or localStorage (only immediately after login)
+  // Initialize from localStorage (persists across page refreshes)
   async restore() {
     try {
-      const stored = sessionStorage.getItem('appstate_auth');
+      // Try localStorage first (survives F5 refresh)
+      let stored = localStorage.getItem('appstate_auth');
+      
+      // Fallback to sessionStorage if localStorage empty
+      if (!stored) {
+        stored = sessionStorage.getItem('appstate_auth');
+        if (stored) console.log('[AppState] Migrating from sessionStorage to localStorage');
+      }
+      
       if (stored) {
         const saved = JSON.parse(stored);
         this.isAuthenticated = saved.isAuthenticated;
         this.user = saved.user;
         this.token = saved.token;
         this.sessionId = saved.sessionId;
-        console.log('[AppState] Restored from sessionStorage:', this.user?.email);
+        console.log('[AppState] ✅ Restored from storage:', this.user?.email);
+        
+        // Verify with backend if we have a token
+        if (this.token) {
+          const isValid = await this.verify();
+          if (!isValid) {
+            console.warn('[AppState] Token invalid, clearing auth');
+            this.logout();
+            return false;
+          }
+        }
         return true;
       }
     } catch (e) {
@@ -100,15 +118,24 @@ window.AppState.auth = {
     console.log('[AppState] User logged in:', user.email);
   },
   
-  // Persist to sessionStorage (NOT localStorage after login to prevent stale data)
+  // Persist to localStorage (survives page refresh + F5)
+  // Also save to sessionStorage as redundant backup
   persist() {
     try {
-      sessionStorage.setItem('appstate_auth', JSON.stringify({
+      const data = JSON.stringify({
         isAuthenticated: this.isAuthenticated,
         user: this.user,
         token: this.token,
         sessionId: this.sessionId
-      }));
+      });
+      
+      // Primary: localStorage (persists on F5)
+      localStorage.setItem('appstate_auth', data);
+      
+      // Redundant: sessionStorage (for compatibility)
+      sessionStorage.setItem('appstate_auth', data);
+      
+      console.log('[AppState] ✅ Persisted to localStorage + sessionStorage');
     } catch (e) {
       console.warn('[AppState] Persist failed:', e.message);
     }
@@ -116,7 +143,7 @@ window.AppState.auth = {
   
   // Logout completely
   logout() {
-    console.log('[AppState] Logging out');
+    console.log('[AppState] ⏹️ Logging out');
     
     // Notify backend
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
@@ -140,7 +167,8 @@ window.AppState.auth = {
     });
     
     // DO NOT touch: bankode_pIndex, bankode_nextDueAt, bankode_codes, user_prefs, etc.
-    console.log('[AppState] Auth keys cleared; code generation state preserved');
+    console.log('[AppState] ✅ Auth keys cleared; code generation state PRESERVED');
+    console.log('[AppState] Preserved keys:', ['bankode_pIndex', 'bankode_nextDueAt', 'bankode_codes']);
     
     // Redirect to login
     window.location.href = '/login.html';

@@ -164,9 +164,9 @@
     <!-- Modular App Core -->
     <script type="module" src="/codebank/js/app-core.js?v=3"></script>
     <script src="/codebank/js/service-manager.js?v=3"></script>
-    <!-- ✅ Unified Global State Architecture (replaces all bridges) -->
-    <script src="/codebank/js/global-store.js?v=1"></script>
-    <script src="/codebank/js/event-bus-simple.js?v=1"></script>
+    <!-- ✅ REFACTORED: Removed old auth scripts (global-store.js, event-bus-simple.js) -->
+    <!-- Using new unified auth system: app-state-unified.js from /shared/ -->
+    <script src="/shared/app-state-unified.js?v=2"></script>
     <script src="/codebank/js/auth-unified.js?v=1"></script>
     <script src="/codebank/js/assets-direct.js?v=2"></script>
     <script src="/codebank/js/service-loader.js?v=1"></script>

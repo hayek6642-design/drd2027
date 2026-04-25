@@ -2833,11 +2833,9 @@ function clearSessionAndLogout() {
     <!-- 3. Bankode (must finish before bridge) -->
     <script src="/shared/bankode-core.js"></script>
     
-    <!-- 3b. EventBus - required for assets-direct.js -->
-    <script src="/codebank/js/event-bus-simple.js"></script>
-    
-    <!-- 3c. Global State -->
-    <script src="/codebank/js/global-store.js"></script>
+    <!-- REMOVED: event-bus-simple.js, global-store.js (old auth system conflicts) -->
+    <!-- ✅ NEW: Unified Auth System (localStorage persistence) -->
+    <script src="/shared/app-state-unified.js?v=2"></script>
     
     <!-- 4. AssetBus & Bridge Initialization -->
     <script type="module">
@@ -2861,7 +2859,7 @@ function clearSessionAndLogout() {
     </script>
 
     <!-- Auth + Assets - from shared -->
-    <script src="/shared/auth-global.js"></script>
+    <!-- REMOVED: auth-global.js (replaced by app-state-unified.js) -->
     <script src="/shared/assets-direct.js"></script>
     
     <!-- 6. Safe Asset List - REMOVED from main page, only in CodeBank iframe -->
