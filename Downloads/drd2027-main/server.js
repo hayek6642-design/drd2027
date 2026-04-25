@@ -122,6 +122,7 @@ import drmailRouter from './api/modules/drmail.js';
 import quotaRouter from './api/modules/quota.js';
 import aiRouter from './server/routes/ai-routes.js';
 import assetRoutes from './server/routes/assets.js';
+import extractedServicesRouter from './api/routes/extracted-services.js';
 import dbAdapter from './server/database/db-adapter.js';
 
 // ── Auth Refactor v2 Routes & Middleware ──────────────────────────
@@ -558,6 +559,9 @@ app.use('/api/persistence', persistenceRouter);
 
 // Register Activity Tracker routes (comprehensive user activity sync)
 app.use('/api/activity', activityRouter);
+
+// Register Extracted Services routes (Quran, Messages, Phone, AI Chat, Platform Manager)
+app.use('/api/services', extractedServicesRouter);
 
 // ============================================================================
 // ZAGEL COMMAND WHEEL - Real-time Event & Service Integration

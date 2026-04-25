@@ -1,100 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quran Browser - CodeBank</title>
-    <link rel="stylesheet" href="quran.css">
-
-  <script src="../auth-bridge.js"></script>
-  <script>
-    // Listen for auth changes from main app
-    authBridge.onAuthChange((user, token) => {
-      if (!user || !token) {
-        console.warn('[Service Auth] Not authenticated. Redirecting to login...');
-        // Show auth required message
-        if (document.body) {
-          document.body.innerHTML = `
-            <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:linear-gradient(135deg,#0f0f1a,#1a1a2e);font-family:sans-serif;color:#fff;">
-              <div style="text-align:center;padding:40px;">
-                <div style="font-size:64px;margin-bottom:20px;">🔐</div>
-                <h1 style="margin:0;color:#00d4ff;">Authentication Required</h1>
-                <p style="color:#aaa;margin:10px 0 20px;">Please log in first to access this service.</p>
-                <a href="/login.html" style="background:linear-gradient(135deg,#00d4ff,#0099cc);color:#000;padding:12px 30px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">Go to Login</a>
-              </div>
-            </div>
-          `;
-        }
-        return;
-      }
-      console.log('[Service Auth] User authenticated:', user.email);
-      // Initialize service with authenticated user
-      if (window.serviceInit && typeof window.serviceInit === 'function') {
-        window.serviceInit(user, token);
-      }
-    });
-  </script>
-  </head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quran - CodeBank</title>
+  <link rel="stylesheet" href="/codebank/styles/styles.css">
+  <link rel="stylesheet" href="quran.css">
+</head>
 <body>
-    <div class="quran-container">
-        <!-- Header -->
-        <div class="quran-header">
-            <h1>📖 Quran Browser</h1>
-            <p class="subtitle">Interactive Quranic Text & Translation</p>
-        </div>
-
-        <!-- Search & Filter -->
-        <div class="quran-controls">
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="Search surahs or verses..." class="search-input">
-                <button class="search-btn">🔍</button>
-            </div>
-            <div class="filters">
-                <select id="languageSelect" class="filter-select">
-                    <option value="ar">العربية</option>
-                    <option value="en">English</option>
-                    <option value="es">Español</option>
-                </select>
-                <select id="translationSelect" class="filter-select">
-                    <option value="saheeh">Sahih International</option>
-                    <option value="pickthall">Pickthall</option>
-                    <option value="yusuf">Yusuf Ali</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- Main Content Area -->
-        <div class="quran-main">
-            <!-- Surahs List (Left Panel) -->
-            <div class="surahs-panel">
-                <h2>📚 Surahs</h2>
-                <div class="surahs-list" id="surahsList">
-                    <!-- Dynamically populated -->
-                </div>
-            </div>
-
-            <!-- Verses Display (Right Panel) -->
-            <div class="verses-panel">
-                <div class="verses-header">
-                    <h2 id="surahTitle">Select a Surah</h2>
-                    <div class="verse-info">
-                        <span class="verse-count" id="verseCount"></span>
-                        <button class="audio-btn" id="audioBtn" title="Play Quranic Recitation">
-                            🔊 Play
-                        </button>
-                    </div>
-                </div>
-
-                <div class="verses-container" id="versesContainer">
-                    <div class="placeholder">
-                        <p>Select a Surah from the list to view verses</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <div id="quran-app" class="service-container">
+    <!-- Header -->
+    <div class="quran-header">
+      <h1>📖 The Quran</h1>
+      <div class="header-actions">
+        <input type="search" id="quranSearch" placeholder="Search Surahs or verses..." class="quran-search">
+        <button id="bookmarksBtn" class="bookmarks-btn">🔖 Bookmarks</button>
+      </div>
     </div>
 
-    <script src="quran.js"></script>
-    <script src="../../service-navigation.js"></script>
+    <!-- Main Layout -->
+    <div class="quran-layout">
+      <!-- Surah List -->
+      <div class="surah-list">
+        <h3>Surahs</h3>
+        <div id="surahContainer" class="surahs"></div>
+      </div>
+
+      <!-- Content Area -->
+      <div class="content-area">
+        <div id="surahView" class="view active">
+          <div class="surah-info">
+            <h2 id="surahTitle"></h2>
+            <p id="surahDescription"></p>
+          </div>
+          <div id="versesContainer" class="verses"></div>
+        </div>
+
+        <div id="bookmarksView" class="view">
+          <h2>My Bookmarks</h2>
+          <div id="bookmarksList" class="bookmarks-list"></div>
+        </div>
+
+        <div id="searchResultsView" class="view">
+          <h2>Search Results</h2>
+          <div id="searchResults" class="search-results"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/universal-autosave.js"></script>
+  <script src="/js/service-adapters.js"></script>
+  <script src="/shared/js/auth-client.js"></script>
+  <script src="quran.js"></script>
 </body>
 </html>

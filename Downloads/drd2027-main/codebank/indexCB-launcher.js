@@ -17,16 +17,21 @@
   var services = [
     { id: 'yt-clear',       name: 'YT-Clear',       icon: '📺', url: '/yt-new-clear.html',  desc: 'Watch & Earn', isExternal: true },
     { id: 'safecode',       name: 'SafeCode',        icon: '🔐', url: '/safecode.html',      desc: 'Asset Vault' },
+    { id: 'quran',          name: 'Quran',           icon: '📖', url: '/quran.html',         desc: 'Holy Scripture' },
+    { id: 'messages',       name: 'DRD-Mail',        icon: '📬', url: '/messages.html',      desc: 'Messages' },
+    { id: 'phone-calls',    name: 'Phone',           icon: '☎️', url: '/phone-calls.html',   desc: 'Call History' },
+    { id: 'ai-chat',        name: 'AI Chat',         icon: '🤖', url: '/ai-chat.html',       desc: 'AI Assistant' },
+    { id: 'platform-mgr',   name: 'Platform Mgr',    icon: '⚙️', url: '/platform-manager.html', desc: 'Admin Panel' },
     { id: 'cottery',        name: 'Cottery',         icon: '🎯', url: '/codebank/cottery/',  desc: 'Prediction Game' },
     { id: 'e7ki',           name: 'E7ki',             icon: '💬', url: '/codebank/e7ki/',   desc: 'Chat' },
-    { id: 'samma3ny',       name: 'Samma3ny',        icon: '🤖', url: '/codebank/samma3ny.html', desc: 'AI Assistant' },
+    { id: 'samma3ny',       name: 'Samma3ny',        icon: '🎵', url: '/codebank/samma3ny.html', desc: 'Music' },
     { id: 'farragna',       name: 'Farragna',        icon: '❤️', url: '/farragna.html',      desc: 'Social Likes' },
     { id: 'nostalgia',      name: 'Nostalgia',       icon: '💿', url: '/codebank/nostalgia/', desc: 'Retro Memories' },
     { id: 'estshara',       name: 'Estshara',        icon: '💼', url: '/codebank/estshara/',  desc: 'Consultations', isFolder: true },
     { id: 'pebalaash',      name: 'Pebalaash',       icon: '🏪', url: '/pebalaash.html',     desc: 'Barter & Trade' },
     { id: 'corsa',          name: 'CoRsA',            icon: '🏎️', url: '/corsa.html',         desc: 'Racing Game' },
     { id: 'eb3at',          name: 'Eb3at',            icon: '📤', url: '/eb3at.html',         desc: 'File Transfer' },
-    { id: 'battalooda',     name: 'Battalooda',      icon: '🎵', url: '/battalooda.html',    desc: 'Music Studio' },
+    { id: 'battalooda',     name: 'Battalooda',      icon: '🎹', url: '/battalooda.html',    desc: 'Music Studio' },
     { id: 'games-centre',   name: 'Games Centre',    icon: '🎮', url: '/games-centre.html',  desc: 'Mini Games' },
     { id: 'yahood',         name: 'Yahood!',          icon: '📰', url: '/yahood.html',        desc: 'News & Content' }
   ];

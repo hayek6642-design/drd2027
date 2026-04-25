@@ -1,307 +1,334 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Platform Manager - CodeBank</title>
-    <link rel="stylesheet" href="platform-manager.css">
-
-  <script src="../auth-bridge.js"></script>
-  <script>
-    // Listen for auth changes from main app
-    authBridge.onAuthChange((user, token) => {
-      if (!user || !token) {
-        console.warn('[Service Auth] Not authenticated. Redirecting to login...');
-        // Show auth required message
-        if (document.body) {
-          document.body.innerHTML = `
-            <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:linear-gradient(135deg,#0f0f1a,#1a1a2e);font-family:sans-serif;color:#fff;">
-              <div style="text-align:center;padding:40px;">
-                <div style="font-size:64px;margin-bottom:20px;">🔐</div>
-                <h1 style="margin:0;color:#00d4ff;">Authentication Required</h1>
-                <p style="color:#aaa;margin:10px 0 20px;">Please log in first to access this service.</p>
-                <a href="/login.html" style="background:linear-gradient(135deg,#00d4ff,#0099cc);color:#000;padding:12px 30px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">Go to Login</a>
-              </div>
-            </div>
-          `;
-        }
-        return;
-      }
-      console.log('[Service Auth] User authenticated:', user.email);
-      // Initialize service with authenticated user
-      if (window.serviceInit && typeof window.serviceInit === 'function') {
-        window.serviceInit(user, token);
-      }
-    });
-  </script>
-  </head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Platform Manager - CodeBank</title>
+  <link rel="stylesheet" href="/codebank/styles/styles.css">
+  <link rel="stylesheet" href="platform-manager.css">
+</head>
 <body>
-    <div class="platform-manager">
-        <!-- Header -->
-        <div class="pm-header">
-            <h1>🏗️ Platform Manager</h1>
-            <div class="header-actions">
-                <button class="refresh-btn" id="refreshBtn" title="Refresh data">
-                    ⟳ Refresh
-                </button>
-                <button class="settings-btn" id="settingsBtn" title="Settings">
-                    ⚙️ Settings
-                </button>
-            </div>
-        </div>
-
-        <!-- Navigation Tabs -->
-        <div class="pm-nav">
-            <button class="nav-tab active" data-tab="dashboard">📊 Dashboard</button>
-            <button class="nav-tab" data-tab="services">🔧 Services</button>
-            <button class="nav-tab" data-tab="resources">📦 Resources</button>
-            <button class="nav-tab" data-tab="analytics">📈 Analytics</button>
-            <button class="nav-tab" data-tab="logs">📋 Logs</button>
-        </div>
-
-        <!-- Content Area -->
-        <div class="pm-content">
-            <!-- Dashboard Tab -->
-            <div class="tab-content active" id="dashboard">
-                <div class="dashboard-grid">
-                    <!-- Status Overview -->
-                    <div class="card status-card">
-                        <h3>System Status</h3>
-                        <div class="status-item">
-                            <span class="status-label">Server Health</span>
-                            <span class="status-value online">🟢 Online</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">API Status</span>
-                            <span class="status-value online">🟢 Operational</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Database</span>
-                            <span class="status-value online">🟢 Connected</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Cache</span>
-                            <span class="status-value online">🟢 Active</span>
-                        </div>
-                    </div>
-
-                    <!-- Quick Stats -->
-                    <div class="card stats-card">
-                        <h3>Quick Stats</h3>
-                        <div class="stat-item">
-                            <div class="stat-number" id="activeUsers">1,247</div>
-                            <div class="stat-label">Active Users</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-number" id="requests">524.2K</div>
-                            <div class="stat-label">Requests/Hour</div>
-                        </div>
-                    </div>
-
-                    <!-- Performance Metrics -->
-                    <div class="card metrics-card">
-                        <h3>Performance</h3>
-                        <div class="metric-item">
-                            <span class="metric-label">Response Time</span>
-                            <span class="metric-value">142ms</span>
-                        </div>
-                        <div class="metric-item">
-                            <span class="metric-label">Uptime</span>
-                            <span class="metric-value">99.99%</span>
-                        </div>
-                        <div class="metric-item">
-                            <span class="metric-label">CPU Usage</span>
-                            <span class="metric-value">34%</span>
-                        </div>
-                    </div>
-
-                    <!-- Recent Activity -->
-                    <div class="card activity-card">
-                        <h3>Recent Activity</h3>
-                        <div class="activity-list">
-                            <div class="activity-item">
-                                <span class="activity-time">2 min ago</span>
-                                <span class="activity-text">User login from IP 192.168.1.1</span>
-                            </div>
-                            <div class="activity-item">
-                                <span class="activity-time">5 min ago</span>
-                                <span class="activity-text">Database backup completed</span>
-                            </div>
-                            <div class="activity-item">
-                                <span class="activity-time">12 min ago</span>
-                                <span class="activity-text">Cache cleared and refreshed</span>
-                            </div>
-                            <div class="activity-item">
-                                <span class="activity-time">18 min ago</span>
-                                <span class="activity-text">API rate limit reset</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Services Tab -->
-            <div class="tab-content" id="services">
-                <div class="services-list">
-                    <div class="service-item">
-                        <div class="service-header">
-                            <h4>📱 Farragna</h4>
-                            <span class="status-badge online">Active</span>
-                        </div>
-                        <p class="service-desc">Video sharing platform with zero-storage architecture</p>
-                        <div class="service-actions">
-                            <button class="action-btn">View Logs</button>
-                            <button class="action-btn">Configure</button>
-                        </div>
-                    </div>
-
-                    <div class="service-item">
-                        <div class="service-header">
-                            <h4>💬 DRD Mail</h4>
-                            <span class="status-badge online">Active</span>
-                        </div>
-                        <p class="service-desc">Secure messaging and email service</p>
-                        <div class="service-actions">
-                            <button class="action-btn">View Logs</button>
-                            <button class="action-btn">Configure</button>
-                        </div>
-                    </div>
-
-                    <div class="service-item">
-                        <div class="service-header">
-                            <h4>☎️ Phone System</h4>
-                            <span class="status-badge online">Active</span>
-                        </div>
-                        <p class="service-desc">VoIP and phone call management</p>
-                        <div class="service-actions">
-                            <button class="action-btn">View Logs</button>
-                            <button class="action-btn">Configure</button>
-                        </div>
-                    </div>
-
-                    <div class="service-item">
-                        <div class="service-header">
-                            <h4>🤖 AI Chat</h4>
-                            <span class="status-badge online">Active</span>
-                        </div>
-                        <p class="service-desc">AI-powered chat and conversation engine</p>
-                        <div class="service-actions">
-                            <button class="action-btn">View Logs</button>
-                            <button class="action-btn">Configure</button>
-                        </div>
-                    </div>
-
-                    <div class="service-item">
-                        <div class="service-header">
-                            <h4>📖 Quran Browser</h4>
-                            <span class="status-badge online">Active</span>
-                        </div>
-                        <p class="service-desc">Interactive Quranic text and translation viewer</p>
-                        <div class="service-actions">
-                            <button class="action-btn">View Logs</button>
-                            <button class="action-btn">Configure</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Resources Tab -->
-            <div class="tab-content" id="resources">
-                <div class="resources-grid">
-                    <div class="resource-card">
-                        <div class="resource-header">
-                            <h4>💾 Storage</h4>
-                            <span class="resource-value">2.3 GB / 10 GB</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: 23%"></div>
-                        </div>
-                    </div>
-
-                    <div class="resource-card">
-                        <div class="resource-header">
-                            <h4>🔌 CPU</h4>
-                            <span class="resource-value">34% / 100%</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill cpu" style="width: 34%"></div>
-                        </div>
-                    </div>
-
-                    <div class="resource-card">
-                        <div class="resource-header">
-                            <h4>💾 Memory</h4>
-                            <span class="resource-value">2.8 GB / 8 GB</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill memory" style="width: 35%"></div>
-                        </div>
-                    </div>
-
-                    <div class="resource-card">
-                        <div class="resource-header">
-                            <h4>🌐 Bandwidth</h4>
-                            <span class="resource-value">2.1 TB / 5 TB</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill bandwidth" style="width: 42%"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Analytics Tab -->
-            <div class="tab-content" id="analytics">
-                <div class="analytics-container">
-                    <div class="chart-placeholder">
-                        <h4>Traffic Over Time</h4>
-                        <p>📊 Chart visualization would appear here</p>
-                    </div>
-                    <div class="chart-placeholder">
-                        <h4>User Activity Distribution</h4>
-                        <p>📈 Distribution chart would appear here</p>
-                    </div>
-                    <div class="chart-placeholder">
-                        <h4>API Endpoint Performance</h4>
-                        <p>📉 Performance metrics would appear here</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Logs Tab -->
-            <div class="tab-content" id="logs">
-                <div class="logs-container">
-                    <div class="logs-header">
-                        <input type="text" id="logFilter" placeholder="Filter logs..." class="log-filter">
-                        <button id="clearLogsBtn" class="clear-logs-btn">Clear All</button>
-                    </div>
-                    <div class="logs-list" id="logsList">
-                        <div class="log-entry info">
-                            <span class="log-time">14:23:45</span>
-                            <span class="log-level">[INFO]</span>
-                            <span class="log-message">Server started successfully</span>
-                        </div>
-                        <div class="log-entry success">
-                            <span class="log-time">14:23:46</span>
-                            <span class="log-level">[SUCCESS]</span>
-                            <span class="log-message">Database connection established</span>
-                        </div>
-                        <div class="log-entry info">
-                            <span class="log-time">14:24:12</span>
-                            <span class="log-level">[INFO]</span>
-                            <span class="log-message">API routes initialized</span>
-                        </div>
-                        <div class="log-entry warning">
-                            <span class="log-time">14:25:33</span>
-                            <span class="log-level">[WARNING]</span>
-                            <span class="log-message">High memory usage detected: 85%</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <div id="platform-manager" class="service-container">
+    <!-- Header -->
+    <div class="pm-header">
+      <h1>🔧 Platform Manager</h1>
+      <div class="header-actions">
+        <button class="refresh-btn" id="refreshBtn" title="Refresh stats">↻</button>
+        <button class="settings-btn" id="settingsBtn" title="Settings">⚙️</button>
+      </div>
     </div>
 
-    <script src="platform-manager.js"></script>
+    <!-- Navigation Tabs -->
+    <div class="pm-tabs">
+      <button class="tab-btn active" data-tab="overview">📊 Overview</button>
+      <button class="tab-btn" data-tab="services">🛠️ Services</button>
+      <button class="tab-btn" data-tab="users">👥 Users</button>
+      <button class="tab-btn" data-tab="analytics">📈 Analytics</button>
+      <button class="tab-btn" data-tab="maintenance">⚙️ Maintenance</button>
+      <button class="tab-btn" data-tab="logs">📋 Logs</button>
+    </div>
+
+    <!-- Content Area -->
+    <div class="pm-content">
+      <!-- Overview Tab -->
+      <div class="tab-content active" id="overview-tab">
+        <div class="overview-grid">
+          <!-- Stats Cards -->
+          <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-info">
+              <div class="stat-label">Active Users</div>
+              <div class="stat-value" id="activeUsers">0</div>
+              <div class="stat-detail">Last 24h</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon">⚡</div>
+            <div class="stat-info">
+              <div class="stat-label">Server Status</div>
+              <div class="stat-value" id="serverStatus">🟢 Online</div>
+              <div class="stat-detail">Uptime: <span id="uptime">0h</span></div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon">💾</div>
+            <div class="stat-info">
+              <div class="stat-label">Database</div>
+              <div class="stat-value" id="dbSize">0 MB</div>
+              <div class="stat-detail">Queries: <span id="dbQueries">0</span></div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon">🔒</div>
+            <div class="stat-info">
+              <div class="stat-label">Security Status</div>
+              <div class="stat-value" id="securityStatus">✅ Secure</div>
+              <div class="stat-detail">No alerts</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- System Health -->
+        <div class="health-section">
+          <h3>System Health</h3>
+          <div class="health-items">
+            <div class="health-item">
+              <span>CPU Usage</span>
+              <div class="progress-bar">
+                <div class="progress-fill" id="cpuUsage" style="width: 45%"></div>
+              </div>
+              <span>45%</span>
+            </div>
+            <div class="health-item">
+              <span>Memory Usage</span>
+              <div class="progress-bar">
+                <div class="progress-fill" id="memoryUsage" style="width: 62%"></div>
+              </div>
+              <span>62%</span>
+            </div>
+            <div class="health-item">
+              <span>Disk Usage</span>
+              <div class="progress-bar">
+                <div class="progress-fill" id="diskUsage" style="width: 38%"></div>
+              </div>
+              <span>38%</span>
+            </div>
+            <div class="health-item">
+              <span>API Response Time</span>
+              <div class="progress-bar">
+                <div class="progress-fill" id="apiTime" style="width: 25%"></div>
+              </div>
+              <span>125ms</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Services Tab -->
+      <div class="tab-content" id="services-tab">
+        <div class="services-list">
+          <div class="service-item">
+            <div class="service-header">
+              <h4>🎵 Samma3ny</h4>
+              <span class="status-badge online">Online</span>
+            </div>
+            <div class="service-details">
+              <span>Users: 234</span> | <span>Uptime: 99.9%</span>
+            </div>
+            <button class="service-action-btn">Manage</button>
+          </div>
+
+          <div class="service-item">
+            <div class="service-header">
+              <h4>💰 SafeCode</h4>
+              <span class="status-badge online">Online</span>
+            </div>
+            <div class="service-details">
+              <span>Transactions: 1,245</span> | <span>Uptime: 100%</span>
+            </div>
+            <button class="service-action-btn">Manage</button>
+          </div>
+
+          <div class="service-item">
+            <div class="service-header">
+              <h4>❤️ Farragna</h4>
+              <span class="status-badge online">Online</span>
+            </div>
+            <div class="service-details">
+              <span>Posts: 5,678</span> | <span>Uptime: 99.8%</span>
+            </div>
+            <button class="service-action-btn">Manage</button>
+          </div>
+
+          <div class="service-item">
+            <div class="service-header">
+              <h4>🎮 Battalooda</h4>
+              <span class="status-badge online">Online</span>
+            </div>
+            <div class="service-details">
+              <span>Active Games: 89</span> | <span>Uptime: 99.7%</span>
+            </div>
+            <button class="service-action-btn">Manage</button>
+          </div>
+
+          <div class="service-item">
+            <div class="service-header">
+              <h4>📱 Messages</h4>
+              <span class="status-badge online">Online</span>
+            </div>
+            <div class="service-details">
+              <span>Messages: 12,456</span> | <span>Uptime: 99.9%</span>
+            </div>
+            <button class="service-action-btn">Manage</button>
+          </div>
+
+          <div class="service-item">
+            <div class="service-header">
+              <h4>☎️ Phone Calls</h4>
+              <span class="status-badge online">Online</span>
+            </div>
+            <div class="service-details">
+              <span>Active Calls: 12</span> | <span>Uptime: 99.6%</span>
+            </div>
+            <button class="service-action-btn">Manage</button>
+          </div>
+
+          <div class="service-item">
+            <div class="service-header">
+              <h4>🤖 AI Chat</h4>
+              <span class="status-badge online">Online</span>
+            </div>
+            <div class="service-details">
+              <span>Active Chats: 45</span> | <span>Uptime: 100%</span>
+            </div>
+            <button class="service-action-btn">Manage</button>
+          </div>
+
+          <div class="service-item">
+            <div class="service-header">
+              <h4>📖 Quran</h4>
+              <span class="status-badge online">Online</span>
+            </div>
+            <div class="service-details">
+              <span>Users: 567</span> | <span>Uptime: 100%</span>
+            </div>
+            <button class="service-action-btn">Manage</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Users Tab -->
+      <div class="tab-content" id="users-tab">
+        <div class="users-section">
+          <div class="search-box">
+            <input type="text" id="userSearch" placeholder="Search users...">
+            <button class="search-btn">🔍</button>
+          </div>
+
+          <table class="users-table">
+            <thead>
+              <tr>
+                <th>User ID</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Joined</th>
+                <th>Last Active</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersList">
+              <tr>
+                <td>#001</td>
+                <td>user@example.com</td>
+                <td><span class="status-badge online">Active</span></td>
+                <td>2024-01-15</td>
+                <td>2 mins ago</td>
+                <td><button class="action-link">View</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Analytics Tab -->
+      <div class="tab-content" id="analytics-tab">
+        <div class="analytics-section">
+          <h3>Platform Analytics</h3>
+          <div class="chart-placeholder">
+            <p>📊 Daily Active Users Chart</p>
+            <div class="simple-chart"></div>
+          </div>
+          <div class="chart-placeholder">
+            <p>💼 Service Usage Distribution</p>
+            <div class="simple-chart"></div>
+          </div>
+          <div class="chart-placeholder">
+            <p>📈 Transaction Volume</p>
+            <div class="simple-chart"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Maintenance Tab -->
+      <div class="tab-content" id="maintenance-tab">
+        <div class="maintenance-section">
+          <div class="maintenance-card">
+            <h4>🔧 Database Maintenance</h4>
+            <p>Last ran: 2 hours ago</p>
+            <button class="action-btn">Run Now</button>
+            <button class="action-btn secondary">Schedule</button>
+          </div>
+
+          <div class="maintenance-card">
+            <h4>🧹 Cache Clear</h4>
+            <p>Cache size: 245 MB</p>
+            <button class="action-btn">Clear Cache</button>
+            <button class="action-btn secondary">View Details</button>
+          </div>
+
+          <div class="maintenance-card">
+            <h4>📦 Backup</h4>
+            <p>Last backup: 6 hours ago</p>
+            <button class="action-btn">Backup Now</button>
+            <button class="action-btn secondary">Restore</button>
+          </div>
+
+          <div class="maintenance-card">
+            <h4>🔄 System Update</h4>
+            <p>Version: 2.1.0 (Latest)</p>
+            <button class="action-btn" disabled>Update Available</button>
+            <button class="action-btn secondary">Changelog</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Logs Tab -->
+      <div class="tab-content" id="logs-tab">
+        <div class="logs-section">
+          <div class="log-filter">
+            <select id="logLevel">
+              <option value="">All Levels</option>
+              <option value="info">Info</option>
+              <option value="warning">Warning</option>
+              <option value="error">Error</option>
+            </select>
+            <input type="date" id="logDate">
+            <button class="search-btn">Filter</button>
+          </div>
+
+          <div class="logs-viewer">
+            <div class="log-entry info">
+              <span class="log-time">[2024-01-20 14:35:22]</span>
+              <span class="log-level">INFO</span>
+              <span class="log-message">User logged in: user@example.com</span>
+            </div>
+            <div class="log-entry warning">
+              <span class="log-time">[2024-01-20 14:30:15]</span>
+              <span class="log-level">WARNING</span>
+              <span class="log-message">High memory usage detected: 78%</span>
+            </div>
+            <div class="log-entry info">
+              <span class="log-time">[2024-01-20 14:25:43]</span>
+              <span class="log-level">INFO</span>
+              <span class="log-message">Database backup completed</span>
+            </div>
+            <div class="log-entry error">
+              <span class="log-time">[2024-01-20 14:20:10]</span>
+              <span class="log-level">ERROR</span>
+              <span class="log-message">Failed to connect to external API: timeout</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/universal-autosave.js"></script>
+  <script src="/js/service-adapters.js"></script>
+  <script src="/shared/js/auth-client.js"></script>
+  <script src="platform-manager.js"></script>
 </body>
 </html>
