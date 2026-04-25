@@ -38,22 +38,9 @@ class AppInitializer {
             await this.waitForStylesheets();
             this.loadingOverlay.updateProgress(25, 'CSS جاهز');
 
-            // Phase 2: Authentication gate
-            const authDetail = await new Promise((resolve) => {
-                try {   
-                    const h = (e) => { try {    window.removeEventListener('auth:ready', h); resolve(e && e.detail || { authenticated: false }); } catch(_) { resolve({ authenticated: false }) } };
-                    window.addEventListener('auth:ready', h);
-                } catch(_) { resolve({ authenticated: false }) }
-            });
-            const isAuthed = !!(authDetail && authDetail.authenticated);
-            if (!isAuthed) {
-                try {    this.loadingOverlay.updateProgress(100, 'جاهز'); } catch(_){}
-                try {    await this.loadingOverlay.hide(); } catch(_){}
-                window.__EXTRA_MODE_LOCKED__ = false;
-                this.initialized = true;
-                console.log('[App Initializer] Unauthenticated — UI unlocked for login');
-                return;
-            }
+            // Phase 2: Auth check - OPTIONAL (allow guest mode)
+            // Don't block app loading on authentication - proceed with guest mode
+            console.log('[App Initializer] Proceeding in guest mode - authentication optional');
 
             // Phase 3: YouTube API and Player (only after auth)
             await this.initializePlayer();

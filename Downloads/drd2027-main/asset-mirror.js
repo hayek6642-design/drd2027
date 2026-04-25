@@ -28,9 +28,13 @@ class AssetMirror {
    * Sync assets from server (only if authenticated)
    */
   async sync() {
-    const sessionId = localStorage.getItem('sessionId');
-    if (!sessionId) {
-      console.log('[AssetMirror] Guest mode - using localStorage');
+    // Check multiple auth markers for authenticated state
+    const sessionId = localStorage.getItem('sessionId') || localStorage.getItem('session_token');
+    const userData = localStorage.getItem('user');
+    const isAuthenticated = sessionId && userData;
+    
+    if (!isAuthenticated) {
+      console.log('[AssetMirror] Guest mode - no session');
       return this.assets;
     }
 

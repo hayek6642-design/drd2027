@@ -127,57 +127,265 @@ function clearSessionAndLogout() {
     })();
     </script>
     
-    <!-- INITIALIZATION STATE TRACKER - Delay hiding progress until ready -->
+    <!-- APP BOOTSTRAP - NO STARTUP AUTH GATE -->
     <script>
-    (function InitStateTracker() {
-        window.InitState = {
-            steps: { domReady: false, authLoaded: false, assetsLoaded: false, codeReady: false, bridgeLoaded: false, configLoaded: false },
-            startTime: Date.now(),
-            minDisplayTime: 2000,
+    (function bootstrapApp() {
+        'use strict';
+        
+        // Show app IMMEDIATELY - no auth blocking
+        function showApp() {
+            // Hide all loading elements
+            const loadingElements = [
+                'loading-progress-bar', 
+                'progress-container', 
+                'init-container',
+                'loadingOverlay',
+                'app-loading'
+            ];
             
-            checkComplete: function() {
-                const elapsed = Date.now() - this.startTime;
-                const timeOk = elapsed >= this.minDisplayTime;
-                const codeReady = this.steps.codeReady || this.steps.configLoaded;
-                console.log('[InitState] Check:', { elapsed: elapsed, codeReady: codeReady, timeOk: timeOk, hide: codeReady && timeOk });
-                return codeReady && timeOk;
-            },
+            loadingElements.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.transition = 'opacity 0.5s ease';
+                    el.style.opacity = '0';
+                    setTimeout(() => { 
+                        el.style.display = 'none'; 
+                        if (el.parentNode) el.remove();
+                    }, 500);
+                }
+            });
             
-            markReady: function(step) {
-                if (this.steps[step] !== undefined && this.steps[step] === true) return;
-                this.steps[step] = true;
-                console.log('[InitState] Ready:', step);
-                if (step === 'codeReady' || step === 'configLoaded') this.hideProgressPage();
-            },
+            // Ensure main app is fully visible
+            const app = document.getElementById('app') || document.getElementById('main-app') || document.body;
+            app.style.display = 'block';
+            app.style.opacity = '0';
             
-            hideProgressPage: function() {
-                if (this._hidden) return;
-                if (!this.checkComplete()) return;
-                this._hidden = true;
-                console.log('[InitState] Hiding progress after', Date.now() - this.startTime, 'ms');
-                
-                // Fade progress elements
-                ['loading-progress-bar', 'progress-container', 'init-container'].forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) { el.style.transition = 'opacity 0.5s'; el.style.opacity = '0'; }
+            requestAnimationFrame(() => {
+                app.style.opacity = '1';
+                app.style.transition = 'opacity 0.3s ease';
+            });
+            
+            console.log('[Bootstrap] ✅ App UI visible - auth deferred to CodeBank');
+        }
+        
+        // Auth is LAZY - only initialized when CodeBank opens
+        window.__authDeferred = true;
+        
+        // Initialize immediately
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', showApp);
+        } else {
+            showApp();
+        }
+        
+        // Disable old InitState auth requirement
+        if (window.InitState) {
+            window.InitState.checkComplete = () => true;
+            window.InitState.hideProgressPage = showApp;
+        }
+        
+        console.log('[Bootstrap] ✅ App initialized with lazy auth');
+    })();
+    
+    // ============================================================
+    // LAZY AUTH SYSTEM - ONLY FOR CODEBANK
+    // ============================================================
+    window.CodeBankAuth = {
+        initialized: false,
+        user: null,
+        sessionId: null,
+        
+        // Called ONLY when CodeBank launcher opens
+        async init() {
+            if (this.initialized) return this.user;
+            
+            // console.log('[CodeBankAuth] Initializing authentication...');  // DISABLED - no auth logging
+            
+            // Check existing session
+            const sessionId = localStorage.getItem('sessionId') || sessionStorage.getItem('sessionId');
+            const userData = localStorage.getItem('user');
+            
+            if (sessionId && userData) {
+                try {
+                    this.user = JSON.parse(userData);
+                    this.sessionId = sessionId;
+                    this.initialized = true;
+                    console.log('[CodeBankAuth] ✅ Session restored:', this.user.email || this.user.username);
+                    return this.user;
+                } catch (e) {
+                    console.warn('[CodeBankAuth] Invalid stored user data');
+                }
+            }
+            
+            // No session - WAIT for indexCB.html to call showLoginModal()
+            // Do NOT auto-show login modal from yt-new-clear.html
+            console.log('[CodeBankAuth] No session - auth will be handled by indexCB.html');
+            return null;
+        },
+        
+        showLoginModal() {
+            // Create login overlay inside CodeBank, not at app level
+            const modal = document.createElement('div');
+            modal.id = 'codebank-auth-modal';
+            modal.innerHTML = `
+                <div class="cb-auth-overlay">
+                    <div class="cb-auth-box">
+                        <h2>🔐 Sign In to CodeBank</h2>
+                        <p>Access your assets, codes, and services</p>
+                        <form id="cb-login-form">
+                            <input type="email" id="cb-email" placeholder="Email" required>
+                            <input type="password" id="cb-password" placeholder="Password" required>
+                            <button type="submit" class="cb-btn-primary">Sign In</button>
+                        </form>
+                        <button class="cb-btn-text" onclick="CodeBankAuth.showSignup()">Create Account</button>
+                        <button class="cb-btn-close" onclick="CodeBankAuth.closeModal()">✕</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // Add styles
+            const style = document.createElement('style');
+            style.textContent = `
+                .cb-auth-overlay {
+                    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+                    display: flex; align-items: center; justify-content: center;
+                    z-index: 99999; backdrop-filter: blur(10px);
+                }
+                .cb-auth-box {
+                    background: #1a1a2e; border: 1px solid #333;
+                    border-radius: 16px; padding: 40px; width: 90%; max-width: 400px;
+                    text-align: center; color: #fff; position: relative;
+                }
+                .cb-auth-box h2 { margin: 0 0 10px; font-size: 24px; }
+                .cb-auth-box p { color: #888; margin-bottom: 24px; }
+                .cb-auth-box input {
+                    width: 100%; padding: 12px 16px; margin-bottom: 12px;
+                    background: #0f0f1a; border: 1px solid #333; border-radius: 8px;
+                    color: #fff; font-size: 14px; box-sizing: border-box;
+                }
+                .cb-auth-box input:focus { outline: none; border-color: #00d4ff; }
+                .cb-btn-primary {
+                    width: 100%; padding: 14px; background: #00d4ff; color: #000;
+                    border: none; border-radius: 8px; font-weight: 600; cursor: pointer;
+                    font-size: 15px; margin-top: 8px;
+                }
+                .cb-btn-primary:hover { background: #33ddff; }
+                .cb-btn-text {
+                    background: none; border: none; color: #00d4ff;
+                    margin-top: 16px; cursor: pointer; font-size: 13px;
+                }
+                .cb-btn-close {
+                    position: absolute; top: 16px; right: 16px;
+                    background: none; border: none; color: #666;
+                    font-size: 20px; cursor: pointer;
+                }
+            `;
+            document.head.appendChild(style);
+            
+            // Handle form
+            document.getElementById('cb-login-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.handleLogin(
+                    document.getElementById('cb-email').value,
+                    document.getElementById('cb-password').value
+                );
+            });
+        },
+        
+        async handleLogin(email, password) {
+            const btn = document.querySelector('.cb-btn-primary');
+            btn.textContent = 'Signing in...';
+            btn.disabled = true;
+            
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
                 });
                 
-                // Clear "Waiting" message if still showing
-                const codeDisplay = document.getElementById('code-display');
-                if (codeDisplay && codeDisplay.textContent === 'Waiting for code...') {
-                    codeDisplay.textContent = window.__currentCode || '';
+                const data = await res.json();
+                
+                if (data.success && data.sessionId) {
+                    this.sessionId = data.sessionId;
+                    this.user = data.user;
+                    localStorage.setItem('sessionId', data.sessionId);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    this.initialized = true;
+                    
+                    console.log('[CodeBankAuth] ✅ Login successful:', data.user.email);
+                    this.closeModal();
+                    
+                    // Notify CodeBank that auth is ready
+                    window.dispatchEvent(new CustomEvent('codebank:auth:ready', { 
+                        detail: { user: data.user, sessionId: data.sessionId } 
+                    }));
+                    
+                    return data.user;
+                } else {
+                    throw new Error(data.error || 'Login failed');
                 }
-            },
-            
-            autoHide: function() {
-                setTimeout(() => { if (!this._hidden) { console.log('[InitState] Auto-timeout'); this._hidden = true; } }, 10000);
+            } catch (err) {
+                console.error('[CodeBankAuth] Login error:', err);
+                btn.textContent = 'Sign In';
+                btn.disabled = false;
+                alert('Login failed: ' + err.message);
             }
-        };
+        },
         
-        window.addEventListener('DOMContentLoaded', () => window.InitState.markReady('domReady'));
-        window.InitState.autoHide();
-        console.log('[InitState] Tracker ready');
-    })();
+        closeModal() {
+            const modal = document.getElementById('codebank-auth-modal');
+            if (modal) {
+                modal.style.opacity = '0';
+                setTimeout(() => modal.remove(), 300);
+            }
+        },
+        
+        showSignup() {
+            // Swap to signup form
+            const box = document.querySelector('.cb-auth-box');
+            box.innerHTML = `
+                <h2>📝 Create Account</h2>
+                <form id="cb-signup-form">
+                    <input type="text" id="cb-username" placeholder="Username" required>
+                    <input type="email" id="cb-email" placeholder="Email" required>
+                    <input type="password" id="cb-password" placeholder="Password" required>
+                    <button type="submit" class="cb-btn-primary">Create Account</button>
+                </form>
+                <button class="cb-btn-text" onclick="CodeBankAuth.showLoginModal()">Already have an account?</button>
+            `;
+            
+            document.getElementById('cb-signup-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.handleSignup({
+                    username: document.getElementById('cb-username').value,
+                    email: document.getElementById('cb-email').value,
+                    password: document.getElementById('cb-password').value
+                });
+            });
+        },
+        
+        async handleSignup(userData) {
+            console.log('[CodeBankAuth] Signup:', userData.email);
+            // Implement signup logic
+        },
+        
+        logout() {
+            localStorage.removeItem('sessionId');
+            localStorage.removeItem('user');
+            this.user = null;
+            this.sessionId = null;
+            this.initialized = false;
+            window.dispatchEvent(new CustomEvent('codebank:auth:logout'));
+            console.log('[CodeBankAuth] Logged out');
+        },
+        
+        // Check if user is authenticated (for service access control)
+        isAuthenticated() {
+            return this.initialized && !!this.sessionId;
+        }
+    };
     </script>
 
     <!-- EMERGENCY AUTH LOCK - Prevents redirect loop -->
@@ -2480,6 +2688,9 @@ function clearSessionAndLogout() {
             // Handle AUTH_REFRESH from iframe-auth-client.js
             try { window.addEventListener('message', function (ev) { try { var data = ev && ev.data || {}; if (data && data.type === 'AUTH_REFRESH') { try { var targetOrigin = (ev.origin && ev.origin !== 'null') ? ev.origin : window.location.origin; var user = null; var sessionId = null; var authenticated = false; try { authenticated = (window.Auth && typeof window.Auth.isAuthenticated==='function' && window.Auth.isAuthenticated()) || (window.AuthCore && typeof window.AuthCore.isAuthenticated==='function' && window.AuthCore.isAuthenticated()) || (!!window.__AUTH_READY__ && !!(window.APP_AUTH && window.APP_AUTH.user)); } catch(_){ authenticated = false } try { user = (window.APP_AUTH && window.APP_AUTH.user) || (window.Auth && window.Auth.user) || null; sessionId = localStorage.getItem('sessionId') || (window.APP_AUTH && window.APP_AUTH.sessionId) || null; } catch(_){} if (window.DEBUG_MODE) console.log('[AUTH REFRESH] Refreshing for iframe'); ev.source.postMessage({ type: 'AUTH_RESPONSE', authenticated: authenticated, user: user, userId: user?.id || sessionId, sessionId: sessionId, requestId: data.requestId }, targetOrigin); } catch (_) { } } } catch (_) { } }); } catch (_) {}
             
+            // Handle auth:broadcast from login.html (after user logs in)
+            try { window.addEventListener('message', function (ev) { try { var data = ev && ev.data || {}; if (data && data.type === 'auth:broadcast') { console.log('[YT-CLEAR] Received auth broadcast from login page:', data.user?.email); if (window.CodeBankAuth && typeof window.CodeBankAuth.login === 'function') { window.CodeBankAuth.login(data.user, data.sessionId); } if (window.AuthManager && typeof window.AuthManager.login === 'function') { window.AuthManager.login(data.user, data.sessionId); } window.APP_AUTH = { user: data.user, sessionId: data.sessionId, authenticated: data.authenticated }; localStorage.setItem('__cached_user__', JSON.stringify(data.user)); if (data.sessionId) localStorage.setItem('session_token', data.sessionId); } } catch (_) { } }); } catch (_) {}
+            
             // Handle SafeCode bridge asset requests
             try { window.addEventListener('message', function (ev) { try { var data = ev && ev.data || {}; if (data && data.type === 'bridge:request-assets') { try { var snap = (window.AssetBus && typeof window.AssetBus.snapshot==='function') ? window.AssetBus.snapshot() : { codes: [], silver: [], gold: [] }; var targetOrigin = (ev.origin && ev.origin !== 'null') ? ev.origin : window.location.origin; if (snap && ev.source) { console.log('[SAFECODE BRIDGE] Sending assets snapshot to SafeCode iframe:', snap.codes?.length || 0, 'codes'); ev.source.postMessage({ type: 'assetbus:snapshot', data: snap, messageId: data.messageId }, targetOrigin); } } catch (_) { console.error('[SAFECODE BRIDGE] Error sending assets:', _.message); } } } catch (_) { } }); } catch (_) {}
             
@@ -2789,31 +3000,8 @@ function clearSessionAndLogout() {
     <!-- Modular JavaScript Files -->
     <!-- modules: migrated from yt-coder to yt-clear -->
     <!-- 1. Core -->
-    <script src="/shared/auth-core.js"></script>
-    <script>
-    // Force session restoration if AuthCore doesn't do it
-    window.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => {
-            const sessionId = localStorage.getItem('sessionId') || 
-                             localStorage.getItem('session_token') ||
-                             sessionStorage.getItem('sessionId');
-            const sessionActive = localStorage.getItem('session_active') === 'true';
-            
-            console.log('[AUTH] Restore check - sessionId:', !!sessionId, 'session_active:', sessionActive);
-            
-            if (sessionId && sessionActive && window.AuthCore && !window.AuthCore.isAuthenticated?.()) {
-                console.log('[AUTH] Force-restoring authenticated state');
-                window.AuthCore._setState({
-                    authenticated: true,
-                    status: 'authenticated',
-                    sessionId: sessionId
-                });
-            }
-        }, 2000);
-    });
-    </script>
-    <script src="/shared/single-session.js"></script>
-    <script src="/shared/client-session-manager.js?v=1"></script>
+    <!-- AUTH DISABLED AT STARTUP - MOVED TO CODEBANK ONLY -->
+    <!-- Auth will be initialized ONLY when CodeBank is opened -->
     
     <!-- 2. Layout (creates video-container) -->
     <script type="module" src="/layout-bootstrap.js"></script>
@@ -2849,7 +3037,6 @@ function clearSessionAndLogout() {
     </script>
 
     <!-- Auth + Assets - from shared -->
-    <script src="/shared/auth-global.js"></script>
     <script src="/shared/assets-direct.js"></script>
     
     <!-- 6. Safe Asset List - REMOVED from main page, only in CodeBank iframe -->
@@ -2884,16 +3071,7 @@ function clearSessionAndLogout() {
 
     <!-- Screenshot Module removed (migrated above) -->
     <!-- main.js loaded below after acc bridges -->
-    <script>
-        (function () {
-            try { window.__UV_TRACE__ = Array.isArray(window.__UV_TRACE__) ? window.__UV_TRACE__ : []; } catch(_){}
-            function __uvlog__(type, data, source){ try { var rec = { type: String(type||''), data: data||{}, source: String(source||'unknown'), ts: Date.now() }; window.__UV_TRACE__.push(rec); } catch(_){} }
-            try { window.UVLog = __uvlog__ } catch(_){}
-            try { window.dumpUVTrace = function(){ try { return (window.__UV_TRACE__||[]).slice() } catch(_){ return [] } } } catch(_){}
-            try { window.addEventListener('auth:ready', function(e){ try { __uvlog__('auth:ready', e&&e.detail||{}, 'auth-core') } catch(_){} }); } catch(_){}
-            try { window.addEventListener('assets:updated', function(e){ try { __uvlog__('assets:updated', e&&e.detail||{}, 'assetbus') } catch(_){} }); } catch(_){}
-        })();
-    </script>
+    <!-- AUTH EVENTS DISABLED - WILL BE INITIALIZED IN CODEBANK -->
 
 
 
@@ -2904,17 +3082,7 @@ function clearSessionAndLogout() {
 
     
 
-<!-- Initialize Bankode timers after auth -->
-<script>
-document.addEventListener('DOMContentLoaded', async function(){
-  if (!window.Bankode) return;
-  try {
-    if (window.Auth && typeof window.Auth.isAuthenticated === 'function') {
-      if (window.Auth.isAuthenticated()) { Bankode.startTimer(300000) } else { window.addEventListener('auth:ready', function(e){ try { var ok=!!(e&&e.detail&&e.detail.authenticated); if(ok){ Bankode.startTimer(300000) } } catch(_){} }) }
-    } else { Bankode.startTimer(300000) }
-  } catch(_){}
-});
-</script>
+<!-- Bankode timers disabled - will run when CodeBank initializes auth -->
 
 
     <script src="/player/ui-controller.js"></script>

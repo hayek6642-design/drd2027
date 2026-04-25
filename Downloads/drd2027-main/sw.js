@@ -28,11 +28,20 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(STATIC_CACHE).then(cache => {
       // Use individual adds so one 404 doesn't break the whole install
-      return Promise.allSettled(
-        APP_SHELL.map(url => cache.add(url).catch(e => console.warn('[SW] Cache miss:', url, e.message)))
+      const cachePromises = APP_SHELL.map(url => 
+        cache.add(url)
+          .then(() => console.log('[SW] ✓ Cached:', url))
+          .catch(e => {
+            // Silently skip missing files (they may be optional or on CDN)
+            // Only log errors for critical files
+            if (url.includes('/index.html') || url.includes('/manifest.json')) {
+              console.warn('[SW] ⚠ Could not cache', url, '—', e.message);
+            }
+          })
       );
+      return Promise.allSettled(cachePromises);
     }).then(() => {
-      console.log('[SW] App shell cached');
+      console.log('[SW] App shell installation complete');
       return self.skipWaiting(); // Activate immediately
     })
   );

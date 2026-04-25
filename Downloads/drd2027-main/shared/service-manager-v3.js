@@ -35,34 +35,34 @@
       // External services
       e7ki: { 
         name: 'E7ki', 
-        path: '/services/e7ki/dist/index.html',
+        path: '/codebank/e7ki/client/index.html',
         priority: 'high',
         features: ['realtime', 'chat']
       },
       farragna: { 
         name: 'Farragna', 
-        path: '/services/farragna/index.html',
+        path: '/codebank/farragna/index.html',
         priority: 'medium' 
       },
       samma3ny: { 
         name: 'Samma3ny', 
-        path: '/services/samma3ny/index.html',
+        path: '/codebank/samma3ny/index.html',
         priority: 'medium' 
       },
       pebalaash: { 
         name: 'Pebalaash', 
-        path: '/services/pebalaash/index.html',
+        path: '/codebank/pebalaash/dist/public/index.html',
         priority: 'low' 
       },
       eb3at: { 
         name: 'Eb3at', 
-        path: '/services/eb3at/index.html',
+        path: '/codebank/eb3at/index.html',
         priority: 'high',
         preload: true 
       },
       games: { 
         name: 'Games', 
-        path: '/services/games/index.html',
+        path: '/codebank/Games-Centre/index.html',
         priority: 'low' 
       }
     },

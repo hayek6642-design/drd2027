@@ -13,7 +13,7 @@
   if (window.__IFRAME_AUTH_CLIENT_LOADED__) return;
   window.__IFRAME_AUTH_CLIENT_LOADED__ = true;
 
-  console.log('[IframeAuthClient] Initializing...');
+  // console.log('[IframeAuthClient] Initializing...');  // DISABLED - no auth logging on startup
 
   // ============================================
   // CONFIGURATION

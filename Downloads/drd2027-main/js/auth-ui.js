@@ -8,7 +8,7 @@ class AuthUIController {
   }
 
   init() {
-    console.log('[AuthUI] Initializing...');
+    // console.log('[AuthUI] Initializing...');  // DISABLED - no auth logging on startup
     this.bindEvents();
     this.checkExistingSession();
     this.setupStorageListener();

@@ -4,40 +4,25 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (window.__SAMMA3NY_PLAYER_INIT__) return;
     window.__SAMMA3NY_PLAYER_INIT__ = true;
     
-    // ===== UNIFIED AUTH SYSTEM =====
-    // Load AppState from parent if this is an iframe
-    if (window.self !== window.top) {
-        // This is an iframe - request auth from parent
-        if (!window.AppState) window.AppState = {};
-        if (!window.AppState.auth) {
-            window.AppState.auth = {
-                isAuthenticated: false,
-                user: null,
-                token: null
-            };
+    // Get userId from session/auth or use default for guest mode
+    const userId = (() => {
+        try {
+            // Try sessionStorage first
+            const sessUserId = sessionStorage.getItem('userId');
+            if (sessUserId) return sessUserId;
+            // Try localStorage
+            const storedUserId = localStorage.getItem('userId');
+            if (storedUserId) return storedUserId;
+            // Try to get from AppState/auth object
+            if (window.AppState?.auth?.userId) return window.AppState.auth.userId;
+            if (window.AppState?.userId) return window.AppState.userId;
+        } catch (e) {
+            console.warn('[Player] Could not retrieve userId from storage:', e);
         }
-        
-        window.parent.postMessage({ type: 'AUTH_REQUEST' }, '*');
-        
-        window.addEventListener('message', (e) => {
-            if (e.data?.type === 'AUTH_RESPONSE') {
-                window.AppState.auth = e.data.auth;
-                console.log('[Samma3ny] Received auth from parent:', e.data.auth.user?.email);
-            }
-        }, { once: true });
-        
-        // Wait for auth response
-        await new Promise(resolve => setTimeout(resolve, 500));
-    }
-    
-    // Get userId from unified AppState
-    const userId = window.AppState?.auth?.user?.id || null;
-    
-    if (!userId) {
-        console.warn('[Samma3ny] No authenticated user, operating in guest mode');
-    } else {
-        console.log('[Samma3ny] Initialized with userId:', userId);
-    }
+        // Fallback to guest mode
+        return `guest-${Date.now()}`;
+    })();
+    console.log('[Samma3ny] Initialized with userId:', userId);
     
     // Player elements
     const audioPlayer = document.getElementById('audio-player');

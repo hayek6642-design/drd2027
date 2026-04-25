@@ -586,6 +586,14 @@
             align-items: center;
             gap: 8px;
         }
+        /* Double-force: Prevent any auth modal from auto-showing */
+        #login-modal, #signup-modal, #auth-modal, .auth-modal {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+        
         .btn-google {
             display: flex;
             align-items: center;
@@ -1327,8 +1335,8 @@
                         const user = JSON.parse(userDataStr);
                         if (authButtons) authButtons.style.display = 'none';
                         if (userProfile) userProfile.style.display = 'flex';
-                        if (emailDisplay) emailDisplay.textContent = user.email || 'User';
-                        console.log('[Navbar] User is logged in:', user.email);
+                        if (emailDisplay) emailDisplay.textContent = user?.email || 'User';
+                        console.log('[Navbar] User is logged in:', user?.email);
                     } catch (e) {
                         console.error('[Navbar] Error parsing user data:', e);
                         showLoggedOutState();
@@ -2078,8 +2086,8 @@
 
     function getUserEmailFromSources() {
         // Source 1: Check AppState (from auth-unified.js)
-        if (window.AppState && window.AppState.user && window.AppState.user.email) {
-            return window.AppState.user.email;
+        if (window.AppState && window.AppState.user && window.AppState.user?.email) {
+            return window.AppState.user?.email;
         }
 
         // Source 2: LocalStorage (cached)
@@ -2087,7 +2095,7 @@
             const cached = localStorage.getItem('__cached_user__');
             if (cached) {
                 const user = JSON.parse(cached);
-                if (user.email) return user.email;
+                if (user?.email) return user?.email;
             }
         } catch (e) {}
         
@@ -2096,7 +2104,7 @@
             const cached = localStorage.getItem('bankode_user_cache');
             if (cached) {
                 const user = JSON.parse(cached);
-                if (user.email) return user.email;
+                if (user?.email) return user?.email;
             }
         } catch (e) {}
         
@@ -2112,7 +2120,7 @@
                         const decoded = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
                         const payload = JSON.parse(decoded);
                         if (payload.email) return payload.email;
-                        if (payload.user?.email) return payload.user.email;
+                        if (payload.user?.email) return payload.user?.email;
                     }
                 }
             }
@@ -2122,7 +2130,7 @@
         if (window.AuthCore && window.AuthCore.getState) {
             try {
                 const state = window.AuthCore.getState();
-                if (state?.user?.email) return state.user.email;
+                if (state?.user?.email) return state.user?.email;
             } catch (e) {}
         }
         
@@ -2141,7 +2149,7 @@
         // 🔧 FIX: Sync assets when auth is ready (for code bar display)
         if (window.EventBus) {
             window.EventBus.on('auth:changed', (data) => {
-                if (data && data.user && data.user.email) {
+                if (data && data.user && data.user?.email) {
                     displayUserEmail();
                     // Sync assets when authenticated
                     if (window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
@@ -2254,6 +2262,20 @@
         // Show a message that user needs to sign in first
         console.log('[CodeBank] Login requested - user must sign in manually');
         break;
+      case 'auth:broadcast':
+        // Received auth success from login.html
+        console.log('[CodeBank] Received auth broadcast:', event.data.user?.email);
+        globalAuthState.authenticated = event.data.authenticated;
+        globalAuthState.user = event.data.user;
+        globalAuthState.userId = event.data.user?.email || event.data.user?.uid;
+        globalAuthState.token = event.data.sessionId;
+        localStorage.setItem('__cached_user__', JSON.stringify(event.data.user));
+        if (event.data.sessionId) localStorage.setItem('session_token', event.data.sessionId);
+        // Broadcast to all iframes
+        broadcastAuthToAllIframes('AUTH_CHANGED', globalAuthState);
+        // Update navbar
+        if (window.updateNavbarAuthState) updateNavbarAuthState();
+        break;
     }
   });
 
@@ -2303,8 +2325,8 @@
             if (window.CodeBankAuth && typeof window.CodeBankAuth.isAuthenticated === 'function') {
                 isAuthenticated = window.CodeBankAuth.isAuthenticated();
                 const authState = window.CodeBankAuth.getAuthState();
-                if (authState && authState.user && authState.user.email) {
-                    userEmailText = authState.user.email;
+                if (authState && authState.user && authState.user?.email) {
+                    userEmailText = authState.user?.email;
                 }
             }
             
@@ -2315,8 +2337,8 @@
                     if (stored) {
                         const parsed = JSON.parse(stored);
                         isAuthenticated = parsed.authenticated;
-                        if (parsed.user && parsed.user.email) {
-                            userEmailText = parsed.user.email;
+                        if (parsed.user && parsed.user?.email) {
+                            userEmailText = parsed.user?.email;
                         }
                     }
                 } catch(e) {}
@@ -2606,7 +2628,7 @@
             localStorage.setItem('session_token', data.token);
             localStorage.setItem('sessionId', data.sessionId);
             localStorage.setItem('user_id', data.userId);
-            localStorage.setItem('user_email', data.user.email);
+            localStorage.setItem('user_email', data.user?.email);
             
             // Close auth modal if open
             const modal = document.getElementById('auth-modal');
@@ -2642,14 +2664,14 @@
         if (auth) {
             try {
                 const user = JSON.parse(auth);
-                if (user && user.email) {
+                if (user && user?.email) {
                     if (authButtons) authButtons.style.display = 'none';
                     if (userProfile) {
                         userProfile.style.display = 'flex';
                         if (userAvatar) userAvatar.src = user.avatar || '';
-                        if (userName) userName.textContent = user.name || user.email || 'User';
+                        if (userName) userName.textContent = user.name || user?.email || 'User';
                     }
-                    console.log('[Auth] User logged in:', user.email);
+                    console.log('[Auth] User logged in:', user?.email);
                 }
             } catch(e) {
                 console.log('[Auth] No valid session');
@@ -2658,6 +2680,21 @@
             if (authButtons) authButtons.style.display = 'flex';
             if (userProfile) userProfile.style.display = 'none';
         }
+    };
+    
+    // Listen for auth trigger from parent app (yt-new-clear)
+    window.addEventListener('message', function(e) {
+        if (e.data && e.data.type === 'TRIGGER_AUTH') {
+            console.log('[Auth] Received trigger from parent app');
+            // Open login page as fallback (or trigger local auth)
+            window.location.href = '/login.html';
+        }
+    });
+
+    // DANGER: Prevent auth modal auto-show after auth state loads
+    const originalShowModal = window.showAuthModal || window.showLoginModal;
+    window.showAuthModal = window.showLoginModal = function() {
+        console.log('[AUTH] Modal show BLOCKED - user must click Sign In');
     };
     
     // Run on DOM ready
@@ -2974,7 +3011,7 @@ class AuthController {
                 if (signinStatus) signinStatus.textContent = '✅ Login successful!';
                 if (signinStatus) signinStatus.style.color = '#00c853';
                 setTimeout(() => {
-                    this.setLoggedIn(data.user);
+                    this.setLoggedIn(data?.user);
                     window.location.reload();
                 }, 800);
             } else {
@@ -3032,7 +3069,7 @@ class AuthController {
                 if (signupStatus) signupStatus.textContent = '✅ Account created successfully!';
                 if (signupStatus) signupStatus.style.color = '#00c853';
                 setTimeout(() => {
-                    this.setLoggedIn(data.user);
+                    this.setLoggedIn(data?.user);
                     window.location.reload();
                 }, 1500);
             } else {
@@ -3051,13 +3088,18 @@ class AuthController {
     }
 
     setLoggedIn(user) {
-        console.log('[AuthController] User logged in:', user.email);
+        console.log('[AuthController] User logged in:', user?.email);
         
+        if (!user) {
+            console.warn('[AuthController] setLoggedIn called with null user');
+            this.setState('not-logged');
+            return;
+        }
         this.user = user;
         
         const userEmailDisplay = document.getElementById('user-email-display');
         if (userEmailDisplay) {
-            userEmailDisplay.textContent = user.email;
+            userEmailDisplay.textContent = user?.email;
         }
 
         this.setState('logged-in');
@@ -3072,7 +3114,7 @@ class AuthController {
             localStorage.setItem('userId', data.user.id);
         }
         if (data.user?.email) {
-            localStorage.setItem('user_email', data.user.email);
+            localStorage.setItem('user_email', data.user?.email);
         }
     }
 
@@ -3093,7 +3135,7 @@ class AuthController {
             if (response.ok) {
                 const data = await response.json();
                 this.token = token;
-                this.setLoggedIn(data.user);
+                this.setLoggedIn(data?.user);
             } else {
                 console.log('[AuthController] Session invalid, clearing');
                 this.logout();

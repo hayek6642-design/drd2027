@@ -16,35 +16,36 @@
 
   let deferredPrompt = null;
 
-  // ─── Service Worker Registration ──────────────────────────────────────────
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', async () => {
-      try {
-        const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-        console.log('[PWA] Service worker registered:', reg.scope);
-
-        // Listen for updates
-        reg.addEventListener('updatefound', () => {
-          const newWorker = reg.installing;
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              showUpdateBanner(newWorker);
-            }
-          });
-        });
-
-        // Handle controller change (after update)
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          if (!window._swReloading) {
-            window._swReloading = true;
-            window.location.reload();
-          }
-        });
-      } catch (err) {
-        console.warn('[PWA] Service worker registration failed:', err);
-      }
-    });
-  }
+  // ─── Service Worker Registration (DISABLED) ──────────────────────────────
+  // Service workers are disabled to prevent caching issues
+  // if ('serviceWorker' in navigator) {
+  //   window.addEventListener('load', async () => {
+  //     try {
+  //       const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+  //       console.log('[PWA] Service worker registered:', reg.scope);
+  //
+  //       // Listen for updates
+  //       reg.addEventListener('updatefound', () => {
+  //         const newWorker = reg.installing;
+  //         newWorker.addEventListener('statechange', () => {
+  //           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+  //             showUpdateBanner(newWorker);
+  //           }
+  //         });
+  //       });
+  //
+  //       // Handle controller change (after update)
+  //       navigator.serviceWorker.addEventListener('controllerchange', () => {
+  //         if (!window._swReloading) {
+  //           window._swReloading = true;
+  //           window.location.reload();
+  //         }
+  //       });
+  //     } catch (err) {
+  //       console.warn('[PWA] Service worker registration failed:', err);
+  //     }
+  //   });
+  // }
 
   // ─── Android/Desktop: Capture beforeinstallprompt ─────────────────────────
   window.addEventListener('beforeinstallprompt', e => {
