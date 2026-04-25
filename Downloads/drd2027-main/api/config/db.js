@@ -228,8 +228,6 @@ export const pool = {
 
 export const query = pool.query
 export const batch = pool.batch
-// Initialize on startup
-await initializeTables();
 
 export { db };
 
