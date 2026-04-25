@@ -1175,6 +1175,17 @@ import { MigrationRunner } from './server/database/migration-runner.js';
   }
 })();
 
+// ============================================================================
+// CODEBANK ROUTES - Serve codebank indexCB.html
+// ============================================================================
+app.get('/codebank/indexCB/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'codebank', 'indexCB.html'));
+});
+
+app.get('/codebank/indexCB', (req, res) => {
+    res.redirect('/codebank/indexCB/');
+});
+
 // 404 handler
 app.use((req, res) => {
     res.status(404).json({
