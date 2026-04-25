@@ -560,9 +560,6 @@ app.use('/api/persistence', persistenceRouter);
 // Register Activity Tracker routes (comprehensive user activity sync)
 app.use('/api/activity', activityRouter);
 
-// Register Extracted Services routes (Quran, Messages, Phone, AI Chat, Platform Manager)
-app.use('/api/services', extractedServicesRouter);
-
 // ============================================================================
 // ZAGEL COMMAND WHEEL - Real-time Event & Service Integration
 // ============================================================================
@@ -570,6 +567,10 @@ app.use('/api/services', extractedServicesRouter);
 // Mount Zagel routes once at /api
 // Routes in zagelRouter handle: /sse, /auth, /commands, /notifications, /channels, /health, /status
 app.use('/api', zagelRouter);
+
+// Register Extracted Services routes (Quran, Messages, Phone, AI Chat, Platform Manager)
+// MUST be AFTER Zagel to avoid conflicts
+app.use('/api/services', extractedServicesRouter);
 
 // Initialize Zagel event bridge (connects to AssetBus and other systems)
 setupZagelEventBridge(app, io); // io is optional (for Socket.IO support)
