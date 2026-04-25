@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { query, batch as dbBatch } from '../config/db.js'
-import { getIdentity } from '../middleware/clerk.js'
+import { requireAuth } from '../middleware/auth.js'
 import { auditLog } from '../utils/audit.js'
 import crypto from 'crypto'
 import fs from 'fs-extra'
@@ -269,7 +269,7 @@ router.post('/generate', async (req, res) => {
 })
 
 // List user's codes endpoint
-router.get('/list', async (req, res) => {
+router.get('/list', requireAuth, async (req, res) => {
   try {
     const identity = await getIdentity(req)
     if (!identity) {
