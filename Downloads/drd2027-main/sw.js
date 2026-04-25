@@ -18,8 +18,8 @@ const APP_SHELL = [
   '/public/bankode-core.js',
   '/public/layout-bootstrap.js',
   '/codebank/js/app-registry.js',
-  '/codebank/aihub.html',
-  '/codebank/shots.html'
+  '/codebank/aihub/',
+  '/codebank/shots/'
 ];
 
 // ─── INSTALL ─────────────────────────────────────────────────────────────────

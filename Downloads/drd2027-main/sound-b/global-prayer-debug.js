@@ -346,7 +346,7 @@
         const path = window.location.pathname;
         if (path.includes('index.html') || path.includes('indexCB.html')) return 'CodeBank';
         if (path.includes('yt-new.html')) return 'YouTube App';
-        if (path.includes('azan-clock.html')) return 'Prayer Clock';
+        if (path.includes('azan-clock/')) return 'Prayer Clock';
         if (path.includes('youtube-channel.html')) return 'YouTube Channel';
         if (path.includes('login.html')) return 'Login Service';
         return 'Unknown Service';

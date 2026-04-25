@@ -16,7 +16,7 @@
       },
       safecode: {
         name: 'SafeCode',
-        path: '/codebank/safecode.html'
+        path: '/codebank/safecode/'
       },
       
       // External services

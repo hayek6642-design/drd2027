@@ -24,7 +24,7 @@ const NativePathResolver = (() => {
 
     /**
      * Resolve a relative/absolute service URL for native platforms.
-     * On web: paths like './safecode.html' or '/codebank/safecode.html' work as-is.
+     * On web: paths like './safecode.html' or '/codebank/safecode/' work as-is.
      * On native: relative paths must be converted to absolute URLs pointing to the server.
      */
     function resolveUrl(url) {

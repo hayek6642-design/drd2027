@@ -2,19 +2,19 @@
 // Service URL registry and access validation
 
 const SERVICES_MAP = {
-  pebalaash:  { url: '/codebank/pebalaash.html',       requiresAuth: true,  minCodes: 0 },
+  pebalaash:  { url: '/codebank/pebalaash/',       requiresAuth: true,  minCodes: 0 },
   games:      { url: '/codebank/Games-Centre.html',    requiresAuth: true,  minCodes: 0 },
-  safecode:   { url: '/codebank/safecode.html',        requiresAuth: true,  minCodes: 0 },
+  safecode:   { url: '/codebank/safecode/',        requiresAuth: true,  minCodes: 0 },
   samma3ny:   { url: '/codebank/samma3ny.html',        requiresAuth: false, minCodes: 0 },
-  farragna:   { url: '/codebank/farragna.html',        requiresAuth: false, minCodes: 0 },
-  shots:      { url: '/codebank/shots.html',           requiresAuth: true,  minCodes: 0 },
-  aihub:      { url: '/codebank/aihub.html',           requiresAuth: false, minCodes: 0 },
-  e7ki:       { url: '/codebank/e7ki.html',            requiresAuth: true,  minCodes: 0 },
+  farragna:   { url: '/codebank/farragna/',        requiresAuth: false, minCodes: 0 },
+  shots:      { url: '/codebank/shots/',           requiresAuth: true,  minCodes: 0 },
+  aihub:      { url: '/codebank/aihub/',           requiresAuth: false, minCodes: 0 },
+  e7ki:       { url: '/codebank/e7ki/',            requiresAuth: true,  minCodes: 0 },
   ledger:     { url: '/codebank/bankode/ledger.html',  requiresAuth: true,  minCodes: 0 },
-  qarsan:     { url: '/codebank/qarsan.html',          requiresAuth: true,  minCodes: 5 },
-  battalooda: { url: '/codebank/battalooda.html',      requiresAuth: true,  minCodes: 0 },
-  nostalgia:  { url: '/codebank/nostalgia.html',       requiresAuth: false, minCodes: 0 },
-  corsa:      { url: '/codebank/corsa.html',           requiresAuth: false, minCodes: 0 },
+  qarsan:     { url: '/codebank/qarsan/',          requiresAuth: true,  minCodes: 5 },
+  battalooda: { url: '/codebank/battalooda/',      requiresAuth: true,  minCodes: 0 },
+  nostalgia:  { url: '/codebank/nostalgia/',       requiresAuth: false, minCodes: 0 },
+  corsa:      { url: '/codebank/corsa/',           requiresAuth: false, minCodes: 0 },
   home:       { url: '/codebank/index.html',           requiresAuth: false, minCodes: 0 },
 };
 

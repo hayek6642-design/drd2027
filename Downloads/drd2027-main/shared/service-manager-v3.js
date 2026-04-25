@@ -28,7 +28,7 @@
       },
       safecode: { 
         name: 'SafeCode', 
-        path: '/codebank/safecode.html',
+        path: '/codebank/safecode/',
         priority: 'medium' 
       },
       

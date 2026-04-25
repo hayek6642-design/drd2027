@@ -126,7 +126,7 @@ class YahoodBridge extends ServiceBridgeBase {
             name: 'Yahood! Mining World',
             description: 'Geo-based treasure mining game with real-time PvP.',
             category: 'games',
-            url: '/codebank/yahood.html',
+            url: '/codebank/yahood/',
             bridgeVersion: '1.0.0'
         };
     }

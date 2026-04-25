@@ -1487,7 +1487,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function startLongPress() {
     pressTimer = setTimeout(() => {
-      popupIframe.src = 'pebalaash.html'; // match your file name
+      popupIframe.src = 'pebalaash/'; // match your file name
       popupOverlay.style.display = 'flex';
     }, 2000); // 2-second long press
   }
@@ -1498,7 +1498,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   popupClose.addEventListener('click', () => {
     popupOverlay.style.display = 'none';
-    popupIframe.src = 'pebalaash.html'; // unload page
+    popupIframe.src = 'pebalaash/'; // unload page
   });
 });
 
