@@ -35,7 +35,7 @@
       // External services
       e7ki: { 
         name: 'E7ki', 
-        path: '/codebank/e7ki/dist/index.html',
+        path: '/codebank/e7ki/client/index.html',
         priority: 'high',
         features: ['realtime', 'chat']
       },
@@ -51,7 +51,7 @@
       },
       pebalaash: { 
         name: 'Pebalaash', 
-        path: '/codebank/pebalaash/index.html',
+        path: '/codebank/pebalaash/dist/public/index.html',
         priority: 'low' 
       },
       eb3at: { 
@@ -62,7 +62,7 @@
       },
       games: { 
         name: 'Games', 
-        path: '/codebank/games/index.html',
+        path: '/codebank/Games-Centre/index.html',
         priority: 'low' 
       }
     },
