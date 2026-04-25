@@ -52,9 +52,9 @@ import { BatteryManager } from "./core/battery-manager.js";  // 🔋 Battery opt
 // 🛡️ 1) Self-Healing Rules Registration
 // ==========================================
 
-// Rule 1: Auth Desync Fix
-SelfHealing.registerRule(
-  "auth-desync",
+// Rule 1: AUTH-DESYNC FIX — DISABLED (caused infinite loop)
+/// SelfHealing.registerRule(
+//   "auth-desync",
   async () => {
     // Only desync if we have a session but Auth isn't ready
     const hasSession = !!localStorage.getItem('session_token');
@@ -70,8 +70,8 @@ SelfHealing.registerRule(
     // Record to AI Brain
     AIBrainEngine.record("auth:change", { reason: "desync" });
   },
-  15000
-);
+//  15000
+// );
 
 // Rule 2: YouTube Player Dead
 SelfHealing.registerRule(
