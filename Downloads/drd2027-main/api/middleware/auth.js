@@ -1,7 +1,7 @@
 // /api/middleware/auth.js
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-fallback-secret-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-production';
 
 
 // In-memory dev sessions storage (for development/testing)
