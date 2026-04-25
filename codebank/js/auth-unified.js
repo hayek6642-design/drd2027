@@ -3,6 +3,8 @@
  * Single auth layer for all CodeBank services.
  * Replaces auth-bridge.js — no postMessage, no bridge forwarding.
  * All services read window.AppState.user directly.
+ * 
+ * FIXED: Now properly validates session with backend instead of faking auth.
  */
 (function(window) {
     'use strict';
@@ -13,30 +15,39 @@
                 const res = await fetch('/api/auth/session', { credentials: 'include' });
                 if (res.ok) {
                     const data = await res.json();
-                    if (data.user || data.authenticated) {
+                    if (data.authenticated && data.user) {
                         this._setUser(data.user, data.sessionId || data.session_token);
+                        console.log('[AuthManager] Session validated from backend:', data.user.email);
                         return;
                     }
                 }
-            } catch(_) {}
-
-            // Fallback: restore from localStorage cache
-            try {
-                const userRaw = localStorage.getItem('__cached_user__') || localStorage.getItem('user');
-                const sessionId = localStorage.getItem('session_token') || localStorage.getItem('__cached_session_id__');
-                if (userRaw && sessionId) {
-                    const user = JSON.parse(userRaw);
-                    if (user) { this._setUser(user, sessionId); return; }
+                
+                // Also try /api/auth/me as fallback
+                const meRes = await fetch('/api/auth/me', { credentials: 'include' });
+                if (meRes.ok) {
+                    const meData = await meRes.json();
+                    if (meData.authenticated && meData.user) {
+                        this._setUser(meData.user, meData.sessionId);
+                        console.log('[AuthManager] Session validated via /me:', meData.user.email);
+                        return;
+                    }
                 }
-            } catch(_) {}
+            } catch(e) {
+                console.warn('[AuthManager] Backend session check failed:', e.message);
+            }
 
+            // No valid session from backend - clear any cached localStorage data
+            console.log('[AuthManager] No backend session, clearing localStorage cache');
+            localStorage.removeItem('__cached_user__');
+            localStorage.removeItem('__cached_session_id__');
+            localStorage.removeItem('session_token');
+            
             this._clearUser();
         },
 
         requireAuth() {
             if (!window.AppState.isAuthenticated) {
                 console.warn('[AuthManager] Not authenticated. Staying as guest.');
-                // Don't redirect - stay on page as guest
                 return false;
             }
             return true;
@@ -44,15 +55,21 @@
 
         getUser()          { return window.AppState.user; },
         isAuthenticated()  { return window.AppState.isAuthenticated; },
+        
         login(user, sid)   { this._setUser(user, sid); },
 
         async logout() {
-            try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch(_) {}
+            try { 
+                await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); 
+            } catch(_) {}
+            
+            // Clear all localStorage
             [
                 'session_active','session_token','user_data','__cached_user__',
                 '__cached_session_id__','auth_timestamp','safeCodes','bankode_codes',
                 'last_reload_time','codebank_assets'
             ].forEach(k => localStorage.removeItem(k));
+            
             try {
                 const req = indexedDB.open('CodeBankSnapshotDB', 1);
                 req.onsuccess = () => {
@@ -63,24 +80,31 @@
                     } catch(_) {}
                 };
             } catch(_) {}
+            
             this._clearUser();
-            console.log('[Auth] Logged out - staying on page as guest');
-            // Don't redirect to login - reload to clear state
+            console.log('[Auth] Logged out - reloading page');
             window.location.reload();
         },
 
         _setUser(user, sessionId) {
+            if (!user || typeof user !== 'object') {
+                console.warn('[AuthManager] Invalid user object:', user);
+                return;
+            }
+            
             window.AppState.user = user;
             window.AppState.isAuthenticated = !!(user && (user.uid || user.id || user.email));
             window.AppState.sessionId = sessionId || null;
+            
             try {
                 localStorage.setItem('__cached_user__', JSON.stringify(user));
                 if (sessionId) localStorage.setItem('session_token', sessionId);
             } catch(_) {}
+            
             window.EventBus.dispatch('auth:changed', {
                 user, isAuthenticated: window.AppState.isAuthenticated, sessionId
             });
-            // 🔧 FIX: Automatically sync assets when user is authenticated
+            
             if (window.AppState.isAuthenticated && window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
                 window.AssetsManager.sync().catch(e => console.warn('[AuthManager] Asset sync on auth:', e.message));
             }
