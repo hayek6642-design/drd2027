@@ -228,4 +228,33 @@ export const pool = {
 
 export const query = pool.query
 export const batch = pool.batch
+// Initialize tables
+async function initializeTables() {
+  try {
+    if (!isLibsql && typeof db.exec === 'function') {
+      // SQLite
+      db.exec(\`
+        CREATE TABLE IF NOT EXISTS codes (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          code TEXT UNIQUE NOT NULL,
+          value INTEGER DEFAULT 0,
+          status TEXT DEFAULT 'active',
+          source TEXT DEFAULT 'manual',
+          metadata TEXT,
+          created_at INTEGER,
+          updated_at INTEGER
+        );
+        CREATE INDEX IF NOT EXISTS idx_codes_user_id ON codes(user_id);
+        CREATE INDEX IF NOT EXISTS idx_codes_code ON codes(code);
+      \`);
+    }
+  } catch (e) {
+    console.error('[DB] Table init error:', e.message);
+  }
+}
+
+// Initialize on startup
+await initializeTables();
+
 export { db };
