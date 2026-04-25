@@ -3051,13 +3051,21 @@ class AuthController {
     }
 
     setLoggedIn(user) {
-        console.log('[AuthController] User logged in:', user.email);
+        // Guard: check if user exists and has required properties
+        if (!user || typeof user !== 'object') {
+            console.warn('[AuthController] setLoggedIn called with invalid user:', user);
+            this.setState('not-logged');
+            return;
+        }
+
+        const email = user.email || 'User';
+        console.log('[AuthController] User logged in:', email);
         
         this.user = user;
         
         const userEmailDisplay = document.getElementById('user-email-display');
         if (userEmailDisplay) {
-            userEmailDisplay.textContent = user.email;
+            userEmailDisplay.textContent = email;
         }
 
         this.setState('logged-in');

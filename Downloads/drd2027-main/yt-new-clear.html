@@ -2586,9 +2586,13 @@ function clearSessionAndLogout() {
                                 var out2 = sanitizeUISnapshot(Object.assign({}, snap, { source: 'ui' }));
                                 var authed2 = false;
                                 try {
+                                    // Check multiple auth sources
                                     authed2 = (window.Auth && typeof window.Auth.isAuthenticated === 'function' && window.Auth.isAuthenticated()) || 
                                               (window.AuthCore && typeof window.AuthCore.isAuthenticated === 'function' && window.AuthCore.isAuthenticated()) || 
-                                              (!!window.__AUTH_READY__ && !!(window.APP_AUTH && window.APP_AUTH.user));
+                                              (!!window.__AUTH_READY__ && !!(window.APP_AUTH && window.APP_AUTH.user)) ||
+                                              (!!window.__FORCED_GUEST) ||
+                                              (localStorage.getItem('session_active') === 'true') ||
+                                              (localStorage.getItem('auth_state') && JSON.parse(localStorage.getItem('auth_state')).authenticated === true);
                                 } catch(_) { authed2 = false; }
                                 
                                 if (!authed2) { 
@@ -2801,13 +2805,21 @@ function clearSessionAndLogout() {
             
             console.log('[AUTH] Restore check - sessionId:', !!sessionId, 'session_active:', sessionActive);
             
-            if (sessionId && sessionActive && window.AuthCore && !window.AuthCore.isAuthenticated?.()) {
+            if (sessionId && sessionActive) {
                 console.log('[AUTH] Force-restoring authenticated state');
-                window.AuthCore._setState({
+                // Use AppState if available, otherwise just ensure localStorage is set
+                if (window.__AppState && typeof window.__AppState.setAuth === 'function') {
+                    window.__AppState.setAuth({ authenticated: true, sessionId: sessionId });
+                } else if (window.AppState && typeof window.AppState.auth === 'object') {
+                    window.AppState.auth.authenticated = true;
+                    window.AppState.auth.sessionId = sessionId;
+                }
+                // Ensure localStorage reflects authenticated state
+                localStorage.setItem('auth_state', JSON.stringify({
                     authenticated: true,
-                    status: 'authenticated',
-                    sessionId: sessionId
-                });
+                    sessionId: sessionId,
+                    timestamp: Date.now()
+                }));
             }
         }, 2000);
     });
