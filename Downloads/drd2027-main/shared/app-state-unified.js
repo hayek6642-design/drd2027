@@ -41,11 +41,16 @@ window.AppState.auth = {
     try {
       // Try localStorage first (survives F5 refresh)
       let stored = localStorage.getItem('appstate_auth');
+      console.log('[AppState::AUTH] Attempting restore from localStorage:', !!stored);
       
       // Fallback to sessionStorage if localStorage empty
       if (!stored) {
         stored = sessionStorage.getItem('appstate_auth');
-        if (stored) console.log('[AppState] Migrating from sessionStorage to localStorage');
+        if (stored) {
+          console.log('[AppState] Migrating from sessionStorage to localStorage');
+        } else {
+          console.log('[AppState::AUTH] No auth found in either storage');
+        }
       }
       
       if (stored) {
@@ -208,7 +213,8 @@ function broadcastAuthToIframes() {
   if (window.self === window.top) {
     // This is parent window
     window.addEventListener('message', (e) => {
-      if (e.data?.type === 'AUTH_REQUEST') {
+      // Support BOTH old (AUTH_REQUEST) and new (auth:request) formats for backwards compatibility
+      if (e.data?.type === 'AUTH_REQUEST' || e.data?.type === 'auth:request') {
         const authData = {
           isAuthenticated: AppState.auth.isAuthenticated,
           user: AppState.auth.user,
@@ -216,8 +222,9 @@ function broadcastAuthToIframes() {
           userId: AppState.auth.user?.id || null,
           email: AppState.auth.user?.email || null
         };
+        console.log('[AppState::AUTH] Responding to auth request from iframe with token:', !!authData.token);
         e.source.postMessage({
-          type: 'AUTH_RESPONSE',
+          type: 'auth:response',  // ✅ FIXED: Use lowercase with colon for ServiceAuth compatibility
           authenticated: authData.isAuthenticated,
           userId: authData.userId,
           user: authData.user,
@@ -228,14 +235,15 @@ function broadcastAuthToIframes() {
     });
   } else {
     // This is an iframe - request auth from parent
-    window.parent.postMessage({ type: 'AUTH_REQUEST' }, '*');
+    window.parent.postMessage({ type: 'auth:request' }, '*');  // ✅ FIXED: Use lowercase with colon
     window.addEventListener('message', (e) => {
-      if (e.data?.type === 'AUTH_RESPONSE') {
+      // Support BOTH old (AUTH_RESPONSE) and new (auth:response) formats for backwards compatibility
+      if (e.data?.type === 'AUTH_RESPONSE' || e.data?.type === 'auth:response') {
         // Receive plain object, not functions
         if (e.data.auth) {
           Object.assign(AppState.auth, e.data.auth);
         }
-        console.log('[AppState] Iframe received auth:', e.data.user?.email || 'no user');
+        console.log('[AppState::AUTH] Iframe received auth:', e.data.auth?.email || e.data.user?.email || 'no user');
       }
     });
   }
