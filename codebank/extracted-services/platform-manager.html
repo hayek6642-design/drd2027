@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Platform Manager - CodeBank</title>
+  <link rel="stylesheet" href="/codebank/styles/styles.css">
+  <link rel="stylesheet" href="platform-manager.css">
+</head>
+<body>
+  <div id="platform-manager" class="service-container">
+    <!-- Header -->
+    <div class="pm-header">
+      <h1>🔧 Platform Manager</h1>
+      <div class="header-actions">
+        <button class="refresh-btn" id="refreshBtn" title="Refresh stats">↻</button>
+        <button class="settings-btn" id="settingsBtn" title="Settings">⚙️</button>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="pm-tabs">
+      <button class="tab-btn active" data-tab="overview">📊 Overview</button>
+      <button class="tab-btn" data-tab="services">🛠️ Services</button>
+      <button class="tab-btn" data-tab="users">👥 Users</button>
+      <button class="tab-btn" data-tab="analytics">📈 Analytics</button>
+      <button class="tab-btn" data-tab="maintenance">⚙️ Maintenance</button>
+      <button class="tab-btn" data-tab="logs">📋 Logs</button>
+    </div>
+
+    <!-- Content Area -->
+    <div class="pm-content">
+      <!-- Overview Tab -->
+      <div class="tab-content active" id="overview-tab">
+        <div class="overview-grid">
+          <!-- Stats Cards -->
+          <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-info">
+              <div class="stat-label">Active Users</div>
+              <div class="stat-value" id="activeUsers">0</div>
+              <div class="stat-detail">Last 24h</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon">⚡</div>
+            <div class="stat-info">
+              <div class="stat-label">Server Status</div>
+              <div class="stat-value" id="serverStatus">🟢 Online</div>
+              <div class="stat-detail">Uptime: <span id="uptime">0h</span></div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon">💾</div>
+            <div class="stat-info">
+              <div class="stat-label">Database</div>
+              <div class="stat-value" id="dbSize">0 MB</div>
+              <div class="stat-detail">Queries: <span id="dbQueries">0</span></div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon">🔒</div>
+            <div class="stat-info">
+              <div class="stat-label">Security Status</div>
+              <div class="stat-value" id="securityStatus">✅ Secure</div>
+              <div class="stat-detail">No alerts</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- System Health -->
+        <div class="health-section">
+          <h3>System Health</h3>
+          <div class="health-items">
+            <div class="health-item">
+              <span>CPU Usage</span>
+              <div class="progress-bar">
+                <div class="progress-fill" id="cpuUsage" style="width: 45%"></div>
+              </div>
+              <span>45%</span>
+            </div>
+            <div class="health-item">
+              <span>Memory Usage</span>
+              <div class="progress-bar">
+                <div class="progress-fill" id="memoryUsage" style="width: 62%"></div>
+              </div>
+              <span>62%</span>
+            </div>
+            <div class="health-item">
+              <span>Disk Usage</span>
+              <div class="progress-bar">
+                <div class="progress-fill" id="diskUsage" style="width: 38%"></div>
+              </div>
+              <span>38%</span>
+            </div>
+            <div class="health-item">
+              <span>API Response Time</span>
+              <div class="progress-bar">
+                <div class="progress-fill" id="apiTime" style="width: 25%"></div>
+              </div>
+              <span>125ms</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Services Tab -->
+      <div class="tab-content" id="services-tab">
+        <div class="services-list">
+          <div class="service-item">
+            <div class="service-header">
+              <h4>🎵 Samma3ny</h4>
+              <span class="status-badge online">Online</span>
+            </div>
+            <div class="service-details">
+              <span>Users: 234</span> | <span>Uptime: 99.9%</span>
+            </div>
+            <button class="service-action-btn">Manage</button>
+          </div>
+
+          <div class="service-item">
+            <div class="service-header">
+              <h4>💰 SafeCode</h4>
+              <span class="status-badge online">Online</span>
+            </div>
+            <div class="service-details">
+              <span>Transactions: 1,245</span> | <span>Uptime: 100%</span>
+            </div>
+            <button class="service-action-btn">Manage</button>
+          </div>
+
+          <div class="service-item">
+            <div class="service-header">
+              <h4>❤️ Farragna</h4>
+              <span class="status-badge online">Online</span>
+            </div>
+            <div class="service-details">
+              <span>Posts: 5,678</span> | <span>Uptime: 99.8%</span>
+            </div>
+            <button class="service-action-btn">Manage</button>
+          </div>
+
+          <div class="service-item">
+            <div class="service-header">
+              <h4>🎮 Battalooda</h4>
+              <span class="status-badge online">Online</span>
+            </div>
+            <div class="service-details">
+              <span>Active Games: 89</span> | <span>Uptime: 99.7%</span>
+            </div>
+            <button class="service-action-btn">Manage</button>
+          </div>
+
+          <div class="service-item">
+            <div class="service-header">
+              <h4>📱 Messages</h4>
+              <span class="status-badge online">Online</span>
+            </div>
+            <div class="service-details">
+              <span>Messages: 12,456</span> | <span>Uptime: 99.9%</span>
+            </div>
+            <button class="service-action-btn">Manage</button>
+          </div>
+
+          <div class="service-item">
+            <div class="service-header">
+              <h4>☎️ Phone Calls</h4>
+              <span class="status-badge online">Online</span>
+            </div>
+            <div class="service-details">
+              <span>Active Calls: 12</span> | <span>Uptime: 99.6%</span>
+            </div>
+            <button class="service-action-btn">Manage</button>
+          </div>
+
+          <div class="service-item">
+            <div class="service-header">
+              <h4>🤖 AI Chat</h4>
+              <span class="status-badge online">Online</span>
+            </div>
+            <div class="service-details">
+              <span>Active Chats: 45</span> | <span>Uptime: 100%</span>
+            </div>
+            <button class="service-action-btn">Manage</button>
+          </div>
+
+          <div class="service-item">
+            <div class="service-header">
+              <h4>📖 Quran</h4>
+              <span class="status-badge online">Online</span>
+            </div>
+            <div class="service-details">
+              <span>Users: 567</span> | <span>Uptime: 100%</span>
+            </div>
+            <button class="service-action-btn">Manage</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Users Tab -->
+      <div class="tab-content" id="users-tab">
+        <div class="users-section">
+          <div class="search-box">
+            <input type="text" id="userSearch" placeholder="Search users...">
+            <button class="search-btn">🔍</button>
+          </div>
+
+          <table class="users-table">
+            <thead>
+              <tr>
+                <th>User ID</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Joined</th>
+                <th>Last Active</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersList">
+              <tr>
+                <td>#001</td>
+                <td>user@example.com</td>
+                <td><span class="status-badge online">Active</span></td>
+                <td>2024-01-15</td>
+                <td>2 mins ago</td>
+                <td><button class="action-link">View</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Analytics Tab -->
+      <div class="tab-content" id="analytics-tab">
+        <div class="analytics-section">
+          <h3>Platform Analytics</h3>
+          <div class="chart-placeholder">
+            <p>📊 Daily Active Users Chart</p>
+            <div class="simple-chart"></div>
+          </div>
+          <div class="chart-placeholder">
+            <p>💼 Service Usage Distribution</p>
+            <div class="simple-chart"></div>
+          </div>
+          <div class="chart-placeholder">
+            <p>📈 Transaction Volume</p>
+            <div class="simple-chart"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Maintenance Tab -->
+      <div class="tab-content" id="maintenance-tab">
+        <div class="maintenance-section">
+          <div class="maintenance-card">
+            <h4>🔧 Database Maintenance</h4>
+            <p>Last ran: 2 hours ago</p>
+            <button class="action-btn">Run Now</button>
+            <button class="action-btn secondary">Schedule</button>
+          </div>
+
+          <div class="maintenance-card">
+            <h4>🧹 Cache Clear</h4>
+            <p>Cache size: 245 MB</p>
+            <button class="action-btn">Clear Cache</button>
+            <button class="action-btn secondary">View Details</button>
+          </div>
+
+          <div class="maintenance-card">
+            <h4>📦 Backup</h4>
+            <p>Last backup: 6 hours ago</p>
+            <button class="action-btn">Backup Now</button>
+            <button class="action-btn secondary">Restore</button>
+          </div>
+
+          <div class="maintenance-card">
+            <h4>🔄 System Update</h4>
+            <p>Version: 2.1.0 (Latest)</p>
+            <button class="action-btn" disabled>Update Available</button>
+            <button class="action-btn secondary">Changelog</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Logs Tab -->
+      <div class="tab-content" id="logs-tab">
+        <div class="logs-section">
+          <div class="log-filter">
+            <select id="logLevel">
+              <option value="">All Levels</option>
+              <option value="info">Info</option>
+              <option value="warning">Warning</option>
+              <option value="error">Error</option>
+            </select>
+            <input type="date" id="logDate">
+            <button class="search-btn">Filter</button>
+          </div>
+
+          <div class="logs-viewer">
+            <div class="log-entry info">
+              <span class="log-time">[2024-01-20 14:35:22]</span>
+              <span class="log-level">INFO</span>
+              <span class="log-message">User logged in: user@example.com</span>
+            </div>
+            <div class="log-entry warning">
+              <span class="log-time">[2024-01-20 14:30:15]</span>
+              <span class="log-level">WARNING</span>
+              <span class="log-message">High memory usage detected: 78%</span>
+            </div>
+            <div class="log-entry info">
+              <span class="log-time">[2024-01-20 14:25:43]</span>
+              <span class="log-level">INFO</span>
+              <span class="log-message">Database backup completed</span>
+            </div>
+            <div class="log-entry error">
+              <span class="log-time">[2024-01-20 14:20:10]</span>
+              <span class="log-level">ERROR</span>
+              <span class="log-message">Failed to connect to external API: timeout</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/universal-autosave.js"></script>
+  <script src="/js/service-adapters.js"></script>
+  <script src="/shared/js/auth-client.js"></script>
+  <script src="platform-manager.js"></script>
+</body>
+</html>

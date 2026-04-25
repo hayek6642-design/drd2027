@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Chat - CodeBank</title>
+  <link rel="stylesheet" href="/codebank/styles/styles.css">
+  <link rel="stylesheet" href="ai-chat.css">
+</head>
+<body>
+  <div id="aichat-app" class="service-container">
+    <div class="chat-header"><h1>🤖 AI Chat</h1><button id="newChatBtn">+ New Chat</button></div>
+    <div class="chat-main">
+      <div class="chat-sidebar"><div id="chatList" class="chat-list"></div></div>
+      <div class="chat-area">
+        <div id="noChat" class="no-chat"><p>Start a new conversation</p></div>
+        <div id="chatView" class="chat-view" style="display:none;">
+          <div id="messages" class="messages"></div>
+          <form id="chatForm"><input type="text" id="chatInput" placeholder="Ask me anything..."><button type="submit">Send</button></form>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="/js/universal-autosave.js"></script>
+  <script src="/shared/js/auth-client.js"></script>
+  <script src="ai-chat.js"></script>
+</body>
+</html>

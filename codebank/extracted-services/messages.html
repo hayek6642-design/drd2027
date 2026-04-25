@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Messages - CodeBank</title>
+  <link rel="stylesheet" href="/codebank/styles/styles.css">
+  <link rel="stylesheet" href="messages.css">
+</head>
+<body>
+  <div id="messages-app" class="service-container">
+    <div class="messages-header"><h1>📱 Messages</h1></div>
+    <div class="messages-layout">
+      <div class="threads-list">
+        <button class="new-msg-btn" id="newMsgBtn">+ New Message</button>
+        <div id="threadsList" class="threads"></div>
+      </div>
+      <div class="message-view">
+        <div id="emptyState" class="empty-state"><p>Select a message to start</p></div>
+        <div id="chatPanel" class="chat-panel" style="display:none;">
+          <div class="msg-header"><h3 id="recipientName"></h3></div>
+          <div id="messagesContainer" class="messages-container"></div>
+          <div class="msg-input">
+            <form id="msgForm"><input type="text" id="msgInput" placeholder="Type a message..."><button type="submit">Send</button></form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="/js/universal-autosave.js"></script>
+  <script src="/shared/js/auth-client.js"></script>
+  <script src="messages.js"></script>
+</body>
+</html>
