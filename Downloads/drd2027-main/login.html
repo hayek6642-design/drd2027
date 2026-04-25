@@ -713,6 +713,16 @@ function saveSession(data) {
   // Set cookie for server-side session validation
   document.cookie = `session_token=${sid}; path=/; max-age=${7*24*60*60}; SameSite=Lax`;
   
+  // ✅ FIX: Set AppState auth so verify() has token
+  if (window.AppState && window.AppState.auth && data.user) {
+    try {
+      window.AppState.auth.setUser(data.user, sid, sid);
+      console.log('[Auth] AppState set with user:', data.user.email);
+    } catch (e) {
+      console.error('[Auth] Failed to set AppState:', e.message);
+    }
+  }
+  
   console.log('[Auth] Session saved');
 }
 
