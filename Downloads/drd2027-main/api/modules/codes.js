@@ -104,8 +104,8 @@ function checkRateLimit(userId) {
 }
 
 // New autosave endpoint for Phase 3
-router.post('/save', async (req, res) => {
-  const identity = await getIdentity(req)
+router.post('/save', requireAuth, async (req, res) => {
+  const identity = req.user
   if (!identity) {
     return res.status(401).json({ ok: false, error: 'UNAUTHORIZED' })
   }
@@ -204,8 +204,8 @@ router.post('/save', async (req, res) => {
 })
 
 // Legacy endpoints for backward compatibility (can be removed later)
-router.get('/last', async (req, res) => {
-  const identity = await getIdentity(req)
+router.get('/last', requireAuth, async (req, res) => {
+  const identity = req.user
   if (!identity) return res.status(401).end()
   try {
     const r = await query(
@@ -219,8 +219,8 @@ router.get('/last', async (req, res) => {
   }
 })
 
-router.post('/generate', async (req, res) => {
-  const identity = await getIdentity(req)
+router.post('/generate', requireAuth, async (req, res) => {
+  const identity = req.user
   if (!identity) return res.status(401).end()
   
   // Check rate limiting
@@ -271,7 +271,7 @@ router.post('/generate', async (req, res) => {
 // List user's codes endpoint
 router.get('/list', requireAuth, async (req, res) => {
   try {
-    const identity = await getIdentity(req)
+    const identity = req.user
     if (!identity) {
       return res.status(401).json({ success: false, message: 'UNAUTHORIZED' })
     }
@@ -306,9 +306,9 @@ router.get('/list', requireAuth, async (req, res) => {
 })
 
 // Send codes endpoint
-router.post('/send-codes', async (req, res) => {
+router.post('/send-codes', requireAuth, async (req, res) => {
   try {
-    const identity = await getIdentity(req)
+    const identity = req.user
     if (!identity) {
       return res.status(401).json({ success: false, message: 'UNAUTHORIZED' })
     }
@@ -414,9 +414,9 @@ router.post('/send-codes', async (req, res) => {
 
 
 // Purge old-format codes (legacy cleanup) - called once by client on load
-router.delete('/purge-old-format', async (req, res) => {
+router.delete('/purge-old-format', requireAuth, async (req, res) => {
   try {
-    const identity = await getIdentity(req)
+    const identity = req.user
     if (!identity) {
       return res.status(401).json({ success: false, message: 'UNAUTHORIZED' })
     }
