@@ -163,9 +163,52 @@ window.AppState.auth = {
       sessionStorage.setItem('appstate_auth', data);
       
       console.log('[AppState] ✅ Persisted to localStorage + sessionStorage');
+      
+      // **NEW**: Immediately broadcast auth to all iframes after login
+      if (this.isAuthenticated && !window.isIframe) {
+        this.broadcastToIframes();
+      }
     } catch (e) {
       console.warn('[AppState] Persist failed:', e.message);
     }
+  },
+  
+  // Broadcast authenticated state to all iframes
+  broadcastToIframes() {
+    const authPayload = {
+      isAuthenticated: this.isAuthenticated,
+      user: this.user,
+      token: this.token,
+      userId: this.user?.id || null,
+      email: this.user?.email || null,
+      authenticated: this.isAuthenticated
+    };
+    
+    console.log('[AppState::BROADCAST] Sending auth to all iframes:', authPayload.email);
+    
+    // Send to all iframes via postMessage (wildcard origin)
+    // Different message formats for compatibility with all iframe types
+    const messages = [
+      { type: 'auth:response', ...authPayload },
+      { type: 'AUTH_RESPONSE', ...authPayload },
+      { type: 'auth:ready', ...authPayload, id: authPayload.userId }
+    ];
+    
+    messages.forEach(msg => {
+      try {
+        window.frames[0]?.postMessage(msg, '*');
+        // Also target any iframe that might exist
+        document.querySelectorAll('iframe').forEach(iframe => {
+          try {
+            iframe.contentWindow?.postMessage(msg, '*');
+          } catch (e) {
+            // Silently ignore cross-origin errors
+          }
+        });
+      } catch (e) {
+        console.warn('[AppState::BROADCAST] Error broadcasting:', e.message);
+      }
+    });
   },
   
   // Logout completely
@@ -223,14 +266,33 @@ function broadcastAuthToIframes() {
         return;
       }
       
-      const authData = {
-        isAuthenticated: AppState.auth.isAuthenticated,
-        user: AppState.auth.user,
-        token: AppState.auth.token,
-        userId: AppState.auth.user?.id || null,
-        email: AppState.auth.user?.email || null,
-        authenticated: AppState.auth.isAuthenticated  // For auth:ready format
+      // **CRITICAL FIX**: Read directly from localStorage instead of in-memory AppState
+      // The in-memory object may not be restored yet when iframe requests auth
+      let authData = {
+        isAuthenticated: false,
+        user: null,
+        token: null,
+        userId: null,
+        email: null,
+        authenticated: false
       };
+      
+      try {
+        const stored = localStorage.getItem('appstate_auth');
+        if (stored) {
+          const saved = JSON.parse(stored);
+          authData = {
+            isAuthenticated: saved.isAuthenticated || false,
+            user: saved.user || null,
+            token: saved.token || null,
+            userId: saved.user?.id || null,
+            email: saved.user?.email || null,
+            authenticated: saved.isAuthenticated || false
+          };
+        }
+      } catch (parseErr) {
+        console.warn('[AppState::AUTH] Failed to parse localStorage auth:', parseErr.message);
+      }
       
       console.log(`[AppState::AUTH] ${msgType} → Responding with token:`, !!authData.token, 'user:', authData.email);
       
@@ -271,7 +333,29 @@ function broadcastAuthToIframes() {
       }
     });
   } else {
-    // This is an iframe - request auth from parent
+    // This is an iframe
+    // **CRITICAL FIX**: First check if parent already set auth in shared localStorage
+    try {
+      const stored = localStorage.getItem('appstate_auth');
+      if (stored) {
+        const saved = JSON.parse(stored);
+        if (saved.isAuthenticated && saved.token) {
+          Object.assign(AppState.auth, {
+            isAuthenticated: saved.isAuthenticated,
+            user: saved.user,
+            token: saved.token,
+            userId: saved.user?.id || null
+          });
+          console.log('[AppState::AUTH] ✅ Iframe bootstrapped from localStorage:', saved.user?.email);
+          // Auth is ready, no need to request from parent
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('[AppState::AUTH] Failed to bootstrap from localStorage:', e.message);
+    }
+    
+    // Fallback: Request auth from parent via postMessage
     // Try all auth request types to ensure compatibility
     window.parent.postMessage({ type: 'auth:request' }, '*');
     window.parent.postMessage({ type: 'AUTH_REQUEST' }, '*');
