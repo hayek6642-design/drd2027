@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quran - CodeBank</title>
+  <link rel="stylesheet" href="/codebank/styles/styles.css">
+  <link rel="stylesheet" href="quran.css">
+</head>
+<body>
+  <div id="quran-app" class="service-container">
+    <!-- Header -->
+    <div class="quran-header">
+      <h1>📖 The Quran</h1>
+      <div class="header-actions">
+        <input type="search" id="quranSearch" placeholder="Search Surahs or verses..." class="quran-search">
+        <button id="bookmarksBtn" class="bookmarks-btn">🔖 Bookmarks</button>
+      </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="quran-layout">
+      <!-- Surah List -->
+      <div class="surah-list">
+        <h3>Surahs</h3>
+        <div id="surahContainer" class="surahs"></div>
+      </div>
+
+      <!-- Content Area -->
+      <div class="content-area">
+        <div id="surahView" class="view active">
+          <div class="surah-info">
+            <h2 id="surahTitle"></h2>
+            <p id="surahDescription"></p>
+          </div>
+          <div id="versesContainer" class="verses"></div>
+        </div>
+
+        <div id="bookmarksView" class="view">
+          <h2>My Bookmarks</h2>
+          <div id="bookmarksList" class="bookmarks-list"></div>
+        </div>
+
+        <div id="searchResultsView" class="view">
+          <h2>Search Results</h2>
+          <div id="searchResults" class="search-results"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/universal-autosave.js"></script>
+  <script src="/js/service-adapters.js"></script>
+  <script src="/shared/js/auth-client.js"></script>
+  <script src="quran.js"></script>
+</body>
+</html>

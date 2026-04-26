@@ -1,0 +1,17 @@
+.calls-header { padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; justify-content: space-between; align-items: center; }
+.calls-header h1 { margin: 0; }
+.calls-tabs { display: flex; gap: 10px; padding: 15px 20px; background: white; border-bottom: 1px solid #e0e0e0; }
+.tab-btn { padding: 8px 16px; background: #f0f0f0; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s; }
+.tab-btn.active { background: #667eea; color: white; }
+.calls-content { padding: 20px; height: calc(100vh - 200px); overflow-y: auto; }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+.call-list { display: flex; flex-direction: column; gap: 10px; }
+.call-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: white; border: 1px solid #e0e0e0; border-radius: 6px; }
+.call-item strong { color: #333; }
+.call-item small { color: #999; font-size: 12px; }
+.call-item button { padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; }
+.call-item.missed { opacity: 0.7; }
+.contacts-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+.contact-item { padding: 15px; background: white; border: 1px solid #e0e0e0; border-radius: 6px; text-align: center; }
+.contact-item button { margin-top: 10px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; }

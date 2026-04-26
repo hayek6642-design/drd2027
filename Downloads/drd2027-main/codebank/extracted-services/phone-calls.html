@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calls - CodeBank</title>
+  <link rel="stylesheet" href="/codebank/styles/styles.css">
+  <link rel="stylesheet" href="phone-calls.css">
+</head>
+<body>
+  <div id="calls-app" class="service-container">
+    <div class="calls-header"><h1>☎️ Phone Calls</h1><button id="contactsBtn">👥 Contacts</button></div>
+    <div class="calls-tabs">
+      <button class="tab-btn active" data-tab="recent">📞 Recent</button>
+      <button class="tab-btn" data-tab="contacts">👥 Contacts</button>
+      <button class="tab-btn" data-tab="missed">📴 Missed</button>
+    </div>
+    <div class="calls-content">
+      <div class="tab-pane active" id="recent-tab"><div id="recentCalls" class="call-list"></div></div>
+      <div class="tab-pane" id="contacts-tab"><div id="contactsList" class="contacts-list"></div></div>
+      <div class="tab-pane" id="missed-tab"><div id="missedCalls" class="call-list"></div></div>
+    </div>
+  </div>
+  <script src="/js/universal-autosave.js"></script>
+  <script src="/shared/js/auth-client.js"></script>
+  <script src="phone-calls.js"></script>
+</body>
+</html>
