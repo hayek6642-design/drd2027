@@ -2299,8 +2299,30 @@
             let isAuthenticated = false;
             let userEmailText = '';
             
+            // ✅ FIX: Check AppState first (from app-state-unified.js)
+            if (window.AppState && window.AppState.isAuthenticated) {
+                isAuthenticated = true;
+                if (window.AppState.user && window.AppState.user.email) {
+                    userEmailText = window.AppState.user.email;
+                }
+            }
+            
+            // Check appstate_auth in localStorage
+            if (!isAuthenticated) {
+                try {
+                    const stored = localStorage.getItem('appstate_auth');
+                    if (stored) {
+                        const parsed = JSON.parse(stored);
+                        isAuthenticated = parsed.isAuthenticated || parsed.authenticated;
+                        if (parsed.user && parsed.user.email) {
+                            userEmailText = parsed.user.email;
+                        }
+                    }
+                } catch(e) {}
+            }
+            
             // Check CodeBankAuth (local auth)
-            if (window.CodeBankAuth && typeof window.CodeBankAuth.isAuthenticated === 'function') {
+            if (!isAuthenticated && window.CodeBankAuth && typeof window.CodeBankAuth.isAuthenticated === 'function') {
                 isAuthenticated = window.CodeBankAuth.isAuthenticated();
                 const authState = window.CodeBankAuth.getAuthState();
                 if (authState && authState.user && authState.user.email) {
@@ -2308,7 +2330,7 @@
                 }
             }
             
-            // Check localStorage as fallback
+            // Check codebank_auth in localStorage
             if (!isAuthenticated) {
                 try {
                     const stored = localStorage.getItem('codebank_auth');
@@ -2333,6 +2355,7 @@
                 userView.style.display = 'flex';
                 if (userEmail && userEmailText) {
                     userEmail.textContent = userEmailText;
+                    console.log('[AuthPanel] ✅ Updated user email:', userEmailText);
                 }
                 console.log('[AuthPanel] Showing authenticated view');
             } else {
@@ -2346,17 +2369,32 @@
         window.signOut = function() {
             console.log('[AuthPanel] Signing out...');
             
+            // ✅ FIX: Clear AppState auth
+            if (window.AppState) {
+                window.AppState.isAuthenticated = false;
+                window.AppState.user = null;
+                window.AppState.token = null;
+                window.AppState.userId = null;
+            }
+            
             // Clear CodeBankAuth
             if (window.CodeBankAuth) {
                 localStorage.removeItem('codebank_auth');
                 window.CodeBankAuth.loadAuthState();
             }
             
-            // Clear localStorage
+            // ✅ FIX: Clear all auth storage including AppState
+            localStorage.removeItem('appstate_auth');
+            sessionStorage.removeItem('appstate_auth');
             localStorage.removeItem('session_active');
             localStorage.removeItem('session_token');
             localStorage.removeItem('user_data');
             localStorage.removeItem('codebank_auth');
+            localStorage.removeItem('__cached_user__');
+            localStorage.removeItem('bankode_user_cache');
+            
+            // Update UI immediately
+            updateAuthUI();
             
             // Reload to apply changes
             window.location.reload();
@@ -2374,12 +2412,28 @@
             }, 100);
         });
         
+        // ✅ FIX: Listen for AppState auth changes and update UI
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'appstate_auth') {
+                console.log('[AuthPanel] Storage changed - AppState auth updated');
+                updateAuthUI();
+            }
+        });
+        
+        // Also listen for custom auth events
+        document.addEventListener('auth:changed', updateAuthUI);
+        window.addEventListener('auth:login', updateAuthUI);
+        window.addEventListener('auth:logout', updateAuthUI);
+        
         // Also run on load
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', updateAuthUI);
         } else {
             setTimeout(updateAuthUI, 100);
         }
+        
+        // Keep checking periodically in case AppState changes
+        setInterval(updateAuthUI, 5000);
     })();
     </script>
 

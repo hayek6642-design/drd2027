@@ -77,9 +77,16 @@
                 localStorage.setItem('__cached_user__', JSON.stringify(user));
                 if (sessionId) localStorage.setItem('session_token', sessionId);
             } catch(_) {}
-            window.EventBus.dispatch('auth:changed', {
-                user, isAuthenticated: window.AppState.isAuthenticated, sessionId
-            });
+            // SAFE dispatch - check EventBus exists first
+            if (window.EventBus && typeof window.EventBus.dispatch === 'function') {
+                window.EventBus.dispatch('auth:changed', {
+                    user, isAuthenticated: window.AppState.isAuthenticated, sessionId
+                });
+            } else {
+                window.dispatchEvent(new CustomEvent('auth:changed', { detail: {
+                    user, isAuthenticated: window.AppState.isAuthenticated, sessionId
+                }}));
+            }
             // 🔧 FIX: Automatically sync assets when user is authenticated
             if (window.AppState.isAuthenticated && window.AssetsManager && typeof window.AssetsManager.sync === 'function') {
                 window.AssetsManager.sync().catch(e => console.warn('[AuthManager] Asset sync on auth:', e.message));
@@ -91,7 +98,14 @@
             window.AppState.user = null;
             window.AppState.isAuthenticated = false;
             window.AppState.sessionId = null;
-            window.EventBus.dispatch('auth:changed', { user: null, isAuthenticated: false, sessionId: null });
+            // SAFE dispatch - check EventBus exists first
+            if (window.EventBus && typeof window.EventBus.dispatch === 'function') {
+                window.EventBus.dispatch('auth:changed', { user: null, isAuthenticated: false, sessionId: null });
+            } else {
+                window.dispatchEvent(new CustomEvent('auth:changed', { detail: {
+                    user: null, isAuthenticated: false, sessionId: null
+                }}));
+            }
         }
     };
 

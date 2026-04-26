@@ -103,11 +103,31 @@ function isSevereBackendFailureStatus(status) {
 }
 
 function getAuthContext() {
+  // ✅ FIX: Check AppState first (from app-state-unified.js)
+  if (window.AppState && window.AppState.isAuthenticated && window.AppState.token) {
+    return {
+      isAuthenticated: () => window.AppState.isAuthenticated,
+      getToken: () => window.AppState.token,
+      user: window.AppState.user
+    };
+  }
+  
   if (window.Auth && typeof window.Auth.isAuthenticated === 'function') return window.Auth;
 
   try {
     if (window.top && window.top.Auth && typeof window.top.Auth.isAuthenticated === 'function') {
       return window.top.Auth;
+    }
+  } catch (e) {}
+  
+  // ✅ FIX: Also check parent frame AppState
+  try {
+    if (window.parent && window.parent !== window && window.parent.AppState && window.parent.AppState.isAuthenticated && window.parent.AppState.token) {
+      return {
+        isAuthenticated: () => window.parent.AppState.isAuthenticated,
+        getToken: () => window.parent.AppState.token,
+        user: window.parent.AppState.user
+      };
     }
   } catch (e) {}
 

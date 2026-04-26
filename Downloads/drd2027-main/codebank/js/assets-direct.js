@@ -145,25 +145,28 @@ if (typeof window.AssetsDirectBus === 'undefined') {
                     console.log('[PIPELINE STEP 1] Generated and stored:', snapshot);
                 } catch(_) {}
 
-                window.EventBus.dispatch('assets:updated', {
-                    type: 'codes',
-                    list: snapshot.codes,
-                    latest: snapshot.codes[0] || null,
-                    count: snapshot.codes.length
-                });
-                window.EventBus.dispatch('assets:updated', {
-                    type: 'silver',
-                    list: snapshot.silver,
-                    latest: snapshot.silver[0] || null,
-                    count: snapshot.silver.length
-                });
-                window.EventBus.dispatch('assets:updated', {
-                    type: 'gold',
-                    list: snapshot.gold,
-                    latest: snapshot.gold[0] || null,
-                    count: snapshot.gold.length
-                });
-                // Legacy compat events
+                // SAFE EventBus dispatch - check if available
+                if (window.EventBus && typeof window.EventBus.dispatch === 'function') {
+                    window.EventBus.dispatch('assets:updated', {
+                        type: 'codes',
+                        list: snapshot.codes,
+                        latest: snapshot.codes[0] || null,
+                        count: snapshot.codes.length
+                    });
+                    window.EventBus.dispatch('assets:updated', {
+                        type: 'silver',
+                        list: snapshot.silver,
+                        latest: snapshot.silver[0] || null,
+                        count: snapshot.silver.length
+                    });
+                    window.EventBus.dispatch('assets:updated', {
+                        type: 'gold',
+                        list: snapshot.gold,
+                        latest: snapshot.gold[0] || null,
+                        count: snapshot.gold.length
+                    });
+                }
+                // Legacy compat events (always works)
                 window.dispatchEvent(new CustomEvent('sqlite:snapshot', { detail: { latestCode: snapshot.codes[0], codesList: snapshot.codes, count: snapshot.codes.length } }));
                 window.dispatchEvent(new CustomEvent('assets:updated', { detail: { latest: snapshot.codes[0], list: snapshot.codes, type: 'codes', count: snapshot.codes.length } }));
 
