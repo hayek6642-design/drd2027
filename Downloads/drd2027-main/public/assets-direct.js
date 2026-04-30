@@ -5,6 +5,28 @@
  * Fix: Check sessionId first, only sync if authenticated
  */
 
+// FIX 4: Helper to merge snapshot data without duplicates
+function mergeArraysUnique(newArr, existingArr) {
+    if (!Array.isArray(newArr)) return existingArr || [];
+    if (!Array.isArray(existingArr)) existingArr = [];
+    
+    const seen = new Set();
+    existingArr.forEach(item => seen.add(item.code || String(item)));
+    
+    const merged = [...existingArr];
+    for (const item of newArr) {
+        const code = item.code || String(item);
+        if (!seen.has(code)) {
+            merged.push(item);
+            seen.add(code);
+        }
+    }
+    
+    console.log('[Merge] Combined', newArr.length, '+', 
+               existingArr.length, '=', merged.length, 'unique codes');
+    return merged;
+}
+
 // Define AssetsDirectBus if not already defined
 if (typeof window.AssetsDirectBus === 'undefined') {
     window.AssetsDirectBus = {
@@ -90,6 +112,14 @@ if (typeof window.AssetsDirectBus === 'undefined') {
                     client: 'browser'
                 })
             });
+
+            // FIX 5: Handle 404 gracefully (endpoint doesn't exist yet)
+            if (response.status === 404) {
+                console.log('[Assets] Server endpoint /api/assets/sync not implemented (404)');
+                console.log('[Assets] Falling back to localStorage cache only');
+                stopSync(); // Don't retry - endpoint doesn't exist
+                return;
+            }
 
             if (response.status === 401) {
                 console.warn('[Assets] Auth expired (401) - clearing token and stopping sync');
@@ -225,6 +255,50 @@ if (typeof window.AssetsDirectBus === 'undefined') {
         syncCodes: syncCodes,
         isAuthenticated: isAuthenticated
     };
+
+    // FIX 4: Listen for snapshot data from parent via postMessage
+    window.addEventListener('message', function(event) {
+        try {
+            // Handle CODEBANK_ASSETS_SYNC messages from parent
+            if (event.data?.type === 'CODEBANK_ASSETS_SYNC' && event.data.payload) {
+                const snapshot = event.data.payload;
+                console.log('[AssetsDirect] Received snapshot via postMessage:', {
+                    codes: snapshot.codes?.length,
+                    silver: snapshot.silver?.length,
+                    gold: snapshot.gold?.length
+                });
+                
+                // Load current cache
+                let cache = AssetsDirectBus.loadFromCache() || {
+                    codes: [],
+                    silver: [],
+                    gold: [],
+                    likes: 0,
+                    superlikes: 0
+                };
+                
+                // Merge snapshot with existing cache
+                if (snapshot.codes && Array.isArray(snapshot.codes)) {
+                    cache.codes = mergeArraysUnique(snapshot.codes, cache.codes);
+                }
+                if (snapshot.silver) cache.silver = snapshot.silver;
+                if (snapshot.gold) cache.gold = snapshot.gold;
+                if (snapshot.likes) cache.likes = snapshot.likes;
+                if (snapshot.superlikes) cache.superlikes = snapshot.superlikes;
+                
+                // Save merged cache
+                AssetsDirectBus.saveToCache(cache);
+                AssetsDirectBus.publish('assets:merged', cache);
+                
+                console.log('[AssetsDirect] ✅ Snapshot merged:', {
+                    total: cache.codes.length,
+                    from: 'postMessage'
+                });
+            }
+        } catch (e) {
+            console.error('[AssetsDirect] Snapshot merge error:', e);
+        }
+    });
 
     // Auto-start on page load
     document.addEventListener('DOMContentLoaded', autoStartSync);

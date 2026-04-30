@@ -2570,6 +2570,36 @@ function clearSessionAndLogout() {
                         } catch(_) {}
                     }
                     
+                    // FIX 1: Persist snapshot to cache (CRITICAL for 165 codes to survive reload)
+                    var persistSnapshotToCache = function(snapshotData) {
+                        try {
+                            if (!snapshotData) return false;
+                            
+                            var cachePayload = {
+                                codes: snapshotData.codes || [],
+                                silver: snapshotData.silver || [],
+                                gold: snapshotData.gold || [],
+                                likes: snapshotData.likes || 0,
+                                superlikes: snapshotData.superlikes || 0,
+                                lastSync: Date.now(),
+                                source: 'snapshot-persisted',
+                                userEmail: snapshotData.userEmail || localStorage.getItem('userEmail')
+                            };
+                            
+                            localStorage.setItem('acc_assets', JSON.stringify(cachePayload));
+                            console.log('[Snapshot→Cache] ✅ Persisted', {
+                                codes: cachePayload.codes.length,
+                                silver: cachePayload.silver.length,
+                                gold: cachePayload.gold.length,
+                                timestamp: new Date(cachePayload.lastSync).toISOString()
+                            });
+                            return true;
+                        } catch (e) {
+                            console.error('[Snapshot→Cache] ❌ Failed to persist:', e.message);
+                            return false;
+                        }
+                    };
+                    
                     // Send snapshot with last code
                     var sendSnapshotWithLastCode = function() {
                         try {
@@ -2603,6 +2633,7 @@ function clearSessionAndLogout() {
                                 console.log('[SNAPSHOT] Sending to iframe on load, snap:', out2);
                                 frame.contentWindow.postMessage({ type: 'CODEBANK_ASSETS_SYNC', payload: out2 }, window.location.origin);
                                 frame.contentWindow.postMessage({ type: 'assetbus:snapshot', data: out2 }, window.location.origin);
+                                persistSnapshotToCache(out2);
                             }
                         } catch(e) {
                             console.error('[SNAPSHOT ERROR]', e);
@@ -2637,6 +2668,7 @@ function clearSessionAndLogout() {
                                     console.log('[SNAPSHOT] Sending after assets:updated event:', updatedOut);
                                     frame.contentWindow.postMessage({ type: 'CODEBANK_ASSETS_SYNC', payload: updatedOut }, window.location.origin);
                                     frame.contentWindow.postMessage({ type: 'assetbus:snapshot', data: updatedOut }, window.location.origin);
+                                    persistSnapshotToCache(updatedOut);
                                 }
                             }
                         } catch(_) {}
@@ -4079,29 +4111,37 @@ document.addEventListener('DOMContentLoaded', async function(){
   if (window.__AUTH_PANEL_FIX_INSTALLED__) return;
   window.__AUTH_PANEL_FIX_INSTALLED__ = true;
   
+  // FIX 6: Debounce auth panel updates (prevent 15+ updates per second)
+  let authPanelDebounceTimer = null;
+  const AUTH_PANEL_DEBOUNCE_MS = 100;
+  
   window.updateAuthPanel = function() {
-    const token = localStorage.getItem('session_token');
-    const userId = localStorage.getItem('userId');
-    const isAuthenticated = !!token && !!userId;
+    clearTimeout(authPanelDebounceTimer);
     
-    const authPanel = document.getElementById('auth-panel');
-    const guestPanel = document.getElementById('guest-panel');
-    
-    if (isAuthenticated) {
-      if (authPanel) authPanel.style.display = 'block';
-      if (guestPanel) guestPanel.style.display = 'none';
+    authPanelDebounceTimer = setTimeout(() => {
+      const token = localStorage.getItem('session_token');
+      const userId = localStorage.getItem('userId');
+      const isAuthenticated = !!token && !!userId;
       
-      const email = localStorage.getItem('user_email') || 'User';
-      const display = document.getElementById('user-email-display');
-      if (display) display.textContent = email;
+      const authPanel = document.getElementById('auth-panel');
+      const guestPanel = document.getElementById('guest-panel');
       
-      console.log('[AuthPanel] ✅ Updated: authenticated');
-    } else {
-      if (authPanel) authPanel.style.display = 'none';
-      if (guestPanel) guestPanel.style.display = 'block';
-      
-      console.log('[AuthPanel] ✅ Updated: guest');
-    }
+      if (isAuthenticated) {
+        if (authPanel) authPanel.style.display = 'block';
+        if (guestPanel) guestPanel.style.display = 'none';
+        
+        const email = localStorage.getItem('user_email') || 'User';
+        const display = document.getElementById('user-email-display');
+        if (display) display.textContent = email;
+        
+        console.log('[AuthPanel] ✅ Updated (debounced 100ms): authenticated');
+      } else {
+        if (authPanel) authPanel.style.display = 'none';
+        if (guestPanel) guestPanel.style.display = 'block';
+        
+        console.log('[AuthPanel] ✅ Updated (debounced 100ms): guest');
+      }
+    }, AUTH_PANEL_DEBOUNCE_MS);
   };
   
   if (document.readyState === 'loading') {
@@ -4113,7 +4153,7 @@ document.addEventListener('DOMContentLoaded', async function(){
   window.addEventListener('auth:changed', window.updateAuthPanel);
   window.addEventListener('auth:ready', window.updateAuthPanel);
   
-  console.log('[AuthFix] ✅ FIX 5: Auth panel UI patched');
+  console.log('[AuthFix] ✅ FIX 6: Auth panel UI patched with debounce (100ms)');
 })();
 
 console.log('═════════════════════════════════════════════════════');
