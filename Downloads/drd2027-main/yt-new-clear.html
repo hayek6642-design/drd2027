@@ -4164,4 +4164,57 @@ console.log('══════════════════════�
 <!-- Service Navigation Parent Handler -->
 <script src="parent-nav-handler.js"></script>
 
+<!-- FIX 5: PARENT AUTH BROADCASTER (sends auth to CodeBank iframe) -->
+<script>
+(function() {
+    console.log('[ParentAuthBroadcaster] Running...');
+    
+    // Handle incoming auth requests from iframe
+    window.addEventListener('message', (e) => {
+        if (e.data?.type === 'auth:request' || e.data?.type === 'bridge:subscribe') {
+            const simpleAuth = localStorage.getItem('simple_auth_state');
+            if (simpleAuth) {
+                try {
+                    const auth = JSON.parse(simpleAuth);
+                    e.source.postMessage({
+                        type: 'auth:state',
+                        auth: auth
+                    }, '*');
+                    console.log('[ParentAuthBroadcaster] Broadcast auth to iframe');
+                } catch(er) {
+                    console.error('[ParentAuthBroadcaster] Parse error:', er);
+                }
+            }
+        }
+    });
+    
+    // Proactively send auth when CodeBank iframe loads
+    const codebankIframe = document.getElementById('codebank-iframe') || 
+                           document.querySelector('iframe[src*="codebank"]') ||
+                           document.querySelector('iframe[src*="indexCB"]');
+    
+    if (codebankIframe) {
+        codebankIframe.addEventListener('load', () => {
+            const simpleAuth = localStorage.getItem('simple_auth_state');
+            if (simpleAuth) {
+                try {
+                    codebankIframe.contentWindow.postMessage({
+                        type: 'auth:state',
+                        auth: JSON.parse(simpleAuth)
+                    }, '*');
+                    console.log('[ParentAuthBroadcaster] Proactive auth send on iframe load');
+                } catch(er) {
+                    console.error('[ParentAuthBroadcaster] Send error:', er);
+                }
+            }
+        });
+    } else {
+        console.log('[ParentAuthBroadcaster] No CodeBank iframe found (may be loaded later)');
+    }
+    
+    console.log('[ParentAuthBroadcaster] ✅ Ready to broadcast auth to iframes');
+})();
+</script>
+<!-- END FIX 5 -->
+
     </body>

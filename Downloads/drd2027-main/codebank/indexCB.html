@@ -3139,6 +3139,27 @@ class AuthController {
     }
 
     async checkExistingSession() {
+        // ===== FIX 1: Check simple_auth_state FIRST (from parent page) =====
+        try {
+            const simpleAuthRaw = localStorage.getItem('simple_auth_state');
+            if (simpleAuthRaw) {
+                const simpleAuth = JSON.parse(simpleAuthRaw);
+                if (simpleAuth.authenticated && simpleAuth.userId) {
+                    console.log('[AuthController] ✅ Using simple_auth_state for user:', simpleAuth.userId);
+                    this.user = {
+                        id: simpleAuth.userId,
+                        email: simpleAuth.email || simpleAuth.userId
+                    };
+                    this.token = simpleAuth.sessionToken || simpleAuth.token;
+                    this.setLoggedIn(this.user);
+                    return;
+                }
+            }
+        } catch(e) {
+            console.error('[AuthController] simple_auth_state parse error:', e);
+        }
+        // ===== END FIX 1 =====
+
         const token = localStorage.getItem('session_token');
         
         if (!token) {
@@ -3201,6 +3222,48 @@ if (document.readyState === 'loading') {
 } else {
     window.authController = new AuthController();
     window.authController.init();
+
+    // FIX 2: AuthBridge v2 - Force sync auth state immediately
+    setTimeout(() => {
+        const simpleAuthRaw = localStorage.getItem('simple_auth_state');
+        if (simpleAuthRaw) {
+            try {
+                const simpleAuth = JSON.parse(simpleAuthRaw);
+                if (simpleAuth.authenticated && simpleAuth.userId) {
+                    console.log('[AuthBridge] Force-syncing auth on load');
+                    window.authController.user = {
+                        id: simpleAuth.userId,
+                        email: simpleAuth.email || simpleAuth.userId
+                    };
+                    window.authController.token = simpleAuth.sessionToken || simpleAuth.token;
+                    window.authController.setState('logged-in');
+                }
+            } catch(e) {
+                console.error('[AuthBridge] Error:', e);
+            }
+        }
+    }, 100);
+    // END FIX 2
+
+    // FIX 4: Emergency login button handler
+    setTimeout(() => {
+        const loginBtn = document.getElementById('btn-show-login');
+        if (loginBtn) {
+            // Remove old broken listeners by cloning
+            const newBtn = loginBtn.cloneNode(true);
+            loginBtn.parentNode.replaceChild(newBtn, loginBtn);
+            
+            newBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('[LoginFix] Login clicked - redirecting to /login.html');
+                window.location.href = '/login.html?redirect=' + encodeURIComponent(window.location.href);
+            });
+            
+            console.log('[LoginFix] ✅ Emergency login button handler installed');
+        }
+    }, 200);
+    // END FIX 4
 
     // Force modals to stay hidden after initialization
     setTimeout(() => {

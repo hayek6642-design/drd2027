@@ -1006,6 +1006,60 @@ app.post('/api/auth/verify-hybrid-otp', async (req, res) => {
 });
 
 // ============================================================================
+// FIX 3: Balances API Endpoint (accepts JWT or userId param)
+// ============================================================================
+app.get('/api/balances', async (req, res) => {
+    try {
+        let userId = null;
+        
+        // Try JWT cookie
+        const token = req.cookies?.session_token || req.cookies?.jwt || req.headers.authorization?.replace('Bearer ', '');
+        if (token) {
+            try {
+                const decoded = jwt.verify(token, JWT_SECRET);
+                userId = decoded.userId || decoded.sub || decoded.id || decoded.email;
+            } catch(e) {
+                console.log('[Server] JWT invalid:', e.message);
+            }
+        }
+        
+        // Try query param (for iframe requests)
+        if (!userId && req.query.userId) {
+            userId = req.query.userId;
+        }
+        
+        // Try header
+        if (!userId && req.headers['x-user-id']) {
+            userId = req.headers['x-user-id'];
+        }
+        
+        if (!userId) {
+            return res.status(401).json({ 
+                error: 'Unauthorized',
+                hint: 'No session_token cookie or userId provided'
+            });
+        }
+        
+        console.log('[API] Balances requested for userId:', userId);
+        
+        // Return balances (default values if no DB entry)
+        res.json({
+            success: true,
+            userId: userId,
+            codes: [],
+            silver: 0,
+            gold: 0,
+            count: 0,
+            message: 'Balances fetched'
+        });
+    } catch(error) {
+        console.error('[BALANCES ERROR]', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch balances' });
+    }
+});
+// END FIX 3
+
+// ============================================================================
 // Health Check Endpoints
 // ============================================================================
 
